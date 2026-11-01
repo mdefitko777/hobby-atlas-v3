@@ -532,3 +532,137 @@ class _ExpandRow extends StatelessWidget {
     );
   }
 }
+
+// ── 목록 안에서 찾기 + 필터 (My Page · 컬렉션 · 도감 · 캘린더 공용) ─────────────────────────
+
+/// 필터 버튼 — 보기 전환(ViewIconToggle)과 같은 크기의 떠 있는 칸, 고른 조건 수를 배지로
+class FilterButton extends StatelessWidget {
+  const FilterButton({super.key, required this.count, required this.onTap});
+  final int count;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+    message: '필터',
+    child: DecoratedBox(
+      decoration: Gp.raised(radius: Gp.radius),
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(Gp.radius),
+          onTap: onTap,
+          child: SizedBox.square(
+            dimension: 44,
+            child: Center(
+              child: Badge(
+                isLabelVisible: count > 0,
+                backgroundColor: Gp.accent,
+                label: Text('$count'),
+                child: Icon(Icons.tune, size: Gp.iM, color: count > 0 ? Gp.accent : Gp.ink),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+/// 검색창(검색 화면과 같은 모양, 카메라 없음) + 필터 버튼 + (있으면) 뒤에 붙는 것 — 한 줄
+class FindBar extends StatefulWidget {
+  const FindBar({
+    super.key,
+    required this.hint,
+    required this.onQuery,
+    this.filterCount = 0,
+    this.onFilter,
+    this.trailing,
+    this.padding = const EdgeInsets.fromLTRB(16, 4, 16, 8),
+  });
+  final String hint;
+  final ValueChanged<String> onQuery;
+  final int filterCount;
+
+  /// 없으면 필터 버튼을 숨긴다
+  final VoidCallback? onFilter;
+  final Widget? trailing;
+  final EdgeInsets padding;
+
+  @override
+  State<FindBar> createState() => _FindBarState();
+}
+
+class _FindBarState extends State<FindBar> {
+  final _ctrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: widget.padding,
+    child: Row(
+      children: [
+        Expanded(
+          child: GpSearchBar(controller: _ctrl, hint: widget.hint, onChanged: (v) => widget.onQuery(v.trim())),
+        ),
+        if (widget.onFilter case final f?) ...[
+          const SizedBox(width: 6),
+          FilterButton(count: widget.filterCount, onTap: f),
+        ],
+        if (widget.trailing case final t?) ...[const SizedBox(width: 6), t],
+      ],
+    ),
+  );
+}
+
+// ── 도감 필터 (칸이 켜졌나) ────────────────────────────────────────────────────────
+
+enum LitState { any, lit, unlit }
+
+extension LitStateLabel on LitState {
+  String get label => switch (this) {
+    LitState.any => '전체',
+    LitState.lit => '켜진 것',
+    LitState.unlit => '아직',
+  };
+
+  /// [lit] = 그 칸(작품이면 하나라도) 켜졌나
+  bool hit(bool lit) => switch (this) {
+    LitState.any => true,
+    LitState.lit => lit,
+    LitState.unlit => !lit,
+  };
+}
+
+/// 도감 필터 시트 — 상품 필터와 같은 네모 세그먼트 한 줄
+Future<LitState?> showLitFilterSheet(BuildContext context, {required LitState initial}) =>
+    showModalBottomSheet<LitState>(
+      context: context,
+      backgroundColor: Gp.panel,
+      builder: (sheet) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '도감 필터',
+                style: TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 14),
+              SquareSegments<LitState>(
+                values: LitState.values,
+                current: initial,
+                child: (v) => Text(v.label, style: const TextStyle(fontSize: Gp.t12)),
+                onPick: (v) => Navigator.pop(sheet, v),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );

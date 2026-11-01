@@ -270,13 +270,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const ListTile(
               leading: Icon(Icons.cloud_off_outlined),
               title: Text('계정 연결 설정이 없어요'),
-              subtitle: Text('config/supabase.json · 기기에만 저장 중'),
+              subtitle: Text('기기에만 저장 중'),
             )
           else if (!a.signedIn)
             ListTile(
               leading: const Icon(Icons.login),
               title: const Text('로그인'),
-              subtitle: const Text('옛 Gunpula 앱과 같은 메일로 로그인하면 컬렉션이 그대로 와요'),
+              subtitle: const Text('옛 앱과 같은 메일로'),
               trailing: const Icon(Icons.chevron_right, color: Gp.faint),
               onTap: () => openSignIn(context),
             )
@@ -359,11 +359,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // K-1 P03
             secondary: const Icon(Icons.notifications_none),
             title: const Text('새 소식 알림'),
-            subtitle: Text(
-              blocked
-                  ? '휴대폰 설정에서 이 앱 알림이 꺼져 있어요 (설정 › 애플리케이션 › Hobby Atlas › 알림)'
-                  : '휴대폰 알림 · 12시간마다 + 앱을 열 때 확인 (끄면 알림 화면에만 모여요)',
-            ),
+            subtitle: blocked ? const Text('휴대폰 설정에서 알림이 꺼져 있어요') : null,
             value: c.enabled && _permitted != false,
             activeThumbColor: Gp.accent,
             onChanged: _setNotify, // STATE: 알림 스위치 (저장 · 권한 요청)
@@ -371,18 +367,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
           SwitchListTile(
             secondary: const Icon(Icons.filter_alt_outlined),
             title: const Text('내 채널 소식만'),
-            subtitle: const Text('내 채널 밖 상품은 알리지 않아요 (좋아요한 상품은 늘)'),
             value: c.onlyMine,
             activeThumbColor: Gp.accent,
             onChanged: _n.setOnlyMine, // STATE: 채널 범위 (저장)
           ),
           chips('관심 항목', notifyInterestRules), // K-5
-          chips('세계관 전체 (그 채널의 새 상품 전부)', notifyWorldRules),
+          chips('채널 전체', notifyWorldRules),
           ListTile(
             // K-6
             leading: const Icon(Icons.history),
             title: const Text('새 소식 확인'),
-            subtitle: Text(_n.statusLine),
+            subtitle: Text(_n.shortStatus),
             trailing: _n.checking
                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                 : TextButton(onPressed: _checkNow, child: const Text('지금 확인')),
@@ -391,16 +386,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ListTile(
               leading: const Icon(Icons.battery_alert_outlined),
               title: const Text('알림이 늦게 오면 (삼성 갤럭시)'),
-              subtitle: const Text('절전 예외 앱에 넣는 방법'),
               onTap: () => showBatteryHint(context, _n),
             ),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: Text(
-              'PB 예약 기간은 프리미엄 반다이 페이지의 Wayback 기록에서 읽은 값이라 늦거나 틀릴 수 있어요.',
-              style: TextStyle(fontSize: Gp.t11, color: Gp.faint),
-            ),
-          ),
         ],
       ),
     );
@@ -409,7 +396,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final cat = Catalog.instance;
-    final me = UserStore.instance;
     final account = AccountScope.of(context); // 로그인 · 동기화 상태가 바뀌면 다시 그림
     return Scaffold(
       appBar: AppBar(
@@ -435,7 +421,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   subtitle: Text(
                     cat.kits.isEmpty
                         ? (cat.progress.isNotEmpty ? cat.progress : '아직 받지 않았어요')
-                        : '기준일 ${cat.updatedAt} · ${cat.kits.length}개 · Gunpula',
+                        : '${dateDot(cat.updatedAt)} · ${cat.kits.length}개',
                   ),
                   trailing: _refreshing
                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
@@ -445,15 +431,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   // K-3 P10
                   leading: const Icon(Icons.move_down),
                   title: const Text('옛 Gunpula 에서 가져오기'),
-                  subtitle: Text('지금 이 기기: 구매함 ${me.ownedCount} · 좋아요 ${me.wantedCount}'),
                   onTap: _import,
                 ),
-                ListTile(
-                  leading: const Icon(Icons.save_alt),
-                  title: const Text('백업 파일로 내보내기'),
-                  subtitle: const Text('구매함 · 좋아요 · 도감 · 베이 부품'),
-                  onTap: _export,
-                ),
+                ListTile(leading: const Icon(Icons.save_alt), title: const Text('백업 파일로 내보내기'), onTap: _export),
               ],
             ),
           ),

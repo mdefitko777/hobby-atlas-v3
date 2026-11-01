@@ -3,7 +3,7 @@
 // ┌──────── 디자인 가이드 대응표: C 채널 ──────────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                    │ 비즈니스 명칭(한글)              │ 원칙(P번호)   │
 // │ C-0  │ ChannelHeader                     │ 아바타 줄 + 채널 바 (네 탭 공용)  │ P04           │
-// │ C-1  │ ChannelBar (가로 스크롤 텍스트 탭) │ 내 채널 바 (전체 + 내 IP)        │ P06 · P04     │
+// │ C-1  │ ChannelBar (가로 스크롤 텍스트 탭) │ 내 채널 바 (전체 + 내 IP) · 홈 내용을 좌우로 밀어도 바뀜 │ P06 · P04 │
 // │ C-2  │ IconButton(ChannelGlyph 세 줄)     │ 채널 관리 열기                   │ P07 · P03     │
 // │ C-3  │ CupertinoPageRoute                │ 오른쪽에서 밀려 들어오는 관리 화면 │ P03           │
 // │ C-4  │ LongPressDraggable + DragTarget   │ 내 채널 (길게 눌러 순서 변경)     │ P03 · P07     │
@@ -47,6 +47,20 @@ mixin ChannelScope<T extends StatefulWidget> on State<T> {
     channel = id; // STATE: 선택 채널 → 그 범위로 다시 GET
     reloadScope();
   });
+
+  /// 내용 위에서 좌우로 밀면 옆 채널 (전체 → 내 채널 순서, 채널 바와 같은 순서).
+  /// 가로로 넘기는 줄 · 배너 위에서 시작하면 그 줄이 먼저 받는다
+  Widget channelSwipe(Widget child) => GestureDetector(
+    behavior: HitTestBehavior.translucent,
+    onHorizontalDragEnd: (d) {
+      final v = d.primaryVelocity ?? 0;
+      if (v.abs() < 300) return;
+      final ids = [allChannelId, ...myChannels];
+      final i = ids.indexOf(channel) + (v < 0 ? 1 : -1);
+      if (i >= 0 && i < ids.length) selectChannel(ids[i]); // STATE: 밀기 → 옆 채널
+    },
+    child: child,
+  );
 
   /// didUpdateWidget 에서 부른다: 내 채널에서 빠진 채널을 보고 있었다면 '전체'로
   void syncScope() {

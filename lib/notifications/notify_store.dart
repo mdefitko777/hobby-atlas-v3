@@ -178,6 +178,15 @@ class NotifyStore extends ChangeNotifier {
     }
   }
 
+  /// 설정 줄: "11.01 13:20 확인" 또는 오류
+  String get shortStatus {
+    final at = DateTime.tryParse(state.lastCheckAt)?.toLocal();
+    if (at == null) return '아직 확인하지 않았어요';
+    if (state.lastError.isNotEmpty) return state.lastError;
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${at.month}.${two(at.day)} ${two(at.hour)}:${two(at.minute)} 확인';
+  }
+
   /// "마지막 확인 11.01 13:20 · 피드 2026-10-23 · 새 알림 2" (+ 요약 피드만 읽었으면 그렇다고)
   String get statusLine {
     final at = DateTime.tryParse(state.lastCheckAt)?.toLocal();

@@ -8,12 +8,15 @@
 // │ J-3  │ 아래 띠: TogglePill(알림 받기)        │ 다음 단계가 되면 휴대폰 알림 (진짜)      │ P03 · P07     │
 // │ J-4  │ 아래 띠: 이 예고 · 상품 n → 시트       │ 4단계 진행 줄 + 제목 「」 으로 찾은 상품  │ P01 · P06     │
 // │ J-5  │ 아래 띠: 브라우저로 (↗)               │ Chrome 등에서 열기 (번역할 때)          │ P10           │
-// │ J-6  │ PageView                            │ 좌우로 밀어 이전 · 다음 예고            │ P03           │
+// │ J-6  │ PageView (위 띠 · 아래 띠에서)        │ 좌우로 밀어 이전 · 다음 예고            │ P03           │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 홈 배너 · 홈 공식 예고 줄 · 캘린더 예고 줄 · 예고 목록 · 알림에서 쌓기(push, 오른쪽에서).
+import 'package:flutter/foundation.dart' show Factory;
+import 'package:flutter/gestures.dart' show EagerGestureRecognizer, OneSequenceGestureRecognizer;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart' show AndroidWebViewController;
 
 import '../api.dart';
 import '../detail_pane.dart';
@@ -115,7 +118,15 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
     return u != null && (u.scheme == 'https' || u.scheme == 'http') ? u : null;
   }
 
-  WebViewController _makeWeb(Uri uri) => WebViewController()
+  WebViewController _makeWeb(Uri uri) {
+    final c = _baseWeb(uri);
+    // 휴대폰용 페이지가 없는 곳(코토부키야 상점 · 프리미엄 반다이 …): 페이지 전체 폭으로 줄여 보이고 두 손가락으로 키운다
+    c.enableZoom(true);
+    if (c.platform case final AndroidWebViewController android) android.setUseWideViewPort(true);
+    return c;
+  }
+
+  WebViewController _baseWeb(Uri uri) => WebViewController()
     ..setJavaScriptMode(JavaScriptMode.unrestricted) // 공식 페이지 · 유튜브는 스크립트가 있어야 글 · 영상이 보인다
     ..setNavigationDelegate(
       NavigationDelegate(
@@ -188,15 +199,17 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
         children: [
           _TopBar(item: a, onBack: () => Navigator.of(context).maybePop()), // J-1
           if (web != null)
-            SizedBox(
-              height: 2,
-              child: _progress < 1 ? LinearProgressIndicator(value: _progress, minHeight: 2) : null,
-            )
+            SizedBox(height: 2, child: _progress < 1 ? LinearProgressIndicator(value: _progress, minHeight: 2) : null)
           else
             const Divider(height: 1),
           Expanded(
             child: web != null
-                ? WebViewWidget(controller: web) // J-2 P02
+                ? WebViewWidget(
+                    // J-2 P02 원문 위의 손가락은 전부 원문이 받는다 (위아래 스크롤 · 확대가 끊기지 않게).
+                    // 예고 넘기기(J-6)는 위 띠 · 아래 띠에서 좌우로
+                    controller: web,
+                    gestureRecognizers: {Factory<OneSequenceGestureRecognizer>(EagerGestureRecognizer.new)},
+                  )
                 : _Summary(item: a, failed: _failed && _uri != null), // J-2b P09
           ),
           _BottomBar(
@@ -406,9 +419,7 @@ class _BottomBar extends StatelessWidget {
                       onPressed: onAbout,
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size.fromHeight(44),
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(Gp.radius)),
-                        ),
+                        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(Gp.radius))),
                       ),
                       icon: const Icon(Icons.info_outline, size: Gp.iS),
                       label: Text(n > 0 ? '이 예고 · 상품 $n' : '이 예고'),

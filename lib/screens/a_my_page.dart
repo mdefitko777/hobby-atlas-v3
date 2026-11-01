@@ -6,6 +6,7 @@
 // │ A-22 │ _LikedSoon                         │ 좋아요 중 날짜가 다가오는 것 (PB 마감 · 발매) │ P01     │
 // │ A-23 │ _OwnedRow                          │ 최근 산 것 (가로 줄)                     │ P08           │
 // │ A-24 │ _SpecialFeed                       │ 특별 관심 친구가 최근 담은 것            │ P01           │
+// │ A-25 │ FindBar (홈 검색창 자리)             │ 내 것에서 찾기 + 필터 → 숫자 · 목록이 같이 좁혀짐 │ P04 · P07 │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 import 'package:flutter/material.dart';
 
@@ -13,6 +14,7 @@ import '../api.dart';
 import '../clock.dart';
 import '../data/catalog.dart';
 import '../data/user_store.dart';
+import '../filter_sheet.dart';
 import '../marks.dart';
 import '../models.dart';
 import '../sync/account.dart';
@@ -22,8 +24,12 @@ import 'd_kit_detail_screen.dart';
 import 'f_collection_screen.dart' show CollectionJump;
 
 class MyPageView extends StatefulWidget {
-  const MyPageView({super.key, required this.loaders, this.onJump});
+  const MyPageView({super.key, required this.loaders, this.onJump, this.query = '', this.filter});
   final Loaders loaders;
+
+  /// A-25 찾기 · 필터 (홈 검색창 자리의 FindBar)
+  final String query;
+  final KitFilter? filter;
 
   /// 숫자 · 머리 아이콘 → 컬렉션 탭 (앱 셸)
   final ValueChanged<CollectionJump>? onJump;
@@ -35,14 +41,18 @@ class MyPageView extends StatefulWidget {
 class _MyPageViewState extends State<MyPageView> {
   @override
   Widget build(BuildContext context) {
-    Marks.of(context); // 좋아요 · 구매함이 바뀌면 다시 그린다
+    final marks = Marks.of(context); // 좋아요 · 구매함이 바뀌면 다시 그린다
     final me = UserStore.instance;
     final cat = Catalog.instance;
+    final f = widget.filter?..statusOf = marks.statusOf;
+    bool hit(Kit k) => kitMatches(k, widget.query) && (f == null || f.matches(k)); // A-25
     final liked = [
-      for (final id in me.idsWith(const {CollectStatus.wanted})) ?cat.byId[id],
+      for (final id in me.idsWith(const {CollectStatus.wanted}))
+        if (cat.byId[id] case final k? when hit(k)) k,
     ];
     final owned = [
-      for (final id in me.idsWith(const {CollectStatus.owned})) ?cat.byId[id],
+      for (final id in me.idsWith(const {CollectStatus.owned}))
+        if (cat.byId[id] case final k? when hit(k)) k,
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

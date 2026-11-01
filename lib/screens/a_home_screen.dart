@@ -24,6 +24,8 @@ import '../channels.dart';
 import '../clock.dart';
 import '../data/catalog.dart';
 import '../data/user_store.dart';
+import '../filter_sheet.dart';
+import '../marks.dart';
 import '../models.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -122,6 +124,27 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
   /// 전체 소식 / My Page
   bool _mine = false;
 
+  /// My Page 안에서 찾기 · 필터 (좋아요 · 구매함에서만)
+  String _mineQuery = '';
+  KitFilter _mineFilter = KitFilter();
+
+  void _setMine(bool v) => setState(() {
+    _mine = v; // STATE: 전체 소식 ↔ My Page (찾기 · 필터는 비운다)
+    _mineQuery = '';
+    _mineFilter = KitFilter();
+  });
+
+  Future<void> _openMineFilter() async {
+    final me = UserStore.instance;
+    final cat = Catalog.instance;
+    final pool = [
+      for (final id in me.idsWith(const {CollectStatus.wanted, CollectStatus.owned})) ?cat.byId[id],
+    ];
+    _mineFilter.statusOf = Marks.read(context).statusOf;
+    final picked = await showFilterSheet(context, kits: pool, initial: _mineFilter);
+    if (picked != null) setState(() => _mineFilter = picked); // STATE: 필터 → My Page 목록
+  }
+
   /// 전체 목록일 때 검색창 = 그 목록 안에서만 찾기 (O-7)
   final _searchCtrl = TextEditingController();
   String _query = '';
@@ -192,21 +215,24 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
           onMyChannelsChanged: widget.onMyChannelsChanged,
         ),
         Expanded(
-          child: FutureBuilder<_HomeData>(
-            future: _future,
-            builder: (context, snap) {
-              if (snap.connectionState != ConnectionState.done) {
-                return const LoadingView(); // A-7 P01
-              }
-              if (snap.hasError) {
-                return ErrorView(
-                  // A-7 P09
-                  message: '${snap.error}',
-                  onRetry: () => setState(reloadScope),
-                );
-              }
-              return _body(snap.data!);
-            },
+          // 내용을 좌우로 밀면 옆 채널 (전체 · 건담 · 베이블레이드 X …)
+          child: channelSwipe(
+            FutureBuilder<_HomeData>(
+              future: _future,
+              builder: (context, snap) {
+                if (snap.connectionState != ConnectionState.done) {
+                  return const LoadingView(); // A-7 P01
+                }
+                if (snap.hasError) {
+                  return ErrorView(
+                    // A-7 P09
+                    message: '${snap.error}',
+                    onRetry: () => setState(reloadScope),
+                  );
+                }
+                return _body(snap.data!);
+              },
+            ),
           ),
         ),
       ],
@@ -216,14 +242,24 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
   Widget _body(_HomeData data) {
     final search = Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-      child: _section == null
+      child: _section == null && _mine
+          ? FindBar(
+              // A-25 My Page 안에서 찾기 + 필터 (컬렉션 · 도감 · 캘린더와 같은 줄)
+              hint: '내 것에서 찾기',
+              padding: EdgeInsets.zero,
+              onQuery: (q) => setState(() => _mineQuery = q),
+              filterCount: _mineFilter.count,
+              onFilter: _openMineFilter,
+              trailing: ViewIconToggle(mine: _mine, onChanged: _setMine),
+            )
+          : _section == null
           ? Row(
               children: [
                 Expanded(
                   child: GpSearchBar(onTap: widget.onOpenSearch, onCamera: widget.onCamera),
                 ), // A-2 P04
                 const SizedBox(width: 6),
-                ViewIconToggle(mine: _mine, onChanged: (v) => setState(() => _mine = v)), // A-10 전체 소식 · My Page
+                ViewIconToggle(mine: _mine, onChanged: _setMine), // A-10 전체 소식 · My Page
               ],
             )
           : GpSearchBar(
@@ -328,7 +364,14 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
         padding: EdgeInsets.only(bottom: navClearance(context)),
         children: [
           search,
-          if (_mine) MyPageView(loaders: widget.loaders, onJump: widget.onJump), // A-20~24
+          if (_mine)
+            MyPageView(
+              // A-20~25
+              loaders: widget.loaders,
+              onJump: widget.onJump,
+              query: _mineQuery,
+              filter: _mineFilter,
+            ),
           if (!_mine && heroes.isNotEmpty)
             _HeroBanner(
               // A-3 떠 있는 카드

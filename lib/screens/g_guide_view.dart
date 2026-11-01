@@ -14,6 +14,7 @@
 // │ G-6  │ 베이 칸 + n/3 · 부품 시트            │ 베이블레이드 X 도감 (부품 3개)          │ P01           │
 // │ G-7  │ 세대 · 작품 카드 + 진행 막대          │ 포켓몬 세대 · Fate 작품 · AC 세대       │ P01           │
 // │ G-8  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 정리 안 된 작품     │ P01 · P09     │
+// │ G-9  │ FindBar (컬렉션 · 작품 도감 위)       │ 도감에서 찾기 + 필터(전체 · 켜진 것 · 아직) │ P04 · P07   │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 작품 카드 → 작품 도감(쌓기) → 기체 시트(덮기) → D 상품 상세(쌓기). 베이 → 부품 시트(덮기).
 //       기체 시트 → 사진 고르기(덮기) → 확인 중(대화 상자) → 토스트.
@@ -21,6 +22,7 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../detail_pane.dart';
+import '../filter_sheet.dart';
 import '../level.dart';
 import '../channels.dart';
 import '../models.dart';
@@ -37,6 +39,8 @@ class GuideView extends StatelessWidget {
     required this.myChannels,
     required this.onPickChannel,
     required this.loaders,
+    this.query = '',
+    this.lit = LitState.any,
   });
 
   final String channel;
@@ -44,16 +48,35 @@ class GuideView extends StatelessWidget {
   final ValueChanged<String> onPickChannel;
   final Loaders loaders;
 
+  /// G-9 찾기 · 필터 (컬렉션의 FindBar)
+  final String query;
+  final LitState lit;
+
   @override
   Widget build(BuildContext context) {
     if (channel == allChannelId) return _ChannelPicker(myChannels: myChannels, onPick: onPickChannel);
+    final find = _Find(query, lit);
     return switch (channel) {
-      'gundam' => _GundamGuide(loaders: loaders),
-      'beyblade' => _BbxGuide(loaders: loaders),
-      _ => _WorldGuide(channel: channel, loaders: loaders),
+      'gundam' => _GundamGuide(loaders: loaders, find: find),
+      'beyblade' => _BbxGuide(loaders: loaders, find: find),
+      _ => _WorldGuide(channel: channel, loaders: loaders, find: find),
     };
   }
 }
+
+/// G-9 이름에 찾는 글자가 있고 · 켜짐 조건에 맞나
+class _Find {
+  const _Find(this.query, this.lit);
+  final String query;
+  final LitState lit;
+
+  bool get active => query.isNotEmpty || lit != LitState.any;
+  bool hit(String name, bool lit) =>
+      (query.isEmpty || name.toLowerCase().contains(query.toLowerCase())) && this.lit.hit(lit);
+}
+
+/// 찾기 · 필터에 맞는 것이 없을 때
+const _noHit = EmptyView(icon: Icons.search_off, message: '이 조건의 칸이 없어요');
 
 /// G-1 '전체'일 때: IP 고르기
 class _ChannelPicker extends StatelessWidget {
@@ -206,8 +229,9 @@ int _cols(double w, double min) => (w / min).floor().clamp(2, 6);
 
 /// G-3 건담 작품 도감
 class _GundamGuide extends StatefulWidget {
-  const _GundamGuide({required this.loaders});
+  const _GundamGuide({required this.loaders, this.find = const _Find('', LitState.any)});
   final Loaders loaders;
+  final _Find find;
 
   @override
   State<_GundamGuide> createState() => _GundamGuideState();
@@ -228,8 +252,12 @@ class _GundamGuideState extends State<_GundamGuide> {
             onRetry: () => setState(() => _future = widget.loaders.guideWorks()),
           );
         }
-        final works = snap.data!;
-        if (works.isEmpty) return const EmptyView(message: '도감 작품이 아직 없어요');
+        if (snap.data!.isEmpty) return const EmptyView(message: '도감 작품이 아직 없어요');
+        final works = [
+          for (final w in snap.data!)
+            if (widget.find.hit(w.name, w.owned > 0)) w,
+        ];
+        if (works.isEmpty) return _noHit;
         final sections = <String, List<GuideWork>>{};
         for (final w in works) {
           (sections[w.section] ??= []).add(w);
@@ -295,6 +323,10 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
   // 이 화면에서 바꾼 상태 (가짜 — 저장하지 않음). 처음 값은 GET 결과에서.
   final Set<String> _liked = {};
   final Set<String> _owned = {};
+
+  /// G-9 이 작품 안에서 찾기 · 필터
+  String _query = '';
+  LitState _lit = LitState.any;
 
   /// 기체 id → 내가 올린 사진. 그 기체가 찍힌 사진일 때만 들어간다
   final Map<String, String> _photos = {};
@@ -460,8 +492,13 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
           if (snap.hasError) {
             return ErrorView(message: '${snap.error}', onRetry: () => setState(() => _future = _load()));
           }
-          final units = snap.data!;
-          if (units.isEmpty) {
+          final all = snap.data!;
+          final find = _Find(_query, _lit);
+          final units = [
+            for (final u in all)
+              if (find.hit(u.name, _tierOf(u) != CellTier.none)) u,
+          ];
+          if (all.isEmpty) {
             return EmptyView(
               // G-8 P09
               icon: Icons.grid_view,
@@ -475,6 +512,17 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
               padding: const EdgeInsets.only(bottom: 32),
               children: [
                 LiveLevelBar(loaders: widget.loaders), // G-4a 수집 레벨 (아바타 옆 Lv 와 같은 막대)
+                FindBar(
+                  // G-9
+                  hint: '${widget.work.name}에서 찾기',
+                  onQuery: (q) => setState(() => _query = q), // STATE: 찾기 → 칸 거르기
+                  filterCount: _lit == LitState.any ? 0 : 1,
+                  onFilter: () async {
+                    final v = await showLitFilterSheet(context, initial: _lit);
+                    if (v != null) setState(() => _lit = v); // STATE: 켜짐 필터 → 칸 거르기
+                  },
+                ),
+                if (units.isEmpty) _noHit,
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: GridView.count(
@@ -874,8 +922,9 @@ class _CheckingDialog extends StatelessWidget {
 
 /// G-6 베이블레이드 X 도감
 class _BbxGuide extends StatefulWidget {
-  const _BbxGuide({required this.loaders});
+  const _BbxGuide({required this.loaders, this.find = const _Find('', LitState.any)});
   final Loaders loaders;
+  final _Find find;
 
   @override
   State<_BbxGuide> createState() => _BbxGuideState();
@@ -893,8 +942,12 @@ class _BbxGuideState extends State<_BbxGuide> {
         if (snap.hasError) {
           return ErrorView(message: '${snap.error}', onRetry: () => setState(() => _future = widget.loaders.bbxTops()));
         }
-        final tops = snap.data!;
-        if (tops.isEmpty) return const EmptyView(message: '베이 도감이 아직 없어요');
+        if (snap.data!.isEmpty) return const EmptyView(message: '베이 도감이 아직 없어요');
+        final tops = [
+          for (final t in snap.data!)
+            if (widget.find.hit(t.name, t.owned > 0)) t,
+        ];
+        if (tops.isEmpty) return _noHit;
         final done = tops.where((t) => t.total > 0 && t.owned >= t.total).length;
         return LayoutBuilder(
           builder: (context, box) => ListView(
@@ -999,9 +1052,10 @@ class _TopSheet extends StatelessWidget {
 
 /// G-7 포켓몬 세대 · Fate 작품 · AC 세대
 class _WorldGuide extends StatefulWidget {
-  const _WorldGuide({required this.channel, required this.loaders});
+  const _WorldGuide({required this.channel, required this.loaders, this.find = const _Find('', LitState.any)});
   final String channel;
   final Loaders loaders;
+  final _Find find;
 
   @override
   State<_WorldGuide> createState() => _WorldGuideState();
@@ -1029,7 +1083,11 @@ class _WorldGuideState extends State<_WorldGuide> {
             onRetry: () => setState(() => _future = widget.loaders.worlds(widget.channel)),
           );
         }
-        final worlds = snap.data!;
+        final worlds = [
+          for (final w in snap.data!)
+            if (widget.find.hit(w.label, w.owned > 0)) w,
+        ];
+        if (worlds.isEmpty && widget.find.active) return _noHit;
         if (worlds.isEmpty) {
           return EmptyView(
             // G-8 P09

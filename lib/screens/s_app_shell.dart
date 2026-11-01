@@ -258,25 +258,18 @@ class _AppShellState extends State<AppShell> {
       onPressed: () => openSettings(context),
       icon: const Icon(Icons.settings_outlined, color: Gp.ink),
     );
-    // S-13 아래로 스크롤하면 탭 바와 함께 아바타 줄도 접힘 (채널 바 · 검색창은 남음) — 내용이 더 보이게
-    final topRow = ClipRect(
-      child: AnimatedAlign(
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
-        alignment: Alignment.bottomCenter,
-        heightFactor: _barShown ? 1 : 0,
-        child: Row(
-          children: [
-            avatar,
-            const SizedBox(width: 6),
-            LevelButton(loaders: widget.loaders),
-            const Spacer(),
-            const UpdateButton(), // 새 빌드가 있을 때만 ⬇
-            bell,
-            gear,
-          ],
-        ),
-      ),
+    // S-13 아바타 줄은 늘 그대로 — 스크롤 중에 접으면 목록 높이가 바뀌어 손가락 아래 내용이 흔들린다.
+    // 아래로 스크롤할 때는 아래 탭 바만 내용 위로 미끄러져 나간다 (_NarrowLayout)
+    final topRow = Row(
+      children: [
+        avatar,
+        const SizedBox(width: 6),
+        LevelButton(loaders: widget.loaders),
+        const Spacer(),
+        const UpdateButton(), // 새 빌드가 있을 때만 ⬇
+        bell,
+        gear,
+      ],
     );
     Widget page(int i) => i == 0
         ? HomeScreen(
