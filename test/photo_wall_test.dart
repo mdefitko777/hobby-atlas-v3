@@ -19,23 +19,13 @@ import 'package:image_picker/image_picker.dart';
 
 import 'support/fake_backend.dart';
 
-const _profile = Profile(
-  name: '나',
-  handle: '',
-  avatarText: '나',
-  tags: [],
-  spendKrw: 0,
-  workspace: '',
-  inviteCode: '',
-  members: [],
-  showcase: [],
-  friends: [],
-  suggested: [],
-);
+const _profile = Profile(name: '나', handle: '', avatarText: '나', tags: [], spendKrw: 0, workspace: '', friends: []);
 
 Kit _kit(String id) => Kit.fromJson({'id': id, 'franchiseId': 'gundam', 'name': '상품 $id', 'line': 'HG', 'image': ''})!;
 
-final _kits = [for (final id in ['k1', 'k2', 'a', 'b']) _kit(id)];
+final _kits = [
+  for (final id in ['k1', 'k2', 'a', 'b']) _kit(id),
+];
 
 final _loaders = Loaders(
   kits: (_) async => _kits,

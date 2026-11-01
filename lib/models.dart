@@ -524,7 +524,7 @@ class Announcement {
   }
 }
 
-/// 내 정보 (가짜 계정 — 실제 로그인 없음)
+/// 내 정보 — 이름 · 아이디 · 친구는 계정에서, 숫자는 기기 기록에서 (lib/data/derive/profile.dart)
 class Profile {
   const Profile({
     required this.name,
@@ -533,11 +533,7 @@ class Profile {
     required this.tags,
     required this.spendKrw,
     required this.workspace,
-    required this.inviteCode,
-    required this.members,
-    required this.showcase,
     required this.friends,
-    required this.suggested,
   });
 
   final String name;
@@ -546,33 +542,13 @@ class Profile {
   final List<String> tags;
   final int spendKrw;
   final String workspace;
-  final String inviteCode;
-  final List<Member> members;
-
-  /// 사진 벽 (나 + 친구). [ShowcasePhoto.owner] = 올린 사람 아이디
-  final List<ShowcasePhoto> showcase;
 
   /// 친구 목록 (친구 서랍 · 친구 프로필)
   final List<Member> friends;
 
-  /// 내 게시물 (= 내 사진 인증 수)
-  List<ShowcasePhoto> get myPosts => [
-    for (final s in showcase)
-      if (s.owner == handle) s,
-  ];
-
-  /// 공유 공간 멤버 → 친구 목록의 자세한 정보(좋아요 · 구매함 id 등)
-  Member friendOf(Member m) => friends.where((f) => f.handle == m.handle).firstOrNull ?? m;
-
-  /// 알 수도 있는 친구 (이름, 아이디, 함께 아는 친구 수)
-  final List<({String name, String handle, int mutual})> suggested;
-
   static Profile? fromJson(Object? json) {
     if (json is! Map<String, Object?>) return null;
-    final members = json['members'];
-    final showcase = json['showcase'];
     final friends = json['friends'];
-    final suggested = json['suggested'];
     return Profile(
       name: jStr(json['name']),
       handle: jStr(json['handle']),
@@ -580,31 +556,9 @@ class Profile {
       tags: _strs(json['tags']),
       spendKrw: _i(json, 'spendKrw'),
       workspace: jStr(json['workspace']),
-      inviteCode: jStr(json['inviteCode']),
-      members: [
-        if (members is List)
-          for (final m in members.whereType<Map<String, Object?>>()) Member.fromJson(m),
-      ],
       friends: [
         if (friends is List)
           for (final m in friends.whereType<Map<String, Object?>>()) Member.fromJson(m),
-      ],
-      suggested: [
-        if (suggested is List)
-          for (final m in suggested.whereType<Map<String, Object?>>())
-            (name: jStr(m['name']), handle: jStr(m['handle']), mutual: _i(m, 'mutual')),
-      ],
-      showcase: [
-        if (showcase is List)
-          for (final m in showcase.whereType<Map<String, Object?>>())
-            ShowcasePhoto(
-              id: jStr(m['id']),
-              owner: jStr(m['owner']),
-              image: jStr(m['image']),
-              unit: jStr(m['unit']),
-              work: jStr(m['work']),
-              watermark: _b(m, 'watermark'),
-            ),
       ],
     );
   }
@@ -672,27 +626,6 @@ class Member {
 
   /// 작품 id → 이 친구가 모은 칸 수
   final Map<String, int> guide;
-}
-
-/// 사진 벽 한 장 — 도감에서 인증한 기체와 이어져 있다
-class ShowcasePhoto {
-  const ShowcasePhoto({
-    required this.id,
-    required this.owner,
-    required this.image,
-    required this.unit,
-    required this.work,
-    required this.watermark,
-  });
-
-  final String id;
-  final String owner;
-  final String image;
-  final String unit;
-  final String work;
-
-  /// 다른 사람이 저장할 때 오른쪽 아래 "HA · @아이디" 를 넣을지
-  final bool watermark;
 }
 
 /// 알림 종류 — 탭 묶음: 상품(발매 · 예약 · 시세) · 예고 · 친구(활동 · 요청)

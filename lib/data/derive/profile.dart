@@ -11,14 +11,10 @@ Future<Profile> deriveProfile() async {
     tags: List.of(_me.profileTags), // 내 정보 화면은 UserStore · 계정에서 바로 읽는다
     spendKrw: _me.spendKrw,
     workspace: a.sync.workspace?.name ?? '',
-    inviteCode: '',
-    members: const [],
-    showcase: const [],
     friends: [
       for (final f in a.signedIn ? a.friends.friends : const <PublicProfile>[])
         friendMemberOf(f, a.friends.collections[f.handle]),
     ],
-    suggested: const [],
   );
 }
 

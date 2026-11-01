@@ -1,9 +1,6 @@
 // 짧은 알림(토스트) · 목록 아래 여백
 import 'package:flutter/material.dart';
 
-/// 아직 만들지 않은 화면으로 가는 자리 — 같은 안내 문구로 통일
-void showSoon(BuildContext context, [String what = '상품 상세']) => showToast(context, '$what 화면은 다음 단계에서 만들어요');
-
 /// 짧은 알림(토스트) — 흰 바탕 · 검정 글자, 2.5초 뒤 사라진다. [onUndo]가 있으면 "되돌리기" (P03)
 void showToast(BuildContext context, String message, {VoidCallback? onUndo}) {
   ScaffoldMessenger.of(context)

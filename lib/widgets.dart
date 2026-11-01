@@ -12,7 +12,7 @@
 //   sheets        showPickSheet · SquareSegments · CheckGrid · ExpandRow
 //   kit_filter_sheet · guide_filter_sheet  상품 · 도감 필터 시트 (규칙은 lib/logic/)
 //   tier_cell     CellTier · tierFrame · cellImage · TierCell (도감 칸 한 벌)
-//   feedback      showToast · showSoon · navClearance
+//   feedback      showToast · navClearance
 // 숫자 · 날짜 글자(lib/format.dart)도 같이 내보낸다.
 export 'format.dart';
 export 'widgets/buttons.dart';
