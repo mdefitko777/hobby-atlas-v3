@@ -20,6 +20,8 @@ const auxFiles = [
   'gget-kit-map.json',
   'gget-series-sections.json',
   'bbx-database.json',
+  // 합쳐진 · 빠진 kit_id (Gunpula 정리 때 생김) — 저장된 기록을 남은 상품으로 옮긴다
+  'kit-aliases.json',
 ];
 
 /// `./assets/…` · `../app/assets/…` 처럼 Gunpula 웹앱 기준 상대 경로 → 전체 주소

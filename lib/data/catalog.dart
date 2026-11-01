@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import '../models.dart';
 import 'blob_store.dart';
 import 'gunpula.dart';
+import 'user_store.dart';
 
 enum CatalogPhase { empty, loading, ready, error }
 
@@ -203,6 +204,32 @@ class Catalog extends ChangeNotifier {
     byId = {for (final k in list) k.id: k};
     phase = CatalogPhase.ready;
     error = '';
+    _applyAliases().ignore();
+  }
+
+  /// 합쳐진 kit_id → 남은 kit_id (data/kit-aliases.json). 옛 id 로도 찾히게 하고, 내 기록을 옮긴다
+  Map<String, String> aliases = const {};
+
+  Future<void> _applyAliases() async {
+    final raw = await aux('kit-aliases.json');
+    final m = raw is Map<String, Object?> ? raw['aliases'] : null;
+    if (m is! Map<String, Object?> || m.isEmpty) return;
+    String resolve(String id) {
+      var cur = id;
+      for (var i = 0; i < 8 && m[cur] is String; i++) {
+        cur = m[cur]! as String; // a → b → c 도 끝까지
+      }
+      return cur;
+    }
+
+    final map = {for (final k in m.keys) k: resolve(k)};
+    aliases = map;
+    byId = {
+      ...byId,
+      for (final e in map.entries)
+        if (!byId.containsKey(e.key) && byId[e.value] != null) e.key: byId[e.value]!,
+    };
+    UserStore.instance.applyAliases(map);
   }
 
   static const _label = {

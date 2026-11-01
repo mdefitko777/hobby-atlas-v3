@@ -220,6 +220,20 @@ class UserStore extends ChangeNotifier {
     _changed(shared: true);
   }
 
+  /// Gunpula 가 합친 상품: 옛 id 의 기록을 남은 id 로 옮기고, 옛 id 는 '지움'으로 남긴다 (동기화 때 되살아나지 않게)
+  void applyAliases(Map<String, String> aliases) {
+    var moved = false;
+    for (final e in aliases.entries) {
+      final old = _items[e.key];
+      if (old == null || old['status'] == 'deleted' || e.key == e.value) continue;
+      final cur = _items[e.value];
+      if (cur == null || _str(cur['updated_at']).compareTo(_str(old['updated_at'])) < 0) _items[e.value] = {...old};
+      _items[e.key] = {...old, 'status': 'deleted', 'updated_at': _now(), 'updated_by': member};
+      moved = true;
+    }
+    if (moved) _changed(shared: true);
+  }
+
   /// 수량 · 산 값 · 보관 장소 · 메모 (null 이면 지움)
   void setDetails(String kitId, {int? quantity, int? purchasePrice, String? storage, String? note}) {
     final old = _items[kitId];
