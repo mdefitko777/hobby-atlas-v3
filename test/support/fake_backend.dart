@@ -113,6 +113,16 @@ class FakeServer implements RpcClient {
   /// 사진 벽 (docs/supabase-v3-photos.sql): 내가 등록한 사진 id → put_photo 인자
   final Map<String, Map<String, Object?>> myPhotos = {};
 
+  /// get_my_photos 의 path 앞부분 (= FakeAuth 의 userId)
+  String uid = 'uid:me@example.com';
+
+  /// 기기 기록 (docs/supabase-v3-sync.sql gunpula_v3_device_state 한 줄)
+  Map<String, Object?> deviceData = {};
+  int deviceRevision = 0;
+
+  /// 다른 기기가 기기 기록을 먼저 저장한 것처럼: save_device_state 직전에 하나씩 꺼내 적용 (revision +1 → 40001)
+  final List<void Function(Map<String, Object?> data)> otherDeviceStateWrites = [];
+
   /// 친구 @아이디 → 그 친구가 보이기로 둔 사진 (id · path · kit_id …) · 태그
   final Map<String, List<Map<String, Object?>>> friendPhotos = {};
   final Map<String, List<String>> friendTags = {};
@@ -238,6 +248,35 @@ class FakeServer implements RpcClient {
       case 'gunpula_v3_delete_photo':
         myPhotos.remove('${p['p_photo_id']}');
         return {'id': p['p_photo_id']};
+      case 'gunpula_v3_get_device_state':
+        return roundTrip({'data': deviceData, 'revision': deviceRevision, 'updated_at': '2026-11-01T00:00:00Z'});
+      case 'gunpula_v3_save_device_state':
+        if (otherDeviceStateWrites.isNotEmpty) {
+          otherDeviceStateWrites.removeAt(0)(deviceData);
+          deviceRevision++;
+        }
+        final data = p['p_data'];
+        if (data is! Map<String, Object?>) throw const RpcException('22023', 'gunpula bad device state');
+        if (jsonEncode(data).length > 1048576) throw const RpcException('54000', 'gunpula device state too large');
+        if ((p['p_base_revision'] ?? 0) != deviceRevision) {
+          throw const RpcException('40001', 'gunpula device state changed');
+        }
+        deviceData = data;
+        deviceRevision++;
+        return {'revision': deviceRevision, 'updated_at': '2026-11-01T00:00:00Z'};
+      case 'gunpula_v3_get_my_photos':
+        final rows = [
+          for (final e in myPhotos.entries)
+            {
+              'id': e.key,
+              'path': '$uid/${e.key}.jpg',
+              'kit_id': e.value['p_kit_id'] ?? '',
+              'unit_id': e.value['p_unit_id'] ?? '',
+              'watermark': e.value['p_watermark'] != false,
+              'created_at': e.value['p_created_at'] ?? '2026-11-01T00:00:00Z',
+            },
+        ]..sort((a, b) => '${b['created_at']}'.compareTo('${a['created_at']}'));
+        return roundTrip(rows);
       case 'gunpula_v3_get_friend_wall':
         final h = '${p['p_handle']}';
         if (!users.containsKey(h)) throw const RpcException('22023', 'gunpula user not found');

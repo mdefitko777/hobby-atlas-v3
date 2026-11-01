@@ -17,6 +17,7 @@
 // │ F-10 │ 🗑 아이콘(개수 배지) → 바텀 시트      │ 휴지통: 지운 상품 복원 (기기 저장 · 30일)  │ P03 · P05     │
 // │ F-11 │ jumpTick (내 정보 숫자에서)          │ 좋아요 · 구매함 · 도감으로 바로 이동       │ P07           │
 // │ F-12 │ FindBar (탭 아래)                   │ 이 탭 · 도감에서 찾기 + 필터(도감 = GuideFilterSheet) │ P04 · P07 │
+// │ F-13 │ 위 줄 ? (S-19, collectionHelp)      │ 목록 · 도감 · 휴지통 · 편집 + 도감 칸 단계 │ P10 · P01     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 줄 → D 상품 상세(쌓기). 빈 상태 "검색하러 가기" → 검색 탭(옆으로).
 // 현행 앱 문제: 컬렉션 화면에 빨간 "전체 삭제"가 늘 보임(실수 위험) · 도감이 따로 떨어진 화면
@@ -27,6 +28,7 @@ import '../api.dart';
 import '../logic/build_status.dart';
 import '../logic/collection_rules.dart';
 import '../logic/preorder.dart';
+import '../level.dart' show tierHelpItems;
 import '../marks.dart';
 import '../channels.dart';
 import '../data/catalog.dart';
@@ -712,3 +714,21 @@ class _TopRow extends StatelessWidget {
     );
   }
 }
+
+/// F-13 ? 도움말 (위 줄 ? 의 "컬렉션" 묶음 — s_app_shell.dart). 도감 칸 단계는 lib/level.dart 와 같은 그림
+List<HelpItem> collectionHelp() => [
+  const HelpItem(Icons.view_agenda_outlined, '목록'),
+  const HelpItem(Icons.auto_awesome_mosaic_outlined, '도감'),
+  const HelpItem(Icons.tune, '필터'),
+  const HelpItem(Icons.delete_outline, '휴지통 (30일 동안 되살리기)'),
+  const HelpItem.widget(
+    Text(
+      '편집',
+      style: TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w600),
+    ),
+    '골라서 지우기',
+  ),
+  const HelpItem(Icons.build_outlined, '베이 조합 만들기 (베이 도감)'),
+  const HelpItem.group('도감 칸'),
+  ...tierHelpItems(),
+];

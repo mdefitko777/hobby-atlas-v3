@@ -326,7 +326,7 @@ class _PhotoViewScreenState extends State<PhotoViewScreen> {
     if (_saving) return;
     setState(() => _saving = true);
     try {
-      final src = widget.friend != null ? await _friendBytes! : await PhotoFiles.instance.read(_photo!.file);
+      final src = widget.friend != null ? await _friendBytes! : await PhotoFiles.instance.readOrFetch(_photo!.file);
       if (src == null) throw StateError('사진 파일이 없어요');
       final out = watermark ? await composeWatermark(src, mark) : src;
       final id = widget.mine ?? widget.friend!.id;

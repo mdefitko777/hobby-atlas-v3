@@ -21,6 +21,7 @@
 // │ I-11 │ 친구 숫자 → L 친구 컬렉션            │ 친구의 좋아요 · 구매함 · 도감 비교(+사진 수) │ P07           │
 // │ I-12 │ OutlinedButton → 확인 대화상자        │ 친구 끊기                              │ P05           │
 // │ I-8  │ LoadingView / ErrorView             │ 불러오는 중 · 오류                      │ P01 · P09     │
+// │ I-14 │ AppBar 오른쪽 ? (HelpButton)       │ 숫자 · 편집 · 친구 · 사진 벽 아이콘 뜻     │ P10           │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 친구 서랍(M) 머리 아바타 → 쌓기(push, 오른쪽에서 · 넓은 화면은 오른쪽 칸). 숫자 → 닫고 컬렉션 탭(옆으로).
 //       친구 → 쌓기. 사진 → 쌓기(T). 편집 · 태그 · 사진 넣기 · 아바타 · 배경 · 공개 범위 → 덮기(바텀 시트).
@@ -281,18 +282,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 style: TextStyle(fontSize: Gp.t19, fontWeight: FontWeight.w600),
               )
             : null,
-        actions: friend == null
-            ? [
-                IconButton(
-                  // I-14 공유 카드
-                  key: const ValueKey('profile-share'),
-                  tooltip: '공유 카드',
-                  onPressed: () => openCollectionShare(context, loaders: widget.loaders),
-                  icon: const Icon(Icons.ios_share, size: Gp.iL),
-                ),
-                const SizedBox(width: 4),
-              ]
-            : null,
+        actions: [
+          if (friend == null)
+            IconButton(
+              // I-14 공유 카드
+              key: const ValueKey('profile-share'),
+              tooltip: '공유 카드',
+              onPressed: () => openCollectionShare(context, loaders: widget.loaders),
+              icon: const Icon(Icons.ios_share, size: Gp.iL),
+            ),
+          // I-15 ?
+          HelpButton(title: friend == null ? '내 정보' : '친구', items: friend == null ? profileHelp : friendProfileHelp),
+          const SizedBox(width: 6),
+        ],
       ),
       body: FutureBuilder<_ProfileData>(
         future: _future,
@@ -844,3 +846,28 @@ class _TagSheetState extends State<_TagSheet> {
     );
   }
 }
+
+/// I-14 ? 도움말 — 내 정보
+const profileHelp = <HelpItem>[
+  HelpItem(Icons.edit_outlined, '프로필 편집 (아바타 · 배경 · 이름 · 아이디 · 태그)'),
+  HelpItem.widget(LikedIcon(size: Gp.iL), '좋아요 수 → 컬렉션'),
+  HelpItem.widget(OwnedIcon(size: Gp.iL), '구매함 수 → 컬렉션'),
+  HelpItem(Icons.calendar_month_outlined, '이번 달 지출'),
+  HelpItem(Icons.account_balance_wallet_outlined, '총 지출'),
+  HelpItem(Icons.person_add_alt_1_outlined, '아이디로 친구 추가'),
+  HelpItem(Icons.mail_outline, '받은 친구 요청'),
+  HelpItem(Icons.content_copy_rounded, '내 아이디 복사'),
+  HelpItem(Icons.add_a_photo_outlined, '사진 넣기 (사진 벽)'),
+  HelpItem(Icons.group_outlined, '사진 공개 범위'),
+  HelpItem(Icons.lock_outline, '사진 공개 끔'),
+  HelpItem(Icons.warning_amber_rounded, '올리지 못한 사진 있음', color: Gp.star),
+];
+
+/// I-14 ? 도움말 — 친구 보기
+const friendProfileHelp = <HelpItem>[
+  HelpItem.widget(LikedIcon(size: Gp.iL), '친구의 좋아요'),
+  HelpItem.widget(OwnedIcon(size: Gp.iL), '친구의 구매함'),
+  HelpItem(Icons.auto_awesome_mosaic_outlined, '도감 비교'),
+  HelpItem(Icons.photo_library_outlined, '친구가 보이기로 둔 사진'),
+  HelpItem(Icons.person_remove_outlined, '친구 끊기'),
+];

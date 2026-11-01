@@ -7,6 +7,7 @@
 // │ S-16 │ MarksHost · PaneHost  │ 좋아요 · 구매함 / 오른쪽 칸에 연 것 (앱 전체) │ P04 · P01 │
 // │ S-17 │ AccountScope          │ 로그인 · 동기화 · 친구 (앱 전체)            │ P01           │
 // │ S-18 │ NotifyScope           │ 알림함 · 안 읽은 수 · 알림 설정 (앱 전체)    │ P01           │
+// │ S-20 │ FirstRunGate          │ 처음 설치: 데이터 받는 화면(W) → 앱 셸        │ P01           │
 // └────────────────────────────────────────────────────────────────────────────┘
 import 'package:flutter/material.dart';
 
@@ -16,6 +17,7 @@ import 'detail_pane.dart';
 import 'marks.dart';
 import 'notifications/notify_store.dart';
 import 'screens/s_app_shell.dart';
+import 'screens/w_first_run_screen.dart';
 import 'share/share_intake.dart';
 import 'sync/account.dart';
 import 'sync/supabase_backend.dart';
@@ -55,10 +57,11 @@ class HobbyAtlasApp extends StatelessWidget {
           child: MarksHost(child: PaneHost(child: child!)),
         ),
       ),
-      // 새 데이터를 받으면 화면들이 다시 불러오도록 셸을 새로 만든다 (하루 한 번쯤)
-      home: ListenableBuilder(
-        listenable: Catalog.instance,
-        builder: (context, _) => AppShell(key: ValueKey(Catalog.instance.version)),
+      // 새 데이터를 받으면 화면들이 다시 불러오도록 셸을 새로 만든다 (하루 한 번쯤).
+      // 처음 설치(캐시 없음)면 셸 대신 받는 화면 (V)
+      home: FirstRunGate(
+        catalog: Catalog.instance,
+        builder: (context) => AppShell(key: ValueKey(Catalog.instance.version)),
       ),
     );
   }

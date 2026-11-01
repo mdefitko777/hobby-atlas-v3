@@ -11,7 +11,7 @@
 // 오프라인이면 바꾼 것은 기기에 남고(cloudDirty), 다음 번에 다시 올린다.
 // 기기의 기록은 처음 로그인한 계정 것이다(UserStore.syncedAccount). 로그아웃 뒤 다른 계정으로 로그인하면
 // 앞 계정 기록을 새 계정에 합치지 않고 비운 뒤 새 계정 것을 받는다 (형 폰에서 동생이 로그인해도 섞이지 않게).
-// Hobby Atlas 에만 있는 값(베이 부품 · 도감 손으로 켜기)은 아직 기기에만 둔다.
+// Hobby Atlas 에만 있는 값(베이 부품 · 도감 손으로 켜기 …)은 payload 에 넣지 않는다 — device_state_sync.dart 가 따로 맞춘다.
 library;
 
 import 'dart:async';
@@ -146,6 +146,9 @@ class SyncService extends ChangeNotifier with WidgetsBindingObserver {
     _onAuth();
   }
 
+  /// 앱으로 돌아올 때 같이 할 일 (Account 가 기기 기록 동기화 · 사진 되찾기를 건다)
+  VoidCallback? onResume;
+
   /// 앱 앞/뒤 전환을 듣는다 (main.dart 에서만 — 테스트는 직접 부른다)
   void attachLifecycle() => WidgetsBinding.instance.addObserver(this);
 
@@ -157,6 +160,7 @@ class SyncService extends ChangeNotifier with WidgetsBindingObserver {
         if (auth.signedIn) {
           syncNow(reason: 'resume');
           _startPoll();
+          onResume?.call();
         }
       case AppLifecycleState.paused || AppLifecycleState.hidden || AppLifecycleState.detached:
         _foreground = false;

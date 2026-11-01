@@ -141,6 +141,9 @@ void main() {
       expect(p.price, 8800);
       expect(p.arrival, '2026-12');
       expect(find.textContaining('동네 샵 · 8,800원 · 2026.12 도착 · 미결제'), findsOneWidget);
+      // 상세 위 뒤로 · ? 버튼은 내용 위에 떠 있다 → 화면 가운데로 굴린 뒤 누른다
+      await Scrollable.ensureVisible(tester.element(find.byKey(const ValueKey('preorder-arrived'))), alignment: 0.5);
+      await _settle(tester);
       await tester.tap(find.byKey(const ValueKey('preorder-arrived')));
       await _settle(tester);
       await tester.tap(find.byKey(const ValueKey('arrived-to-owned')));

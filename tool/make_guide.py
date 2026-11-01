@@ -31,6 +31,7 @@ SCREENS = [
     ('N', '알림', ['lib/screens/n_notifications_screen.dart']),
     ('K', '설정', ['lib/screens/k_settings_screen.dart']),
     ('V', '공유 카드 (내 컬렉션 · 도감 진행 그림)', ['lib/screens/v_share_sheet.dart']),
+    ('W', '처음 데이터 받기', ['lib/screens/w_first_run_screen.dart']),
 ]
 
 

@@ -1,8 +1,11 @@
 // Gunpula 상품 카탈로그 — 기기 캐시를 먼저 보여 주고, 뒤에서 GitHub Pages 의 새 데이터를 받는다.
 //   1) split/manifest.json (176 B) 의 updated_at · total 이 같으면 아무것도 받지 않는다
 //   2) 다르면 보조 파일(auxFiles) → split/kits-<채널>.json 5개를 받아 compute() 에서 가벼운 모양으로 바꿔 저장
+// 처음 설치(캐시 없음)면 [firstDownload] — 앱은 셸 대신 받는 화면(lib/screens/w_first_run_screen.dart)을 보인다.
+//   진행 = 받은 파일 [filesDone] / [filesTotal] · 받은 바이트 [bytesReceived]
 import '../format.dart';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -36,6 +39,20 @@ class Catalog extends ChangeNotifier {
   /// 첫 다운로드 중 진행 문구 ("건담 받는 중 …")
   String progress = '';
 
+  /// 처음 설치라 캐시가 없어 받는 중 (실패해도 true — 받는 화면에서 다시 시도)
+  bool firstDownload = false;
+
+  /// 첫 다운로드: 받은 파일 수 / 받을 파일 수 (manifest + 보조 파일 + 채널별 상품)
+  int filesDone = 0;
+  int get filesTotal => 1 + auxFiles.length + franchiseIds.length;
+
+  /// 첫 다운로드: 지금까지 받은 바이트
+  int bytesReceived = 0;
+
+  /// 테스트: 가짜 인터넷 (package:http/testing.dart MockClient)
+  @visibleForTesting
+  static http.Client? debugClient;
+
   /// 새 데이터를 받을 때마다 +1 (앱 셸이 화면을 다시 불러온다)
   int version = 0;
 
@@ -68,6 +85,10 @@ class Catalog extends ChangeNotifier {
   Future<void> _start() async {
     await _loadCache();
     if (kits.isEmpty) {
+      firstDownload = true;
+      filesDone = 0;
+      bytesReceived = 0;
+      notifyListeners();
       await refresh();
     } else {
       // 캐시로 먼저 보여 주고 뒤에서 새로 받는다
@@ -98,6 +119,21 @@ class Catalog extends ChangeNotifier {
       ..clear()
       ..addAll(aux);
     _rebuild();
+  }
+
+  /// 받는 화면의 "다시 시도"
+  Future<void> retry() => ensureLoaded().catchError((Object _) {});
+
+  /// 테스트: 받는 화면 상태를 손으로
+  @visibleForTesting
+  void debugFirstRun({required bool on, int files = 0, int bytes = 0, String step = '', String error = ''}) {
+    firstDownload = on;
+    filesDone = files;
+    bytesReceived = bytes;
+    progress = step;
+    this.error = error;
+    phase = error.isEmpty ? CatalogPhase.loading : CatalogPhase.error;
+    notifyListeners();
   }
 
   /// 보조 파일(JSON) — 필요한 화면이 처음 부를 때 푼다
@@ -134,8 +170,9 @@ class Catalog extends ChangeNotifier {
       notifyListeners();
     }
     try {
-      final mText = await _get('data/split/manifest.json');
+      final mText = await _get('data/split/manifest.json', count: true);
       if (mText == null) throw const CatalogException('인터넷에 연결하지 못했어요.');
+      _fileDone();
       final m = jsonDecode(mText) as Map<String, Object?>;
       final same = m['updated_at'] == manifest['updated_at'] && m['total'] == manifest['total'];
       if (same && kits.isNotEmpty && !force) return false;
@@ -143,14 +180,16 @@ class Catalog extends ChangeNotifier {
       final aux = <String, String>{};
       for (final f in auxFiles) {
         _step('보조 데이터 $f');
-        final t = await _get('data/$f');
+        final t = await _get('data/$f', count: true);
         if (t != null) aux[f] = t;
+        _fileDone();
       }
       final slim = <Map<String, Object?>>[];
       for (final f in franchiseIds) {
         _step('${_label[f]} 상품 받는 중');
-        final raw = await _get('data/split/kits-$f.json');
+        final raw = await _get('data/split/kits-$f.json', count: true);
         if (raw == null) throw CatalogException('${_label[f]} 상품을 받지 못했어요.');
+        _fileDone();
         slim.addAll(
           await compute(mapKitsJob, {
             'raw': raw,
@@ -193,6 +232,26 @@ class Catalog extends ChangeNotifier {
     }
   }
 
+  void _fileDone() {
+    if (!firstDownload || kits.isNotEmpty) return;
+    filesDone++;
+    notifyListeners();
+  }
+
+  final _bytesTick = Stopwatch();
+
+  void _addBytes(int n) {
+    if (!firstDownload || kits.isNotEmpty) return;
+    bytesReceived += n;
+    // 너무 자주 다시 그리지 않게 (0.1초에 한 번쯤)
+    if (!_bytesTick.isRunning || _bytesTick.elapsedMilliseconds > 100) {
+      _bytesTick
+        ..reset()
+        ..start();
+      notifyListeners();
+    }
+  }
+
   void _step(String s) {
     if (kits.isNotEmpty) return; // 뒤에서 받는 중엔 문구를 바꾸지 않는다
     progress = s;
@@ -221,6 +280,7 @@ class Catalog extends ChangeNotifier {
     kits = list;
     byId = {for (final k in list) k.id: k};
     phase = CatalogPhase.ready;
+    if (list.isNotEmpty) firstDownload = false;
     error = '';
     _applyAliases().ignore();
     _loadRates().ignore();
@@ -290,14 +350,27 @@ class Catalog extends ChangeNotifier {
     'fate': 'Fate',
   };
 
-  static Future<String?> _get(String path) async {
+  /// 받기 — Pages 가 안 되면 raw.githubusercontent. [count] = 첫 다운로드 바이트를 센다
+  Future<String?> _get(String path, {bool count = false}) async {
     for (final base in [gunpulaBase, gunpulaRawBase]) {
+      final client = debugClient ?? http.Client();
       try {
-        final res = await http.get(Uri.parse('$base$path')).timeout(const Duration(seconds: 60));
-        if (res.statusCode == 200) return utf8.decode(res.bodyBytes);
+        final res = await client.send(http.Request('GET', Uri.parse('$base$path'))).timeout(const Duration(seconds: 60));
+        if (res.statusCode == 200) {
+          final bytes = BytesBuilder(copy: false);
+          // 한 조각을 60초 넘게 못 받으면 멈춘 것으로 본다 (큰 파일도 천천히 오는 동안은 기다린다)
+          await for (final chunk in res.stream.timeout(const Duration(seconds: 60))) {
+            bytes.add(chunk);
+            if (count) _addBytes(chunk.length);
+          }
+          return utf8.decode(bytes.takeBytes());
+        }
+        await res.stream.drain<void>();
         debugPrint('[catalog] $base$path → HTTP ${res.statusCode}');
       } on Exception catch (e) {
         debugPrint('[catalog] $base$path → $e');
+      } finally {
+        if (debugClient == null) client.close();
       }
     }
     return null;

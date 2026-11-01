@@ -11,6 +11,7 @@
 // │ S-7  │ 내 채널 목록(UserStore 에 저장)    │ 네 화면이 같이 쓰는 내 IP 채널         │ P04           │
 // │ S-9  │ 오른쪽 위 🔔 (안 읽은 수)          │ 알림 열기 · 휴대폰 알림 누르면 이동     │ P01           │
 // │ S-10 │ 오른쪽 위 ⚙                     │ 설정 열기 (K)                          │ P04 · P06     │
+// │ S-19 │ 오른쪽 위 ? (HelpButton)          │ 위 줄 + 이 탭 아이콘 뜻 한 줄씩           │ P10           │
 // │ S-11 │ Drawer (아바타 · 홈 가장자리 밀기)     │ 친구 서랍 (M)                          │ P07           │
 // │ S-13 │ AnimatedAlign(heightFactor) 아바타 줄 │ 아래로 스크롤하면 위 줄도 접힘          │ P08           │
 // │ S-12 │ Row(왼쪽 폰 화면 | 오른쪽 Navigator)│ 반반 화면 (폴드 · 태블릿 · 넓은 창 ≥700dp) │ 적응형      │
@@ -74,6 +75,16 @@ const _tabs = <(IconData, IconData, String)>[
   (Icons.search, Icons.search, '검색'),
   (Icons.calendar_today_outlined, Icons.calendar_today, '캘린더'),
   (Icons.auto_awesome_mosaic_outlined, Icons.auto_awesome_mosaic, '컬렉션'), // 책갈피 리본은 구매함 표시라 겹치지 않게
+];
+
+/// S-19 위 줄 아이콘 뜻 (네 탭 공통)
+const _topRowHelp = <HelpItem>[
+  HelpItem.group('위 줄'),
+  HelpItem(Icons.account_circle_outlined, '친구 · 내 정보'),
+  HelpItem.widget(LevelChip(level: 1, small: true), '수집 레벨'),
+  HelpItem(Icons.system_update_alt, '새 버전 (있을 때만)'),
+  HelpItem(Icons.notifications_none, '알림 · 친구 요청'),
+  HelpItem(Icons.settings_outlined, '설정'),
 ];
 
 class _AppShellState extends State<AppShell> {
@@ -283,6 +294,20 @@ class _AppShellState extends State<AppShell> {
         const UpdateButton(), // 새 빌드가 있을 때만 ⬇
         bell,
         gear,
+        HelpButton(
+          // S-19 ? 위 줄 + 이 탭 아이콘 뜻 (탭마다 내용만 바뀌고 자리는 같다)
+          title: _tabs[_tab].$3,
+          items: [
+            ..._topRowHelp,
+            HelpItem.group(_tabs[_tab].$3),
+            ...switch (_tab) {
+              0 => homeHelp,
+              1 => searchHelp,
+              2 => calendarHelp,
+              _ => collectionHelp(),
+            },
+          ],
+        ),
       ],
     );
     Widget page(int i) => i == 0

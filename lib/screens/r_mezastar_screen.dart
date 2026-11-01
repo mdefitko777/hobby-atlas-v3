@@ -12,6 +12,7 @@
 // │ R-7  │ 필터 시트 (가짐 · 등급 · 타입)        │ 네모 세그먼트 + 네모 체크 칸             │ P04 · P08     │
 // │ R-8  │ TagSearchSection (B 검색 결과 위)    │ 검색 탭에서 태그 · 게임 이름 찾기         │ P07 · P06     │
 // │ R-9  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 맞는 태그 없음       │ P01 · P09     │
+// │ R-10 │ AppBar 오른쪽 ? (HelpButton)       │ 칸 색 · 누르기 · 아이콘 뜻 한 줄씩        │ P10           │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 도감 카드 → R(쌓기) → 태그 시트(덮기). 검색 결과 줄 → 태그 시트(덮기) → R(쌓기).
 // 가짐 = UserStore.tagOwned (기기에만 · 백업 파일에 들어감). 키 = Gunpula atlas 의 인쇄 id · 픽 id.
@@ -376,6 +377,10 @@ class _TagAtlasScreenState extends State<TagAtlasScreen> {
             );
           },
         ),
+        actions: [
+          HelpButton(title: widget.game.label, items: tagHelp()),
+          const SizedBox(width: 6),
+        ], // R-10
       ),
       body: FutureBuilder<TagBook>(
         future: _future,
@@ -465,7 +470,6 @@ class _TagAtlasScreenState extends State<TagAtlasScreen> {
               if (s != null && s.date.isNotEmpty) dateDot(s.date),
               if (s != null && s.local != s.name) s.local,
             ]),
-            trailing: const LevelHelpButton(),
             padding: const EdgeInsets.fromLTRB(16, 14, 4, 8),
           ),
         ),
@@ -886,3 +890,13 @@ class _TagSearchSectionState extends State<TagSearchSection> {
     );
   }
 }
+
+/// R-10 ? 도움말 — 칸 색 (도감 칸과 같은 그림) · 누르기 · 찾기 줄 아이콘
+List<HelpItem> tagHelp() => [
+  HelpItem.widget(tierHelpCell(CellTier.none), '흑백 = 아직'),
+  HelpItem.widget(tierHelpCell(CellTier.owned), '컬러 + 민트 테두리 = 가짐'),
+  const HelpItem(Icons.touch_app_outlined, '누르기 = 가짐 켜고 끄기 · 길게 = 정보'),
+  const HelpItem(Icons.tune, '필터 (가짐 · 등급 · 타입)'),
+  const HelpItem(Icons.grid_view_outlined, '격자로 보기'),
+  const HelpItem(Icons.view_list_outlined, '목록으로 보기'),
+];

@@ -90,6 +90,8 @@ flutter:
     - assets/gp/bbx/
     - assets/gp/parts/
     - assets/gp/ann/
+    # 앱 아이콘 (처음 데이터 받는 화면 — lib/screens/v_first_run_screen.dart)
+    - assets/app_icon.png
     # 계정 · 동기화: Gunpula Supabase 주소 + anon key (공개용 값, lib/sync/supabase_backend.dart)
     - config/supabase.json
 

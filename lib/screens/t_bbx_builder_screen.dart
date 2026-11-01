@@ -17,6 +17,7 @@
 // │ T-8  │ 저장 목록 줄 + ✎ · 🗑 → 토스트       │ 조합 불러오기 · 이름 바꾸기 · 지우기(되돌리기) │ P03 · P05 │
 // │ T-9  │ 덱 판: 세그먼트 + 3칸 + 규칙 줄       │ 3on3 덱 (TT · WBO · 자유) · 겹치는 부품 빨간 테두리 │ P05 · P09 │
 // │ T-10 │ LoadingView / ErrorView / EmptyView │ 부품 받는 중 · 오류 · 저장 · 덱 없음      │ P09           │
+// │ T-11 │ AppBar 오른쪽 ? (HelpButton)       │ 부품 · 규칙 · 저장 · 덱 아이콘 뜻 한 줄씩  │ P10           │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 도감(G-6) → 이 화면(쌓기) → 부품 고르기(아래에서 덮기). 저장 줄 → 만들기 탭(옆으로). 덱 칸 → 조합 고르기(덮기).
 // 나눈 곳 (part): bbx_builder/name_panel · part_picker · stats_panel · saved_decks
@@ -79,7 +80,8 @@ class _BbxBuilderScreenState extends State<BbxBuilderScreen> {
             color: _ownedOnly ? Gp.own : null,
             onTap: () => setState(() => _ownedOnly = !_ownedOnly),
           ),
-          const SizedBox(width: 8),
+          const HelpButton(title: '베이 조합', items: bbxBuilderHelp), // T-11
+          const SizedBox(width: 6),
         ],
       ),
       body: FutureBuilder<BbxBuilderData>(
@@ -306,3 +308,16 @@ class _BbxBuilderScreenState extends State<BbxBuilderScreen> {
     );
   }
 }
+
+/// T-11 ? 도움말
+const bbxBuilderHelp = <HelpItem>[
+  HelpItem(Icons.bookmark_border, '가진 부품만 (고르기 시트도)'),
+  HelpItem(Icons.restart_alt, '새로 만들기'),
+  HelpItem(Icons.link, '붙어 있는 칸 (따로 못 고름)'),
+  HelpItem(Icons.block, '지금 조합과 안 맞음', color: Gp.danger),
+  HelpItem(Icons.check_circle, '규칙에 맞음', color: Gp.own),
+  HelpItem(Icons.bookmark, '내 부품으로 만들 수 있음', color: Gp.own),
+  HelpItem(Icons.edit_outlined, '이름 바꾸기'),
+  HelpItem(Icons.delete_outline, '지우기 (되돌리기 있음)'),
+  HelpItem(Icons.add, '덱 만들기 (3on3)'),
+];

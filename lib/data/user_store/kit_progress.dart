@@ -3,7 +3,7 @@
 //   preorders    {kit_id: {shop?, price?, deposit?, paid, arrival?: YYYY-MM|YYYY-MM-DD, arrived_at?, deleted?: true, updated_at}}
 // 두 섹션 모두 항목마다 updated_at — 기기 사이 동기화는 항목별로 늦은 쪽이 이긴다. 예약을 지우면 deleted 로 남긴다.
 // 수집 기록(items[kit_id])에 칸을 더하지 않는다: 옛 Gunpula 앱이 동기화하면서 모르는 칸을 버릴 수 있다.
-// TODO(sync registry): local_state 섹션 'build_status' · 'preorders' 를 기기 동기화 REGISTRY 에 등록 (v3/batch-a)
+// 계정 동기화: local_state 'build_status' · 'preorders' 는 lib/sync/device_state.dart 의 deviceSections 에 map 으로 등록돼 있다.
 part of '../user_store.dart';
 
 mixin _KitProgress on ChangeNotifier {
