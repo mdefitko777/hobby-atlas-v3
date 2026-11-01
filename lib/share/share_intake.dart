@@ -1,11 +1,11 @@
 // 공유로 받기 (안드로이드 "공유 → Hobby Atlas") — 다른 앱에서 보낸 사진(스크린숏) · 글 · 주소를 받아 둔다.
 // 앱이 꺼져 있다가 공유로 켜진 경우(처음 받은 것) · 켜져 있던 경우(이어서 받는 것) 둘 다 [ShareIntake.incoming] 하나로.
 // 앱 셸(lib/screens/s_app_shell.dart)이 듣다가 사진 · 공유로 찾기(E-15)를 연다.
-// 받는 쪽 안드로이드 설정: AndroidManifest.xml 의 ACTION_SEND / SEND_MULTIPLE intent-filter (image/* · text/plain).
-import 'dart:async';
-
+// 받는 쪽 안드로이드: AndroidManifest.xml 의 ACTION_SEND / SEND_MULTIPLE intent-filter (image/* · text/plain) +
+// MainActivity.kt 가 MethodChannel `hobbyatlas/share` 로 넘긴다 ("initial" = 공유로 켜졌을 때, "shared" = 켜져 있을 때).
+// (receive_sharing_intent 는 1.9 가 compileSdk 37, 1.8 이 JVM 대상 불일치로 빌드가 안 돼 직접 받는다)
 import 'package:flutter/foundation.dart';
-import 'package:receive_sharing_intent/receive_sharing_intent.dart';
+import 'package:flutter/services.dart';
 
 import 'shared_file_io.dart' if (dart.library.js_interop) 'shared_file_web.dart' as impl;
 
@@ -14,7 +14,7 @@ sealed class SharedItem {
   const SharedItem();
 }
 
-/// 사진 (플러그인이 앱 캐시 폴더에 복사해 둔 파일)
+/// 사진 (MainActivity 가 앱 캐시 폴더에 복사해 둔 파일)
 final class SharedImage extends SharedItem {
   const SharedImage(this.path);
   final String path;
@@ -26,18 +26,19 @@ final class SharedText extends SharedItem {
   final String text;
 }
 
-/// 플러그인 결과 → 받은 것 하나 (사진이 먼저 — 여러 장이면 첫 장, 없으면 글 · 주소를 모아서)
-SharedItem? sharedItemFrom(List<SharedMediaFile> files) {
-  for (final f in files) {
-    if (f.type == SharedMediaType.image && f.path.isNotEmpty) return SharedImage(f.path);
-  }
-  final text = <String>{
-    for (final f in files)
-      if (f.type == SharedMediaType.text || f.type == SharedMediaType.url) f.path.trim(),
-    for (final f in files) (f.message ?? '').trim(),
-  }.where((s) => s.isNotEmpty).join('\n');
-  return text.isEmpty ? null : SharedText(text);
+/// MainActivity 가 보낸 것 `{type: image, path}` · `{type: text, text}` → 받은 것 하나 (모르는 모양이면 null)
+SharedItem? sharedItemFrom(Object? raw) {
+  if (raw is! Map) return null;
+  final type = raw['type'];
+  final path = raw['path'];
+  final text = raw['text'];
+  if (type == 'image' && path is String && path.isNotEmpty) return SharedImage(path);
+  if (type == 'text' && text is String && text.trim().isNotEmpty) return SharedText(text.trim());
+  return null;
 }
+
+/// MainActivity 와 이어진 통로 (테스트는 TestDefaultBinaryMessengerBinding 으로 흉내 낸다)
+const shareChannel = MethodChannel('hobbyatlas/share');
 
 /// 받은 사진 파일 → 바이트 (읽은 뒤 캐시의 복사본은 지운다). 테스트는 바꿔 끼운다
 typedef SharedFileReader = Future<Uint8List> Function(String path);
@@ -51,22 +52,30 @@ class ShareIntake {
   /// 아직 열지 않은 공유 (연 쪽이 [take] 로 비운다)
   final incoming = ValueNotifier<SharedItem?>(null);
 
-  StreamSubscription<List<SharedMediaFile>>? _sub;
+  bool _started = false;
 
   /// main() 에서 한 번: 켜져 있는 동안 받는 것 + 공유로 켜졌으면 그 처음 것
   Future<void> start() async {
-    if (kIsWeb || _sub != null) return;
+    if (kIsWeb || _started) return;
+    _started = true;
+    shareChannel.setMethodCallHandler((call) async {
+      if (call.method == 'shared') _put(call.arguments);
+    });
     try {
-      _sub = ReceiveSharingIntent.instance.getMediaStream().listen(_put, onError: (Object _) {});
-      _put(await ReceiveSharingIntent.instance.getInitialMedia());
-      await ReceiveSharingIntent.instance.reset(); // 다시 켤 때 같은 공유를 또 열지 않게
+      _put(await shareChannel.invokeMethod<Object?>('initial'));
     } on Object {
-      // 플러그인이 없는 곳 (테스트 · 데스크톱) — 공유로 받기만 없다
+      // 안드로이드가 아닌 곳 (테스트 · 데스크톱) — 공유로 받기만 없다
     }
   }
 
-  void _put(List<SharedMediaFile> files) {
-    final item = sharedItemFrom(files);
+  @visibleForTesting
+  void debugReset() {
+    _started = false;
+    incoming.value = null;
+  }
+
+  void _put(Object? raw) {
+    final item = sharedItemFrom(raw);
     if (item != null) incoming.value = item;
   }
 

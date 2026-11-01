@@ -3,13 +3,13 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hobby_atlas/data/gunpula.dart';
 import 'package:hobby_atlas/logic/ocr_lookup.dart';
 import 'package:hobby_atlas/logic/url_lookup.dart';
 import 'package:hobby_atlas/models.dart';
 import 'package:hobby_atlas/share/share_intake.dart';
-import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 
 const dataDir = String.fromEnvironment('GUNPULA_DATA');
 
@@ -365,23 +365,25 @@ void main() {
   });
 
   group('공유로 받은 것', () {
-    test('사진이 먼저 (여러 장이면 첫 장), 없으면 글 · 주소', () {
-      final img = sharedItemFrom([
-        SharedMediaFile(path: '/cache/a.png', type: SharedMediaType.image),
-        SharedMediaFile(path: '/cache/b.png', type: SharedMediaType.image),
-      ]);
+    test('MainActivity 가 보낸 모양 → 사진 · 글 (모르는 것은 null)', () {
+      final img = sharedItemFrom({'type': 'image', 'path': '/cache/a.png'});
       expect((img! as SharedImage).path, '/cache/a.png');
-      final text = sharedItemFrom([SharedMediaFile(path: 'HG エアリアル https://p-bandai.jp/item/item-1/', type: SharedMediaType.text)]);
-      expect((text! as SharedText).text, contains('p-bandai'));
-      expect(sharedItemFrom(const []), isNull);
-      expect(sharedItemFrom([SharedMediaFile(path: '/x.mp4', type: SharedMediaType.video)]), isNull);
+      final text = sharedItemFrom({'type': 'text', 'text': ' HG エアリアル https://p-bandai.jp/item/item-1/ '});
+      expect((text! as SharedText).text, startsWith('HG'));
+      expect(sharedItemFrom(null), isNull);
+      expect(sharedItemFrom({'type': 'video', 'path': '/x.mp4'}), isNull);
+      expect(sharedItemFrom({'type': 'text', 'text': '  '}), isNull);
     });
 
-    test('켜져 있을 때 받은 것 · 공유로 켜졌을 때 처음 것 → incoming', () async {
-      ReceiveSharingIntent.setMockValues(
-        initialMedia: [SharedMediaFile(path: 'RG サザビー', type: SharedMediaType.text)],
-        mediaStream: Stream.value([SharedMediaFile(path: '/cache/shot.png', type: SharedMediaType.image)]),
-      );
+    test('공유로 켜졌을 때 처음 것("initial") · 켜져 있을 때 온 것("shared") → incoming', () async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(shareChannel, (call) async {
+        if (call.method == 'initial') return {'type': 'text', 'text': 'RG サザビー'};
+        return null;
+      });
+      addTearDown(() => messenger.setMockMethodCallHandler(shareChannel, null));
+      ShareIntake.instance.debugReset();
       final got = <SharedItem>[];
       void listen() {
         final v = ShareIntake.instance.incoming.value;
@@ -390,7 +392,12 @@ void main() {
 
       ShareIntake.instance.incoming.addListener(listen);
       await ShareIntake.instance.start();
-      await Future<void>.delayed(Duration.zero);
+      // 안드로이드 → Flutter: 켜져 있을 때 온 공유
+      await messenger.handlePlatformMessage(
+        shareChannel.name,
+        shareChannel.codec.encodeMethodCall(const MethodCall('shared', {'type': 'image', 'path': '/cache/shot.png'})),
+        (_) {},
+      );
       ShareIntake.instance.incoming.removeListener(listen);
       expect(got.whereType<SharedText>().single.text, 'RG サザビー');
       expect(got.whereType<SharedImage>().single.path, '/cache/shot.png');
