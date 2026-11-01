@@ -3,7 +3,8 @@
 // 지운 것도 'deleted' 로 남겨 둔다 (나중에 동기화할 때 "지웠다"가 이기도록).
 // 로그인하면 lib/sync/sync_service.dart 가 이 기록을 옛 앱과 같은 Supabase payload 에 합쳐 올린다:
 //   · 공유되는 것 = 구매함 · 좋아요(내 버킷) — 바꾸면 sharedRevision +1, cloudDirty = true
-//   · 이 기기에만 = 베이 부품 · 베이 연결 · 베이 조합 · 덱 · 도감 손으로 켜기 · 메자스타 · 프렌다 태그 · 최근 본 것 (payload 에 넣지 않음)
+//   · 이 기기에만 = 베이 부품 · 베이 연결 · 베이 조합 · 덱 · 도감 손으로 켜기 · 메자스타 · 프렌다 태그 · 최근 본 것 · 내 사진 목록 · 취향 태그 (payload 에 넣지 않음)
+//     (내 사진 중 친구에게 보이기를 켠 것은 lib/sync/photo_share.dart 가 Storage 에, 태그는 v3 preferences.tags 에 따로 올린다)
 import 'dart:async';
 import 'dart:convert';
 
@@ -14,6 +15,7 @@ import '../channels.dart' show defaultMyChannels;
 import '../models.dart';
 import '../sync/collection_merge.dart' show collectionStatuses, normalizeCollectionEntry;
 import 'blob_store.dart';
+import 'photo_files.dart';
 import '../json_util.dart';
 
 class UserStore extends ChangeNotifier {
@@ -71,6 +73,12 @@ class UserStore extends ChangeNotifier {
 
   /// 특별 관심 친구 (@아이디) — My Page ★ 에 이 사람들 소식만. 기기에만
   final Set<String> specialFriends = {};
+
+  /// 내 사진 (사진 벽 · 도감 칸 · 상품 상세). 지운 것도 서버에서 내릴 때까지 [MyPhoto.deleted] 로 남는다
+  final List<MyPhoto> _photos = [];
+
+  /// 내 취향 태그 (내 정보 머리) — 로그인하면 v3 preferences.tags 에도
+  final List<String> profileTags = [];
 
   /// 바뀔 때마다 +1 (Marks 가 다시 그릴지 판단)
   int revision = 0;
@@ -137,6 +145,12 @@ class UserStore extends ChangeNotifier {
     specialFriends
       ..clear()
       ..addAll(jList(local['special_friends']).whereType<String>());
+    _photos
+      ..clear()
+      ..addAll(jList(local['photos']).map(MyPhoto.fromJson).nonNulls);
+    profileTags
+      ..clear()
+      ..addAll(jList(local['profile_tags']).whereType<String>());
   }
 
   Map<String, Object?> toJson() => {
@@ -156,6 +170,8 @@ class UserStore extends ChangeNotifier {
       'tag_owned': tagOwned.toList(),
       'my_channels': myChannels,
       'special_friends': specialFriends.toList(),
+      'photos': [for (final p in _photos) p.toJson()],
+      'profile_tags': profileTags,
     },
   };
 
@@ -281,6 +297,58 @@ class UserStore extends ChangeNotifier {
 
   void setSpecialFriend(String handle, bool on) {
     if (on ? specialFriends.add(handle) : specialFriends.remove(handle)) _changed();
+  }
+
+  // ── 내 사진 · 태그 ──
+  /// 보이는 내 사진 — 새것부터
+  List<MyPhoto> get photos => [
+    for (final p in _photos)
+      if (!p.deleted) p,
+  ];
+
+  /// 지운 것까지 (서버에서 내릴 것 찾기 — 사진 공유만 본다)
+  List<MyPhoto> get allPhotos => List.unmodifiable(_photos);
+
+  MyPhoto? photo(String id) => _photos.where((p) => p.id == id).firstOrNull;
+
+  void addPhoto(MyPhoto p) {
+    _photos.insert(0, p);
+    _changed();
+  }
+
+  /// 같은 id 를 바꿔 끼운다 (친구에게 보이기 · 워터마크 · 상품 잇기 · 올림 표시)
+  void updatePhoto(MyPhoto p) {
+    final i = _photos.indexWhere((x) => x.id == p.id);
+    if (i < 0) return;
+    _photos[i] = p;
+    _changed();
+  }
+
+  /// 지우기 — 서버에 올라가 있으면 내릴 때까지 '지움'으로 남긴다
+  void removePhoto(String id) {
+    final p = photo(id);
+    if (p == null) return;
+    if (p.uploadedTo.isEmpty) {
+      _photos.remove(p);
+      _changed();
+    } else {
+      updatePhoto(p.copyWith(deleted: true));
+    }
+  }
+
+  /// 서버에서 내렸다 → 목록에서 뺀다
+  void purgePhoto(String id) {
+    final before = _photos.length;
+    _photos.removeWhere((p) => p.id == id);
+    if (_photos.length != before) _changed();
+  }
+
+  void setProfileTags(List<String> tags) {
+    if (listEquals(tags, profileTags)) return;
+    profileTags
+      ..clear()
+      ..addAll(tags);
+    _changed();
   }
 
   void setMyChannels(List<String> ids) {

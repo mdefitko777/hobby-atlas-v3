@@ -26,7 +26,7 @@ void main() {
   Catalog.instance.ensureLoaded().ignore(); // 캐시 → 뒤에서 새 데이터 확인
   // 계정: Gunpula Supabase (config/supabase.json). 저장된 세션이 있으면 바로 받아 온다.
   final auth = SupabaseAuthService();
-  Account.instance = Account(auth: auth, rpc: SupabaseRpc(auth))
+  Account.instance = Account(auth: auth, rpc: SupabaseRpc(auth), storage: SupabasePhotoStorage(auth))
     ..start()
     ..sync.attachLifecycle();
   auth.start().ignore();

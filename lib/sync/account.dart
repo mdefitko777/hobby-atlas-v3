@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 
 import '../data/user_store.dart';
 import 'friends_service.dart';
+import 'photo_share.dart';
 import 'rpc.dart';
 import 'sync_service.dart';
 
@@ -13,6 +14,7 @@ class Account extends ChangeNotifier {
   Account({
     required this.auth,
     required RpcClient rpc,
+    PhotoStorage storage = const NoPhotoStorage(),
     UserStore? store,
     Duration debounce = const Duration(milliseconds: 700),
     Duration pollEvery = const Duration(seconds: 15),
@@ -29,9 +31,17 @@ class Account extends ChangeNotifier {
       pollEvery: pollEvery,
       clock: clock,
     );
+    photos = PhotoShareService(rpc: () => _rpc, storage: storage, auth: auth, store: this.store);
     auth.addListener(notifyListeners);
     friends.addListener(notifyListeners);
     sync.addListener(notifyListeners);
+    photos.addListener(notifyListeners);
+    auth.addListener(_photosOnSignIn);
+  }
+
+  /// 로그인하면 못 올린 사진을 올린다 (로그아웃 동안 친구에게 보이기로 둔 것)
+  void _photosOnSignIn() {
+    if (auth.signedIn) photos.sync().ignore();
   }
 
   /// 백엔드 없음 (테스트 · 설정 파일 없음) — 늘 로그아웃
@@ -45,6 +55,9 @@ class Account extends ChangeNotifier {
   final UserStore store;
   late final FriendsService friends;
   late final SyncService sync;
+
+  /// 사진 공유 (친구에게 보이기 → Storage) · 친구 사진 벽
+  late final PhotoShareService photos;
 
   /// 로그인 · 기록 변경을 듣기 시작 (한 번)
   void start() => sync.start();
@@ -88,13 +101,17 @@ class Account extends ChangeNotifier {
   Future<void> signOut() async {
     await auth.signOut();
     friends.clear();
+    photos.clear();
   }
 
   @override
   void dispose() {
     auth.removeListener(notifyListeners);
+    auth.removeListener(_photosOnSignIn);
     friends.removeListener(notifyListeners);
     sync.removeListener(notifyListeners);
+    photos.removeListener(notifyListeners);
+    photos.dispose();
     sync.dispose();
     friends.dispose();
     super.dispose();

@@ -8,6 +8,7 @@
 // │ D-5  │ Text(¥) + 발매일 + 한정 표시         │ 일본 정가 · 발매 · 한정/PB              │ P02 · P01     │
 // │ D-5b │ 정가 아래 시세 한 줄 → 바텀 시트      │ 정가 ↔ 국내 시세 (시세는 이 한 곳에만)   │ P01 · P08     │
 // │ D-5c │ 구매함일 때 "내 구매가" 줄 → 입력 시트 │ 내가 낸 돈 기록 (가짜 저장)             │ P01 · P03     │
+// │ D-5d │ KitPhotoStrip (T-8)                │ 구매함이면 이 상품의 내 사진 + 넣기       │ P07           │
 // │ D-6  │ 하단 고정 바: ♡ 좋아요 · 리본 구매함   │ 좋아요 · 구매함 (따로 켜고 끔, 앱 전체 한 벌) │ P03 · P04 │
 // │ D-8  │ 가로 스크롤 요약 줄 → 바텀 시트       │ 공식 정보 (요약 → 전체 표)              │ P08 · P06     │
 // │ D-9  │ 시세 시트: 가격 범위 · 플랫폼 3칸     │ 국내 시세 자세히 (없으면 이유 + 찾아볼 곳) │ P01 · P08   │
@@ -34,6 +35,7 @@ import '../data/user_store.dart';
 import '../models.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 't_photo_screen.dart' show KitPhotoStrip;
 
 /// 상품 상세 열기 — 폰: 오른쪽에서 밀려 들어옴 / 넓은 화면: 오른쪽 칸 (detail_pane.dart)
 /// [list] 를 주면 그 목록 안에서 좌우로 밀어 이전 · 다음 상품 (최근 추가 · 좋아요 · 검색 결과 …)
@@ -451,6 +453,8 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
                   ),
                 ),
               ),
+              const SizedBox(height: 8),
+              KitPhotoStrip(kitId: widget.kit.id), // D-5d 내 사진 (사진 벽에도)
             ],
           ],
         ),

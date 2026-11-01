@@ -11,8 +11,8 @@
 // │ G-4c │ ViewIconToggle + 장마다 SectionHeader · 칸 격자 │ 화수별 보기 (gundam-chapters 가 있을 때만) │ P01 · P07 │
 // │ G-5  │ 바텀 시트(끌어 올리기): 기체 → 상품    │ 이 기체의 상품 전부 → 상품 상세          │ P07           │
 // │ G-5a │ ThumbRow + ♡ · 책갈피 아이콘          │ 상품 줄: 등급 · 축척 · 발매월 · 바로 좋아요 · 구매함 │ P07 · P04 │
-// │ G-5b │ 시트의 TogglePill 2개                │ 손으로 켜기(기기 저장) · 내 사진(가짜)   │ P03 · P07     │
-// │ G-5c │ 바텀 시트(카메라 · 최근 사진) → 확인  │ 이 기체가 찍힌 사진이어야 켜짐 (가짜 판정) │ P05 · P09   │
+// │ G-5b │ 시트의 TogglePill 2개                │ 손으로 켜기(기기 저장) · 내 사진          │ P03 · P07     │
+// │ G-5c │ 바텀 시트(카메라 · 갤러리) (T-2)      │ 이 기체의 내 사진 → 사진 벽에도 (기기 저장) │ P05 · P07   │
 // │ G-6  │ 베이 칸 + n/3 · 부품 시트            │ 베이블레이드 X 도감 (부품 3개)          │ P01           │
 // │ G-6a │ 🔧 ToolIcon (베이 머리줄)            │ 조합 만들기 (화면 T) — 블레이드 · 래칫 · 비트 · 덱 │ P07     │
 // │ G-7  │ 세대 · 작품 카드 + 진행 막대          │ 포켓몬 세대 · Fate 작품 · AC 세대       │ P01           │
@@ -22,7 +22,7 @@
 // │ G-9  │ FindBar + GuideFilterSheet(60% 시트) │ 도감에서 찾기(작품 · 기체 이름 · 형식번호) + 도감 필터: 단계(아직 · ♡ · 구매함 · 내 사진) · 상품 있는 것만 · 등급 · 종류 · 시대 · 정렬 │ P04 · P07 · P01 │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 🔧 → T 베이 조합 만들기(쌓기). 작품 카드 → 작품 도감(쌓기) → 기체 시트(덮기) → D 상품 상세(쌓기, 이 기체 상품끼리 좌우). 베이 → 부품 시트(덮기).
-//       기체 시트 → 사진 고르기(덮기) → 확인 중(대화 상자) → 토스트.
+//       기체 시트 → 사진 고르기(덮기, T-2) → 토스트.
 // 데이터: lib/data/derive.dart 건담 도감 ← lib/data/gundam_atlas.dart (data/atlas/gundam-ms · gundam-kit-ms · gundam-chapters).
 //       작품 · 시대 카드 그림 = 공식 작품 로고 (주소 · 출처는 데이터 쪽 GundamAtlas 가 정한다).
 import 'package:flutter/material.dart';
@@ -39,10 +39,10 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'c_channel_screen.dart';
 import 'd_kit_detail_screen.dart';
-import 'e_camera_screen.dart' show albumScenes;
 import 't_bbx_builder_screen.dart';
 import 'r_mezastar_screen.dart' show TagGameCards;
 import 'o_see_all_screen.dart' show SectionListView;
+import 't_photo_screen.dart' show addMyPhoto, deleteMyPhoto;
 
 class GuideView extends StatelessWidget {
   const GuideView({
@@ -425,8 +425,19 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
   /// true = 화수별 보기, false = 한 격자
   bool _byChapter = false;
 
-  /// 기체 id → 내가 올린 사진 (가짜 판정 · 저장하지 않음). 그 기체가 찍힌 사진일 때만 들어간다
+  /// 기체 id → 내 사진 (AppImage 경로 `local:파일`). UserStore 의 내 사진에서 — 기체 칸 · 사진 벽이 같은 사진
   final Map<String, String> _photos = {};
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _photos
+      ..clear()
+      ..addAll({
+        for (final p in Marks.of(context).store.photos.reversed) // 새것이 이기도록 오래된 것부터
+          if (p.unitId.isNotEmpty) p.unitId: '$localPhotoPrefix${p.file}',
+      });
+  }
 
   Future<List<GuideUnit>> _load() async {
     // STATE: GET /guideUnits?workId= → 칸, GET /kits?id= → 칸마다 상품
@@ -539,45 +550,25 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
     _openUnit(u);
   }
 
-  void _setPhoto(GuideUnit u, String? photo) {
-    final before = _photos[u.id];
-    setState(() => photo == null ? _photos.remove(u.id) : _photos[u.id] = photo); // STATE: 내 사진 → 도는 고리
-    showToast(
-      context,
-      photo == null ? '「${u.name}」의 내 사진을 내렸어요' : '사진에서 「${u.name}」을(를) 찾았어요 · 인증 완료',
-      onUndo: () => setState(() => before == null ? _photos.remove(u.id) : _photos[u.id] = before),
-    );
+  /// 사진 내리기 — 이 기체에 붙인 내 사진을 지운다 (사진 벽에서도)
+  void _removePhoto(GuideUnit u) {
+    for (final p in Marks.read(context).store.photos.where((p) => p.unitId == u.id)) {
+      deleteMyPhoto(context, p).ignore();
+    }
+    showToast(context, '「${u.name}」의 내 사진을 내렸어요');
   }
 
-  /// G-5c 내 사진 올리기: 카메라 · 최근 사진 → 사진 속 기체 확인(가짜) → 맞을 때만 켜짐
+  /// G-5c 내 사진 올리기: 카메라 · 갤러리 → 기기에 저장 (사진 벽 · 칸이 같이 바뀐다). 사진이 있으면 가진 것
   Future<void> _uploadPhoto(GuideUnit u) async {
-    // 가짜 판정 기준: 이 기체의 상품 사진 = "이 기체가 찍힌 사진"
-    var mine = [
-      for (final k in _kitsOf(u))
-        if (k.image.isNotEmpty) k.image,
-    ];
-    if (mine.isEmpty) mine = [u.image];
-    final others = [
-      for (final a in albumScenes)
-        if (!mine.contains(a.photo)) a.photo,
-    ];
-    final album = [...others.take(1), ...mine.take(2), ...others.skip(1)].take(6).toList();
-    final picked = await showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => _PhotoSourceSheet(unit: u, album: album, cameraShot: mine.first),
-    );
-    if (picked == null || !mounted) return;
-    final nav = Navigator.of(context, rootNavigator: true);
-    showDialog<void>(context: context, barrierDismissible: false, builder: (_) => const _CheckingDialog());
-    await Future<void>.delayed(const Duration(milliseconds: 1100));
-    nav.pop();
-    if (!mounted) return;
-    if (mine.contains(picked)) {
-      _setPhoto(u, picked);
-    } else {
-      showToast(context, '사진에서 「${u.name}」을(를) 찾지 못했어요 · 기체가 잘 보이는 사진을 골라 주세요'); // P09
-    }
+    final store = Marks.read(context).store;
+    final kit = [
+      for (final id in u.kitIds)
+        if (store.statusOf(id) == CollectStatus.owned) id,
+    ].firstOrNull;
+    final p = await addMyPhoto(context, unitId: u.id, kitId: kit ?? u.kitIds.firstOrNull ?? '');
+    if (p == null || !mounted) return;
+    setState(() {}); // STATE: 내 사진 → 도는 고리
+    showToast(context, '「${u.name}」 내 사진');
   }
 
   void _openUnit(GuideUnit u) {
@@ -597,7 +588,7 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
         },
         onRemovePhoto: () {
           Navigator.pop(sheet);
-          _setPhoto(u, null);
+          _removePhoto(u);
         },
         loaders: widget.loaders,
       ),
@@ -1050,78 +1041,6 @@ class _KitLine extends StatelessWidget {
             onPressed: () => Marks.read(context).toggleOwn(context, kit),
             icon: OwnedIcon(filled: owned, size: Gp.iM, color: owned ? Gp.own : Gp.muted),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-/// G-5c 사진 고르기: 카메라로 찍기 · 최근 사진 (가짜 앨범)
-class _PhotoSourceSheet extends StatelessWidget {
-  const _PhotoSourceSheet({required this.unit, required this.album, required this.cameraShot});
-  final GuideUnit unit;
-  final List<String> album;
-
-  /// 카메라로 찍으면 나오는 미리 정한 사진
-  final String cameraShot;
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SectionHeader(
-              '「${unit.name}」 내 사진 올리기',
-              subtitle: '내가 가진 이 기체가 찍힌 사진이어야 칸이 켜져요',
-              padding: const EdgeInsets.fromLTRB(0, 0, 0, 8),
-            ),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.photo_camera_outlined, color: Gp.ink),
-              title: const Text('카메라로 찍기'),
-              onTap: () => Navigator.pop(context, cameraShot),
-            ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(0, 4, 0, 10),
-              child: Text(
-                '최근 사진',
-                style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
-              ),
-            ),
-            GridView.count(
-              crossAxisCount: 3,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 6,
-              crossAxisSpacing: 6,
-              children: [
-                for (final ph in album)
-                  GestureDetector(onTap: () => Navigator.pop(context, ph), child: PhotoThumb(ph, radius: 8)),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// 사진 속 기체 확인 중 (가짜 1.1초)
-class _CheckingDialog extends StatelessWidget {
-  const _CheckingDialog();
-
-  @override
-  Widget build(BuildContext context) {
-    return const AlertDialog(
-      content: Row(
-        children: [
-          MiniSpinner(color: Gp.accent),
-          SizedBox(width: 16),
-          Expanded(child: Text('사진 속 기체를 확인하고 있어요')),
         ],
       ),
     );

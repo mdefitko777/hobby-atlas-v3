@@ -1,35 +1,45 @@
-// 화면 I: 내 정보 — 프로필 · 수집 숫자 · 친구 추가(아이디) (친구 서랍 머리에서 열림, 설정은 K 화면)
-// 같은 화면을 친구 보기로도 쓴다: 친구 이름을 누르면 그 친구의 숫자 (편집 없음, 친구 끊기)
-// v3: 이름 · @아이디 · 친구는 Gunpula 계정(v3 get_me), 숫자는 내 기록(Marks). 게시물 · 사진 인증은 서버가 없어 숨김.
+// 화면 I: 내 정보 — 프로필 · 취향 태그 · 수집 숫자 · 사진 벽 · 친구 추가(아이디) (친구 서랍 머리에서 열림, 설정은 K 화면)
+// 같은 화면을 친구 보기로도 쓴다: 친구 이름을 누르면 그 친구의 숫자 · 사진 벽 · 태그 (편집 없음, 친구 끊기)
+// v3: 이름 · @아이디 · 친구는 Gunpula 계정(v3 get_me), 숫자는 내 기록(Marks), 태그는 preferences.tags,
+//     사진 벽은 내 사진(기기) → 구매함 상품 사진. 친구 사진은 Storage(docs/supabase-v3-photos.sql) — 없으면 친구 구매함 사진.
+// 숫자 · 아이콘은 My Page(A-21)와 같은 모양: ♡ | 리본, 이번 달 | 총 지출을 떠 있는 흰 묶음 두 개에.
 //
 // ┌──────── 디자인 가이드 대응표: I 내 정보 ───────────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
-// │ I-1  │ 색 고리 큰 아바타 · 이름 · @아이디    │ 내 프로필 (계정 이름 · 아이디)           │ P04           │
-// │ I-2  │ 안내 카드 + 버튼                     │ 로그인하기 · 아이디 정하기               │ P09 · P10     │
-// │ I-3  │ 프로필 편집 → 바텀 시트(액션 목록)    │ 이름 바꾸기 · 아이디 바꾸기              │ P03 · P07     │
-// │ I-4  │ 숫자 3칸 (누르면 이동)               │ 좋아요 · 도감 레벨 · 구매함 → 컬렉션      │ P01 · P07     │
-// │ I-5  │ 내 @아이디 + 복사 · 버튼 2개          │ 친구 추가 (아이디로) · 받은 요청          │ P07 · P08     │
-// │ I-11 │ 친구 숫자 → L 친구 컬렉션            │ 친구의 좋아요 · 구매함 · 도감 보기         │ P07           │
+// │ I-1  │ 색 고리 큰 아바타 · 이름 · Lv · @아이디 │ 내 프로필 (계정 이름 · 레벨 · 아이디)     │ P04           │
+// │ I-2  │ TagPill 줄                          │ 내 취향 태그 (친구에게도 보임)            │ P06           │
+// │ I-3  │ ✎ 아이콘 → 바텀 시트(액션 목록)       │ 이름 · 아이디 · 태그 바꾸기               │ P03 · P07     │
+// │ I-4  │ 떠 있는 숫자 묶음 2개 (아이콘 + 숫자)  │ ♡ · 리본 → 컬렉션 / 이번 달 · 총 지출     │ P01 · P07     │
+// │ I-5  │ 친구 줄: 👥 n · 추가 · 요청 아이콘     │ 친구 추가 (아이디로) · 받은 요청 · 내 아이디 복사 │ P07 · P08 │
+// │ I-6  │ PhotoWall 3열 (T-1)                 │ 사진 벽: 내 사진 → 구매함 상품 사진         │ P02 · P06     │
+// │ I-7  │ 사진 칸 → T 사진 보기                │ 친구에게 보이기 · 워터마크 저장            │ P05 · P10     │
+// │ I-9  │ 안내 카드 + 버튼                     │ 로그인하기 · 아이디 정하기                │ P09 · P10     │
+// │ I-11 │ 친구 숫자 → L 친구 컬렉션            │ 친구의 좋아요 · 구매함 · 도감 비교          │ P07           │
 // │ I-12 │ OutlinedButton → 확인 대화상자        │ 친구 끊기                              │ P05           │
 // │ I-8  │ LoadingView / ErrorView             │ 불러오는 중 · 오류                      │ P01 · P09     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
-// 전환: 친구 서랍(M) 머리 아바타 → 쌓기(push, 오른쪽에서 · 넓은 화면은 오른쪽 칸). 숫자 → 닫고 컬렉션 탭(옆으로). 친구 → 쌓기. 편집 → 덮기.
+// 전환: 친구 서랍(M) 머리 아바타 → 쌓기(push, 오른쪽에서 · 넓은 화면은 오른쪽 칸). 숫자 → 닫고 컬렉션 탭(옆으로).
+//       친구 → 쌓기. 사진 → 쌓기(T). 편집 · 태그 · 사진 넣기 → 덮기(바텀 시트).
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 
 import '../api.dart';
 import '../channels.dart';
-import '../marks.dart';
+import '../clock.dart';
 import '../detail_pane.dart';
+import '../level.dart';
+import '../marks.dart';
 import '../models.dart';
 import '../sync/account.dart';
 import '../sync/friends_service.dart' show FriendsFailure;
+import '../sync/photo_share.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'f_collection_screen.dart' show CollectionJump;
 import 'l_friend_collection_screen.dart';
 import 'p_sign_in_screen.dart';
 import 'q_friend_sheets.dart';
+import 't_photo_screen.dart';
 
 void openProfile(
   BuildContext context, {
@@ -72,6 +82,13 @@ Future<Member> loadFriendMember(Account account, String handle, Loaders loaders,
   );
 }
 
+/// 사진 벽에 상품 사진을 몇 칸까지 채울지 (내 사진은 전부)
+const _wallKits = 24;
+
+/// 취향 태그 한도
+const _maxTags = 8;
+const _maxTagLength = 12;
+
 class _ProfileData {
   const _ProfileData(this.profile, this.collection, this.lit);
   final Profile profile;
@@ -79,6 +96,14 @@ class _ProfileData {
 
   /// 도감 점등 칸 수 (작품 도감의 수집 합)
   final int lit;
+}
+
+/// 친구 보기: 숫자 · 사진 벽(+태그) · 구매함 상품
+class _FriendData {
+  const _FriendData(this.member, this.wall, this.owned);
+  final Member member;
+  final FriendWall wall;
+  final List<Kit> owned;
 }
 
 class ProfileScreen extends StatefulWidget {
@@ -101,13 +126,19 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   late Future<_ProfileData> _future;
 
-  /// 친구 보기: 계정에서 받은 최신 숫자 (계정 친구가 아니면 넘겨받은 그대로)
-  Future<Member>? _friendFuture;
+  /// 친구 보기: 계정에서 받은 최신 숫자 · 사진 벽 (계정 친구가 아니면 넘겨받은 그대로)
+  Future<_FriendData>? _friendFuture;
 
   @override
   void initState() {
     super.initState();
     _load();
+    if (widget.friend == null) {
+      // 못 올린 사진이 있으면 다시 (서버에 사진 공유가 없으면 ⚠ 가 켜진다)
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) AccountScope.read(context).photos.sync().ignore();
+      });
+    }
   }
 
   void _load() {
@@ -118,12 +149,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
       widget.loaders.guideWorks(),
     ]).then((r) => _ProfileData(r[0] as Profile, r[1] as List<Kit>, litCount(r[2] as List<GuideWork>)));
     final f = widget.friend;
-    if (f != null) {
-      final account = AccountScope.read(context);
-      final real = account.signedIn && account.friends.friends.any((x) => x.handle == f.handle);
-      // STATE: 친구 컬렉션 받기 (get_friend_collection)
-      _friendFuture = real ? loadFriendMember(account, f.handle, widget.loaders) : Future.value(f);
+    if (f != null) _friendFuture = _loadFriend(f);
+  }
+
+  Future<_FriendData> _loadFriend(Member f) async {
+    final account = AccountScope.read(context);
+    final real = account.signedIn && account.friends.friends.any((x) => x.handle == f.handle);
+    // STATE: 친구 컬렉션(get_friend_collection) · 사진 벽(get_friend_wall, 없으면 빈 벽)
+    final results = await Future.wait<Object>([
+      real ? loadFriendMember(account, f.handle, widget.loaders) : Future.value(f),
+      real ? account.photos.friendWall(f.handle, force: true) : Future.value(const FriendWall()),
+    ]);
+    final m = results[0] as Member;
+    var owned = const <Kit>[];
+    try {
+      owned = await widget.loaders.kitsByIds(m.ownedIds.take(_wallKits).toList());
+    } on Object {
+      // 상품 사진이 없어도 숫자 · 사진은 보여 준다
     }
+    return _FriendData(m, results[1] as FriendWall, owned);
   }
 
   void _jump(CollectionJump j) {
@@ -131,46 +175,68 @@ class _ProfileScreenState extends State<ProfileScreen> {
     widget.onJump?.call(j);
   }
 
+  /// I-3 이름 · 아이디 · 태그
   void _editProfile() {
-    if (!ensureSignedIn(context)) return;
     showModalBottomSheet<void>(
       // I-3 덮기
       context: context,
-      builder: (sheet) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.edit_outlined),
-              title: const Text('이름 바꾸기'),
-              subtitle: const Text('친구에게 보이는 이름'),
-              onTap: () {
-                Navigator.pop(sheet);
-                askDisplayName(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.alternate_email),
-              title: const Text('아이디 바꾸기'),
-              subtitle: const Text('친구가 나를 찾는 @아이디'),
-              onTap: () {
-                Navigator.pop(sheet);
-                askHandle(context);
-              },
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
+      builder: (sheet) {
+        Widget row(IconData icon, String label, VoidCallback onTap) => ListTile(
+          leading: Icon(icon, size: Gp.iM),
+          title: Text(label, style: const TextStyle(fontSize: Gp.t14)),
+          onTap: () {
+            Navigator.pop(sheet);
+            onTap();
+          },
+        );
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              row(Icons.edit_outlined, '이름', () {
+                if (ensureSignedIn(context)) askDisplayName(context);
+              }),
+              row(Icons.alternate_email, '아이디', () {
+                if (ensureSignedIn(context)) askHandle(context);
+              }),
+              row(Icons.sell_outlined, '취향 태그', _editTags),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
     );
   }
+
+  /// I-2 취향 태그 고치기 — 기기에 두고, 로그인했으면 v3 preferences.tags 에도
+  Future<void> _editTags() async {
+    final store = Marks.read(context).store;
+    final account = AccountScope.read(context);
+    final next = await showModalBottomSheet<List<String>>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _TagSheet(initial: _myTags(store.profileTags, account)),
+    );
+    if (next == null || !mounted) return;
+    store.setProfileTags(next);
+    if (!account.signedIn) return;
+    try {
+      await account.friends.setTags(next);
+    } on FriendsFailure catch (e) {
+      if (mounted) showToast(context, e.message);
+    }
+  }
+
+  /// 기기에 정한 태그 → 없으면 서버(다른 기기에서 정한 것)
+  List<String> _myTags(List<String> local, Account account) =>
+      local.isNotEmpty ? local : (account.signedIn ? account.friends.me?.tags ?? const [] : const []);
 
   Future<void> _unfriend(Member m) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (dialog) => AlertDialog(
         title: Text('${m.name}님과 친구를 끊을까요?'),
-        content: const Text('서로의 컬렉션이 더 이상 보이지 않아요. 다시 친구가 되려면 요청을 새로 보내야 해요.'),
+        content: const Text('서로의 컬렉션 · 사진이 더 이상 보이지 않아요.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(dialog, false), child: const Text('취소')),
           FilledButton(
@@ -197,10 +263,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final friend = widget.friend;
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          friend == null ? '내 정보' : '${friend.name}의 컬렉션',
-          style: const TextStyle(fontSize: Gp.t19, fontWeight: FontWeight.w600),
-        ),
+        title: friend == null
+            ? const Text(
+                '내 정보',
+                style: TextStyle(fontSize: Gp.t19, fontWeight: FontWeight.w600),
+              )
+            : null,
       ),
       body: FutureBuilder<_ProfileData>(
         future: _future,
@@ -208,12 +276,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           if (snap.connectionState != ConnectionState.done) return const LoadingView(); // I-8
           if (snap.hasError) return ErrorView(message: '${snap.error}', onRetry: () => setState(_load));
           if (friend == null) return _mine(snap.data!.profile, snap.data!);
-          return FutureBuilder<Member>(
+          return FutureBuilder<_FriendData>(
             future: _friendFuture,
             builder: (context, fs) {
               if (fs.connectionState != ConnectionState.done) return const LoadingView();
               if (fs.hasError) return ErrorView(message: '${fs.error}', onRetry: () => setState(_load));
-              return _friend(fs.data ?? friend);
+              return _friend(fs.data ?? _FriendData(friend, const FriendWall(), const []));
             },
           );
         },
@@ -223,14 +291,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _mine(Profile p, _ProfileData d) {
     final scope = widget.myChannels;
-    final marks = Marks.of(context); // 앱 전체 한 벌 — 홈에서 누른 ♡ · 리본도 숫자에 반영
-    final account = AccountScope.of(context); // 로그인 · 아이디 · 친구가 바뀌면 다시 그림
+    final marks = Marks.of(context); // 앱 전체 한 벌 — 홈에서 누른 ♡ · 리본 · 새 사진도 반영
+    final store = marks.store;
+    final account = AccountScope.of(context); // 로그인 · 아이디 · 친구 · 사진 공유가 바뀌면 다시 그림
     final mine = d.collection.where((k) => scope == null || scope.contains(k.franchiseId));
     final liked = mine.where(marks.liked).length;
     final owned = mine.where(marks.owned).length;
     final signedIn = account.signedIn;
     final name = signedIn ? account.displayName : p.name;
     final handle = signedIn ? account.handle : p.handle;
+    final level = guideLevel(d.lit, 0, owned: store.ownedCount); // 왼쪽 위 Lv 와 같은 셈 (lib/level.dart)
+    final jump = widget.onJump == null ? null : _jump;
+
+    // I-6 사진 벽: 내 사진 → 구매함 상품 (사진을 이어 붙인 상품은 한 번만)
+    final photos = store.photos;
+    final withPhoto = {for (final ph in photos) ph.kitId};
+    String at(Kit k) => '${store.entry(k.id)?['updated_at'] ?? ''}';
+    final ownedKits = [
+      for (final k in d.collection)
+        if (marks.owned(k) && !withPhoto.contains(k.id)) k,
+    ]..sort((a, b) => at(b).compareTo(at(a)));
+
     return ListView(
       padding: const EdgeInsets.only(bottom: 40),
       children: [
@@ -238,12 +319,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           name: name,
           subtitle: handle.isNotEmpty ? '@$handle' : (signedIn ? '아이디 없음' : '로그인 전'),
           avatarText: name.characters.isEmpty ? '나' : name.characters.first,
-          tags: p.tags,
+          level: level,
+          onLevel: jump == null ? null : () => jump(CollectionJump.guide),
+          tags: _myTags(store.profileTags, account),
           onEdit: _editProfile,
         ),
         if (!signedIn)
           _Hint(
-            // I-2 P09
+            // I-9 P09
             icon: Icons.cloud_outlined,
             text: '로그인 전이에요',
             action: '로그인',
@@ -257,88 +340,110 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onTap: () => askHandle(context),
           ),
         _Stats(
-          liked: liked,
-          lit: d.lit,
-          verified: 0, // 사진 인증은 서버가 없어 아직 0
-          owned: owned,
-          spendKrw: signedIn ? marks.store.spendKrw : p.spendKrw,
-          onJump: widget.onJump == null ? null : _jump, // I-4
+          // I-4 My Page 와 같은 두 묶음
+          groups: [
+            [
+              _Cell(const LikedIcon(), '$liked', '좋아요', jump == null ? null : () => jump(CollectionJump.liked)),
+              _Cell(const OwnedIcon(), '$owned', '구매함', jump == null ? null : () => jump(CollectionJump.owned)),
+            ],
+            [
+              _Cell(
+                const Icon(Icons.calendar_month_outlined, size: Gp.iS, color: Gp.muted),
+                wonShort(store.spendInMonth(appNow())),
+                '이번 달 지출',
+              ),
+              _Cell(
+                const Icon(Icons.account_balance_wallet_outlined, size: Gp.iS, color: Gp.muted),
+                wonShort(store.spendKrw),
+                '총 지출',
+              ),
+            ],
+          ],
+        ),
+        PhotoWall(
+          // I-6 · I-7
+          warn: signedIn && photos.any((ph) => ph.shared) ? photoWarn(account.photos) : '',
+          onAdd: () => addMyPhoto(context),
+          tiles: [
+            for (final ph in photos) MyPhotoTile(ph),
+            for (final k in ownedKits.take(_wallKits)) KitPhotoTile(k),
+          ],
         ),
         if (signedIn) _friendsPanel(account),
       ],
     );
   }
 
-  /// I-5 친구 추가 (초대 코드 대신 내 @아이디)
+  /// I-5 친구 줄 — 👥 n · 아이디로 추가 · 받은 요청 / 내 @아이디 복사
   Widget _friendsPanel(Account account) {
     final f = account.friends;
     return SectionPanel(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.fromLTRB(16, 6, 8, 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SectionHeader(
-            '친구',
-            subtitle: f.unavailable ? '' : '${f.friends.length}명',
+          Row(
+            children: [
+              const Icon(Icons.group_outlined, size: Gp.iM, color: Gp.ink),
+              const SizedBox(width: 6),
+              if (!f.unavailable)
+                Text(
+                  '${f.friends.length}',
+                  style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w700),
+                ),
+              const Spacer(),
+              IconButton(
+                tooltip: '아이디로 친구 추가',
+                onPressed: () => showAddFriend(context),
+                icon: const Icon(Icons.person_add_alt_1_outlined, size: Gp.iL, color: Gp.ink),
+              ),
+              IconButton(
+                tooltip: '친구 요청',
+                onPressed: () => showFriendRequests(context),
+                icon: Badge(
+                  isLabelVisible: f.incoming.isNotEmpty,
+                  label: Text('${f.incoming.length}'),
+                  backgroundColor: Gp.accent,
+                  child: const Icon(Icons.mail_outline, size: Gp.iL, color: Gp.ink),
+                ),
+              ),
+            ],
           ),
           if (account.handle.isNotEmpty)
             Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              padding: const EdgeInsets.fromLTRB(14, 6, 4, 6),
+              margin: const EdgeInsets.only(right: 8, top: 2),
+              padding: const EdgeInsets.fromLTRB(12, 2, 2, 2),
               decoration: BoxDecoration(color: Gp.bg, borderRadius: BorderRadius.circular(Gp.radius)),
               child: Row(
                 children: [
-                  const Text(
-                    '내 아이디',
-                    style: TextStyle(color: Gp.muted, fontSize: Gp.t12),
-                  ),
-                  const SizedBox(width: 12),
                   Expanded(
-                    child: Text('@${account.handle}', style: const TextStyle(fontWeight: FontWeight.w700)),
+                    child: Text(
+                      '@${account.handle}',
+                      style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w700),
+                    ),
                   ),
                   IconButton(
                     tooltip: '아이디 복사', // P07
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: '@${account.handle}'));
-                      showToast(context, '아이디를 복사했어요 · 친구에게 보내 주세요');
+                      showToast(context, '아이디를 복사했어요');
                     },
                     icon: const Icon(Icons.content_copy_rounded, size: Gp.iM, color: Gp.muted),
                   ),
                 ],
               ),
             ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                FilledButton.tonalIcon(
-                  onPressed: () => showAddFriend(context),
-                  icon: const Icon(Icons.person_add_alt_1_outlined, size: Gp.iM),
-                  label: const Text('아이디로 친구 추가'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () => showFriendRequests(context),
-                  icon: Badge(
-                    isLabelVisible: f.incoming.isNotEmpty,
-                    label: Text('${f.incoming.length}'),
-                    backgroundColor: Gp.accent,
-                    child: const Icon(Icons.mail_outline, size: Gp.iM),
-                  ),
-                  label: const Text('친구 요청'),
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _friend(Member m) {
+  Widget _friend(_FriendData d) {
+    final m = d.member;
     final account = AccountScope.of(context);
     final real = account.signedIn && account.friends.friends.any((x) => x.handle == m.handle);
+    void open(CollectionJump j) => openFriendCollection(context, m, j, loaders: widget.loaders); // I-11
+    final withPhoto = {for (final ph in d.wall.photos) ph.kitId};
     return ListView(
       padding: const EdgeInsets.only(bottom: 40),
       children: [
@@ -346,19 +451,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
           name: m.name,
           subtitle: '@${m.handle}',
           avatarText: m.name.characters.isEmpty ? '?' : m.name.characters.first,
-          tags: [if (m.role.isNotEmpty) m.role],
+          level: guideLevel(m.lit, 0, owned: m.owned),
+          onLevel: () => open(CollectionJump.guide),
+          tags: d.wall.tags,
         ),
         _Stats(
-          liked: m.liked,
-          lit: m.lit,
-          verified: m.verified,
-          owned: m.owned,
-          onJump: (j) => openFriendCollection(context, m, j, loaders: widget.loaders), // I-11
+          groups: [
+            [
+              _Cell(const LikedIcon(), '${m.liked}', '좋아요', () => open(CollectionJump.liked)),
+              _Cell(const OwnedIcon(), '${m.owned}', '구매함', () => open(CollectionJump.owned)),
+            ],
+            [
+              _Cell(
+                const Icon(Icons.auto_awesome_mosaic_outlined, size: Gp.iS, color: Gp.muted),
+                '${m.lit}',
+                '도감',
+                () => open(CollectionJump.guide),
+              ),
+              _Cell(
+                const Icon(Icons.photo_library_outlined, size: Gp.iS, color: Gp.muted),
+                '${d.wall.photos.length}',
+                '사진',
+              ),
+            ],
+          ],
+        ),
+        PhotoWall(
+          // I-6 친구가 보이기로 둔 사진 → 친구 구매함 상품
+          tiles: [
+            for (final ph in d.wall.photos) FriendPhotoTile(ph),
+            for (final k in d.owned)
+              if (!withPhoto.contains(k.id)) KitPhotoTile(k),
+          ],
         ),
         if (real)
           Padding(
             // I-12 P05
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
             child: OutlinedButton.icon(
               onPressed: () => _unfriend(m),
               style: OutlinedButton.styleFrom(foregroundColor: Gp.danger),
@@ -371,7 +500,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
-/// I-2 안내 카드 (로그인 · 아이디)
+/// I-9 안내 카드 (로그인 · 아이디)
 class _Hint extends StatelessWidget {
   const _Hint({required this.icon, required this.text, required this.action, required this.onTap});
   final IconData icon;
@@ -385,10 +514,10 @@ class _Hint extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
       child: Row(
         children: [
-          Icon(icon, color: Gp.accent),
+          Icon(icon, size: Gp.iL, color: Gp.accent),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(text, style: const TextStyle(fontSize: Gp.t12, height: 1.4)),
+            child: Text(text, style: const TextStyle(fontSize: Gp.t14)),
           ),
           const SizedBox(width: 8),
           FilledButton(onPressed: onTap, child: Text(action)),
@@ -403,7 +532,9 @@ class _Header extends StatelessWidget {
     required this.name,
     required this.subtitle,
     required this.avatarText,
+    required this.level,
     required this.tags,
+    this.onLevel,
     this.onEdit,
   });
   final String name;
@@ -411,14 +542,19 @@ class _Header extends StatelessWidget {
   /// @아이디 (없으면 안내 글)
   final String subtitle;
   final String avatarText;
+  final int level;
   final List<String> tags;
 
-  /// 없으면(친구 보기) 편집 버튼을 숨긴다
+  /// Lv 누르면 (도감)
+  final VoidCallback? onLevel;
+
+  /// 없으면(친구 보기) 편집 아이콘을 숨긴다
   final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
     final avatar = RingAvatar(text: avatarText, size: 76, ringWidth: 3);
+    final chip = LevelChip(level: level);
     return ColoredBox(
       color: Gp.panel,
       child: Stack(
@@ -429,139 +565,226 @@ class _Header extends StatelessWidget {
               const SizedBox(height: 56), // 아바타가 겹쳐 앉는 자리
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  name,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: Gp.t19, fontWeight: FontWeight.w700),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: Gp.t19, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    onLevel == null
+                        ? chip
+                        : InkWell(borderRadius: BorderRadius.circular(Gp.rSmall), onTap: onLevel, child: chip),
+                  ],
                 ),
               ),
-              Text(subtitle, style: const TextStyle(color: Gp.muted)),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+              ),
               if (tags.isNotEmpty) ...[
                 const SizedBox(height: 10),
-                Wrap(spacing: 6, children: [for (final t in tags) TagPill(t)]), // P06
-              ],
-              if (onEdit != null) ...[
-                const SizedBox(height: 14),
-                OutlinedButton(
-                  onPressed: onEdit, // I-3
-                  style: OutlinedButton.styleFrom(
-                    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(Gp.rSmall))),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    alignment: WrapAlignment.center,
+                    children: [for (final t in tags) TagPill(t)], // I-2 P06
                   ),
-                  child: const Text('프로필 편집'),
                 ),
               ],
-              const SizedBox(height: 18),
+              const SizedBox(height: 16),
             ],
           ),
           Positioned(top: 30, left: 0, right: 0, child: Center(child: avatar)), // I-1 P04
+          if (onEdit != null)
+            Positioned(
+              top: 4,
+              right: 4,
+              child: IconButton(
+                tooltip: '프로필 편집', // I-3
+                onPressed: onEdit,
+                icon: const Icon(Icons.edit_outlined, size: Gp.iM, color: Gp.ink),
+              ),
+            ),
         ],
       ),
     );
   }
 }
 
-/// I-4 숫자 3칸 — 누르면 컬렉션 탭의 그 목록으로 (친구 보기에서는 숫자만)
-class _Stats extends StatelessWidget {
-  const _Stats({
-    required this.liked,
-    required this.lit,
-    required this.verified,
-    required this.owned,
-    this.spendKrw,
-    this.onJump,
-  });
-  final int liked;
-  final int lit;
+/// 숫자 한 칸: 아이콘 + 숫자 (뜻은 툴팁)
+class _Cell {
+  const _Cell(this.icon, this.value, this.tip, [this.onTap]);
+  final Widget icon;
+  final String value;
+  final String tip;
+  final VoidCallback? onTap;
+}
 
-  /// 3점(내 사진 인증) 칸 수 = 배지 수
-  final int verified;
-  final int owned;
-  final int? spendKrw;
-  final ValueChanged<CollectionJump>? onJump;
+/// I-4 숫자 묶음 — My Page(A-21)와 같은 떠 있는 흰 묶음 · 아이콘 18 높이 · 숫자 t14 굵게
+class _Stats extends StatelessWidget {
+  const _Stats({required this.groups});
+  final List<List<_Cell>> groups;
 
   @override
   Widget build(BuildContext context) {
-    Widget stat(String label, String value, CollectionJump j, {Widget? extra}) {
-      final body = Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Column(
-          children: [
-            FittedBox(
-              // 좁은 화면에서는 줄여서 한 줄
-              fit: BoxFit.scaleDown,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    value,
-                    style: const TextStyle(fontSize: Gp.t19, fontWeight: FontWeight.w700),
-                  ),
-                  ?extra,
-                ],
-              ),
-            ),
-            const SizedBox(height: 3),
-            Row(
-              mainAxisSize: MainAxisSize.min,
+    Widget cell(_Cell c) => Expanded(
+      child: Tooltip(
+        message: c.tip,
+        child: InkWell(
+          onTap: c.onTap,
+          borderRadius: BorderRadius.circular(Gp.radius),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 9),
+            child: Column(
               children: [
+                SizedBox(height: 18, child: Center(child: c.icon)),
+                const SizedBox(height: 3),
                 Text(
-                  label,
-                  style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                  c.value,
+                  style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w700),
                 ),
-                if (onJump != null) const Icon(Icons.chevron_right, size: Gp.iS, color: Gp.faint),
-              ],
-            ),
-          ],
-        ),
-      );
-      return Expanded(
-        child: onJump == null
-            ? body
-            : InkWell(borderRadius: BorderRadius.circular(Gp.radius), onTap: () => onJump!(j), child: body),
-      );
-    }
-
-    return SectionPanel(
-      padding: const EdgeInsets.fromLTRB(8, 12, 8, 12),
-      child: Column(
-        children: [
-          IntrinsicHeight(
-            child: Row(
-              children: [
-                stat('좋아요', '$liked', CollectionJump.liked),
-                const VerticalDivider(width: 1, indent: 6, endIndent: 6),
-                stat(
-                  '도감 레벨',
-                  'Lv.${guideLevel(lit, verified, owned: owned, liked: liked)}',
-                  CollectionJump.guide,
-                  extra: verified == 0
-                      ? null // 사진 인증은 아직 서버가 없어 0 이면 배지를 숨긴다
-                      : Padding(
-                          padding: const EdgeInsets.only(left: 6),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const VerifiedBadge(size: 16),
-                              Text(
-                                ' $verified',
-                                style: const TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w600),
-                              ),
-                            ],
-                          ),
-                        ),
-                ),
-                const VerticalDivider(width: 1, indent: 6, endIndent: 6),
-                stat('구매함', '$owned', CollectionJump.owned),
               ],
             ),
           ),
-          if (spendKrw case final spend?) ...[
-            const Divider(height: 20),
-            Text(
-              '구매 지출 합계 ${won(spend)}',
-              style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+        ),
+      ),
+    );
+    Widget group(List<_Cell> cells) => Expanded(
+      child: DecoratedBox(
+        decoration: Gp.raised(radius: Gp.radius),
+        child: Material(
+          type: MaterialType.transparency,
+          child: IntrinsicHeight(
+            child: Row(
+              children: [
+                for (var i = 0; i < cells.length; i++) ...[
+                  if (i > 0) const VerticalDivider(width: 1, indent: 10, endIndent: 10),
+                  cell(cells[i]),
+                ],
+              ],
             ),
-          ],
+          ),
+        ),
+      ),
+    );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+      child: Row(
+        children: [
+          for (var i = 0; i < groups.length; i++) ...[if (i > 0) const SizedBox(width: 8), group(groups[i])],
+        ],
+      ),
+    );
+  }
+}
+
+/// I-2 취향 태그 시트 — 적고 + · 꼬리표 누르면 빼기 · ✓ 로 저장
+class _TagSheet extends StatefulWidget {
+  const _TagSheet({required this.initial});
+  final List<String> initial;
+
+  @override
+  State<_TagSheet> createState() => _TagSheetState();
+}
+
+class _TagSheetState extends State<_TagSheet> {
+  late final List<String> _tags = [...widget.initial];
+  final _ctl = TextEditingController();
+
+  @override
+  void dispose() {
+    _ctl.dispose();
+    super.dispose();
+  }
+
+  void _add() {
+    final t = _ctl.text.trim().replaceAll(RegExp(r'\s+'), ' ');
+    if (t.isEmpty || _tags.contains(t) || _tags.length >= _maxTags) return;
+    setState(() {
+      _tags.add(t.length > _maxTagLength ? t.substring(0, _maxTagLength) : t); // STATE: 태그 → 꼬리표 줄
+      _ctl.clear();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + MediaQuery.viewInsetsOf(context).bottom),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.sell_outlined, size: Gp.iM),
+              const SizedBox(width: 6),
+              Text(
+                '${_tags.length}/$_maxTags',
+                style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+              ),
+              const Spacer(),
+              IconButton(
+                tooltip: '저장',
+                onPressed: () {
+                  _add(); // 적어 두고 + 를 안 눌렀어도 넣는다
+                  Navigator.pop(context, _tags);
+                },
+                icon: const Icon(Icons.check, size: Gp.iL, color: Gp.accent),
+              ),
+            ],
+          ),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final t in _tags)
+                InkWell(
+                  borderRadius: BorderRadius.circular(Gp.rSmall),
+                  onTap: () => setState(() => _tags.remove(t)),
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(8, 4, 4, 4),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(Gp.rSmall),
+                      border: Border.all(color: Gp.line),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(t, style: const TextStyle(fontSize: Gp.t12)),
+                        const SizedBox(width: 2),
+                        const Icon(Icons.close, size: 14, color: Gp.faint),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _ctl,
+            maxLength: _maxTagLength,
+            enabled: _tags.length < _maxTags,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _add(),
+            decoration: InputDecoration(
+              hintText: '건담 · 베이블레이드 …',
+              counterText: '',
+              suffixIcon: IconButton(
+                tooltip: '태그 더하기',
+                onPressed: _add,
+                icon: const Icon(Icons.add, size: Gp.iM),
+              ),
+            ),
+          ),
         ],
       ),
     );

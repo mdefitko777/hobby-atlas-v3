@@ -5,6 +5,7 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:hobby_atlas/sync/photo_share.dart';
 import 'package:hobby_atlas/sync/rpc.dart';
 
 Object? roundTrip(Object? v) => v == null ? null : jsonDecode(jsonEncode(v));
@@ -106,6 +107,16 @@ class FakeServer implements RpcClient {
 
   final List<({String fn, Map<String, Object?> params})> calls = [];
 
+  /// v3 preferences (취향 태그 = tags)
+  Map<String, Object?> preferences = {};
+
+  /// 사진 벽 (docs/supabase-v3-photos.sql): 내가 등록한 사진 id → put_photo 인자
+  final Map<String, Map<String, Object?>> myPhotos = {};
+
+  /// 친구 @아이디 → 그 친구가 보이기로 둔 사진 (id · path · kit_id …) · 태그
+  final Map<String, List<Map<String, Object?>>> friendPhotos = {};
+  final Map<String, List<String>> friendTags = {};
+
   // 친구
   final Map<String, ({String name, Map<String, Object?> collection})> users = {};
   final Set<String> friends = {};
@@ -124,7 +135,7 @@ class FakeServer implements RpcClient {
     'handle': handle,
     'display_name': displayName,
     'avatar': '',
-    'preferences': {},
+    'preferences': preferences,
     'payload': v3Payload,
     'revision': v3Revision,
     'updated_at': '2026-11-01T00:00:00Z',
@@ -191,7 +202,19 @@ class FakeServer implements RpcClient {
         return roundTrip(_me());
       case 'gunpula_v3_update_profile':
         displayName = '${p['p_display_name'] ?? displayName}';
+        if (p['p_preferences'] case final Map<String, Object?> prefs) preferences = prefs;
         return roundTrip(_me());
+      case 'gunpula_v3_put_photo':
+        myPhotos['${p['p_photo_id']}'] = p;
+        return {'id': p['p_photo_id']};
+      case 'gunpula_v3_delete_photo':
+        myPhotos.remove('${p['p_photo_id']}');
+        return {'id': p['p_photo_id']};
+      case 'gunpula_v3_get_friend_wall':
+        final h = '${p['p_handle']}';
+        if (!users.containsKey(h)) throw const RpcException('22023', 'gunpula user not found');
+        if (!friends.contains(h)) throw const RpcException('42501', 'gunpula not friends');
+        return roundTrip({..._profile(h), 'photos': friendPhotos[h] ?? const [], 'tags': friendTags[h] ?? const []});
       case 'gunpula_v3_search_user':
         final h = '${p['p_handle']}';
         if (h == handle) return {..._profile(h), 'name': displayName.isEmpty ? h : displayName, 'relation': 'self'};
@@ -232,5 +255,40 @@ class FakeServer implements RpcClient {
         return roundTrip({..._profile(h), 'collection': u.collection, 'updated_at': '2026-10-31T09:00:00Z'});
     }
     throw RpcException('PGRST202', 'Could not find the function public.$fn');
+  }
+}
+
+/// 가짜 Storage (photos 버킷). [missingBucket] = 버킷 · 정책을 아직 안 만든 프로젝트
+class FakePhotoStorage implements PhotoStorage {
+  final Map<String, Uint8List> objects = {};
+  bool missingBucket = false;
+  bool offline = false;
+  final List<String> uploads = [];
+
+  Future<void> _check() async {
+    await Future<void>.delayed(Duration.zero);
+    if (offline) throw const OfflineException('인터넷에 연결되지 않았어요');
+    if (missingBucket) throw const PhotoStorageException('Bucket not found', status: '404');
+  }
+
+  @override
+  Future<void> upload(String path, Uint8List bytes) async {
+    await _check();
+    uploads.add(path);
+    objects[path] = bytes;
+  }
+
+  @override
+  Future<void> remove(List<String> paths) async {
+    await _check();
+    paths.forEach(objects.remove);
+  }
+
+  @override
+  Future<Uint8List> download(String path) async {
+    await _check();
+    final b = objects[path];
+    if (b == null) throw const PhotoStorageException('Object not found', status: '404');
+    return b;
   }
 }
