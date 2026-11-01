@@ -95,6 +95,18 @@ class KitFilter {
     price: price,
   )..statusOf = statusOf;
 
+  /// 모든 조건 비우기 (필터 시트 초기화)
+  void clear() {
+    works.clear();
+    types.clear();
+    lines.clear();
+    goodsKinds.clear();
+    mine = MineState.any;
+    release = ReleaseState.any;
+    sale = SaleState.any;
+    price = PriceBand.any;
+  }
+
   int get count =>
       works.length +
       types.length +

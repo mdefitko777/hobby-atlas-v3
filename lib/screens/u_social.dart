@@ -246,7 +246,7 @@ IconData privacyIcon(SocialLocal s) =>
 /// U-5 사진 공개 범위 (I-9) — 스위치 하나 + 친구 체크 목록 (체크 = 내 사진을 볼 수 있음)
 Future<void> showPhotoPrivacy(BuildContext context) {
   AccountScope.read(context).photos.pullPrivacy().ignore(); // 다른 기기에서 바꾼 것 · 서버가 지키는지
-  return showModalBottomSheet<void>(context: context, isScrollControlled: true, builder: (_) => const _PrivacySheet());
+  return showGpSheet<void>(context, tall: true, builder: (_) => const _PrivacySheet());
 }
 
 class _PrivacySheet extends StatelessWidget {

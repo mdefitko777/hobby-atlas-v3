@@ -119,9 +119,9 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
   /// F-10 휴지통 — 지운 상품 (기기에 저장, 30일 지나면 버림)
   void _openTrash(List<Kit> all) {
     final me = Marks.read(context).store..purgeTrash(DateTime.now());
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
+    showGpSheet<void>(
+      context,
+      tall: true,
       builder: (sheet) => StatefulBuilder(
         builder: (sheet, setSheet) {
           final removed = _removed;

@@ -93,10 +93,7 @@ class _BbxGuideState extends State<BbxGuide> {
                         name: t.name,
                         tier: t.total > 0 && t.owned >= t.total ? CellTier.owned : CellTier.none,
                         badge: '${t.owned}/${t.total}',
-                        onTap: () => showModalBottomSheet<void>(
-                          context: context,
-                          builder: (_) => _TopSheet(top: t),
-                        ),
+                        onTap: () => showGpSheet<void>(context, builder: (_) => _TopSheet(top: t)),
                       ),
                   ],
                 ),

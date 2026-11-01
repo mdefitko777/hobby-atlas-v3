@@ -24,10 +24,7 @@ class UpdateButton extends StatelessWidget {
           icon: Badge(
             smallSize: 8,
             backgroundColor: Gp.danger,
-            child: Icon(
-              u.progress == null ? Icons.system_update_alt : Icons.downloading,
-              color: Gp.ink,
-            ),
+            child: Icon(u.progress == null ? Icons.system_update_alt : Icons.downloading, color: Gp.ink),
           ),
         );
       },
@@ -47,10 +44,9 @@ Future<void> askUpdateOnce(BuildContext context, {AppUpdate? update}) async {
 /// 업데이트 시트 — 바뀐 점 + [나중에 · 업데이트]. 받는 동안 진행률, 다 받으면 안드로이드 설치 창
 Future<void> showUpdateSheet(BuildContext context, UpdateInfo info, {AppUpdate? update}) {
   final u = update ?? AppUpdate.instance;
-  return showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: Gp.panel,
-    isScrollControlled: true,
+  return showGpSheet<void>(
+    context,
+    tall: true,
     builder: (sheet) => SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 22, 20, 16),
@@ -82,7 +78,10 @@ Future<void> showUpdateSheet(BuildContext context, UpdateInfo info, {AppUpdate? 
                 ),
                 if (info.notes.isNotEmpty) ...[
                   const SizedBox(height: 14),
-                  const Text('바뀐 점', style: TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w700)),
+                  const Text(
+                    '바뀐 점',
+                    style: TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w700),
+                  ),
                   const SizedBox(height: 6),
                   for (final n in info.notes)
                     Padding(
@@ -97,7 +96,10 @@ Future<void> showUpdateSheet(BuildContext context, UpdateInfo info, {AppUpdate? 
                 ],
                 if (u.error.isNotEmpty) ...[
                   const SizedBox(height: 10),
-                  Text(u.error, style: const TextStyle(fontSize: Gp.t12, color: Gp.danger)),
+                  Text(
+                    u.error,
+                    style: const TextStyle(fontSize: Gp.t12, color: Gp.danger),
+                  ),
                 ],
                 const SizedBox(height: 18),
                 if (p != null) ...[
@@ -187,7 +189,9 @@ class _VersionTileState extends State<VersionTile> {
         leading: const Icon(Icons.info_outline),
         title: const Text('버전'),
         subtitle: Text(
-          u.available == null ? 'Hobby Atlas · $appVersionLabel' : 'Hobby Atlas · $appVersionLabel → ${u.available!.versionLabel} 있음',
+          u.available == null
+              ? 'Hobby Atlas · $appVersionLabel'
+              : 'Hobby Atlas · $appVersionLabel → ${u.available!.versionLabel} 있음',
         ),
         trailing: _checking
             ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))

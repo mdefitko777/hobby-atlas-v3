@@ -123,14 +123,7 @@ class _TextAskDialogState extends State<_TextAskDialog> {
 /// Q-1 · Q-2 아이디로 친구 추가
 Future<void> showAddFriend(BuildContext context) async {
   if (!ensureSignedIn(context)) return;
-  await showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    builder: (sheet) => Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(sheet).bottom),
-      child: const _AddFriendSheet(),
-    ),
-  );
+  await showGpSheet<void>(context, keyboard: true, builder: (_) => const _AddFriendSheet());
 }
 
 class _AddFriendSheet extends StatefulWidget {
@@ -308,11 +301,7 @@ class _AddFriendSheetState extends State<_AddFriendSheet> {
 Future<void> showFriendRequests(BuildContext context) async {
   if (!ensureSignedIn(context)) return;
   AccountScope.read(context).friends.refresh().ignore(); // 열 때 한 번 새로
-  await showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    builder: (sheet) => const _RequestsSheet(),
-  );
+  await showGpSheet<void>(context, tall: true, builder: (_) => const _RequestsSheet());
 }
 
 class _RequestsSheet extends StatefulWidget {

@@ -53,8 +53,8 @@ String markFor(String handle) => handle.isEmpty ? 'HA' : watermarkText(handle);
 /// 사진 고르는 곳 (T-2 · I-3 아바타 · 배경). [remove] = 지우기 칸도 (I-3, 이미 사진이 있을 때)
 enum PhotoChoice { camera, gallery, remove }
 
-Future<PhotoChoice?> askPhotoSource(BuildContext context, {bool remove = false}) => showModalBottomSheet<PhotoChoice>(
-  context: context,
+Future<PhotoChoice?> askPhotoSource(BuildContext context, {bool remove = false}) => showGpSheet<PhotoChoice>(
+  context,
   builder: (sheet) => SafeArea(
     child: Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
@@ -369,16 +369,15 @@ class _PhotoViewScreenState extends State<PhotoViewScreen> {
     final store = Marks.read(context).store;
     final cat = Catalog.instance;
     final owned = [
-      for (final id in store.idsWith(const {CollectStatus.owned}))
-        ?cat.byId[id],
+      for (final id in store.idsWith(const {CollectStatus.owned})) ?cat.byId[id],
     ];
     if (owned.isEmpty) {
       showToast(context, '구매함이 비어 있어요');
       return;
     }
-    final kit = await showModalBottomSheet<Kit>(
-      context: context,
-      isScrollControlled: true,
+    final kit = await showGpSheet<Kit>(
+      context,
+      tall: true,
       builder: (sheet) => SafeArea(
         child: SizedBox(
           height: MediaQuery.sizeOf(sheet).height * 0.6,
@@ -387,7 +386,13 @@ class _PhotoViewScreenState extends State<PhotoViewScreen> {
             children: [
               const Padding(
                 padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: Row(children: [Icon(Icons.link, size: Gp.iM), SizedBox(width: 6), OwnedIcon(size: Gp.iS)]),
+                child: Row(
+                  children: [
+                    Icon(Icons.link, size: Gp.iM),
+                    SizedBox(width: 6),
+                    OwnedIcon(size: Gp.iS),
+                  ],
+                ),
               ),
               Expanded(
                 child: GridView.count(
@@ -427,7 +432,10 @@ class _PhotoViewScreenState extends State<PhotoViewScreen> {
     final p = _photo;
     final f = widget.friend;
     if (p == null && f == null) {
-      return Scaffold(appBar: AppBar(), body: const EmptyView(message: '지운 사진이에요'));
+      return Scaffold(
+        appBar: AppBar(),
+        body: const EmptyView(message: '지운 사진이에요'),
+      );
     }
     final mark = markFor(f?.owner ?? account.handle);
     final watermark = p?.watermark ?? f!.watermark;

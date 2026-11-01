@@ -124,8 +124,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // ── 옛 Gunpula 에서 가져오기 ──
   Future<void> _import() async {
-    final how = await showModalBottomSheet<String>(
-      context: context,
+    final how = await showGpSheet<String>(
+      context,
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,

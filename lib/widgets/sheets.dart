@@ -1,8 +1,96 @@
-// 아래 시트 조각 — 하나 고르기 · 네모 세그먼트 · 체크 칸 · 펼치는 줄
+// 아래 시트 한 벌 — 여는 법(showGpSheet) · 고르는 시트 틀(GpPickSheet: 제목 · 초기화 · 내용 · "n개 보기")
+// · 하나 고르기 · 네모 세그먼트 · 체크 칸 · 펼치는 줄
 import 'package:flutter/material.dart';
 
 import '../theme.dart';
+import 'buttons.dart';
 import 'sections.dart';
+
+/// 필터 · 고르기 시트 높이 (화면의 62%)
+const gpSheetHeight = 0.62;
+
+/// 아래 시트 열기 — 흰 바탕 · 손잡이는 테마(lib/theme.dart bottomSheetTheme).
+/// [heightFactor] = 화면의 그만큼 높이(필터 시트 [gpSheetHeight]), 없으면 내용 높이.
+/// [tall] = 내용이 길어 화면 절반을 넘을 수 있다 · [keyboard] = 글자 칸이 있어 키보드만큼 올린다
+Future<T?> showGpSheet<T>(
+  BuildContext context, {
+  required WidgetBuilder builder,
+  double? heightFactor,
+  bool tall = false,
+  bool keyboard = false,
+}) => showModalBottomSheet<T>(
+  context: context,
+  isScrollControlled: heightFactor != null || tall || keyboard,
+  builder: (sheet) {
+    var child = builder(sheet);
+    if (heightFactor != null) child = FractionallySizedBox(heightFactor: heightFactor, child: child);
+    if (keyboard) {
+      child = Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(sheet).bottom),
+        child: child,
+      );
+    }
+    return child;
+  },
+);
+
+/// 고르는 시트 틀 (상품 필터 · 도감 필터 · 태그 필터): 제목 + 초기화 · 스크롤 내용 · 아래 주 버튼 "n개 보기"
+class GpPickSheet extends StatelessWidget {
+  const GpPickSheet({
+    super.key,
+    required this.title,
+    required this.children,
+    required this.hits,
+    required this.noHitLabel,
+    required this.onApply,
+    required this.onReset,
+  });
+
+  final String title;
+  final List<Widget> children;
+
+  /// 지금 조건에 맞는 개수 — 0 이면 버튼이 회색 [noHitLabel] (P01 고르는 동안 개수)
+  final int hits;
+  final String noHitLabel;
+  final VoidCallback onApply;
+  final VoidCallback onReset;
+
+  @override
+  Widget build(BuildContext context) => SafeArea(
+    top: false,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 8, 4),
+          child: Row(
+            children: [
+              Text(
+                title,
+                style: const TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w700),
+              ),
+              const Spacer(),
+              TextButton(
+                onPressed: onReset,
+                child: const Text('초기화', style: TextStyle(color: Gp.muted)),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView(padding: const EdgeInsets.fromLTRB(16, 0, 16, 8), children: children),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
+          child: GradientButton(label: hits == 0 ? noHitLabel : '$hits개 보기', onPressed: hits == 0 ? null : onApply),
+        ),
+      ],
+    ),
+  );
+}
+
+/// 고른 값 한 줄 요약 — 없으면 '전체', 하나면 그것, 여럿이면 "첫 것 외 n"
+String pickSummary(Set<String> s) => s.isEmpty ? '전체' : (s.length == 1 ? s.first : '${s.first} 외 ${s.length - 1}');
 
 /// 하나 고르기 바텀 시트 — 제목 + 줄마다 이름, 고른 줄은 브랜드 색 글자 + ✓ (정렬 · 언어 공통)
 Future<T?> showPickSheet<T>(
@@ -12,8 +100,8 @@ Future<T?> showPickSheet<T>(
   required T current,
   required String Function(T) label,
 }) {
-  return showModalBottomSheet<T>(
-    context: context,
+  return showGpSheet<T>(
+    context,
     builder: (sheet) => SafeArea(
       child: Column(
         mainAxisSize: MainAxisSize.min,

@@ -128,8 +128,7 @@ class LevelHelpButton extends StatelessWidget {
   Widget build(BuildContext context) => IconButton(
     tooltip: '레벨 · 도감',
     visualDensity: VisualDensity.compact,
-    onPressed: () =>
-        showModalBottomSheet<void>(context: context, showDragHandle: true, builder: (_) => const _LevelHelp()),
+    onPressed: () => showGpSheet<void>(context, builder: (_) => const _LevelHelp()),
     icon: const Icon(Icons.help_outline, size: Gp.iM, color: Gp.muted),
   );
 }
@@ -224,68 +223,65 @@ class _LevelButtonState extends State<LevelButton> {
 }
 
 /// 레벨 시트 — 막대 + 켜진 도감 (작품 그림 · 모은 칸 / 전체)
-Future<void> showLevelSheet(BuildContext context, Loaders loaders) => showModalBottomSheet<void>(
-  context: context,
-  isScrollControlled: true,
-  builder: (_) => FractionallySizedBox(
-    heightFactor: 0.6,
-    child: FutureBuilder<LevelData>(
-      future: loadLevel(loaders),
-      builder: (context, snap) {
-        final d = snap.data;
-        if (d == null) return const LoadingView();
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            LevelBar(xp: d.xp, padding: const EdgeInsets.fromLTRB(16, 0, 8, 8)),
-            const Divider(height: 1),
-            Expanded(
-              child: d.series.isEmpty
-                  ? const Center(child: Icon(Icons.grid_view_rounded, size: 40, color: Gp.line))
-                  : GridView.builder(
-                      padding: const EdgeInsets.all(16),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        mainAxisSpacing: 14,
-                        crossAxisSpacing: 10,
-                        childAspectRatio: 0.82,
-                      ),
-                      itemCount: d.series.length,
-                      itemBuilder: (context, i) {
-                        final s = d.series[i];
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                              child: tierFrame(
-                                CellTier.owned,
-                                Padding(
-                                  padding: const EdgeInsets.all(6),
-                                  child: AppImage(s.image, fit: BoxFit.contain),
-                                ),
-                                radius: 10,
-                              ),
-                            ),
-                            const SizedBox(height: 5),
-                            Text(
-                              s.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: Gp.t12),
-                            ),
-                            Text(
-                              '${s.owned} / ${s.total}',
-                              style: const TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w700, color: Gp.own),
-                            ),
-                          ],
-                        );
-                      },
+Future<void> showLevelSheet(BuildContext context, Loaders loaders) => showGpSheet<void>(
+  context,
+  heightFactor: gpSheetHeight,
+  builder: (_) => FutureBuilder<LevelData>(
+    future: loadLevel(loaders),
+    builder: (context, snap) {
+      final d = snap.data;
+      if (d == null) return const LoadingView();
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          LevelBar(xp: d.xp, padding: const EdgeInsets.fromLTRB(16, 0, 8, 8)),
+          const Divider(height: 1),
+          Expanded(
+            child: d.series.isEmpty
+                ? const Center(child: Icon(Icons.grid_view_rounded, size: 40, color: Gp.line))
+                : GridView.builder(
+                    padding: const EdgeInsets.all(16),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      mainAxisSpacing: 14,
+                      crossAxisSpacing: 10,
+                      childAspectRatio: 0.82,
                     ),
-            ),
-          ],
-        );
-      },
-    ),
+                    itemCount: d.series.length,
+                    itemBuilder: (context, i) {
+                      final s = d.series[i];
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            child: tierFrame(
+                              CellTier.owned,
+                              Padding(
+                                padding: const EdgeInsets.all(6),
+                                child: AppImage(s.image, fit: BoxFit.contain),
+                              ),
+                              radius: 10,
+                            ),
+                          ),
+                          const SizedBox(height: 5),
+                          Text(
+                            s.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: Gp.t12),
+                          ),
+                          Text(
+                            '${s.owned} / ${s.total}',
+                            style: const TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w700, color: Gp.own),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+          ),
+        ],
+      );
+    },
   ),
 );
 

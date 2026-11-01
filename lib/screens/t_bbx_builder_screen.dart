@@ -201,9 +201,9 @@ class _BbxBuilderScreenState extends State<BbxBuilderScreen> {
   }
 
   Future<void> _pick(Slot slot, BbxBuilderData data, BbxInventory inv) async {
-    final picked = await showModalBottomSheet<PartMold>(
-      context: context,
-      isScrollControlled: true,
+    final picked = await showGpSheet<PartMold>(
+      context,
+      tall: true,
       builder: (_) => _PartPickerSheet(
         slot: slot,
         catalog: data.catalog,

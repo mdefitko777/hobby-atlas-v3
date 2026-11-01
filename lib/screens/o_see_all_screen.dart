@@ -171,6 +171,7 @@ class _SectionListViewState extends State<SectionListView> {
     widget.tools?.removeListener(_onTools);
     super.dispose();
   }
+
   String _annStatus = '';
 
   List<Kit> get _kits => [

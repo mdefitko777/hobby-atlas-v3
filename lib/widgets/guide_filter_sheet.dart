@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import '../logic/guide_filter.dart';
 import '../logic/kit_filter.dart' show valueCounts;
 import '../theme.dart';
-import 'buttons.dart';
 import 'icons.dart';
 import 'sheets.dart';
 
@@ -49,14 +48,10 @@ Future<GuideFilter?> showGuideFilterSheet(
   required GuideFilter initial,
   String groupLabel = '시대 · 작품',
   bool photoTier = true,
-}) => showModalBottomSheet<GuideFilter>(
-  context: context,
-  isScrollControlled: true,
-  backgroundColor: Gp.panel,
-  builder: (_) => FractionallySizedBox(
-    heightFactor: 0.62,
-    child: GuideFilterSheet(pool: pool, initial: initial, groupLabel: groupLabel, photoTier: photoTier),
-  ),
+}) => showGpSheet<GuideFilter>(
+  context,
+  heightFactor: gpSheetHeight,
+  builder: (_) => GuideFilterSheet(pool: pool, initial: initial, groupLabel: groupLabel, photoTier: photoTier),
 );
 
 class GuideFilterSheet extends StatefulWidget {
@@ -139,90 +134,58 @@ class _GuideFilterSheetState extends State<GuideFilterSheet> {
       for (final t in GuideTier.values)
         if (t != GuideTier.photo || widget.photoTier) t,
     ];
-    return SafeArea(
-      top: false,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 8, 4),
-            child: Row(
-              children: [
-                const Text(
-                  '도감 필터',
-                  style: TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w700),
-                ),
-                const Spacer(),
-                TextButton(
-                  onPressed: () => setState(() {
-                    _draft.clear();
-                    _open = '';
-                  }),
-                  child: const Text('초기화', style: TextStyle(color: Gp.muted)),
-                ),
-              ],
-            ),
+    return GpPickSheet(
+      title: '도감 필터',
+      hits: hits,
+      noHitLabel: '맞는 칸 없음',
+      onApply: () => Navigator.pop(context, _draft),
+      onReset: () => setState(() {
+        _draft.clear();
+        _open = '';
+      }),
+      children: [
+        // 칸 단계: 전체 · 아직 · ♡ · 구매함 · 내 사진
+        SquareSegments<GuideTier>(
+          values: tiers,
+          current: _draft.tier,
+          child: (v) => switch (v) {
+            GuideTier.any => const Text('전체'),
+            GuideTier.none => const Text('아직'),
+            GuideTier.liked => const LikedIcon(),
+            GuideTier.owned => const OwnedIcon(),
+            GuideTier.photo => const Icon(Icons.workspace_premium, size: Gp.iS, color: Gp.own),
+          },
+          onPick: (v) => setState(() => _draft.tier = v),
+        ),
+        const SizedBox(height: 8),
+        CheckGrid(
+          columns: 1,
+          values: const ['상품 있는 것만'],
+          selected: {if (_draft.withKits) '상품 있는 것만'},
+          countOf: (_) => _with((f) => f.withKits = true),
+          onToggle: (_) => setState(() => _draft.withKits = !_draft.withKits),
+        ),
+        const Divider(height: 20),
+        if (grades.isNotEmpty)
+          _expand('등급 · 라인', pickSummary(_draft.grades), _checks(grades, _draft.grades, (f) => f.grades)),
+        if (types.length > 1) _expand('종류', pickSummary(_draft.types), _checks(types, _draft.types, (f) => f.types)),
+        if (groups.length > 1)
+          _expand(
+            widget.groupLabel,
+            pickSummary(_draft.groups),
+            _checks(groups, _draft.groups, (f) => f.groups, columns: 1),
           ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              children: [
-                // 칸 단계: 전체 · 아직 · ♡ · 구매함 · 내 사진
-                SquareSegments<GuideTier>(
-                  values: tiers,
-                  current: _draft.tier,
-                  child: (v) => switch (v) {
-                    GuideTier.any => const Text('전체'),
-                    GuideTier.none => const Text('아직'),
-                    GuideTier.liked => const LikedIcon(),
-                    GuideTier.owned => const OwnedIcon(),
-                    GuideTier.photo => const Icon(Icons.workspace_premium, size: Gp.iS, color: Gp.own),
-                  },
-                  onPick: (v) => setState(() => _draft.tier = v),
-                ),
-                const SizedBox(height: 8),
-                CheckGrid(
-                  columns: 1,
-                  values: const ['상품 있는 것만'],
-                  selected: {if (_draft.withKits) '상품 있는 것만'},
-                  countOf: (_) => _with((f) => f.withKits = true),
-                  onToggle: (_) => setState(() => _draft.withKits = !_draft.withKits),
-                ),
-                const Divider(height: 20),
-                if (grades.isNotEmpty)
-                  _expand('등급 · 라인', _summary(_draft.grades), _checks(grades, _draft.grades, (f) => f.grades)),
-                if (types.length > 1)
-                  _expand('종류', _summary(_draft.types), _checks(types, _draft.types, (f) => f.types)),
-                if (groups.length > 1)
-                  _expand(
-                    widget.groupLabel,
-                    _summary(_draft.groups),
-                    _checks(groups, _draft.groups, (f) => f.groups, columns: 1),
-                  ),
-                _expand(
-                  '정렬',
-                  _draft.sort.label,
-                  SquareSegments<GuideSort>(
-                    values: GuideSort.values,
-                    current: _draft.sort,
-                    child: (v) => Text(v.label),
-                    onPick: (v) => setState(() => _draft.sort = v),
-                  ),
-                ),
-              ],
-            ),
+        _expand(
+          '정렬',
+          _draft.sort.label,
+          SquareSegments<GuideSort>(
+            values: GuideSort.values,
+            current: _draft.sort,
+            child: (v) => Text(v.label),
+            onPick: (v) => setState(() => _draft.sort = v),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
-            child: GradientButton(
-              label: hits == 0 ? '맞는 칸 없음' : '$hits개 보기', // P01 고르는 동안 개수
-              onPressed: hits == 0 ? null : () => Navigator.pop(context, _draft),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
-
-  String _summary(Set<String> s) => s.isEmpty ? '전체' : (s.length == 1 ? s.first : '${s.first} 외 ${s.length - 1}');
 }

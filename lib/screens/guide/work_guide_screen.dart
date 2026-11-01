@@ -198,10 +198,10 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
   }
 
   void _openUnit(GuideUnit u) {
-    showModalBottomSheet<void>(
+    showGpSheet<void>(
       // G-5 덮기
-      context: context,
-      isScrollControlled: true,
+      context,
+      tall: true,
       builder: (sheet) => _UnitSheet(
         unit: u,
         kits: _kitsOf(u),

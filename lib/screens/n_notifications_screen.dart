@@ -108,9 +108,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final a = AccountScope.read(context);
     if (a.signedIn) {
       // 친구 컬렉션도 받아 "친구가 이미 갖고 있어요" 줄을 만든다 (N-8)
-      a.friends.refresh().then((_) => Future.wait([
-            for (final f in a.friends.friends) a.friends.collection(f.handle).then((_) {}, onError: (Object _) {}),
-          ]), onError: (Object _) {});
+      a.friends.refresh().then(
+        (_) => Future.wait([
+          for (final f in a.friends.friends) a.friends.collection(f.handle).then((_) {}, onError: (Object _) {}),
+        ]),
+        onError: (Object _) {},
+      );
     }
   }
 
@@ -119,7 +122,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (!account.signedIn) return const [];
     final byId = Catalog.instance.byId;
     return [
-      for (final o in likedOwnedByFriends(account.friends.collections, UserStore.instance.idsWith(const {CollectStatus.wanted}).toSet()))
+      for (final o in likedOwnedByFriends(
+        account.friends.collections,
+        UserStore.instance.idsWith(const {CollectStatus.wanted}).toSet(),
+      ))
         if (byId[o.kitId] case final k?)
           AppNotice(
             id: 'own-${o.handle}-${o.kitId}',
@@ -254,8 +260,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   /// N-7 친구 요청 응답
   void _answerRequest(AppNotice n) {
-    showModalBottomSheet<void>(
-      context: context,
+    showGpSheet<void>(
+      context,
       builder: (sheet) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),

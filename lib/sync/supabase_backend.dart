@@ -258,11 +258,7 @@ class SupabasePhotoStorage implements PhotoStorage {
 
   @override
   Future<void> upload(String path, Uint8List bytes) => _guardStorage(
-    (api) => api.uploadBinary(
-      path,
-      bytes,
-      fileOptions: const FileOptions(contentType: 'image/jpeg', upsert: true),
-    ),
+    (api) => api.uploadBinary(path, bytes, fileOptions: const FileOptions(contentType: 'image/jpeg', upsert: true)),
   );
 
   @override

@@ -145,14 +145,10 @@ Future<TagFilter?> _showTagFilter(
   required List<TagCard> cards,
   required Set<String> owned,
   required TagFilter initial,
-}) => showModalBottomSheet<TagFilter>(
-  context: context,
-  isScrollControlled: true,
-  backgroundColor: Gp.panel,
-  builder: (_) => FractionallySizedBox(
-    heightFactor: 0.62,
-    child: _TagFilterSheet(cards: cards, owned: owned, initial: initial),
-  ),
+}) => showGpSheet<TagFilter>(
+  context,
+  heightFactor: gpSheetHeight,
+  builder: (_) => _TagFilterSheet(cards: cards, owned: owned, initial: initial),
 );
 
 class _TagFilterSheet extends StatefulWidget {
@@ -188,76 +184,47 @@ class _TagFilterSheetState extends State<_TagFilterSheet> {
         style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
       ),
     );
-    return SafeArea(
-      top: false,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 14, 8, 4),
-            child: Row(
-              children: [
-                const Text(
-                  '필터',
-                  style: TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w700),
-                ),
-                const Spacer(),
-                TextButton(
-                  onPressed: () => setState(() {
-                    _draft
-                      ..rarities.clear()
-                      ..types.clear()
-                      ..owned = LitState.any;
-                  }),
-                  child: const Text('초기화', style: TextStyle(color: Gp.muted)),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              children: [
-                SquareSegments<LitState>(
-                  values: LitState.values,
-                  current: _draft.owned,
-                  child: (v) => switch (v) {
-                    LitState.any => const Text('전체'),
-                    LitState.lit => const OwnedIcon(size: Gp.iS),
-                    LitState.unlit => const Text('아직'),
-                  },
-                  onPick: (v) => setState(() => _draft.owned = v),
-                ),
-                title('등급'),
-                _SquareChecks(
-                  values: rarities,
-                  label: (r) => rarityLabels[r] ?? r,
-                  selected: _draft.rarities,
-                  count: (r) => widget.cards.where((c) => c.rarity == r).length,
-                  onToggle: (r) => _toggle(_draft.rarities, r),
-                ),
-                if (types.isNotEmpty) ...[
-                  title('타입'),
-                  _SquareChecks(
-                    values: types,
-                    label: (t) => typeLabels[t] ?? t,
-                    selected: _draft.types,
-                    count: (t) => widget.cards.where((c) => c.types.contains(t)).length,
-                    onToggle: (t) => _toggle(_draft.types, t),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
-            child: GradientButton(
-              label: hits == 0 ? '맞는 태그 없음' : '$hits개 보기', // P01 고르는 동안 개수
-              onPressed: hits == 0 ? null : () => Navigator.pop(context, _draft),
-            ),
+    return GpPickSheet(
+      title: '필터',
+      hits: hits,
+      noHitLabel: '맞는 태그 없음',
+      onApply: () => Navigator.pop(context, _draft),
+      onReset: () => setState(() {
+        _draft
+          ..rarities.clear()
+          ..types.clear()
+          ..owned = LitState.any;
+      }),
+      children: [
+        SquareSegments<LitState>(
+          values: LitState.values,
+          current: _draft.owned,
+          child: (v) => switch (v) {
+            LitState.any => const Text('전체'),
+            LitState.lit => const OwnedIcon(size: Gp.iS),
+            LitState.unlit => const Text('아직'),
+          },
+          onPick: (v) => setState(() => _draft.owned = v),
+        ),
+        title('등급'),
+        _SquareChecks(
+          values: rarities,
+          label: (r) => rarityLabels[r] ?? r,
+          selected: _draft.rarities,
+          count: (r) => widget.cards.where((c) => c.rarity == r).length,
+          onToggle: (r) => _toggle(_draft.rarities, r),
+        ),
+        if (types.isNotEmpty) ...[
+          title('타입'),
+          _SquareChecks(
+            values: types,
+            label: (t) => typeLabels[t] ?? t,
+            selected: _draft.types,
+            count: (t) => widget.cards.where((c) => c.types.contains(t)).length,
+            onToggle: (t) => _toggle(_draft.types, t),
           ),
         ],
-      ),
+      ],
     );
   }
 }
@@ -696,11 +663,9 @@ class TagCell extends StatelessWidget {
 
 /// 태그 정보 + 가짐 버튼. [onOpenBook] = 검색 탭에서 열었을 때 "도감에서 보기"
 Future<void> showTagSheet(BuildContext context, TagCard card, {TagBook? book, VoidCallback? onOpenBook}) =>
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      backgroundColor: Gp.panel,
+    showGpSheet<void>(
+      context,
+      tall: true,
       builder: (_) => _TagSheet(card: card, book: book, onOpenBook: onOpenBook),
     );
 

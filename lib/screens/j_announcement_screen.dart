@@ -245,76 +245,72 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
   void _showAbout(BuildContext context) {
     final a = widget.item;
     final stage = announcementStages.indexOf(a.status).clamp(0, announcementStages.length - 1);
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Gp.panel,
-      builder: (sheet) => FractionallySizedBox(
-        heightFactor: 0.62,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(0, 20, 0, 24),
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
+    showGpSheet<void>(
+      context,
+      heightFactor: gpSheetHeight,
+      builder: (sheet) => ListView(
+        padding: const EdgeInsets.fromLTRB(0, 20, 0, 24),
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  a.title,
+                  style: const TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w600, height: 1.4),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  joinDot([channelOf(a.franchiseId).label, dateDot(a.date), a.source]),
+                  style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                ),
+                const SizedBox(height: 20),
+                _StageLine(current: stage),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          FutureBuilder<List<Kit>>(
+            future: _related,
+            builder: (context, snap) {
+              if (snap.connectionState != ConnectionState.done) {
+                return const SizedBox(height: 120, child: LoadingView());
+              }
+              final kits = snap.data ?? const <Kit>[];
+              if (kits.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text(
+                    '제목에서 상품을 찾지 못했어요 · 상품화되면 여기에 보여요', // P09
+                    style: TextStyle(color: Gp.muted, fontSize: Gp.t12),
+                  ),
+                );
+              }
+              return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    a.title,
-                    style: const TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w600, height: 1.4),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    joinDot([channelOf(a.franchiseId).label, dateDot(a.date), a.source]),
-                    style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
-                  ),
-                  const SizedBox(height: 20),
-                  _StageLine(current: stage),
+                  SectionHeader('이 예고의 상품', subtitle: '${kits.length}개'), // P06
+                  _tiles(sheet, kits),
                 ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            FutureBuilder<List<Kit>>(
-              future: _related,
-              builder: (context, snap) {
-                if (snap.connectionState != ConnectionState.done) {
-                  return const SizedBox(height: 120, child: LoadingView());
-                }
-                final kits = snap.data ?? const <Kit>[];
-                if (kits.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Text(
-                      '제목에서 상품을 찾지 못했어요 · 상품화되면 여기에 보여요', // P09
-                      style: TextStyle(color: Gp.muted, fontSize: Gp.t12),
-                    ),
-                  );
-                }
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SectionHeader('이 예고의 상품', subtitle: '${kits.length}개'), // P06
-                    _tiles(sheet, kits),
-                  ],
-                );
-              },
-            ),
-            FutureBuilder<({String label, List<Kit> kits})>(
-              future: _sameIp, // J-7
-              builder: (context, snap) {
-                final ip = snap.data;
-                if (ip == null || ip.kits.isEmpty) return const SizedBox.shrink();
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SectionHeader('같은 IP의 새 상품', subtitle: ip.label), // P06
-                    _tiles(sheet, ip.kits),
-                  ],
-                );
-              },
-            ),
-          ],
-        ),
+              );
+            },
+          ),
+          FutureBuilder<({String label, List<Kit> kits})>(
+            future: _sameIp, // J-7
+            builder: (context, snap) {
+              final ip = snap.data;
+              if (ip == null || ip.kits.isEmpty) return const SizedBox.shrink();
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SectionHeader('같은 IP의 새 상품', subtitle: ip.label), // P06
+                  _tiles(sheet, ip.kits),
+                ],
+              );
+            },
+          ),
+        ],
       ),
     );
   }

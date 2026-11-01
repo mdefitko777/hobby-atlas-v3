@@ -499,8 +499,8 @@ void _showLegend(BuildContext context, bool mine) {
       ],
     ),
   );
-  showModalBottomSheet<void>(
-    context: context,
+  showGpSheet<void>(
+    context,
     builder: (_) => SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
