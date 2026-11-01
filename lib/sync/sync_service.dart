@@ -269,6 +269,7 @@ class SyncService extends ChangeNotifier with WidgetsBindingObserver {
     }
     _debounceTimer?.cancel();
     store.resetForAccount(id);
+    store.social.resetForAccount(); // 앞 계정의 공개 범위 · 친구 아바타 · 닫은 추천도 섞지 않는다
     _seenShared = store.sharedRevision;
     accountSwitched = true;
   }

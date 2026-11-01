@@ -10,6 +10,7 @@ library;
 import 'package:flutter/foundation.dart';
 
 import '../json_util.dart';
+import 'photo_files.dart';
 
 /// 프로필 사진 종류 — Storage 경로 `<user_id>/profile/<kind>.jpg`
 enum ProfileImageKind {
@@ -136,6 +137,21 @@ class SocialLocal {
   void setFriendsSeenAt(String iso) {
     if (iso == friendsSeenAt) return;
     friendsSeenAt = iso;
+    _changed();
+  }
+
+  /// 다른 계정으로 로그인했다 → 계정에 딸린 것(공개 범위 · 닫은 추천 · 서랍 본 시각 · 친구 아바타 목록)을 비운다.
+  /// 내 아바타 · 배경은 uploaded_to 로 가려 ProfileImageService 가 정리한다.
+  void resetForAccount() {
+    photosPublic = true;
+    hiddenFrom.clear();
+    privacyDirty = false;
+    dismissedSuggestions.clear();
+    friendsSeenAt = '';
+    for (final f in friendAvatars.values) {
+      PhotoFiles.instance.delete(f).ignore();
+    }
+    friendAvatars.clear();
     _changed();
   }
 
