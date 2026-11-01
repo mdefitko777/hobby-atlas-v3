@@ -414,7 +414,7 @@ class _HeroBannerState extends State<_HeroBanner> {
         return Column(
           children: [
             SizedBox(
-              height: imageH + 62 + 18,
+              height: imageH + 40 + 18,
               child: NotificationListener<ScrollNotification>(
                 onNotification: (n) {
                   if (n is ScrollStartNotification && n.dragDetails != null) _timer?.cancel();
@@ -445,7 +445,7 @@ class _HeroBannerState extends State<_HeroBanner> {
                                 child: ColoredBox(color: Gp.soft, child: AppImage(a.image, fit: BoxFit.contain)),
                               ),
                               Padding(
-                                padding: const EdgeInsets.fromLTRB(12, 9, 12, 0),
+                                padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
                                 child: Row(
                                   children: [
                                     Text(

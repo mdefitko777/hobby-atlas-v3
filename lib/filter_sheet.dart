@@ -47,7 +47,7 @@ extension SaleStateLabel on SaleState {
     SaleState.regular => '일반',
     SaleState.limited => '한정',
     SaleState.pb => 'PB',
-    SaleState.base => '베이스 · 이벤트',
+    SaleState.base => '베이스',
   };
 }
 

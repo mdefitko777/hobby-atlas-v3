@@ -324,7 +324,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
         ),
       for (final d in days) ...[
         _DayHeader(date: DateTime(_month.year, _month.month, d)), // H-5
-        for (final e in shown.where((e) => e.day == d)) _EventRow(event: e, dday: _dday(d), loaders: widget.loaders),
+        for (final e in shown.where((e) => e.day == d)) _EventRow(event: e, dday: e.tag == '구매' ? '' : _dday(d), loaders: widget.loaders),
       ],
       if (undated.isNotEmpty) ...[
         SectionHeader(
