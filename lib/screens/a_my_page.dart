@@ -48,8 +48,9 @@ class _MyPageViewState extends State<MyPageView> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // 레벨은 왼쪽 위 아바타 옆 Lv (lib/level.dart) — 여기는 숫자 4칸만
-        SectionPanel(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        Padding(
+          // 페이지 바탕 위에 흰 묶음 두 개 (수집 | 돈)
+          padding: const EdgeInsets.fromLTRB(16, 2, 16, 12),
           child: _Stats(
             liked: liked.length,
             owned: owned.length,
@@ -122,53 +123,55 @@ class _Stats extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget cell(Widget icon, String value, {VoidCallback? onTap, String tip = ''}) => Expanded(
+    Widget cell(Widget icon, String value, String tip, {VoidCallback? onTap}) => Expanded(
       child: Tooltip(
         message: tip,
-        child: Material(
-          color: Gp.soft,
+        child: InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(Gp.radius),
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(Gp.radius),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Column(
-                children: [
-                  SizedBox(height: 18, child: Center(child: icon)),
-                  const SizedBox(height: 3),
-                  Text(
-                    value,
-                    style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w700),
-                  ),
-                ],
-              ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 9),
+            child: Column(
+              children: [
+                SizedBox(height: 18, child: Center(child: icon)),
+                const SizedBox(height: 3),
+                Text(
+                  value,
+                  style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w700),
+                ),
+              ],
             ),
           ),
         ),
       ),
     );
+    // 뜻이 같은 둘을 한 칸에: 수집(♡ | 리본) · 돈(이번 달 | 총)
+    Widget group(Widget a, Widget b) => Expanded(
+      child: Material(
+        color: Gp.panel,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Gp.radius),
+          side: const BorderSide(color: Gp.line),
+        ),
+        child: IntrinsicHeight(
+          child: Row(children: [a, const VerticalDivider(width: 1, indent: 10, endIndent: 10), b]),
+        ),
+      ),
+    );
     return Row(
       children: [
-        cell(const LikedIcon(), '$liked', onTap: () => onJump?.call(CollectionJump.liked), tip: '좋아요'),
-        const SizedBox(width: 6),
-        cell(
-          const OwnedIcon(size: Gp.iS),
-          '$owned',
-          onTap: () => onJump?.call(CollectionJump.owned),
-          tip: '구매함',
+        group(
+          cell(const LikedIcon(), '$liked', '좋아요', onTap: () => onJump?.call(CollectionJump.liked)),
+          cell(const OwnedIcon(), '$owned', '구매함', onTap: () => onJump?.call(CollectionJump.owned)),
         ),
-        const SizedBox(width: 6),
-        cell(
-          const Icon(Icons.calendar_month_outlined, size: Gp.iS, color: Gp.muted),
-          wonShort(month),
-          tip: '이번 달 지출',
-        ),
-        const SizedBox(width: 6),
-        cell(
-          const Icon(Icons.account_balance_wallet_outlined, size: Gp.iS, color: Gp.muted),
-          wonShort(total),
-          tip: '총 지출',
+        const SizedBox(width: 8),
+        group(
+          cell(const Icon(Icons.calendar_month_outlined, size: Gp.iS, color: Gp.muted), wonShort(month), '이번 달 지출'),
+          cell(
+            const Icon(Icons.account_balance_wallet_outlined, size: Gp.iS, color: Gp.muted),
+            wonShort(total),
+            '총 지출',
+          ),
         ),
       ],
     );
