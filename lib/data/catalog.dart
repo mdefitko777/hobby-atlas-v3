@@ -157,7 +157,10 @@ class Catalog extends ChangeNotifier {
         _aux.remove(e.key);
       }
       await BlobStore.write(_kitsKey, slimText);
-      await BlobStore.write(_metaKey, jsonEncode({'manifest': m, 'map_version': mapVersion, 'fetched_at': DateTime.now().toIso8601String()}));
+      await BlobStore.write(
+        _metaKey,
+        jsonEncode({'manifest': m, 'map_version': mapVersion, 'fetched_at': DateTime.now().toIso8601String()}),
+      );
       manifest = m;
       _slim = slim;
       _rebuild();

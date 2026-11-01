@@ -159,7 +159,7 @@ class _WorkCard extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: Gp.panel,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(Gp.radius),
           border: Border.all(color: Gp.line),
         ),
         clipBehavior: Clip.antiAlias,
@@ -324,7 +324,6 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
       : _liked.contains(u.id)
       ? CellTier.liked
       : CellTier.none;
-
 
   /// 상태 바꾸기 + 토스트(되돌리기). 레벨이 오르면 토스트에 같이 알린다
   void _change(String message, VoidCallback apply) {

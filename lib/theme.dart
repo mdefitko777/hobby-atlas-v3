@@ -18,7 +18,45 @@ abstract final class Gp {
   /// 카드·시트 면
   static const panel = Color(0xFFFFFFFF);
   static const danger = Color(0xFFC0392B);
-  static const radius = 12.0;
+
+  /// 모서리 3단계 — 이 밖의 값은 쓰지 않는다 (캡슐 모양 없음)
+  static const rSmall = 6.0; // 태그 · 작은 버튼 · 체크 칸 · 날짜 꼬리표
+  static const radius = 12.0; // 카드 · 버튼 · 입력칸 · 사진
+  static const rLarge = 18.0; // 큰 면: 시트 · 대화상자 · 달력 판 · 배너 카드
+
+  /// 아이콘 3단계 — 글자 옆 16 · 버튼 20 · 머리줄 24 (큰 빈 화면 그림은 따로)
+  static const iS = 16.0;
+  static const iM = 20.0;
+  static const iL = 24.0;
+
+  /// 특별 관심 ★
+  static const star = Color(0xFFBA7517);
+
+  /// 레벨 색 — 10레벨마다: 회색 · 초록 · 파랑 · 보라 · 금색 · 빨강(50+)
+  static const levelTiers = [
+    Color(0xFF888780),
+    Color(0xFF639922),
+    accent,
+    Color(0xFF7F77DD),
+    Color(0xFFBA7517),
+    Color(0xFFE24B4A),
+  ];
+
+  /// 사진 위 어두운 덮개 (구매함 리본 · 좋아요 동그라미)
+  static const scrim = Color(0xA6222222);
+  static const scrimLight = Color(0x8C222222);
+
+  /// 반투명 흰 면 (사진 위 꼬리표 · 떠 있는 버튼 테두리)
+  static const glass = Color(0xE6FFFFFF);
+
+  /// 그림자 · 서랍 뒤 어둡게
+  static const shadow = Color(0x33000000);
+
+  /// 아래 탭 안 고른 아이콘 · 글자
+  static const navIdle = Color(0xFF9A9A98);
+
+  /// 빈 오른쪽 칸 그림 (넓은 화면)
+  static const ghost = Color(0xFFDCDCDA);
 
   /// 글자 크기 6단계 (타이포 스케일) — 이 밖의 크기는 쓰지 않는다
   static const t11 = 11.0; // 아주 작은 보조: 배지 숫자 · 시간 · 알약
@@ -42,7 +80,7 @@ abstract final class Gp {
   /// 브랜드 그라데이션 (Lv 알약 · 인증 배지)
   static const accentGradient = LinearGradient(colors: [accent, accent2]);
 
-  static BoxDecoration raised({BoxShape shape = BoxShape.rectangle, double radius = 14}) => BoxDecoration(
+  static BoxDecoration raised({BoxShape shape = BoxShape.rectangle, double radius = Gp.radius}) => BoxDecoration(
     shape: shape,
     borderRadius: shape == BoxShape.circle ? null : BorderRadius.circular(radius),
     gradient: const LinearGradient(
@@ -50,7 +88,7 @@ abstract final class Gp {
       end: Alignment.bottomRight,
       colors: [Color(0xFFFFFFFF), Color(0xFFEDEDEB)],
     ),
-    border: Border.all(color: const Color(0xE6FFFFFF)),
+    border: Border.all(color: Gp.glass),
     boxShadow: const [
       BoxShadow(color: Color(0x1A000000), blurRadius: 16, offset: Offset(0, 6)),
       BoxShadow(color: Color(0x0F000000), blurRadius: 2, offset: Offset(0, 1)),
@@ -111,11 +149,11 @@ ThemeData buildGpTheme() {
     bottomSheetTheme: const BottomSheetThemeData(
       backgroundColor: Gp.panel,
       showDragHandle: true,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(Gp.rLarge))),
     ),
     dialogTheme: DialogThemeData(
       backgroundColor: Gp.panel,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Gp.rLarge)),
     ),
     // 알림(토스트): 흰 반투명 바탕 · 검정 글자 · 되돌리기는 브랜드 색, 몇 초 뒤 사라짐
     snackBarTheme: SnackBarThemeData(
@@ -126,7 +164,7 @@ ThemeData buildGpTheme() {
       elevation: 6,
       insetPadding: const EdgeInsets.fromLTRB(16, 0, 16, 90),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(Gp.radius),
         side: const BorderSide(color: Gp.line),
       ),
     ),

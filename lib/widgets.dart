@@ -17,6 +17,8 @@ import 'marks.dart';
 import 'models.dart';
 import 'theme.dart';
 
+export 'format.dart';
+
 /// 로딩 상태
 class LoadingView extends StatelessWidget {
   const LoadingView({super.key, this.label = '불러오는 중…'});
@@ -74,7 +76,7 @@ class ErrorView extends StatelessWidget {
             const SizedBox(height: 16),
             FilledButton.icon(
               onPressed: onRetry,
-              icon: const Icon(Icons.refresh, size: 18),
+              icon: const Icon(Icons.refresh, size: Gp.iM),
               label: const Text('다시 시도'),
             ),
           ],
@@ -369,10 +371,10 @@ class GpSearchBar extends StatelessWidget {
         child: Container(
           height: 48,
           padding: const EdgeInsets.only(left: 16, right: 4),
-          decoration: Gp.raised(radius: 24),
+          decoration: Gp.raised(radius: Gp.radius),
           child: Row(
             children: [
-              const Icon(Icons.search, size: 20, color: Gp.muted),
+              const Icon(Icons.search, size: Gp.iM, color: Gp.muted),
               const SizedBox(width: 10),
               Expanded(child: field),
               if (c != null && onTap == null)
@@ -382,7 +384,7 @@ class GpSearchBar extends StatelessWidget {
                       ? const SizedBox.shrink()
                       : IconButton(
                           tooltip: '지우기', // P03
-                          icon: const Icon(Icons.cancel, size: 18, color: Gp.faint),
+                          icon: const Icon(Icons.cancel, size: Gp.iM, color: Gp.faint),
                           onPressed: () {
                             c.clear();
                             onChanged?.call('');
@@ -392,7 +394,7 @@ class GpSearchBar extends StatelessWidget {
               if (onCamera != null)
                 IconButton(
                   tooltip: '찍어서 찾기',
-                  icon: const Icon(Icons.photo_camera_outlined, size: 21, color: Gp.ink),
+                  icon: const Icon(Icons.photo_camera_outlined, size: Gp.iM, color: Gp.ink),
                   onPressed: onCamera,
                 )
               else
@@ -553,7 +555,7 @@ class ProductTile extends StatelessWidget {
                   builder: (context) => isPaneSelected(context, id)
                       ? DecoratedBox(
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(Gp.radius),
                             border: Border.all(color: Gp.accent, width: 2.5),
                           ),
                         )
@@ -639,7 +641,7 @@ class MarkOverlay extends StatelessWidget {
                     width: size + 2,
                     height: size * 1.4,
                     alignment: const Alignment(0, -0.3),
-                    color: owned ? Gp.own : const Color(0xA6222222),
+                    color: owned ? Gp.own : Gp.scrim,
                     child: Icon(owned ? Icons.check : Icons.add, size: size * 0.7, color: Colors.white),
                   ),
                 ),
@@ -667,7 +669,7 @@ class MarkOverlay extends StatelessWidget {
                   duration: const Duration(milliseconds: 180),
                   width: size,
                   height: size,
-                  decoration: BoxDecoration(shape: BoxShape.circle, color: liked ? Gp.panel : const Color(0x8C222222)),
+                  decoration: BoxDecoration(shape: BoxShape.circle, color: liked ? Gp.panel : Gp.scrimLight),
                   child: Icon(
                     liked ? Icons.favorite : Icons.favorite_border,
                     size: size * 0.6,
@@ -702,32 +704,38 @@ class QuickMarks extends StatelessWidget {
   }
 }
 
-/// 구매함 표시 아이콘 (상품 카드의 리본과 같은 모양 · 민트) — 글자 대신 쓴다
-class RibbonIcon extends StatelessWidget {
-  const RibbonIcon({super.key, this.size = 16, this.color = Gp.own});
+/// 좋아요 표시 (♡, 파랑) — 글자 대신. 상세 · 필터 · My Page · 친구 소식 공통
+class LikedIcon extends StatelessWidget {
+  const LikedIcon({super.key, this.filled = true, this.size = Gp.iS, this.color = Gp.accent});
+  final bool filled;
   final double size;
   final Color color;
 
   @override
-  Widget build(BuildContext context) => ClipPath(
-    clipper: const _RibbonClipper(notch: 0.28),
-    child: Container(width: size * 0.78, height: size, color: color),
-  );
+  Widget build(BuildContext context) => Icon(filled ? Icons.favorite : Icons.favorite_border, size: size, color: color);
+}
+
+/// 구매함 표시 (책갈피, 민트) — 상품 카드의 리본과 같은 뜻
+class OwnedIcon extends StatelessWidget {
+  const OwnedIcon({super.key, this.filled = true, this.size = Gp.iS, this.color = Gp.own});
+  final bool filled;
+  final double size;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Icon(filled ? Icons.bookmark : Icons.bookmark_border, size: size, color: color);
 }
 
 /// 책갈피 리본 모양 (아래 가운데가 파인 사각형)
 class _RibbonClipper extends CustomClipper<Path> {
-  const _RibbonClipper({this.notch});
-
-  /// 파인 깊이 (높이 비율). 없으면 8px
-  final double? notch;
+  const _RibbonClipper();
 
   @override
   Path getClip(Size s) => Path()
     ..moveTo(0, 0)
     ..lineTo(s.width, 0)
     ..lineTo(s.width, s.height)
-    ..lineTo(s.width / 2, s.height - (notch == null ? 8 : s.height * notch!))
+    ..lineTo(s.width / 2, s.height - 8)
     ..lineTo(0, s.height)
     ..close();
 
@@ -788,7 +796,7 @@ Future<T?> showPickSheet<T>(
                         ),
                       ),
                     ),
-                    if (v == current) const Icon(Icons.check, size: 20, color: Gp.accent),
+                    if (v == current) const Icon(Icons.check, size: Gp.iM, color: Gp.accent),
                   ],
                 ),
               ),
@@ -853,38 +861,6 @@ class RingAvatar extends StatelessWidget {
     return AccentRing(width: ringWidth, child: face);
   }
 }
-
-/// 레벨 색 — 10레벨마다 바뀐다: 회색 · 초록 · 파랑 · 보라 · 금색 · 빨강(50+)
-Color levelColor(int level) => switch (level ~/ 10) {
-  0 => const Color(0xFF888780),
-  1 => const Color(0xFF639922),
-  2 => Gp.accent,
-  3 => const Color(0xFF7F77DD),
-  4 => const Color(0xFFBA7517),
-  _ => const Color(0xFFE24B4A),
-};
-
-/// Lv 표 (레벨 색) — My Page · 도감 레벨 막대 · 친구 서랍
-class LevelChip extends StatelessWidget {
-  const LevelChip({super.key, required this.level, this.small = false});
-  final int level;
-  final bool small;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: small ? 6 : 9, vertical: small ? 1 : 3),
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(5), color: levelColor(level)),
-      child: Text(
-        'Lv.$level',
-        style: TextStyle(fontSize: small ? Gp.t11 : Gp.t12, fontWeight: FontWeight.w700, color: Colors.white),
-      ),
-    );
-  }
-}
-
-/// "a · b · c" — 빈 칸은 빼고 가운뎃점으로 잇는다
-String joinDot(Iterable<String> parts) => parts.where((s) => s.isNotEmpty).join(' · ');
 
 /// 글자 + 브랜드 색 밑줄 탭 (채널 바 · 좋아요/구매함 · 사진/바코드)
 class UnderlineTab extends StatelessWidget {
@@ -1097,8 +1073,8 @@ class TagPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
-        color: filled ? const Color(0xE6FFFFFF) : null,
-        borderRadius: BorderRadius.circular(99),
+        color: filled ? Gp.glass : null,
+        borderRadius: BorderRadius.circular(Gp.rSmall),
         border: Border.all(color: strong ? Gp.ink : Gp.line),
       ),
       child: Text(
@@ -1149,13 +1125,13 @@ class TogglePill extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
             color: active ? color.withValues(alpha: 0.07) : Gp.panel,
-            borderRadius: BorderRadius.circular(99),
+            borderRadius: BorderRadius.circular(Gp.rSmall),
             border: Border.all(color: active ? color : Gp.line, width: active ? 1.3 : 1),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(active ? activeIcon : icon, size: 18, color: active ? color : Gp.ink),
+              Icon(active ? activeIcon : icon, size: Gp.iM, color: active ? color : Gp.ink),
               const SizedBox(width: 5),
               Flexible(
                 // 좁은 화면에서는 말줄임
@@ -1279,24 +1255,6 @@ class _AccentRingState extends State<AccentRing> with SingleTickerProviderStateM
   }
 }
 
-String _comma(int v) => v.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (_) => ',');
-
-/// 일본 정가: ¥3,850 (없으면 '가격 미정')
-String yen(int? v) => v == null ? '가격 미정' : '¥${_comma(v)}';
-
-/// 날짜 한 가지 모양: "2026-10-05" → "2026.10.05", "2027-07" → "2027.07" (상세 · 목록 · 공고 공통)
-String dateDot(String d) => d.replaceAll('-', '.');
-
-/// 원화: 41,000원
-String won(int v) => '${_comma(v)}원';
-
-/// 원화 짧게 (My Page 숫자 칸): 9,800원 · 18.4만 · 243만
-String wonShort(int v) {
-  if (v < 10000) return won(v);
-  final man = v / 10000;
-  return man < 100 ? '${man.toStringAsFixed(1).replaceAll('.0', '')}만' : '${man.round()}만';
-}
-
 /// 보기 바꾸기 아이콘 두 개 (전체 ↔ 내 것) — 홈 검색창 옆 · 캘린더. 글자 없이 아이콘, 고른 쪽만 연한 파랑 칸
 class ViewIconToggle extends StatelessWidget {
   const ViewIconToggle({
@@ -1320,13 +1278,13 @@ class ViewIconToggle extends StatelessWidget {
       message: tip,
       child: Material(
         color: v == mine ? Gp.accent.withValues(alpha: 0.12) : Colors.transparent,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(Gp.radius),
         child: InkWell(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(Gp.radius),
           onTap: () => onChanged(v),
           child: SizedBox.square(
             dimension: 38,
-            child: Icon(icon, size: 21, color: v == mine ? Gp.accent : Gp.faint),
+            child: Icon(icon, size: Gp.iM, color: v == mine ? Gp.accent : Gp.faint),
           ),
         ),
       ),
@@ -1363,6 +1321,26 @@ class BlurFitImage extends StatelessWidget {
         ColoredBox(color: Colors.black.withValues(alpha: dim)),
         AppImage(path, fit: BoxFit.contain),
       ],
+    );
+  }
+}
+
+/// 날짜 꼬리표 하나 (빨강 = PB 예약 마감, 파랑 = 발매)
+class DateTag extends StatelessWidget {
+  const DateTag(this.text, {super.key, this.urgent = false});
+  final String text;
+  final bool urgent;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = urgent ? Gp.danger : Gp.accent;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(color: c.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(Gp.rSmall)),
+      child: Text(
+        text,
+        style: TextStyle(fontSize: Gp.t11, fontWeight: FontWeight.w700, color: c),
+      ),
     );
   }
 }

@@ -299,7 +299,7 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
         isLabelVisible: _removed.isNotEmpty,
         backgroundColor: Gp.accent,
         label: Text('${_removed.length}'),
-        child: const Icon(Icons.delete_outline, color: Gp.muted, size: 22),
+        child: const Icon(Icons.delete_outline, color: Gp.muted, size: Gp.iM),
       ),
     );
     if (kits.isEmpty) {
@@ -311,12 +311,12 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
         action: _removed.isEmpty
             ? OutlinedButton.icon(
                 onPressed: widget.onGoSearch,
-                icon: const Icon(Icons.search, size: 18),
+                icon: const Icon(Icons.search, size: Gp.iM),
                 label: const Text('검색하러 가기'),
               )
             : OutlinedButton.icon(
                 onPressed: () => _openTrash(all), // 다 지웠어도 휴지통은 열 수 있게
-                icon: const Icon(Icons.delete_outline, size: 18),
+                icon: const Icon(Icons.delete_outline, size: Gp.iM),
                 label: Text('휴지통 (${_removed.length})'),
               ),
       );
@@ -446,7 +446,7 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: c, size: 20),
+          Icon(icon, color: c, size: Gp.iM),
           const SizedBox(width: 6),
           Text(
             label,

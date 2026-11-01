@@ -313,7 +313,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
                     tooltip: '뒤로',
                     size: 40,
                     onTap: () => Navigator.of(context).maybePop(),
-                    child: const Icon(Icons.arrow_back_ios_new, size: 18, color: Gp.ink),
+                    child: const Icon(Icons.arrow_back_ios_new, size: Gp.iM, color: Gp.ink),
                   ),
                 ),
               ),
@@ -403,7 +403,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
                         '거래 ${m.samples}건',
                         style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
                       ),
-                    const Icon(Icons.chevron_right, size: 20, color: Gp.muted),
+                    const Icon(Icons.chevron_right, size: Gp.iM, color: Gp.muted),
                   ],
                 ),
               ),
@@ -520,7 +520,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
         child: Center(
           child: TextButton.icon(
             onPressed: _report, // D-12 P09
-            icon: const Icon(Icons.flag_outlined, size: 18, color: Gp.muted),
+            icon: const Icon(Icons.flag_outlined, size: Gp.iM, color: Gp.muted),
             label: const Text('정보가 틀렸나요? 제보하기', style: TextStyle(color: Gp.muted)),
           ),
         ),
@@ -585,7 +585,7 @@ class _SpecStrip extends StatelessWidget {
           children: [
             const Padding(
               padding: EdgeInsets.only(left: 16, right: 6),
-              child: Icon(Icons.assignment_outlined, size: 22, color: Gp.ink),
+              child: Icon(Icons.assignment_outlined, size: Gp.iM, color: Gp.ink),
             ),
             Expanded(
               child: ListView.separated(
@@ -660,7 +660,7 @@ class _SpecSheet extends StatelessWidget {
               ),
             ),
             DecoratedBox(
-              decoration: BoxDecoration(color: Gp.bg, borderRadius: BorderRadius.circular(14)),
+              decoration: BoxDecoration(color: Gp.bg, borderRadius: BorderRadius.circular(Gp.radius)),
               child: Column(
                 children: [
                   for (var r = 0; r < top.length; r += 2)
@@ -791,7 +791,7 @@ class _BottomActions extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 21, color: Gp.ink),
+            Icon(icon, size: Gp.iM, color: Gp.ink),
             const SizedBox(height: 2),
             Text(
               label,

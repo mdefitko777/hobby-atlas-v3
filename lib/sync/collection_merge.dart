@@ -10,6 +10,7 @@
 library;
 
 import 'dart:convert';
+import '../json_util.dart';
 
 /// 기록 상태 3가지
 const collectionStatuses = ['owned', 'wanted', 'deleted'];
@@ -95,7 +96,7 @@ Map<String, Object?> normalizeCollectionEntry(
   String? now,
   String member = 'member',
 }) {
-  final entry = _map(raw);
+  final entry = jMap(raw);
   final status = entry['status'];
   final out = <String, Object?>{
     'status': status is String && statuses.contains(status) ? status : 'wanted',
@@ -112,25 +113,25 @@ Map<String, Object?> normalizeCollectionEntry(
 
 /// {owned[], wanted[], items{}, member_items{멤버: {kit_id: 기록}}} (+ 그 밖의 키는 그대로)
 Map<String, Object?> normalizeCollection(Object? raw, [CollectionOptions options = const CollectionOptions()]) {
-  final collection = _map(raw);
+  final collection = jMap(raw);
   final statuses = options.statuses;
   final self = safeMemberName(options.self);
   final now = _nowIso();
-  final legacyItems = <String, Object?>{..._map(collection['items'])};
+  final legacyItems = <String, Object?>{...jMap(collection['items'])};
   final memberItems = <String, Object?>{
-    for (final e in _map(collection['member_items']).entries) e.key: e.value is Map ? _deepCopy(e.value) : e.value,
+    for (final e in jMap(collection['member_items']).entries) e.key: e.value is Map ? _deepCopy(e.value) : e.value,
   };
 
-  for (final id in _list(collection['owned'])) {
+  for (final id in jList(collection['owned'])) {
     if (id is String) legacyItems[id] ??= {'status': 'owned', 'updated_at': now, 'updated_by': 'local'};
   }
-  for (final id in _list(collection['wanted'])) {
+  for (final id in jList(collection['wanted'])) {
     if (id is String) legacyItems[id] ??= {'status': 'wanted', 'quantity': 1, 'updated_at': now, 'updated_by': 'local'};
   }
 
   if (memberItems.isEmpty) {
     for (final e in legacyItems.entries) {
-      if (!_truthy(_map(e.value)['status'])) continue;
+      if (!_truthy(jMap(e.value)['status'])) continue;
       ((memberItems[self] ??= <String, Object?>{}) as Map)[e.key] = e.value;
     }
   }
@@ -143,13 +144,13 @@ Map<String, Object?> normalizeCollection(Object? raw, [CollectionOptions options
     final target = options.memberMerges[key];
     if (target != null && target.isNotEmpty && key != self) key = safeMemberName(target);
     for (final it in memberMap.entries) {
-      final entry = _map(it.value);
+      final entry = jMap(it.value);
       final status = entry['status'];
       if (status is! String || !statuses.contains(status)) continue;
       final ne = normalizeCollectionEntry(entry, statuses: statuses, now: now, member: key);
       final bucket = normalized[key] ??= <String, Object?>{};
       final existing = bucket['${it.key}'];
-      bucket['${it.key}'] = existing == null ? ne : newerByTimestamp(_map(existing), ne)!;
+      bucket['${it.key}'] = existing == null ? ne : newerByTimestamp(jMap(existing), ne)!;
     }
   }
 
@@ -158,7 +159,7 @@ Map<String, Object?> normalizeCollection(Object? raw, [CollectionOptions options
   final items = <String, Object?>{};
   for (final e in (normalized[self] ?? const <String, Object?>{}).entries) {
     items[e.key] = e.value;
-    final status = _map(e.value)['status'];
+    final status = jMap(e.value)['status'];
     if (status == 'owned') owned.add(e.key);
     if (status == 'wanted') wanted.add(e.key);
   }
@@ -180,12 +181,12 @@ Map<String, Object?> mergeCollectionState(
 ]) {
   final local = normalizeCollection(localCollection, options);
   final remote = normalizeCollection(remoteCollection, options);
-  final lm = _map(local['member_items']);
-  final rm = _map(remote['member_items']);
+  final lm = jMap(local['member_items']);
+  final rm = jMap(remote['member_items']);
   final merged = <String, Map<String, Object?>>{};
   for (final member in {...lm.keys, ...rm.keys}) {
-    final l = _map(lm[member]);
-    final r = _map(rm[member]);
+    final l = jMap(lm[member]);
+    final r = jMap(rm[member]);
     for (final kitId in {...l.keys, ...r.keys}) {
       final next = newerByTimestamp(l[kitId], r[kitId]);
       if (next == null) continue;
@@ -201,8 +202,8 @@ Map<String, Object?> mergeCollectionState(
 
 /// 키별로 더 늦은 값 (updated_at · hidden_at · reviewed_at) — overrides 용
 Map<String, Object?> mergeTimestampedMap(Object? localMap, Object? remoteMap) {
-  final l = _map(localMap);
-  final r = _map(remoteMap);
+  final l = jMap(localMap);
+  final r = jMap(remoteMap);
   final merged = <String, Object?>{};
   for (final key in {...l.keys, ...r.keys}) {
     final next = newerByTimestamp(l[key], r[key], const ['updated_at', 'hidden_at', 'reviewed_at']);
@@ -224,8 +225,8 @@ Map<String, Object?> mergeCloudPayload(
   final merged = mergeCollectionState(localPayload['collection'], remotePayload['collection'], options);
   merged.addAll(
     _mergeExtras(
-      _collectionExtras(_map(localPayload['collection'])),
-      _collectionExtras(_map(remotePayload['collection'])),
+      _collectionExtras(jMap(localPayload['collection'])),
+      _collectionExtras(jMap(remotePayload['collection'])),
     ),
   );
   return {
@@ -233,8 +234,8 @@ Map<String, Object?> mergeCloudPayload(
     'collection': merged,
     'overrides': mergeTimestampedMap(localPayload['overrides'], remotePayload['overrides']),
     'series_label_overrides': {
-      ..._map(remotePayload['series_label_overrides']),
-      ..._map(localPayload['series_label_overrides']),
+      ...jMap(remotePayload['series_label_overrides']),
+      ...jMap(localPayload['series_label_overrides']),
     },
   };
 }
@@ -248,17 +249,17 @@ Map<String, Object?> mergeCloudPayload(
 ///     공유 공간의 items 는 "마지막에 저장한 사람"의 버킷이라 동생 것일 수도 있다.
 ///  4) 그것도 없으면 [preferred] (비었으면 'member')
 String resolveSelfBucket(Map<String, Object?> payload, String preferred, {Set<String> notMine = const {}}) {
-  final col = _map(payload['collection']);
-  final members = _map(col['member_items']);
+  final col = jMap(payload['collection']);
+  final members = jMap(col['member_items']);
   final want = preferred.trim();
   if (want.isNotEmpty && members[want] is Map) return want;
   if (members['member'] is Map) return 'member';
-  final items = _map(col['items']);
+  final items = jMap(col['items']);
   if (items.isNotEmpty) {
     for (final e in members.entries) {
       final name = safeMemberName(e.key);
       if (notMine.contains(name) || droppedCollectionMembers.contains(name)) continue;
-      final m = _map(e.value);
+      final m = jMap(e.value);
       if (m.length == items.length && m.keys.every(items.containsKey)) return name;
     }
   }
@@ -279,8 +280,8 @@ Map<String, Object?> buildSyncPayload({
 }) {
   final options = CollectionOptions.forSelf(self);
   final me = options.self;
-  final remoteCol = _map(remote['collection']);
-  final remoteMembers = _map(remoteCol['member_items']);
+  final remoteCol = jMap(remote['collection']);
+  final remoteMembers = jMap(remoteCol['member_items']);
   final merged = mergeCollectionState(
     {
       'member_items': {me: localSelf},
@@ -289,7 +290,7 @@ Map<String, Object?> buildSyncPayload({
     options,
   );
   // 다른 멤버 버킷은 읽은 글자 그대로 (정리하지 않음)
-  final members = _map(merged['member_items']);
+  final members = jMap(merged['member_items']);
   final keptMembers = <String, Object?>{
     for (final e in members.entries)
       e.key: e.key != me && remoteMembers[e.key] is Map ? _deepCopy(remoteMembers[e.key]) : e.value,
@@ -314,8 +315,8 @@ Map<String, Object?> buildSyncPayload({
     }
     out['overrides'] = mergeTimestampedMap(localExtras['overrides'], remote['overrides']);
     out['series_label_overrides'] = {
-      ..._map(remote['series_label_overrides']),
-      ..._map(localExtras['series_label_overrides']),
+      ...jMap(remote['series_label_overrides']),
+      ...jMap(localExtras['series_label_overrides']),
     };
   }
   return out;
@@ -326,15 +327,15 @@ bool samePayload(Object? a, Object? b) => _canonical(a) == _canonical(b);
 
 /// payload 에서 내 버킷만 (정리된 기록)
 Map<String, Map<String, Object?>> selfItemsOf(Map<String, Object?> payload, String self) {
-  final members = _map(_map(payload['collection'])['member_items']);
+  final members = jMap(jMap(payload['collection'])['member_items']);
   return {
-    for (final e in _map(members[safeMemberName(self)]).entries)
-      if (e.value is Map) e.key: Map<String, Object?>.of(_map(e.value)),
+    for (final e in jMap(members[safeMemberName(self)]).entries)
+      if (e.value is Map) e.key: Map<String, Object?>.of(jMap(e.value)),
   };
 }
 
 /// collection 의 기본 4키 말고 나머지 (custom_items 등)
-Map<String, Object?> collectionExtrasOf(Map<String, Object?> payload) => _collectionExtras(_map(payload['collection']));
+Map<String, Object?> collectionExtrasOf(Map<String, Object?> payload) => _collectionExtras(jMap(payload['collection']));
 
 Map<String, Object?> _collectionExtras(Map<String, Object?> collection) => {
   for (final e in collection.entries)
@@ -396,10 +397,6 @@ double? _jsNumber(Object? v) {
   }
   return null;
 }
-
-Map<String, Object?> _map(Object? v) =>
-    v is Map<String, Object?> ? v : (v is Map ? {for (final e in v.entries) '${e.key}': e.value} : const {});
-List<Object?> _list(Object? v) => v is List ? v : const [];
 
 Object? _deepCopy(Object? v) {
   if (v is Map) return {for (final e in v.entries) '${e.key}': _deepCopy(e.value)};

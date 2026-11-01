@@ -142,16 +142,11 @@ class _EmptyPane extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.view_in_ar_outlined, size: 72, color: Color(0xFFDCDCDA)),
+            Icon(Icons.view_in_ar_outlined, size: 72, color: Gp.ghost),
             SizedBox(height: 10),
             Text(
               'Hobby Atlas',
-              style: TextStyle(
-                fontSize: Gp.t24,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 1.5,
-                color: Color(0xFFDCDCDA),
-              ),
+              style: TextStyle(fontSize: Gp.t24, fontWeight: FontWeight.w800, letterSpacing: 1.5, color: Gp.ghost),
             ),
             SizedBox(height: 8),
             Text(

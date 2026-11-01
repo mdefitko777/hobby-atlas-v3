@@ -105,7 +105,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (!mounted) return;
     showToast(
       context,
-      r == null ? '이미 확인 중이에요' : (r.error.isNotEmpty ? r.error : (r.liveCount == 0 ? '새 소식이 없어요' : '새 알림 ${r.liveCount}개')),
+      r == null
+          ? '이미 확인 중이에요'
+          : (r.error.isNotEmpty ? r.error : (r.liveCount == 0 ? '새 소식이 없어요' : '새 알림 ${r.liveCount}개')),
     );
   }
 
@@ -134,7 +136,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _import() async {
     final how = await showModalBottomSheet<String>(
       context: context,
-      showDragHandle: true,
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -290,13 +291,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               isThreeLine: sync.statusLine.contains('\n'),
               trailing: busy
                   ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                  : TextButton(onPressed: () => sync.syncNow(reason: 'manual'), child: const Text('지금 동기화')),
+                  : TextButton(
+                      onPressed: () => sync.syncNow(reason: 'manual'),
+                      child: const Text('지금 동기화'),
+                    ),
             ),
-            ListTile(
-              leading: const Icon(Icons.logout),
-              title: const Text('로그아웃'),
-              onTap: _signOut,
-            ),
+            ListTile(leading: const Icon(Icons.logout), title: const Text('로그아웃'), onTap: _signOut),
           ],
         ],
       ),
@@ -307,11 +307,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _export() async {
     final now = DateTime.now();
     final day = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-    final json = const JsonEncoder.withIndent(' ').convert({
-      'exported_at': now.toUtc().toIso8601String(),
-      'app': 'hobby-atlas-v3',
-      ...UserStore.instance.toJson(),
-    });
+    final json = const JsonEncoder.withIndent(
+      ' ',
+    ).convert({'exported_at': now.toUtc().toIso8601String(), 'app': 'hobby-atlas-v3', ...UserStore.instance.toJson()});
     try {
       final uri = await FilePicker.saveFile(
         fileName: 'hobby-atlas-backup-$day.json',
@@ -340,7 +338,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontSize: Gp.t12, color: Gp.muted)),
+          Text(
+            title,
+            style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+          ),
           const SizedBox(height: 6),
           Wrap(spacing: 6, runSpacing: 6, children: [for (final k in keys) chip(k)]),
         ],

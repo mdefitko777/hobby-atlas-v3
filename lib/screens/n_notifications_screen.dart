@@ -64,19 +64,7 @@ extension on NoticeType {
 }
 
 /// "3시간 전" · "어제" · "10.16"
-String noticeTime(DateTime at) {
-  final d = noticeNow.difference(at);
-  if (d.inMinutes < 60) return '${d.inMinutes.clamp(1, 59)}분 전';
-  if (d.inHours < 24 && at.day == noticeNow.day) return '${d.inHours}시간 전';
-  final days = DateTime(
-    noticeNow.year,
-    noticeNow.month,
-    noticeNow.day,
-  ).difference(DateTime(at.year, at.month, at.day)).inDays;
-  if (days == 1) return '어제';
-  if (days < 7) return '$days일 전';
-  return '${at.month}.${at.day.toString().padLeft(2, '0')}';
-}
+String noticeTime(DateTime at) => timeAgo(at, now: noticeNow);
 
 String _groupOf(DateTime at) {
   final days = DateTime(

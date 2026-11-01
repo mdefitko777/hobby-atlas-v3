@@ -6,6 +6,7 @@ library;
 import 'package:flutter/foundation.dart';
 
 import 'rpc.dart';
+import '../json_util.dart';
 
 class PublicProfile {
   const PublicProfile({required this.handle, required this.name, this.avatar = ''});
@@ -17,13 +18,13 @@ class PublicProfile {
   final String avatar;
 
   static PublicProfile? parse(Object? raw) {
-    final m = _map(raw);
-    final handle = _str(m['handle']);
-    if (handle.isEmpty && _str(m['name']).isEmpty) return null;
+    final m = jMap(raw);
+    final handle = jStr(m['handle']);
+    if (handle.isEmpty && jStr(m['name']).isEmpty) return null;
     return PublicProfile(
       handle: handle,
-      name: _str(m['name']).isEmpty ? handle : _str(m['name']),
-      avatar: _str(m['avatar']),
+      name: jStr(m['name']).isEmpty ? handle : jStr(m['name']),
+      avatar: jStr(m['avatar']),
     );
   }
 }
@@ -57,16 +58,16 @@ class MeState {
 
   static MeState? parse(Object? raw) {
     if (raw is! Map) return null;
-    final m = _map(raw);
-    List<PublicProfile> people(String k) => [for (final x in _list(m[k])) ?PublicProfile.parse(x)];
+    final m = jMap(raw);
+    List<PublicProfile> people(String k) => [for (final x in jList(m[k])) ?PublicProfile.parse(x)];
     final rev = m['revision'];
     return MeState(
-      handle: _str(m['handle']),
-      displayName: _str(m['display_name']),
-      avatar: _str(m['avatar']),
-      preferences: _map(m['preferences']),
+      handle: jStr(m['handle']),
+      displayName: jStr(m['display_name']),
+      avatar: jStr(m['avatar']),
+      preferences: jMap(m['preferences']),
       revision: rev is num ? rev.toInt() : int.tryParse('$rev') ?? 0,
-      payload: _map(m['payload']),
+      payload: jMap(m['payload']),
       friends: people('friends'),
       incoming: people('incoming_requests'),
       outgoing: people('outgoing_requests'),
@@ -95,7 +96,7 @@ class FriendCollection {
     final e = [
       for (final x in items.entries)
         if (x.value['status'] == status) x,
-    ]..sort((a, b) => _str(b.value['updated_at']).compareTo(_str(a.value['updated_at'])));
+    ]..sort((a, b) => jStr(b.value['updated_at']).compareTo(jStr(a.value['updated_at'])));
     return [for (final x in e) x.key];
   }
 
@@ -104,11 +105,11 @@ class FriendCollection {
 
   /// 옛 앱 openFriendProfile 과 같은 규칙: member_items[이름] → 없으면 items
   static FriendCollection parse(Object? raw, String fallbackHandle) {
-    final m = _map(raw);
+    final m = jMap(raw);
     final profile = PublicProfile.parse(m) ?? PublicProfile(handle: fallbackHandle, name: fallbackHandle);
-    final col = _map(m['collection']);
-    final byName = _map(col['member_items'])[profile.name];
-    final src = byName is Map ? _map(byName) : _map(col['items']);
+    final col = jMap(m['collection']);
+    final byName = jMap(col['member_items'])[profile.name];
+    final src = byName is Map ? jMap(byName) : jMap(col['items']);
     return FriendCollection(
       profile: PublicProfile(
         handle: profile.handle.isEmpty ? fallbackHandle : profile.handle,
@@ -117,9 +118,9 @@ class FriendCollection {
       ),
       items: {
         for (final e in src.entries)
-          if (e.value is Map) e.key: _map(e.value),
+          if (e.value is Map) e.key: jMap(e.value),
       },
-      updatedAt: _str(m['updated_at']),
+      updatedAt: jStr(m['updated_at']),
     );
   }
 }
@@ -198,7 +199,7 @@ class FriendsService extends ChangeNotifier {
       final r = await _rpc()('gunpula_v3_search_user', {'p_handle': h});
       final p = PublicProfile.parse(r);
       if (p == null) return null;
-      return FriendSearch(p, _str(_map(r)['relation']));
+      return FriendSearch(p, jStr(jMap(r)['relation']));
     } on RpcException catch (e) {
       throw FriendsFailure(friendlyError(e));
     } on OfflineException catch (e) {
@@ -275,8 +276,3 @@ String friendlyError(RpcException e) {
   if (m.contains('not signed in') || e.isAuth) return '로그인이 필요해요';
   return e.message;
 }
-
-String _str(Object? v) => v is String ? v : '';
-Map<String, Object?> _map(Object? v) =>
-    v is Map<String, Object?> ? v : (v is Map ? {for (final e in v.entries) '${e.key}': e.value} : const {});
-List<Object?> _list(Object? v) => v is List ? v : const [];

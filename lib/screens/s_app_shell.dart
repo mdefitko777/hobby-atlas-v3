@@ -252,7 +252,16 @@ class _AppShellState extends State<AppShell> {
         curve: Curves.easeOutCubic,
         alignment: Alignment.bottomCenter,
         heightFactor: _barShown ? 1 : 0,
-        child: Row(children: [avatar, const SizedBox(width: 6), LevelButton(loaders: widget.loaders), const Spacer(), bell, gear]),
+        child: Row(
+          children: [
+            avatar,
+            const SizedBox(width: 6),
+            LevelButton(loaders: widget.loaders),
+            const Spacer(),
+            bell,
+            gear,
+          ],
+        ),
       ),
     );
     Widget page(int i) => i == 0
@@ -337,7 +346,7 @@ class _AppShellState extends State<AppShell> {
         onOpenFriend: (m) => openFriend(context, m, loaders: widget.loaders),
       ),
       drawerEdgeDragWidth: _tab == 0 ? 56 : 0,
-      drawerScrimColor: const Color(0x33000000),
+      drawerScrimColor: Gp.shadow,
       body: SafeArea(
         bottom: false,
         child: wide
@@ -446,7 +455,7 @@ class _CameraButton extends StatelessWidget {
       tooltip: '찍어서 찾기',
       size: _cameraSize,
       onTap: onTap,
-      child: const Icon(Icons.photo_camera_outlined, color: Gp.ink, size: 24),
+      child: const Icon(Icons.photo_camera_outlined, color: Gp.ink, size: Gp.iL),
     );
   }
 }
@@ -550,7 +559,7 @@ class _BottomBar extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(on ? t.$2 : t.$1, size: 23, color: on ? Gp.ink : const Color(0xFF9A9A98)),
+                Icon(on ? t.$2 : t.$1, size: Gp.iL, color: on ? Gp.ink : Gp.navIdle),
                 const SizedBox(height: 3),
                 Text(
                   t.$3,
@@ -558,7 +567,7 @@ class _BottomBar extends StatelessWidget {
                     fontSize: Gp.t11,
                     letterSpacing: 0.4,
                     fontWeight: on ? FontWeight.w700 : FontWeight.w400,
-                    color: on ? Gp.ink : const Color(0xFF9A9A98),
+                    color: on ? Gp.ink : Gp.navIdle,
                   ),
                 ),
               ],
@@ -573,7 +582,7 @@ class _BottomBar extends StatelessWidget {
         filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
         child: DecoratedBox(
           decoration: const BoxDecoration(
-            color: Color(0xE0FFFFFF),
+            color: Gp.glass,
             border: Border(top: BorderSide(color: Gp.line)),
           ),
           child: SafeArea(

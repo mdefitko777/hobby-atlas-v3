@@ -7,12 +7,8 @@ import 'catalog.dart';
 import 'gunpula.dart';
 import 'user_store.dart';
 import '../sync/account.dart';
+import '../json_util.dart';
 import '../sync/friends_service.dart' show PublicProfile;
-
-String _str(Object? v) => v is String ? v : '';
-Map<String, Object?> _map(Object? v) => v is Map<String, Object?> ? v : const {};
-List<Object?> _list(Object? v) => v is List ? v : const [];
-int _int(Object? v) => v is num ? v.toInt() : int.tryParse('$v') ?? 0;
 
 Catalog get _cat => Catalog.instance;
 UserStore get _me => UserStore.instance;
@@ -43,40 +39,40 @@ class _Gget {
 }
 
 Future<_Gget> _gget() async {
-  final u = _map(await _cat.aux('gget-units.json'));
-  final km = _map(await _cat.aux('gget-kit-map.json'));
-  final sec = _map(await _cat.aux('gget-series-sections.json'));
-  final atlas = _map(await _cat.aux('atlas-groups.json'));
+  final u = jMap(await _cat.aux('gget-units.json'));
+  final km = jMap(await _cat.aux('gget-kit-map.json'));
+  final sec = jMap(await _cat.aux('gget-series-sections.json'));
+  final atlas = jMap(await _cat.aux('atlas-groups.json'));
   final workImage = <int, String>{};
   final workSection = <int, String>{};
-  for (final g in _list(_map(atlas['franchises'])['gundam_timeline'])) {
-    final label = pickName(_map(g)['labels']);
-    for (final w in _list(_map(g)['works'])) {
-      final id = _int(_map(w)['work_id']);
+  for (final g in jList(jMap(atlas['franchises'])['gundam_timeline'])) {
+    final label = pickName(jMap(g)['labels']);
+    for (final w in jList(jMap(g)['works'])) {
+      final id = jInt(jMap(w)['work_id']);
       workSection.putIfAbsent(id, () => label);
-      if (_str(_map(w)['image']).isNotEmpty) workImage[id] = _str(_map(w)['image']);
+      if (jStr(jMap(w)['image']).isNotEmpty) workImage[id] = jStr(jMap(w)['image']);
     }
   }
-  for (final w in _list(sec['works'])) {
-    final id = _int(_map(w)['work_id']);
-    if (_str(_map(w)['image']).isNotEmpty) workImage[id] = _str(_map(w)['image']);
+  for (final w in jList(sec['works'])) {
+    final id = jInt(jMap(w)['work_id']);
+    if (jStr(jMap(w)['image']).isNotEmpty) workImage[id] = jStr(jMap(w)['image']);
   }
   return _Gget(
-    [for (final w in _list(u['works'])) _map(w)],
-    [for (final x in _list(u['units'])) _map(x)],
-    {for (final e in _map(km['unit_kits']).entries) e.key: _list(e.value).whereType<String>().toList()},
+    [for (final w in jList(u['works'])) jMap(w)],
+    [for (final x in jList(u['units'])) jMap(x)],
+    {for (final e in jMap(km['unit_kits']).entries) e.key: jList(e.value).whereType<String>().toList()},
     workImage,
     workSection,
   );
 }
 
 bool _inWork(Map<String, Object?> unit, int workId) {
-  final ids = _list(unit['work_ids']);
-  return ids.isEmpty ? _int(unit['work_id']) == workId : ids.any((w) => _int(w) == workId);
+  final ids = jList(unit['work_ids']);
+  return ids.isEmpty ? jInt(unit['work_id']) == workId : ids.any((w) => jInt(w) == workId);
 }
 
 CollectStatus _unitStatus(_Gget g, Map<String, Object?> unit) {
-  final id = _int(unit['unit_id']);
+  final id = jInt(unit['unit_id']);
   final s = _best(g.unitKits['$id'] ?? const []);
   if (s != CollectStatus.none) return s;
   return _me.guideManualLit.contains(id) ? CollectStatus.owned : CollectStatus.none;
@@ -87,15 +83,18 @@ Future<List<GuideWork>> deriveGuideWorks() async {
   final g = await _gget();
   final out = <GuideWork>[];
   for (final w in g.works) {
-    final id = _int(w['work_id']);
-    final units = [for (final u in g.units) if (_inWork(u, id)) u];
+    final id = jInt(w['work_id']);
+    final units = [
+      for (final u in g.units)
+        if (_inWork(u, id)) u,
+    ];
     if (units.isEmpty) continue;
     out.add(
       GuideWork(
         id: '$id',
         section: g.workSection[id] ?? '기타 작품',
-        name: _str(w['name']),
-        image: g.workImage[id] ?? _str(units.first['image_url']),
+        name: jStr(w['name']),
+        image: g.workImage[id] ?? jStr(units.first['image_url']),
         total: units.length,
         owned: units.where((u) => _unitStatus(g, u) == CollectStatus.owned).length,
       ),
@@ -123,14 +122,14 @@ Future<List<GuideUnit>> deriveGuideUnits(String workId) async {
     for (final u in g.units)
       if (_inWork(u, wid))
         GuideUnit(
-          id: '${_int(u['unit_id'])}',
+          id: '${jInt(u['unit_id'])}',
           workId: workId,
-          name: _str(u['name']),
-          nameEn: _str(u['name']),
-          image: _str(u['image_url']),
+          name: jStr(u['name']),
+          nameEn: jStr(u['name']),
+          image: jStr(u['image_url']),
           status: _unitStatus(g, u),
           kitIds: [
-            for (final k in g.unitKits['${_int(u['unit_id'])}'] ?? const <String>[])
+            for (final k in g.unitKits['${jInt(u['unit_id'])}'] ?? const <String>[])
               if (_cat.byId.containsKey(k)) k,
           ],
         ),
@@ -145,13 +144,13 @@ Future<Map<String, int>> deriveFriendGuide(List<String> ownedKitIds) async {
   final owned = ownedKitIds.toSet();
   final litUnits = <int>{
     for (final u in g.units)
-      if ((g.unitKits['${_int(u['unit_id'])}'] ?? const <String>[]).any(owned.contains)) _int(u['unit_id']),
+      if ((g.unitKits['${jInt(u['unit_id'])}'] ?? const <String>[]).any(owned.contains)) jInt(u['unit_id']),
   };
   if (litUnits.isEmpty) return const {};
   final out = <String, int>{};
   for (final w in g.works) {
-    final id = _int(w['work_id']);
-    final n = g.units.where((u) => litUnits.contains(_int(u['unit_id'])) && _inWork(u, id)).length;
+    final id = jInt(w['work_id']);
+    final n = g.units.where((u) => litUnits.contains(jInt(u['unit_id'])) && _inWork(u, id)).length;
     if (n > 0) out['$id'] = n;
   }
   return out;
@@ -173,38 +172,38 @@ String _bbxLine(String baseSetId) => RegExp(r'^[A-Za-z]+').firstMatch(baseSetId)
 
 Future<List<BbxTop>> deriveBbxTops() async {
   await _cat.ensureLoaded();
-  final db = _map(await _cat.aux('bbx-database.json'));
+  final db = jMap(await _cat.aux('bbx-database.json'));
   final parts = <String, Map<String, Object?>>{};
-  for (final e in _map(db['parts']).entries) {
-    for (final p in _list(e.value)) {
-      final m = _map(p);
-      if (_str(m['part_id']).isNotEmpty) parts[_str(m['part_id'])] = {...m, 'type': e.key};
+  for (final e in jMap(db['parts']).entries) {
+    for (final p in jList(e.value)) {
+      final m = jMap(p);
+      if (jStr(m['part_id']).isNotEmpty) parts[jStr(m['part_id'])] = {...m, 'type': e.key};
     }
   }
   final seriesBySet = <String, List<Map<String, Object?>>>{};
-  for (final s in _list(db['series'])) {
-    final m = _map(s);
-    (seriesBySet[_str(m['base_set_id'])] ??= []).add(m);
+  for (final s in jList(db['series'])) {
+    final m = jMap(s);
+    (seriesBySet[jStr(m['base_set_id'])] ??= []).add(m);
   }
   final out = <BbxTop>[];
-  for (final p in _list(db['products'])) {
-    final prod = _map(p);
-    final setId = _str(prod['base_set_id']);
-    final kitId = 'beyblade-x-${_str(prod['product_id']).toLowerCase()}';
+  for (final p in jList(db['products'])) {
+    final prod = jMap(p);
+    final setId = jStr(prod['base_set_id']);
+    final kitId = 'beyblade-x-${jStr(prod['product_id']).toLowerCase()}';
     final kitOwned = _kitStatus(kitId) == CollectStatus.owned || _me.bbxManualMap.values.contains(setId);
     final partList = <BbxPart>[];
     for (final s in seriesBySet[setId] ?? const <Map<String, Object?>>[]) {
       for (final type in _partLabels.keys) {
-        final pid = _str(s['${type}_id']);
+        final pid = jStr(s['${type}_id']);
         final part = parts[pid];
         if (part == null || partList.any((x) => x.id == pid)) continue;
-        final stats = _map(part['stats']);
+        final stats = jMap(part['stats']);
         partList.add(
           BbxPart(
             id: pid,
             typeLabel: _partLabels[type]!,
             name: pickName(part['names']),
-            image: _str(part['image']).isNotEmpty ? _str(part['image']) : _str(part['image_remote']),
+            image: jStr(part['image']).isNotEmpty ? jStr(part['image']) : jStr(part['image_remote']),
             have: kitOwned || _me.bbxOwnedParts.contains(pid),
             topId: setId,
             stats: {
@@ -220,7 +219,7 @@ Future<List<BbxTop>> deriveBbxTops() async {
         id: setId,
         line: _bbxLine(setId),
         name: pickName(prod['names']),
-        image: resolveAsset(_str(prod['image']).isNotEmpty ? prod['image'] : prod['image_remote']),
+        image: resolveAsset(jStr(prod['image']).isNotEmpty ? prod['image'] : prod['image_remote']),
         owned: partList.where((x) => x.have).length,
         total: partList.length,
         parts: partList,
@@ -253,24 +252,24 @@ Future<List<World>> deriveWorlds(String channelId) async {
         ),
     ];
   }
-  final atlas = _map(_map(await _cat.aux('atlas-groups.json'))['franchises']);
+  final atlas = jMap(jMap(await _cat.aux('atlas-groups.json'))['franchises']);
   if (channelId == 'gundam') {
     final g = await _gget();
     return [
-      for (final grp in _list(atlas['gundam_timeline']))
+      for (final grp in jList(atlas['gundam_timeline']))
         () {
-          final m = _map(grp);
-          final workIds = {for (final w in _list(m['works'])) _int(_map(w)['work_id'])};
+          final m = jMap(grp);
+          final workIds = {for (final w in jList(m['works'])) jInt(jMap(w)['work_id'])};
           final units = [
             for (final u in g.units)
               if (workIds.any((w) => _inWork(u, w))) u,
           ];
           return World(
-            id: 'gundam-${_str(m['id'])}',
+            id: 'gundam-${jStr(m['id'])}',
             franchiseId: 'gundam',
             label: pickName(m['labels']),
             subtitle: pickName(m['subtitle']),
-            image: _str(m['image']),
+            image: jStr(m['image']),
             total: units.length,
             owned: units.where((u) => _unitStatus(g, u) == CollectStatus.owned).length,
           );
@@ -278,16 +277,16 @@ Future<List<World>> deriveWorlds(String channelId) async {
     ];
   }
   return [
-    for (final grp in _list(atlas[channelId]))
+    for (final grp in jList(atlas[channelId]))
       () {
-        final m = _map(grp);
-        final ids = _list(m['kit_ids']).whereType<String>().toList();
+        final m = jMap(grp);
+        final ids = jList(m['kit_ids']).whereType<String>().toList();
         return World(
-          id: '$channelId-${_str(m['id'])}',
+          id: '$channelId-${jStr(m['id'])}',
           franchiseId: channelId,
           label: pickName(m['labels']),
           subtitle: pickName(m['subtitle']),
-          image: _str(m['image']),
+          image: jStr(m['image']),
           total: ids.length,
           owned: ids.where((id) => _kitStatus(id) == CollectStatus.owned).length,
         );
@@ -302,24 +301,24 @@ Future<List<Announcement>> deriveAnnouncements(List<String> channelIds) async {
   await _cat.ensureLoaded();
   final set = channelIds.toSet();
   final list = [
-    for (final a in _list(_map(await _cat.aux('announcements.json'))['announcements']))
-      if (_map(a) case final m when set.contains(_str(m['franchise'])) && _str(m['id']).isNotEmpty) m,
-  ]..sort((a, b) => _str(b['announced_at']).compareTo(_str(a['announced_at'])));
+    for (final a in jList(jMap(await _cat.aux('announcements.json'))['announcements']))
+      if (jMap(a) case final m when set.contains(jStr(m['franchise'])) && jStr(m['id']).isNotEmpty) m,
+  ]..sort((a, b) => jStr(b['announced_at']).compareTo(jStr(a['announced_at'])));
   var heroes = 0;
   return [
     for (final m in list)
       () {
         final image = resolveAsset(m['thumbnail_url']);
         return Announcement(
-          id: _str(m['id']),
-          franchiseId: _str(m['franchise']),
+          id: jStr(m['id']),
+          franchiseId: jStr(m['franchise']),
           title: pickName(m['names']),
-          status: _stageLabels[_str(m['status'])] ?? '공식 발표',
-          date: _str(m['announced_at']),
-          source: _str(m['source_name']),
+          status: _stageLabels[jStr(m['status'])] ?? '공식 발표',
+          date: jStr(m['announced_at']),
+          source: jStr(m['source_name']),
           image: image,
           hero: image.isNotEmpty && heroes++ < 6,
-          url: _str(m['source_url']),
+          url: jStr(m['source_url']),
         );
       }(),
   ];

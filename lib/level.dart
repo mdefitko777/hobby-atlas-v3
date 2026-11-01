@@ -9,6 +9,28 @@ import 'models.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
+/// 레벨 색 — 10레벨마다 바뀐다: 회색 · 초록 · 파랑 · 보라 · 금색 · 빨강(50+)
+Color levelColor(int level) => Gp.levelTiers[(level ~/ 10).clamp(0, Gp.levelTiers.length - 1)];
+
+/// Lv 표 (레벨 색) — My Page · 도감 레벨 막대 · 친구 서랍
+class LevelChip extends StatelessWidget {
+  const LevelChip({super.key, required this.level, this.small = false});
+  final int level;
+  final bool small;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: small ? 6 : 9, vertical: small ? 1 : 3),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(Gp.rSmall), color: levelColor(level)),
+      child: Text(
+        'Lv.$level',
+        style: TextStyle(fontSize: small ? Gp.t11 : Gp.t12, fontWeight: FontWeight.w700, color: Colors.white),
+      ),
+    );
+  }
+}
+
 /// 도감 칸 단계 — 흑백 · 컬러(좋아요) · 초록 테두리(구매) · 도는 고리(사진 인증)
 enum CellTier { none, liked, owned, photo }
 
@@ -106,7 +128,10 @@ class LevelBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          Text('${lv.into} / ${lv.need}', style: const TextStyle(fontSize: Gp.t11, color: Gp.muted)),
+          Text(
+            '${lv.into} / ${lv.need}',
+            style: const TextStyle(fontSize: Gp.t11, color: Gp.muted),
+          ),
           const LevelHelpButton(),
         ],
       ),
@@ -122,8 +147,9 @@ class LevelHelpButton extends StatelessWidget {
   Widget build(BuildContext context) => IconButton(
     tooltip: '레벨 · 도감',
     visualDensity: VisualDensity.compact,
-    onPressed: () => showModalBottomSheet<void>(context: context, showDragHandle: true, builder: (_) => const _LevelHelp()),
-    icon: const Icon(Icons.help_outline, size: 19, color: Gp.muted),
+    onPressed: () =>
+        showModalBottomSheet<void>(context: context, showDragHandle: true, builder: (_) => const _LevelHelp()),
+    icon: const Icon(Icons.help_outline, size: Gp.iM, color: Gp.muted),
   );
 }
 
@@ -140,8 +166,13 @@ class _LevelHelp extends StatelessWidget {
         children: [
           SizedBox.square(dimension: 40, child: cell),
           const SizedBox(width: 12),
-          Expanded(child: Text(label, style: const TextStyle(fontSize: Gp.t14))),
-          Text(xp, style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w700, color: Gp.accent)),
+          Expanded(
+            child: Text(label, style: const TextStyle(fontSize: Gp.t14)),
+          ),
+          Text(
+            xp,
+            style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w700, color: Gp.accent),
+          ),
         ],
       ),
     );
@@ -154,18 +185,16 @@ class _LevelHelp extends StatelessWidget {
           children: [
             row(tier(CellTier.liked), '♡ 좋아요', '0'),
             row(tier(CellTier.owned), '구매함', '+10'),
-            row(
-              const Icon(Icons.grid_view_rounded, color: Gp.own, size: 24),
-              '도감 새 칸',
-              '+5',
-            ),
+            row(const Icon(Icons.grid_view_rounded, color: Gp.own, size: Gp.iL), '도감 새 칸', '+5'),
             row(tier(CellTier.photo), '사진 인증', '+3'),
             const SizedBox(height: 10),
             Row(
               children: [
                 for (final (i, lv) in const [1, 10, 20, 30, 40, 50].indexed) ...[
                   if (i > 0) const SizedBox(width: 6),
-                  Expanded(child: Center(child: LevelChip(level: lv, small: true))),
+                  Expanded(
+                    child: Center(child: LevelChip(level: lv, small: true)),
+                  ),
                 ],
               ],
             ),
@@ -201,9 +230,12 @@ class _LevelButtonState extends State<LevelButton> {
       builder: (context, snap) {
         final xp = snap.data?.xp ?? collectorXp(owned: UserStore.instance.ownedCount);
         return InkWell(
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(Gp.rSmall),
           onTap: () => showLevelSheet(context, widget.loaders),
-          child: Padding(padding: const EdgeInsets.all(4), child: LevelChip(level: levelOf(xp).level)),
+          child: Padding(
+            padding: const EdgeInsets.all(4),
+            child: LevelChip(level: levelOf(xp).level),
+          ),
         );
       },
     );
@@ -214,7 +246,6 @@ class _LevelButtonState extends State<LevelButton> {
 Future<void> showLevelSheet(BuildContext context, Loaders loaders) => showModalBottomSheet<void>(
   context: context,
   isScrollControlled: true,
-  showDragHandle: true,
   builder: (_) => FractionallySizedBox(
     heightFactor: 0.6,
     child: FutureBuilder<LevelData>(
@@ -247,12 +278,20 @@ Future<void> showLevelSheet(BuildContext context, Loaders loaders) => showModalB
                             Expanded(
                               child: tierFrame(
                                 CellTier.owned,
-                                Padding(padding: const EdgeInsets.all(6), child: AppImage(s.image, fit: BoxFit.contain)),
+                                Padding(
+                                  padding: const EdgeInsets.all(6),
+                                  child: AppImage(s.image, fit: BoxFit.contain),
+                                ),
                                 radius: 10,
                               ),
                             ),
                             const SizedBox(height: 5),
-                            Text(s.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: Gp.t12)),
+                            Text(
+                              s.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: Gp.t12),
+                            ),
                             Text(
                               '${s.owned} / ${s.total}',
                               style: const TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w700, color: Gp.own),

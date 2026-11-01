@@ -395,7 +395,7 @@ class _MonthCalendar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(8, 6, 8, 10),
       decoration: BoxDecoration(
         color: Gp.panel,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(Gp.rLarge),
         border: Border.all(color: Gp.line),
       ),
       child: Column(
@@ -414,7 +414,7 @@ class _MonthCalendar extends StatelessWidget {
               IconButton(
                 tooltip: '점 색',
                 onPressed: () => _showLegend(context, mine),
-                icon: const Icon(Icons.help_outline, size: 18, color: Gp.faint),
+                icon: const Icon(Icons.help_outline, size: Gp.iM, color: Gp.faint),
               ),
             ],
           ),
@@ -476,7 +476,6 @@ void _showLegend(BuildContext context, bool mine) {
   );
   showModalBottomSheet<void>(
     context: context,
-    showDragHandle: true,
     builder: (_) => SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
@@ -610,12 +609,7 @@ class _EventRow extends StatelessWidget {
           openAnnouncement(context, ann, loaders: loaders);
         }
       },
-      trailing: dday.isEmpty
-          ? null
-          : Text(
-              dday,
-              style: const TextStyle(fontWeight: FontWeight.w700, color: Gp.accent, fontSize: Gp.t12),
-            ),
+      trailing: dday.isEmpty ? null : DateTag(dday, urgent: dday == 'D-DAY' || event.tag == 'PB'),
     );
   }
 }

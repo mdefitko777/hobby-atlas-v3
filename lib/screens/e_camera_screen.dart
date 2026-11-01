@@ -189,7 +189,7 @@ class _CameraScreenState extends State<CameraScreen> {
                                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                                     decoration: BoxDecoration(
                                       color: const Color(0xEEFFFFFF),
-                                      borderRadius: BorderRadius.circular(99),
+                                      borderRadius: BorderRadius.circular(Gp.rSmall),
                                     ),
                                     child: const Row(
                                       mainAxisSize: MainAxisSize.min,
@@ -220,7 +220,7 @@ class _CameraScreenState extends State<CameraScreen> {
                                   tooltip: '닫기', // P03
                                   size: 40,
                                   onTap: () => Navigator.of(context).maybePop(),
-                                  child: const Icon(Icons.close, size: 20, color: Gp.ink),
+                                  child: const Icon(Icons.close, size: Gp.iM, color: Gp.ink),
                                 ),
                               ],
                             ),
@@ -228,8 +228,8 @@ class _CameraScreenState extends State<CameraScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                               decoration: BoxDecoration(
-                                color: const Color(0xE6FFFFFF),
-                                borderRadius: BorderRadius.circular(99),
+                                color: Gp.glass,
+                                borderRadius: BorderRadius.circular(Gp.rSmall),
                               ),
                               child: Text(
                                 barcode ? '상자 뒷면 바코드를 가로 틀에 맞춰 주세요' : '상자나 실물을 네모 안에 맞춰 주세요', // P10
@@ -470,7 +470,7 @@ class _CameraResultScreenState extends State<CameraResultScreen> {
                     ),
                     TextButton.icon(
                       onPressed: _retake, // E-9 P03
-                      icon: const Icon(Icons.photo_camera_outlined, size: 18),
+                      icon: const Icon(Icons.photo_camera_outlined, size: Gp.iM),
                       label: const Text('다시 찍기'),
                     ),
                   ],
@@ -482,7 +482,7 @@ class _CameraResultScreenState extends State<CameraResultScreen> {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Gp.panel,
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(Gp.rLarge),
                   border: Border.all(color: Gp.line),
                 ),
                 child: Column(
@@ -507,7 +507,7 @@ class _CameraResultScreenState extends State<CameraResultScreen> {
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        const Icon(Icons.auto_awesome, size: 15, color: Gp.accent),
+                        const Icon(Icons.auto_awesome, size: Gp.iS, color: Gp.accent),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
@@ -569,13 +569,13 @@ class _CameraResultScreenState extends State<CameraResultScreen> {
                       children: [
                         OutlinedButton.icon(
                           onPressed: _goSearch, // P09
-                          icon: const Icon(Icons.search, size: 18),
+                          icon: const Icon(Icons.search, size: Gp.iM),
                           label: const Text('이름으로 검색'),
                         ),
                         const SizedBox(width: 8),
                         OutlinedButton.icon(
                           onPressed: _retake,
-                          icon: const Icon(Icons.photo_camera_outlined, size: 18),
+                          icon: const Icon(Icons.photo_camera_outlined, size: Gp.iM),
                           label: const Text('다시 찍기'),
                         ),
                       ],

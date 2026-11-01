@@ -159,7 +159,11 @@ class _SectionListViewState extends State<SectionListView> {
           child: Row(
             children: [
               if (widget.onBack case final back?)
-                IconButton(tooltip: '돌아가기', onPressed: back, icon: const Icon(Icons.arrow_back_ios_new, size: 18))
+                IconButton(
+                  tooltip: '돌아가기',
+                  onPressed: back,
+                  icon: const Icon(Icons.arrow_back_ios_new, size: Gp.iM),
+                )
               else
                 const SizedBox(width: 12),
               Container(width: 3, height: 16, color: Gp.accent), // 홈 줄 제목과 같은 색 막대
@@ -242,7 +246,7 @@ class _SectionListViewState extends State<SectionListView> {
                         child: const SizedBox.square(
                           // 누르는 자리 40
                           dimension: 40,
-                          child: Icon(Icons.close, size: 16, color: Gp.muted),
+                          child: Icon(Icons.close, size: Gp.iS, color: Gp.muted),
                         ),
                       ),
                     ],
@@ -265,7 +269,7 @@ class _SectionListViewState extends State<SectionListView> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.swap_vert, size: 18, color: Gp.muted),
+                  const Icon(Icons.swap_vert, size: Gp.iM, color: Gp.muted),
                   const SizedBox(width: 2),
                   Text(
                     _sort.label,

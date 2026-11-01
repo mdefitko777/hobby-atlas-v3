@@ -302,7 +302,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Clipboard.setData(ClipboardData(text: '@${account.handle}'));
                       showToast(context, '아이디를 복사했어요 · 친구에게 보내 주세요');
                     },
-                    icon: const Icon(Icons.content_copy_rounded, size: 18, color: Gp.muted),
+                    icon: const Icon(Icons.content_copy_rounded, size: Gp.iM, color: Gp.muted),
                   ),
                 ],
               ),
@@ -315,7 +315,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 FilledButton.tonalIcon(
                   onPressed: () => showAddFriend(context),
-                  icon: const Icon(Icons.person_add_alt_1_outlined, size: 18),
+                  icon: const Icon(Icons.person_add_alt_1_outlined, size: Gp.iM),
                   label: const Text('아이디로 친구 추가'),
                 ),
                 OutlinedButton.icon(
@@ -324,7 +324,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     isLabelVisible: f.incoming.isNotEmpty,
                     label: Text('${f.incoming.length}'),
                     backgroundColor: Gp.accent,
-                    child: const Icon(Icons.mail_outline, size: 18),
+                    child: const Icon(Icons.mail_outline, size: Gp.iM),
                   ),
                   label: const Text('친구 요청'),
                 ),
@@ -362,7 +362,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: OutlinedButton.icon(
               onPressed: () => _unfriend(m),
               style: OutlinedButton.styleFrom(foregroundColor: Gp.danger),
-              icon: const Icon(Icons.person_remove_outlined, size: 18),
+              icon: const Icon(Icons.person_remove_outlined, size: Gp.iM),
               label: const Text('친구 끊기'),
             ),
           ),
@@ -444,7 +444,9 @@ class _Header extends StatelessWidget {
                 const SizedBox(height: 14),
                 OutlinedButton(
                   onPressed: onEdit, // I-3
-                  style: OutlinedButton.styleFrom(shape: const StadiumBorder()),
+                  style: OutlinedButton.styleFrom(
+                    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(Gp.rSmall))),
+                  ),
                   child: const Text('프로필 편집'),
                 ),
               ],
@@ -506,7 +508,7 @@ class _Stats extends StatelessWidget {
                   label,
                   style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
                 ),
-                if (onJump != null) const Icon(Icons.chevron_right, size: 14, color: Gp.faint),
+                if (onJump != null) const Icon(Icons.chevron_right, size: Gp.iS, color: Gp.faint),
               ],
             ),
           ],

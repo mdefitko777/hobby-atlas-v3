@@ -16,6 +16,7 @@
 import 'combo.dart';
 import 'names.dart';
 import 'parts.dart';
+import '../json_util.dart';
 
 /// Ratchets without burst teeth (go-shoot `simple`, phstudy `fixed_burst`).
 const simpleRatchetCodes = {'3-85', '4-55', '7-55', '9-65', 'M-65', 'M-85'};
@@ -194,23 +195,19 @@ class BbxCatalog {
 
 // ─── loader ─────────────────────────────────────────────────────────────────
 
-Map<String, Object?> _map(Object? v) => v is Map ? v.cast<String, Object?>() : const {};
-List<Object?> _list(Object? v) => v is List ? v : const [];
-String _str(Object? v) => v is String ? v : (v == null ? '' : '$v');
-
 class _Raw {
   _Raw(this.slot, this.json);
   final Slot slot;
   final Map<String, Object?> json;
-  late final String id = _str(json['part_id']);
+  late final String id = jText(json['part_id']);
   late final Map<String, String> fullNames = {
-    for (final l in bbxLangs) l: stripSetPrefix(foldWidth(_str(_map(json['names'])[l]))),
+    for (final l in bbxLangs) l: stripSetPrefix(foldWidth(jText(jMap(json['names'])[l]))),
   };
-  late final Map<String, String> bases = {for (final l in bbxLangs) l: partBaseName(_str(_map(json['names'])[l]), l)};
+  late final Map<String, String> bases = {for (final l in bbxLangs) l: partBaseName(jText(jMap(json['names'])[l]), l)};
   double? get weight => json['weight_g'] is num ? (json['weight_g'] as num).toDouble() : null;
   int? get order => json['collection_order'] is num ? (json['collection_order'] as num).toInt() : null;
   String? get rotation {
-    final r = _map(json['stats'])['rotation'];
+    final r = jMap(json['stats'])['rotation'];
     return r == 'right' || r == 'left' ? r as String : null;
   }
 
@@ -235,7 +232,7 @@ class _Raw {
       (slot == Slot.ratchet && !_ratchetCode.hasMatch(bases['en']!) && !_ratchetCode.hasMatch(bases['ja']!));
 
   late final String moldKey = () {
-    final explicit = _str(json['mold_key']);
+    final explicit = jText(json['mold_key']);
     if (explicit.isNotEmpty) return explicit.contains(':') ? explicit : '${slot.json}:$explicit';
     final fixed = partMoldOverrides[id];
     if (fixed != null) return fixed;
@@ -252,10 +249,10 @@ class _Loader {
 
   BbxCatalog build() {
     final raws = <String, _Raw>{};
-    final partsJson = _map(json['parts']);
+    final partsJson = jMap(json['parts']);
     for (final slot in Slot.values) {
-      for (final p in _list(partsJson[slot.json])) {
-        final r = _Raw(slot, _map(p));
+      for (final p in jList(partsJson[slot.json])) {
+        final r = _Raw(slot, jMap(p));
         if (r.id.isEmpty) continue;
         if (raws.containsKey(r.id)) issues.add('duplicate part_id ${r.id}');
         raws[r.id] = r;
@@ -263,30 +260,30 @@ class _Loader {
     }
 
     // Series references, and what they tell us about molds.
-    final seriesJson = [for (final s in _list(json['series'])) _map(s)];
+    final seriesJson = [for (final s in jList(json['series'])) jMap(s)];
     final integratedBladeMolds = <String>{};
     final integratedBitMolds = <String>{};
     final assembledIds = <String>{};
     final compositeOf = <String, List<String>>{}; // main-blade mold -> [metal, over]
     final tagsByMold = <String, Map<String, int>>{};
-    _Raw? ref(Map<String, Object?> s, Slot slot) => raws[_str(s['${slot.json}_id'])];
+    _Raw? ref(Map<String, Object?> s, Slot slot) => raws[jText(s['${slot.json}_id'])];
     for (final s in seriesJson) {
       final blade = ref(s, Slot.blade), ratchet = ref(s, Slot.ratchet), bit = ref(s, Slot.bit);
       final main = ref(s, Slot.mainBlade);
       final metal = ref(s, Slot.metalBlade), over = ref(s, Slot.overBlade);
       if (ratchet != null && ratchet.integratedBladeFiller && blade != null) integratedBladeMolds.add(blade.moldKey);
       if (ratchet != null && ratchet.integratedBitFiller && bit != null) integratedBitMolds.add(bit.moldKey);
-      if (blade != null && _str(s['lock_chip_id']).isNotEmpty) assembledIds.add(blade.id);
+      if (blade != null && jText(s['lock_chip_id']).isNotEmpty) assembledIds.add(blade.id);
       if (main != null && metal != null && over != null) {
         final c = [metal.moldKey, over.moldKey];
         final prev = compositeOf[main.moldKey];
         if (prev != null && (prev[0] != c[0] || prev[1] != c[1])) {
-          issues.add('main blade ${main.moldKey} is made of $prev in one series and $c in ${_str(s['series_id'])}');
+          issues.add('main blade ${main.moldKey} is made of $prev in one series and $c in ${jText(s['series_id'])}');
         }
         compositeOf[main.moldKey] = c;
       }
       final lineTags = [
-        for (final t in _list(s['tags']))
+        for (final t in jList(s['tags']))
           if (t == 'bx' || t == 'ux' || t == 'cx') t as String,
       ];
       for (final slot in Slot.values) {
@@ -306,16 +303,16 @@ class _Loader {
         id: r.id,
         slot: r.slot,
         moldKey: r.moldKey,
-        baseSetId: _str(r.json['base_set_id']),
+        baseSetId: jText(r.json['base_set_id']),
         names: r.fullNames,
         stats: BbxStats.fromJson(r.json['stats']),
-        color: _str(r.json['color']),
+        color: jText(r.json['color']),
         rotation: r.rotation,
-        height: _map(r.json['stats'])['height'] is num ? (_map(r.json['stats'])['height'] as num).round() : 0,
+        height: jMap(r.json['stats'])['height'] is num ? (jMap(r.json['stats'])['height'] as num).round() : 0,
         weightG: r.weight,
         collectionOrder: r.order,
-        image: _str(r.json['image_remote']).isNotEmpty ? _str(r.json['image_remote']) : _str(r.json['image']),
-        imageFallback: _str(r.json['image_fallback']),
+        image: jText(r.json['image_remote']).isNotEmpty ? jText(r.json['image_remote']) : jText(r.json['image']),
+        imageFallback: jText(r.json['image_fallback']),
       );
     }
 
@@ -407,31 +404,31 @@ class _Loader {
       variants: variants,
       molds: molds,
       series: series,
-      updatedAt: _str(json['updated_at']),
+      updatedAt: jText(json['updated_at']),
       sources: _sources(),
       dataIssues: issues,
     );
   }
 
   List<BbxSource> _sources() {
-    final raw = _list(json['sources']);
+    final raw = jList(json['sources']);
     if (raw.isEmpty) return defaultBbxSources;
     return [
       for (final s in raw)
         BbxSource(
-          name: _str(_map(s)['name']),
-          url: _str(_map(s)['url']),
-          licence: _str(_map(s)['licence'] ?? _map(s)['license']),
+          name: jText(jMap(s)['name']),
+          url: jText(jMap(s)['url']),
+          licence: jText(jMap(s)['licence'] ?? jMap(s)['license']),
         ),
     ];
   }
 
   StockSeries _series(Map<String, Object?> s, Map<String, _Raw> raws, Map<String, PartMold> molds) {
-    final id = _str(s['series_id']);
+    final id = jText(s['series_id']);
     final dataIssues = <String>[];
     final found = <Slot, _Raw>{};
     for (final slot in Slot.values) {
-      final pid = _str(s['${slot.json}_id']);
+      final pid = jText(s['${slot.json}_id']);
       if (pid.isEmpty) continue;
       final r = raws[pid];
       if (r == null) {
@@ -449,7 +446,7 @@ class _Loader {
       return !m.placeholder;
     }
 
-    final names = {for (final l in bbxLangs) l: foldWidth(_str(_map(s['names'])[l]))};
+    final names = {for (final l in bbxLangs) l: foldWidth(jText(jMap(s['names'])[l]))};
     for (final e in found.entries) {
       final en = e.value.bases['en']!;
       if (!molds[e.value.moldKey]!.placeholder && hasCjk(en)) {
@@ -482,9 +479,9 @@ class _Loader {
     if (arch != null && hasBit && ratchetOk) {
       return StockSeries(
         id: id,
-        baseSetId: _str(s['base_set_id']),
+        baseSetId: jText(s['base_set_id']),
         names: names,
-        tags: [for (final t in _list(s['tags'])) '$t'],
+        tags: [for (final t in jList(s['tags'])) '$t'],
         kind: SeriesKind.combo,
         partIds: [
           for (final slot in arch.slots)
@@ -503,9 +500,9 @@ class _Loader {
     final what = realParts.isEmpty ? 'no resolvable part' : realParts.map((r) => r.slot.json).join(' + ');
     return StockSeries(
       id: id,
-      baseSetId: _str(s['base_set_id']),
+      baseSetId: jText(s['base_set_id']),
       names: names,
-      tags: [for (final t in _list(s['tags'])) '$t'],
+      tags: [for (final t in jList(s['tags'])) '$t'],
       kind: SeriesKind.partsOnly,
       partIds: [for (final r in realParts) r.id],
       reason: 'parts-only product: $what',

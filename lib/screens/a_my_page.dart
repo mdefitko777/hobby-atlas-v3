@@ -38,8 +38,12 @@ class _MyPageViewState extends State<MyPageView> {
     Marks.of(context); // 좋아요 · 구매함이 바뀌면 다시 그린다
     final me = UserStore.instance;
     final cat = Catalog.instance;
-    final liked = [for (final id in me.idsWith(const {CollectStatus.wanted})) ?cat.byId[id]];
-    final owned = [for (final id in me.idsWith(const {CollectStatus.owned})) ?cat.byId[id]];
+    final liked = [
+      for (final id in me.idsWith(const {CollectStatus.wanted})) ?cat.byId[id],
+    ];
+    final owned = [
+      for (final id in me.idsWith(const {CollectStatus.owned})) ?cat.byId[id],
+    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -55,17 +59,17 @@ class _MyPageViewState extends State<MyPageView> {
           ),
         ),
         _Section(
-          icon: const Icon(Icons.favorite, size: 18, color: Gp.accent),
+          icon: const LikedIcon(size: Gp.iM),
           onMore: () => widget.onJump?.call(CollectionJump.liked),
           child: _LikedSoon(kits: liked, loaders: widget.loaders),
         ),
         _Section(
-          icon: const RibbonIcon(size: 17),
+          icon: const OwnedIcon(size: Gp.iS),
           onMore: () => widget.onJump?.call(CollectionJump.owned),
           child: _OwnedRow(kits: owned.take(12).toList(), loaders: widget.loaders),
         ),
         _Section(
-          icon: const Icon(Icons.star_rounded, size: 20, color: Color(0xFFBA7517)),
+          icon: const Icon(Icons.star_rounded, size: Gp.iM, color: Gp.star),
           child: const _SpecialFeed(),
         ),
       ],
@@ -94,8 +98,11 @@ class _Section extends StatelessWidget {
               if (onMore != null)
                 InkWell(
                   onTap: onMore,
-                  borderRadius: BorderRadius.circular(12),
-                  child: const Padding(padding: EdgeInsets.all(2), child: Icon(Icons.chevron_right, color: Gp.faint)),
+                  borderRadius: BorderRadius.circular(Gp.radius),
+                  child: const Padding(
+                    padding: EdgeInsets.all(2),
+                    child: Icon(Icons.chevron_right, color: Gp.faint),
+                  ),
                 ),
             ],
           ),
@@ -120,17 +127,20 @@ class _Stats extends StatelessWidget {
         message: tip,
         child: Material(
           color: Gp.soft,
-          borderRadius: BorderRadius.circular(9),
+          borderRadius: BorderRadius.circular(Gp.radius),
           child: InkWell(
             onTap: onTap,
-            borderRadius: BorderRadius.circular(9),
+            borderRadius: BorderRadius.circular(Gp.radius),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Column(
                 children: [
                   SizedBox(height: 18, child: Center(child: icon)),
                   const SizedBox(height: 3),
-                  Text(value, style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w700)),
+                  Text(
+                    value,
+                    style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w700),
+                  ),
                 ],
               ),
             ),
@@ -140,31 +150,27 @@ class _Stats extends StatelessWidget {
     );
     return Row(
       children: [
-        cell(const Icon(Icons.favorite, size: 17, color: Gp.accent), '$liked', onTap: () => onJump?.call(CollectionJump.liked), tip: '좋아요'),
+        cell(const LikedIcon(), '$liked', onTap: () => onJump?.call(CollectionJump.liked), tip: '좋아요'),
         const SizedBox(width: 6),
-        cell(const RibbonIcon(size: 16), '$owned', onTap: () => onJump?.call(CollectionJump.owned), tip: '구매함'),
+        cell(
+          const OwnedIcon(size: Gp.iS),
+          '$owned',
+          onTap: () => onJump?.call(CollectionJump.owned),
+          tip: '구매함',
+        ),
         const SizedBox(width: 6),
-        cell(const Icon(Icons.calendar_month_outlined, size: 17, color: Gp.muted), wonShort(month), tip: '이번 달 지출'),
+        cell(
+          const Icon(Icons.calendar_month_outlined, size: Gp.iS, color: Gp.muted),
+          wonShort(month),
+          tip: '이번 달 지출',
+        ),
         const SizedBox(width: 6),
-        cell(const Icon(Icons.account_balance_wallet_outlined, size: 17, color: Gp.muted), wonShort(total), tip: '총 지출'),
+        cell(
+          const Icon(Icons.account_balance_wallet_outlined, size: Gp.iS, color: Gp.muted),
+          wonShort(total),
+          tip: '총 지출',
+        ),
       ],
-    );
-  }
-}
-
-/// 날짜 꼬리표 하나 (빨강 = PB 예약 마감, 파랑 = 발매)
-class DateTag extends StatelessWidget {
-  const DateTag(this.text, {super.key, this.urgent = false});
-  final String text;
-  final bool urgent;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = urgent ? Gp.danger : Gp.accent;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(color: c.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
-      child: Text(text, style: TextStyle(fontSize: Gp.t11, fontWeight: FontWeight.w700, color: c)),
     );
   }
 }
@@ -214,12 +220,17 @@ class _LikedSoon extends StatelessWidget {
               child: Row(
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(Gp.rSmall),
                     child: SizedBox(width: 38, height: 38, child: AppImage(k.image, placeholder: k.line)),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: Text(k.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: Gp.t14)),
+                    child: Text(
+                      k.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: Gp.t14),
+                    ),
                   ),
                   if (u != null) ...[const SizedBox(width: 8), DateTag(u.label, urgent: u.urgent)],
                 ],
@@ -312,17 +323,31 @@ class _SpecialFeedState extends State<_SpecialFeed> {
                   CircleAvatar(
                     radius: 13,
                     backgroundColor: Gp.soft,
-                    child: Text(name.isEmpty ? '?' : name.substring(0, 1), style: const TextStyle(fontSize: Gp.t12, color: Gp.ink)),
+                    child: Text(
+                      name.isEmpty ? '?' : name.substring(0, 1),
+                      style: const TextStyle(fontSize: Gp.t12, color: Gp.ink),
+                    ),
                   ),
                   const SizedBox(width: 8),
-                  Text(name, style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w700)),
+                  Text(
+                    name,
+                    style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w700),
+                  ),
                   const SizedBox(width: 6),
-                  st == 'owned' ? const RibbonIcon(size: 14) : const Icon(Icons.favorite, size: 14, color: Gp.accent),
+                  st == 'owned' ? const OwnedIcon(size: Gp.iS) : const LikedIcon(),
                   const SizedBox(width: 6),
                   Expanded(
-                    child: Text(kit.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: Gp.t14)),
+                    child: Text(
+                      kit.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: Gp.t14),
+                    ),
                   ),
-                  Text(_ago(at), style: const TextStyle(fontSize: Gp.t11, color: Gp.faint)),
+                  Text(
+                    _ago(at),
+                    style: const TextStyle(fontSize: Gp.t11, color: Gp.faint),
+                  ),
                 ],
               ),
             ),
@@ -331,13 +356,7 @@ class _SpecialFeedState extends State<_SpecialFeed> {
     );
   }
 
-  String _ago(DateTime at) {
-    final d = appNow().difference(at);
-    if (d.inMinutes < 60) return '${d.inMinutes.clamp(1, 59)}분';
-    if (d.inHours < 24) return '${d.inHours}시간';
-    if (d.inDays < 7) return '${d.inDays}일';
-    return dateDot('${at.month.toString().padLeft(2, '0')}-${at.day.toString().padLeft(2, '0')}');
-  }
+  String _ago(DateTime at) => timeAgo(at, now: appNow());
 }
 
 /// 비어 있을 때 — 흐린 아이콘 하나
@@ -348,6 +367,6 @@ class _Empty extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 10),
-    child: Icon(icon, size: 26, color: Gp.line),
+    child: Icon(icon, size: Gp.iL, color: Gp.line),
   );
 }

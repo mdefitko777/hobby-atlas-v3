@@ -112,9 +112,11 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
                             onPressed: () => showToast(context, '반다이 공식 페이지를 브라우저에서 열어요'), // J-5 P10
                             style: OutlinedButton.styleFrom(
                               minimumSize: const Size.fromHeight(44),
-                              shape: const StadiumBorder(),
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.all(Radius.circular(Gp.rSmall)),
+                              ),
                             ),
-                            icon: const Icon(Icons.north_east, size: 16),
+                            icon: const Icon(Icons.north_east, size: Gp.iS),
                             label: const Text('공식으로 가기'),
                           ),
                         ),
@@ -182,7 +184,7 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
                 tooltip: '뒤로',
                 size: 40,
                 onTap: () => Navigator.of(context).maybePop(),
-                child: const Icon(Icons.arrow_back_ios_new, size: 18, color: Gp.ink),
+                child: const Icon(Icons.arrow_back_ios_new, size: Gp.iM, color: Gp.ink),
               ),
             ),
           ),

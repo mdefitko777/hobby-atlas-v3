@@ -4,9 +4,9 @@
 import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/painting.dart' show Color;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+import '../theme.dart';
 import 'feed_rules.dart' show SystemAlert;
 
 class LocalNotifier {
@@ -113,7 +113,7 @@ class LocalNotifier {
               importance: ch.importance,
               priority: ch.importance == Importance.high ? Priority.high : Priority.defaultPriority,
               styleInformation: BigTextStyleInformation(a.body),
-              color: const Color(0xFF1C86D9), // Gp.accent
+              color: Gp.accent,
               category: AndroidNotificationCategory.recommendation,
             ),
           ),

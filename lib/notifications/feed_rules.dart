@@ -12,6 +12,7 @@
 // 이 파일은 Flutter 위젯을 쓰지 않는다 (백그라운드 isolate · 단위 테스트).
 import '../data/gunpula.dart' show pickName;
 import 'notify_models.dart';
+import '../json_util.dart';
 
 /// 피드 상품 한 줄 (entries[].added[] · changed[])
 class FeedItem {
@@ -48,23 +49,23 @@ class FeedItem {
   final List<String> reasons;
 
   static FeedItem? fromJson(Object? json, String changeType) {
-    final j = _map(json);
-    final id = _str(j['kit_id']);
+    final j = jMap(json);
+    final id = jStr(j['kit_id']);
     if (id.isEmpty) return null;
     return FeedItem(
       kitId: id,
-      changeType: _str(j['change_type']).isEmpty ? changeType : _str(j['change_type']),
-      franchise: _str(j['franchise']),
+      changeType: jStr(j['change_type']).isEmpty ? changeType : jStr(j['change_type']),
+      franchise: jStr(j['franchise']),
       name: pickName(j['names']).isEmpty ? id : pickName(j['names']),
-      seriesKey: _str(j['series_key']),
+      seriesKey: jStr(j['series_key']),
       seriesLabel: pickName(j['series_labels']),
-      releaseDate: _str(j['release_date']),
+      releaseDate: jStr(j['release_date']),
       priceJpy: j['price_jpy'] is num ? (j['price_jpy']! as num).toInt() : null,
       isLimited: j['is_limited'] == true,
       isPb: itemIsPremiumBandai(j),
-      watchTags: _list(j['watch_tags']).whereType<String>().toList(),
-      interestTags: _list(j['interest_tags']).whereType<String>().toList(),
-      reasons: _list(j['change_reasons']).whereType<String>().toList(),
+      watchTags: jList(j['watch_tags']).whereType<String>().toList(),
+      interestTags: jList(j['interest_tags']).whereType<String>().toList(),
+      reasons: jList(j['change_reasons']).whereType<String>().toList(),
     );
   }
 
@@ -85,11 +86,11 @@ const quietReasons = {'image', 'name', 'series', 'product_line', 'metadata'};
 bool itemIsPremiumBandai(Map<String, Object?> j) {
   if (j['is_premium_bandai'] == true) return true;
   final text = [
-    _str(j['kit_id']),
-    _str(j['grade_code']),
-    _str(j['subline']),
-    ..._map(j['names']).values.whereType<String>(),
-    ..._list(j['source_urls']).whereType<String>(),
+    jStr(j['kit_id']),
+    jStr(j['grade_code']),
+    jStr(j['subline']),
+    ...jMap(j['names']).values.whereType<String>(),
+    ...jList(j['source_urls']).whereType<String>(),
   ].join(' ');
   return _pbRe.hasMatch(text);
 }
@@ -123,20 +124,20 @@ class FeedEntry {
 /// update-feed-lite.json → 날짜 새것부터
 List<FeedEntry> parseFeed(Object? json) {
   final out = <FeedEntry>[];
-  for (final raw in _list(_map(json)['entries'])) {
-    final e = _map(raw);
-    final date = _str(e['date']);
+  for (final raw in jList(jMap(json)['entries'])) {
+    final e = jMap(raw);
+    final date = jStr(e['date']);
     if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(date)) continue;
     out.add(
       FeedEntry(
         date: date,
-        generatedAt: DateTime.tryParse(_str(e['generated_at'])),
+        generatedAt: DateTime.tryParse(jStr(e['generated_at'])),
         addedCount: e['added_count'] is num ? (e['added_count']! as num).toInt() : 0,
         changedCount: e['changed_count'] is num ? (e['changed_count']! as num).toInt() : 0,
         totalAfter: e['total_after'] is num ? (e['total_after']! as num).toInt() : null,
         items: [
-          for (final it in _list(e['added'])) ?FeedItem.fromJson(it, 'added'),
-          for (final it in _list(e['changed'])) ?FeedItem.fromJson(it, 'changed'),
+          for (final it in jList(e['added'])) ?FeedItem.fromJson(it, 'added'),
+          for (final it in jList(e['changed'])) ?FeedItem.fromJson(it, 'changed'),
         ],
       ),
     );
@@ -148,11 +149,11 @@ List<FeedEntry> parseFeed(Object? json) {
 /// 피드가 이 manifest 와 같은 판인가 — 가장 새 날짜 = manifest.updated_at, 그날 상품 수 = manifest.total.
 /// Pages(CDN)가 manifest 는 새것 · 피드는 옛것을 줄 때가 있어, 같은 판을 받았을 때만 "이 manifest 는 다 봤다"고 적는다.
 bool feedMatches(List<FeedEntry> entries, Object? manifest) {
-  final m = _map(manifest);
+  final m = jMap(manifest);
   if (entries.isEmpty) return false;
   final top = entries.first;
   final total = m['total'];
-  return top.date == _str(m['updated_at']) && total is num && top.totalAfter == total.toInt();
+  return top.date == jStr(m['updated_at']) && total is num && top.totalAfter == total.toInt();
 }
 
 /// 두 피드를 날짜별로 합친다 ([a] 의 상품이 앞 — 같은 상품은 planCheck 가 id 로 한 번만 넣는다)
@@ -506,7 +507,3 @@ String _shiftDay(String day, int days) {
   if (d == null) return '';
   return d.add(Duration(days: days)).toIso8601String().substring(0, 10);
 }
-
-String _str(Object? v) => v is String ? v : '';
-Map<String, Object?> _map(Object? v) => v is Map<String, Object?> ? v : const {};
-List<Object?> _list(Object? v) => v is List ? v : const [];

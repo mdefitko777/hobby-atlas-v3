@@ -219,7 +219,9 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
       child: _section == null
           ? Row(
               children: [
-                Expanded(child: GpSearchBar(onTap: widget.onOpenSearch, onCamera: widget.onCamera)), // A-2 P04
+                Expanded(
+                  child: GpSearchBar(onTap: widget.onOpenSearch, onCamera: widget.onCamera),
+                ), // A-2 P04
                 const SizedBox(width: 6),
                 ViewIconToggle(mine: _mine, onChanged: (v) => setState(() => _mine = v)), // A-10 전체 소식 · My Page
               ],
@@ -428,8 +430,8 @@ class _HeroBannerState extends State<_HeroBanner> {
                       child: Material(
                         color: Gp.panel,
                         elevation: 3,
-                        shadowColor: const Color(0x33000000),
-                        borderRadius: BorderRadius.circular(16),
+                        shadowColor: Gp.shadow,
+                        borderRadius: BorderRadius.circular(Gp.rLarge),
                         clipBehavior: Clip.antiAlias,
                         child: InkWell(
                           onTap: () => widget.onTap(a),

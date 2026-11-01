@@ -327,10 +327,8 @@ class _ChannelTile extends StatelessWidget {
         Positioned.fill(
           child: DecoratedBox(
             decoration: Gp.raised().copyWith(
-              border: Border.all(color: highlighted ? Gp.ink : const Color(0xE6FFFFFF), width: highlighted ? 1.5 : 1),
-              boxShadow: lifted
-                  ? const [BoxShadow(color: Color(0x33000000), blurRadius: 24, offset: Offset(0, 10))]
-                  : null,
+              border: Border.all(color: highlighted ? Gp.ink : Gp.glass, width: highlighted ? 1.5 : 1),
+              boxShadow: lifted ? const [BoxShadow(color: Gp.shadow, blurRadius: 24, offset: Offset(0, 10))] : null,
             ),
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,

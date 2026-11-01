@@ -1,6 +1,7 @@
 // Gunpula 데이터(GitHub Pages) → 앱 모델용 가벼운 Map.
 // 여기 함수는 compute() 안(다른 isolate)에서도 돌아가야 해서 Flutter 위젯 · 전역 상태를 쓰지 않는다.
 import 'dart:convert';
+import '../json_util.dart';
 
 /// Gunpula 저장소의 Pages 주소. 데이터는 data/, 이미지는 app/assets/
 const gunpulaBase = 'https://mdefitko777.github.io/Gunpula/';
@@ -44,15 +45,11 @@ bool deadImage(String url) =>
     url.contains('bandai-hobby.net') ||
     url.contains('pokemon.hgodo.com');
 
-String _str(Object? v) => v is String ? v : '';
-Map<String, Object?> _map(Object? v) => v is Map<String, Object?> ? v : const {};
-List<Object?> _list(Object? v) => v is List ? v : const [];
-
 /// 4개 언어 이름 중 [order] 순서로 처음 있는 것
 String pickName(Object? names, [List<String> order = const ['ko', 'ja', 'en', 'zh']]) {
-  final m = _map(names);
+  final m = jMap(names);
   for (final l in order) {
-    final s = _str(m[l]).trim();
+    final s = jStr(m[l]).trim();
     if (s.isNotEmpty) return s;
   }
   return '';
@@ -209,53 +206,52 @@ String findJan(Iterable<String> texts) {
 /// compute() 작업: `split/kits-<franchise>.json` 한 개 → Kit.fromSlim 이 읽는 Map 목록
 /// msg = {raw, grades, firstSeen} (모두 JSON 글자)
 List<Map<String, Object?>> mapKitsJob(Map<String, String> msg) {
-  final kits = _list(_map(jsonDecode(msg['raw']!))['kits']);
+  final kits = jList(jMap(jsonDecode(msg['raw']!))['kits']);
   final grades = {
-    for (final g in _list(_map(jsonDecode(msg['grades'] ?? '{}'))['grades']))
-      if (_str(_map(g)['code']).isNotEmpty) _str(_map(g)['code']): _str(_map(g)['category']),
+    for (final g in jList(jMap(jsonDecode(msg['grades'] ?? '{}'))['grades']))
+      if (jStr(jMap(g)['code']).isNotEmpty) jStr(jMap(g)['code']): jStr(jMap(g)['category']),
   };
-  final firstSeen = _map(_map(jsonDecode(msg['firstSeen'] ?? '{}'))['dates']);
+  final firstSeen = jMap(jMap(jsonDecode(msg['firstSeen'] ?? '{}'))['dates']);
   final out = <Map<String, Object?>>[];
   for (final raw in kits) {
-    final r = _map(raw);
-    final id = _str(r['kit_id']);
+    final r = jMap(raw);
+    final id = jStr(r['kit_id']);
     if (id.isEmpty) continue;
-    final names = _map(r['names']);
-    final series = _map(r['series']);
-    final labels = _map(series['labels']);
-    final code = _str(r['grade_code']);
-    final subline = _str(r['subline']);
-    final sourceUrls = _list(r['source_urls']).whereType<String>().toList();
-    final images = _map(r['images']);
+    final names = jMap(r['names']);
+    final series = jMap(r['series']);
+    final labels = jMap(series['labels']);
+    final code = jStr(r['grade_code']);
+    final subline = jStr(r['subline']);
+    final sourceUrls = jList(r['source_urls']).whereType<String>().toList();
+    final images = jMap(r['images']);
     final box = resolveAsset(images['box_art_url']);
     final gallery = <String>[
-      for (final g in _list(r['gallery_image_urls']))
+      for (final g in jList(r['gallery_image_urls']))
         if (resolveAsset(g) case final u when u.isNotEmpty && !deadImage(u)) u,
     ];
     final cover = (box.isNotEmpty && !deadImage(box)) ? box : (gallery.isEmpty ? '' : gallery.first);
-    final jan = findJan([id, ...sourceUrls, _str(r['number']), _str(images['box_art_url'])]);
+    final jan = findJan([id, ...sourceUrls, jStr(r['number']), jStr(images['box_art_url'])]);
     final pb = r['is_premium_bandai'] == true;
     final brands = <String>{
-      for (final s in _list(r['source_refs']))
-        ?_brandBySource[_str(_map(s)['source_id'])],
+      for (final s in jList(r['source_refs'])) ?_brandBySource[jStr(jMap(s)['source_id'])],
       if (pb) '프리미엄 반다이',
     }.toList();
-    final pbInfo = _map(r['premium_bandai']);
+    final pbInfo = jMap(r['premium_bandai']);
     final name = pickName(names);
     final nameJa = pickName(names, const ['ja', 'en', 'ko']);
     final seriesLabel = pickName(labels);
     final line = lineLabel(code, subline, id);
-    final goodsKind = _str(r['goods_kind']);
+    final goodsKind = jStr(r['goods_kind']);
     final type = goodsKind.isEmpty
-        ? typeLabel(code, grades[code] ?? '', '${_str(names['ja'])} ${_str(names['ko'])}')
+        ? typeLabel(code, grades[code] ?? '', '${jStr(names['ja'])} ${jStr(names['ko'])}')
         : (goodsKind == 'card_game' ? '카드' : '굿즈');
     final keywords = <String>{
-      _str(names['en']),
-      _str(names['zh']),
-      _str(labels['ja']),
-      _str(labels['en']),
-      _str(labels['zh']),
-      _str(r['work_title']),
+      jStr(names['en']),
+      jStr(names['zh']),
+      jStr(labels['ja']),
+      jStr(labels['en']),
+      jStr(labels['zh']),
+      jStr(r['work_title']),
       code,
       subline,
       if (jan.isNotEmpty) jan,
@@ -263,16 +259,16 @@ List<Map<String, Object?>> mapKitsJob(Map<String, String> msg) {
     }.where((s) => s.isNotEmpty).toList();
     out.add({
       'id': id,
-      'franchiseId': _str(r['franchise']),
+      'franchiseId': jStr(r['franchise']),
       'name': name,
       'nameJa': nameJa == name ? '' : nameJa,
       'series': seriesLabel,
-      'seriesKey': _str(series['key']),
+      'seriesKey': jStr(series['key']),
       'line': line,
       'type': type,
-      'scale': _str(r['scale']) == 'non-scale' ? '' : _str(r['scale']),
-      'universe': _str(r['universe']),
-      'date': _str(r['release_date']),
+      'scale': jStr(r['scale']) == 'non-scale' ? '' : jStr(r['scale']),
+      'universe': jStr(r['universe']),
+      'date': jStr(r['release_date']),
       'priceJpy': r['price_jpy'] is num ? (r['price_jpy']! as num).toInt() : null,
       'priceKrw': r['price_krw'] is num ? (r['price_krw']! as num).toInt() : null,
       'image': cover,
@@ -283,14 +279,14 @@ List<Map<String, Object?>> mapKitsJob(Map<String, String> msg) {
       ].take(10).toList(),
       'limited': r['is_limited'] == true,
       'pb': pb,
-      'pbOpens': _str(pbInfo['order_opens_at']).split('T').first,
-      'pbCloses': _str(pbInfo['order_closes_at']).split('T').first,
+      'pbOpens': jStr(pbInfo['order_opens_at']).split('T').first,
+      'pbCloses': jStr(pbInfo['order_closes_at']).split('T').first,
       'officialUrl': sourceUrls.isEmpty ? '' : sourceUrls.first,
       // 굿즈 세부 종류 (티켓 · 의류 · 블루레이 …) — 데이터에 있으면 유형은 굿즈(카드 게임은 카드)
-      'goodsKind': goodsKindLabels[_str(r['goods_kind'])] ?? '',
+      'goodsKind': goodsKindLabels[jStr(r['goods_kind'])] ?? '',
       'jan': jan,
       'brands': brands,
-      'firstSeen': _str(firstSeen[id]),
+      'firstSeen': jStr(firstSeen[id]),
       'keywords': keywords,
       'blob': [name, nameJa, seriesLabel, line, type, ...keywords].join(' ').toLowerCase(),
     });

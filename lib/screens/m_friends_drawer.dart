@@ -25,6 +25,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'p_sign_in_screen.dart';
 import 'q_friend_sheets.dart';
+import '../level.dart';
 
 class FriendsDrawer extends StatefulWidget {
   const FriendsDrawer({
@@ -203,11 +204,11 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
             Center(
               child: ActionChip(
                 // M-3
-                avatar: const Icon(Icons.notifications_none, size: 16, color: Gp.accent),
+                avatar: const Icon(Icons.notifications_none, size: Gp.iS, color: Gp.accent),
                 label: Text('친구 요청 $incoming건'),
                 backgroundColor: Gp.panel,
                 side: const BorderSide(color: Gp.line),
-                shape: const StadiumBorder(),
+                shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(Gp.rSmall))),
                 onPressed: () => showFriendRequests(context),
               ),
             ),
@@ -328,7 +329,7 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
                 ),
               ),
               icon: UserStore.instance.specialFriends.contains(m.handle)
-                  ? const Icon(Icons.star_rounded, color: Color(0xFFBA7517))
+                  ? const Icon(Icons.star_rounded, color: Gp.star)
                   : const Icon(Icons.star_border_rounded, color: Gp.faint),
             ),
       onTap: () => _close(() => widget.onOpenFriend(m)),

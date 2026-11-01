@@ -4,6 +4,8 @@
 //                        쓰기 직전에 파일을 다시 읽어 합친다. 알림은 id 로 합치고, 읽음 · 지움은 나중에 바꾼 쪽이 이긴다.
 // 이 파일은 Flutter 위젯을 쓰지 않는다 (백그라운드 isolate · 단위 테스트에서 그대로 돈다).
 
+import '../json_util.dart';
+
 const notifyConfigKey = 'notify_config.json';
 const notifyStateKey = 'notify_state.json';
 
@@ -51,13 +53,13 @@ class PbWindow {
   Map<String, Object?> toJson() => {'id': id, 'name': name, 'franchise': franchise, 'opens': opens, 'closes': closes};
 
   static PbWindow? fromJson(Object? json) {
-    final j = _map(json);
-    final id = _str(j['id']);
+    final j = jMap(json);
+    final id = jStr(j['id']);
     if (id.isEmpty) return null;
     return PbWindow(
       id: id,
-      name: _str(j['name']),
-      franchise: _str(j['franchise']),
+      name: jStr(j['name']),
+      franchise: jStr(j['franchise']),
       opens: _day(j['opens']),
       closes: _day(j['closes']),
     );
@@ -112,19 +114,19 @@ class NotifyConfig {
   };
 
   static NotifyConfig fromJson(Object? json) {
-    final j = _map(json);
+    final j = jMap(json);
     return NotifyConfig(
       enabled: j['enabled'] is bool ? j['enabled']! as bool : true,
       onlyMine: j['only_mine'] is bool ? j['only_mine']! as bool : true,
       rules: {
-        for (final e in _map(j['rules']).entries)
+        for (final e in jMap(j['rules']).entries)
           if (e.value is bool) e.key: e.value! as bool,
       },
       hintShown: j['hint_shown'] == true,
       permissionAsked: j['permission_asked'] == true,
-      channels: j['channels'] is List ? _list(j['channels']).whereType<String>().toList() : null,
-      wanted: _list(j['wanted']).whereType<String>().toSet(),
-      pb: _list(j['pb']).map(PbWindow.fromJson).nonNulls.toList(),
+      channels: j['channels'] is List ? jList(j['channels']).whereType<String>().toList() : null,
+      wanted: jList(j['wanted']).whereType<String>().toSet(),
+      pb: jList(j['pb']).map(PbWindow.fromJson).nonNulls.toList(),
     );
   }
 }
@@ -198,20 +200,20 @@ class NoticeRecord {
   };
 
   static NoticeRecord? fromJson(Object? json) {
-    final j = _map(json);
-    final id = _str(j['id']);
-    final at = DateTime.tryParse(_str(j['at']));
+    final j = jMap(json);
+    final id = jStr(j['id']);
+    final at = DateTime.tryParse(jStr(j['at']));
     if (id.isEmpty || at == null) return null;
     return NoticeRecord(
       id: id,
-      kind: _str(j['kind']),
-      kitId: _str(j['kit']),
-      title: _str(j['title']),
-      body: _str(j['body']),
+      kind: jStr(j['kind']),
+      kitId: jStr(j['kit']),
+      title: jStr(j['title']),
+      body: jStr(j['body']),
       at: at,
-      franchise: _str(j['franchise']),
-      date: _str(j['date']),
-      reasons: _list(j['reasons']).whereType<String>().toList(),
+      franchise: jStr(j['franchise']),
+      date: jStr(j['date']),
+      reasons: jList(j['reasons']).whereType<String>().toList(),
       pb: j['pb'] == true,
       wanted: j['wanted'] == true,
       watched: j['watched'] == true,
@@ -230,7 +232,7 @@ class NoticeFlag {
   Map<String, Object?> toJson() => {'r': ?read, 'd': ?dismissed, 'u': u};
 
   static NoticeFlag? fromJson(Object? json) {
-    final j = _map(json);
+    final j = jMap(json);
     final u = j['u'];
     if (u is! num) return null;
     return NoticeFlag(
@@ -311,18 +313,18 @@ class NotifyState {
   };
 
   static NotifyState fromJson(Object? json) {
-    final j = _map(json);
+    final j = jMap(json);
     return NotifyState(
       lastSeen: _day(j['last_seen']),
-      lastManifest: _str(j['last_manifest']),
-      lastCheckAt: _str(j['last_check_at']),
-      lastError: _str(j['last_error']),
+      lastManifest: jStr(j['last_manifest']),
+      lastCheckAt: jStr(j['last_check_at']),
+      lastError: jStr(j['last_error']),
       lastNew: j['last_new'] is num ? (j['last_new']! as num).toInt() : 0,
-      lastSource: _str(j['last_source']),
-      pending: _str(j['pending']),
-      seenFeed: _list(j['seen_feed']).whereType<String>().toSet(),
-      inbox: _list(j['inbox']).map(NoticeRecord.fromJson).nonNulls.toList(),
-      flags: {for (final e in _map(j['flags']).entries) e.key: ?NoticeFlag.fromJson(e.value)},
+      lastSource: jStr(j['last_source']),
+      pending: jStr(j['pending']),
+      seenFeed: jList(j['seen_feed']).whereType<String>().toSet(),
+      inbox: jList(j['inbox']).map(NoticeRecord.fromJson).nonNulls.toList(),
+      flags: {for (final e in jMap(j['flags']).entries) e.key: ?NoticeFlag.fromJson(e.value)},
     );
   }
 
@@ -392,10 +394,6 @@ String _maxStr(String a, String b) => a.compareTo(b) >= 0 ? a : b;
 
 /// '2026-10-31T00:00:00+09:00' → '2026-10-31'
 String _day(Object? v) {
-  final s = _str(v).trim();
+  final s = jStr(v).trim();
   return RegExp(r'^\d{4}-\d{2}-\d{2}').firstMatch(s)?.group(0) ?? '';
 }
-
-String _str(Object? v) => v is String ? v : '';
-Map<String, Object?> _map(Object? v) => v is Map<String, Object?> ? v : const {};
-List<Object?> _list(Object? v) => v is List ? v : const [];

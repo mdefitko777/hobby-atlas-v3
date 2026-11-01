@@ -213,10 +213,10 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
                     label: Text(q),
                     onPressed: () => _setQuery(q),
                     onDeleted: () => setState(() => _recent.remove(q)),
-                    deleteIcon: const Icon(Icons.close, size: 16),
+                    deleteIcon: const Icon(Icons.close, size: Gp.iS),
                     backgroundColor: Gp.panel,
                     side: const BorderSide(color: Gp.line),
-                    shape: const StadiumBorder(),
+                    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(Gp.rSmall))),
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     visualDensity: VisualDensity.compact,
                   ),
@@ -281,12 +281,12 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
             children: [
               for (final (_, example, _) in aiAnswers)
                 ActionChip(
-                  avatar: const Icon(Icons.auto_awesome, size: 16, color: Gp.accent),
+                  avatar: const Icon(Icons.auto_awesome, size: Gp.iS, color: Gp.accent),
                   label: Text(example),
                   onPressed: () => _setQuery(example),
                   backgroundColor: Gp.panel,
                   side: const BorderSide(color: Gp.line),
-                  shape: const StadiumBorder(),
+                  shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(Gp.rSmall))),
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
             ],
@@ -361,7 +361,7 @@ class _AiCandidates extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
       decoration: BoxDecoration(
         color: Gp.panel,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(Gp.rLarge),
         border: Border.all(color: Gp.line),
       ),
       child: Column(
@@ -369,7 +369,7 @@ class _AiCandidates extends StatelessWidget {
         children: [
           const Row(
             children: [
-              Icon(Icons.auto_awesome, size: 18, color: Gp.accent),
+              Icon(Icons.auto_awesome, size: Gp.iM, color: Gp.accent),
               SizedBox(width: 6),
               Text('AI 추천 후보', style: TextStyle(fontWeight: FontWeight.w700)),
               Spacer(),

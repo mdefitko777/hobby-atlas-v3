@@ -22,6 +22,7 @@ import '../data/user_store.dart';
 import 'collection_merge.dart';
 import 'friends_service.dart';
 import 'rpc.dart';
+import '../format.dart';
 
 enum SyncPhase { off, syncing, synced, offline, error }
 
@@ -448,12 +449,7 @@ class SyncService extends ChangeNotifier with WidgetsBindingObserver {
     };
   }
 
-  String _ago(DateTime t) {
-    final d = _clock().difference(t);
-    if (d.inSeconds < 60) return '방금';
-    if (d.inMinutes < 60) return '${d.inMinutes}분 전';
-    return '${d.inHours}시간 전';
-  }
+  String _ago(DateTime t) => timeAgo(t, now: _clock());
 
   @override
   void dispose() {

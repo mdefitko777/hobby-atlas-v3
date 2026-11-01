@@ -126,7 +126,6 @@ Future<void> showAddFriend(BuildContext context) async {
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    showDragHandle: true,
     builder: (sheet) => Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(sheet).bottom),
       child: const _AddFriendSheet(),
@@ -226,7 +225,7 @@ class _AddFriendSheetState extends State<_AddFriendSheet> {
                         Clipboard.setData(ClipboardData(text: '@$mine'));
                         showToast(context, '아이디를 복사했어요 · 친구에게 보내 주세요');
                       },
-                      icon: const Icon(Icons.content_copy_rounded, size: 18, color: Gp.muted),
+                      icon: const Icon(Icons.content_copy_rounded, size: Gp.iM, color: Gp.muted),
                     ),
                 ],
               ),
@@ -312,7 +311,6 @@ Future<void> showFriendRequests(BuildContext context) async {
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    showDragHandle: true,
     builder: (sheet) => const _RequestsSheet(),
   );
 }

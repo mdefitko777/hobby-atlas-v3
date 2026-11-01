@@ -126,9 +126,11 @@ class KitFilter {
         } &&
         switch (release) {
           ReleaseState.any => true,
-          ReleaseState.upcoming => k.date.isNotEmpty && k.date.compareTo(today.substring(0, k.date.length.clamp(0, 10))) > 0,
+          ReleaseState.upcoming =>
+            k.date.isNotEmpty && k.date.compareTo(today.substring(0, k.date.length.clamp(0, 10))) > 0,
           ReleaseState.thisMonth => k.date.startsWith(today.substring(0, 7)),
-          ReleaseState.released => k.date.isNotEmpty && k.date.compareTo(today.substring(0, k.date.length.clamp(0, 10))) <= 0,
+          ReleaseState.released =>
+            k.date.isNotEmpty && k.date.compareTo(today.substring(0, k.date.length.clamp(0, 10))) <= 0,
         } &&
         switch (sale) {
           SaleState.any => true,
@@ -141,7 +143,12 @@ class KitFilter {
 
   /// 고른 조건 한 줄 ("SEED · HG · PB")
   List<String> get labels => [
-    if (mine != MineState.any) switch (mine) { MineState.liked => '좋아요', MineState.owned => '구매함', _ => '아직 없음' },
+    if (mine != MineState.any)
+      switch (mine) {
+        MineState.liked => '좋아요',
+        MineState.owned => '구매함',
+        _ => '아직 없음',
+      },
     if (release != ReleaseState.any) release.label,
     if (sale != SaleState.any) sale.label,
     ...works,
@@ -166,9 +173,11 @@ Future<KitFilter?> showFilterSheet(BuildContext context, {required List<Kit> kit
   return showModalBottomSheet<KitFilter>(
     context: context,
     isScrollControlled: true,
-    showDragHandle: true,
     backgroundColor: Gp.panel,
-    builder: (_) => FractionallySizedBox(heightFactor: 0.62, child: FilterSheet(kits: kits, initial: initial)),
+    builder: (_) => FractionallySizedBox(
+      heightFactor: 0.62,
+      child: FilterSheet(kits: kits, initial: initial),
+    ),
   );
 }
 
@@ -210,7 +219,10 @@ class _FilterSheetState extends State<FilterSheet> {
             padding: const EdgeInsets.fromLTRB(20, 0, 8, 4),
             child: Row(
               children: [
-                const Text('필터', style: TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w700)),
+                const Text(
+                  '필터',
+                  style: TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w700),
+                ),
                 const Spacer(),
                 TextButton(
                   onPressed: () => setState(() {
@@ -239,8 +251,8 @@ class _FilterSheetState extends State<FilterSheet> {
                   current: _draft.mine,
                   child: (v) => switch (v) {
                     MineState.any => const Text('전체'),
-                    MineState.liked => const Icon(Icons.favorite, size: 16, color: Gp.accent),
-                    MineState.owned => const RibbonIcon(size: 15),
+                    MineState.liked => const LikedIcon(),
+                    MineState.owned => const OwnedIcon(size: Gp.iS),
                     MineState.none => const Text('아직 없음'),
                   },
                   onPick: (v) => setState(() => _draft.mine = v),
@@ -263,23 +275,30 @@ class _FilterSheetState extends State<FilterSheet> {
                 _CheckGrid(
                   values: valueCounts(kits.map((k) => k.type)).map((e) => e.$1).toList(),
                   selected: _draft.types,
-                  countOf: (v) => _with((f) => f.types
-                    ..clear()
-                    ..add(v)),
+                  countOf: (v) => _with(
+                    (f) => f.types
+                      ..clear()
+                      ..add(v),
+                  ),
                   onToggle: (v) => _toggle(_draft.types, v),
                 ),
                 // 굿즈를 고르면 세부 종류 (티켓 · 의류 · 블루레이 …)
                 if (_draft.types.contains('굿즈') && kits.any((k) => k.goodsKind.isNotEmpty)) ...[
                   const Padding(
                     padding: EdgeInsets.fromLTRB(2, 10, 0, 2),
-                    child: Text('굿즈 종류', style: TextStyle(fontSize: Gp.t12, color: Gp.muted)),
+                    child: Text(
+                      '굿즈 종류',
+                      style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                    ),
                   ),
                   _CheckGrid(
                     values: valueCounts(kits.map((k) => k.goodsKind)).map((e) => e.$1).toList(),
                     selected: _draft.goodsKinds,
-                    countOf: (v) => _with((f) => f.goodsKinds
-                      ..clear()
-                      ..add(v)),
+                    countOf: (v) => _with(
+                      (f) => f.goodsKinds
+                        ..clear()
+                        ..add(v),
+                    ),
                     onToggle: (v) => _toggle(_draft.goodsKinds, v),
                   ),
                 ],
@@ -294,9 +313,11 @@ class _FilterSheetState extends State<FilterSheet> {
                   _CheckGrid(
                     values: valueCounts(kits.map((k) => k.line)).map((e) => e.$1).toList(),
                     selected: _draft.lines,
-                    countOf: (v) => _with((f) => f.lines
-                      ..clear()
-                      ..add(v)),
+                    countOf: (v) => _with(
+                      (f) => f.lines
+                        ..clear()
+                        ..add(v),
+                    ),
                     onToggle: (v) => _toggle(_draft.lines, v),
                   ),
                 _ExpandRow(
@@ -310,9 +331,11 @@ class _FilterSheetState extends State<FilterSheet> {
                     columns: 1,
                     values: valueCounts(kits.map(kitWork)).map((e) => e.$1).toList(),
                     selected: _draft.works,
-                    countOf: (v) => _with((f) => f.works
-                      ..clear()
-                      ..add(v)),
+                    countOf: (v) => _with(
+                      (f) => f.works
+                        ..clear()
+                        ..add(v),
+                    ),
                     onToggle: (v) => _toggle(_draft.works, v),
                   ),
                 _ExpandRow(
@@ -337,7 +360,7 @@ class _FilterSheetState extends State<FilterSheet> {
               onPressed: hits == 0 ? null : () => Navigator.pop(context, _draft),
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(44),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Gp.radius)),
               ),
               child: Text(hits == 0 ? '맞는 상품 없음' : '$hits개 보기'), // P01 고르는 동안 개수
             ),
@@ -352,7 +375,13 @@ class _FilterSheetState extends State<FilterSheet> {
 
 /// 네모 세그먼트 (캡슐 대신) — 한 줄에 하나만 고름. 필터 · 홈 · 캘린더가 같이 쓴다
 class SquareSegments<T> extends StatelessWidget {
-  const SquareSegments({super.key, required this.values, required this.current, required this.child, required this.onPick});
+  const SquareSegments({
+    super.key,
+    required this.values,
+    required this.current,
+    required this.child,
+    required this.onPick,
+  });
   final List<T> values;
   final T current;
   final Widget Function(T) child;
@@ -364,7 +393,7 @@ class SquareSegments<T> extends StatelessWidget {
       height: 34,
       decoration: BoxDecoration(
         border: Border.all(color: Gp.line),
-        borderRadius: BorderRadius.circular(7),
+        borderRadius: BorderRadius.circular(Gp.rSmall),
       ),
       clipBehavior: Clip.antiAlias,
       child: Row(
@@ -438,16 +467,24 @@ class _CheckGrid extends StatelessWidget {
                             height: 18,
                             decoration: BoxDecoration(
                               color: on ? Gp.accent : Gp.panel,
-                              borderRadius: BorderRadius.circular(4),
+                              borderRadius: BorderRadius.circular(Gp.rSmall),
                               border: Border.all(color: on ? Gp.accent : Gp.line),
                             ),
-                            child: on ? const Icon(Icons.check, size: 14, color: Colors.white) : null,
+                            child: on ? const Icon(Icons.check, size: Gp.iS, color: Colors.white) : null,
                           ),
                           const SizedBox(width: 8),
                           Expanded(
-                            child: Text(v, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: Gp.t14)),
+                            child: Text(
+                              v,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: Gp.t14),
+                            ),
                           ),
-                          Text('$n', style: const TextStyle(fontSize: Gp.t11, color: Gp.faint)),
+                          Text(
+                            '$n',
+                            style: const TextStyle(fontSize: Gp.t11, color: Gp.faint),
+                          ),
                           const SizedBox(width: 10),
                         ],
                       ),
@@ -478,14 +515,20 @@ class _ExpandRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 10),
         child: Row(
           children: [
-            Text(title, style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w600)),
+            Text(
+              title,
+              style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w600),
+            ),
             const Spacer(),
-            Text(summary, style: TextStyle(fontSize: Gp.t12, color: summary == '전체' ? Gp.faint : Gp.accent)),
+            Text(
+              summary,
+              style: TextStyle(fontSize: Gp.t12, color: summary == '전체' ? Gp.faint : Gp.accent),
+            ),
             const SizedBox(width: 4),
             AnimatedRotation(
               turns: open ? 0.5 : 0,
               duration: const Duration(milliseconds: 150),
-              child: const Icon(Icons.expand_more, size: 20, color: Gp.muted),
+              child: const Icon(Icons.expand_more, size: Gp.iM, color: Gp.muted),
             ),
           ],
         ),

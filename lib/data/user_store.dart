@@ -13,6 +13,7 @@ import '../channels.dart' show defaultMyChannels;
 import '../models.dart';
 import '../sync/collection_merge.dart' show collectionStatuses, normalizeCollectionEntry;
 import 'blob_store.dart';
+import '../json_util.dart';
 
 class UserStore extends ChangeNotifier {
   UserStore._() : persist = true;
@@ -85,42 +86,39 @@ class UserStore extends ChangeNotifier {
   }
 
   void _fromJson(Object? json) {
-    final j = _map(json);
-    member = _str(j['member']).isEmpty ? 'member' : _str(j['member']);
+    final j = jMap(json);
+    member = jStr(j['member']).isEmpty ? 'member' : jStr(j['member']);
     _items
       ..clear()
-      ..addAll({
-        for (final e in _map(_map(j['collection'])['items']).entries)
-          e.key: ?normalizeEntry(e.value, member),
-      });
-    payloadExtra = Map.of(_map(j['payload_extra']))..remove('appearance');
-    collectionExtra = Map.of(_map(j['collection_extra']));
+      ..addAll({for (final e in jMap(jMap(j['collection'])['items']).entries) e.key: ?normalizeEntry(e.value, member)});
+    payloadExtra = Map.of(jMap(j['payload_extra']))..remove('appearance');
+    collectionExtra = Map.of(jMap(j['collection_extra']));
     // 예전 파일: custom_items 를 payload_extra 에 두었다 → collection 쪽으로
     if (payloadExtra.remove('custom_items') case final Object c) collectionExtra.putIfAbsent('custom_items', () => c);
-    final sync = _map(j['sync']);
+    final sync = jMap(j['sync']);
     cloudDirty = sync['dirty'] == true;
     extrasDirty = sync['extras_dirty'] == true;
-    syncedAccount = _str(sync['account']);
-    final local = _map(j['local_state']);
+    syncedAccount = jStr(sync['account']);
+    final local = jMap(j['local_state']);
     bbxOwnedParts
       ..clear()
-      ..addAll(_list(local['bbx_owned_parts']).whereType<String>());
+      ..addAll(jList(local['bbx_owned_parts']).whereType<String>());
     bbxManualMap
       ..clear()
-      ..addAll({for (final e in _map(local['bbx_manual_map']).entries) e.key: '${e.value}'});
+      ..addAll({for (final e in jMap(local['bbx_manual_map']).entries) e.key: '${e.value}'});
     guideManualLit
       ..clear()
-      ..addAll(_list(local['guide_manual_lit']).map((v) => v is num ? v.toInt() : int.tryParse('$v')).nonNulls);
+      ..addAll(jList(local['guide_manual_lit']).map((v) => v is num ? v.toInt() : int.tryParse('$v')).nonNulls);
     recentViewed
       ..clear()
-      ..addAll(_list(local['recent_viewed']).whereType<String>());
+      ..addAll(jList(local['recent_viewed']).whereType<String>());
     // 키가 없으면(옛 파일) 처음 값. 빈 목록은 "채널 없음"으로 그대로 둔다.
     myChannels
       ..clear()
-      ..addAll(local['my_channels'] is List ? _list(local['my_channels']).whereType<String>() : defaultMyChannels);
+      ..addAll(local['my_channels'] is List ? jList(local['my_channels']).whereType<String>() : defaultMyChannels);
     specialFriends
       ..clear()
-      ..addAll(_list(local['special_friends']).whereType<String>());
+      ..addAll(jList(local['special_friends']).whereType<String>());
   }
 
   Map<String, Object?> toJson() => {
@@ -176,7 +174,7 @@ class UserStore extends ChangeNotifier {
     final e = [
       for (final x in _items.entries)
         if (statuses.contains(statusOf(x.key))) x,
-    ]..sort((a, b) => _str(b.value['updated_at']).compareTo(_str(a.value['updated_at'])));
+    ]..sort((a, b) => jStr(b.value['updated_at']).compareTo(jStr(a.value['updated_at'])));
     return [for (final x in e) x.key];
   }
 
@@ -194,7 +192,7 @@ class UserStore extends ChangeNotifier {
     final prefix = '${now.year}-${now.month.toString().padLeft(2, '0')}';
     return _items.values.fold(0, (s, e) {
       final p = e['purchase_price'];
-      final at = DateTime.tryParse(_str(e['updated_at']))?.toLocal().toIso8601String() ?? '';
+      final at = DateTime.tryParse(jStr(e['updated_at']))?.toLocal().toIso8601String() ?? '';
       return e['status'] == 'owned' && p is num && at.startsWith(prefix) ? s + p.toInt() : s;
     });
   }
@@ -227,7 +225,7 @@ class UserStore extends ChangeNotifier {
       final old = _items[e.key];
       if (old == null || old['status'] == 'deleted' || e.key == e.value) continue;
       final cur = _items[e.value];
-      if (cur == null || _str(cur['updated_at']).compareTo(_str(old['updated_at'])) < 0) _items[e.value] = {...old};
+      if (cur == null || jStr(cur['updated_at']).compareTo(jStr(old['updated_at'])) < 0) _items[e.value] = {...old};
       _items[e.key] = {...old, 'status': 'deleted', 'updated_at': _now(), 'updated_by': member};
       moved = true;
     }
@@ -285,7 +283,7 @@ class UserStore extends ChangeNotifier {
     if (p.member.isNotEmpty) member = p.member;
     for (final e in p.items.entries) {
       final mine = _items[e.key];
-      if (mine == null || _str(e.value['updated_at']).compareTo(_str(mine['updated_at'])) > 0) {
+      if (mine == null || jStr(e.value['updated_at']).compareTo(jStr(mine['updated_at'])) > 0) {
         _items[e.key] = e.value;
       }
     }
@@ -319,9 +317,7 @@ class UserStore extends ChangeNotifier {
     this.member = member.trim().isEmpty ? this.member : member.trim();
     _items
       ..clear()
-      ..addAll({
-        for (final e in selfItems.entries) e.key: ?normalizeEntry(e.value, this.member),
-      });
+      ..addAll({for (final e in selfItems.entries) e.key: ?normalizeEntry(e.value, this.member)});
     this.payloadExtra = Map.of(payloadExtra)
       ..remove('collection')
       ..remove('appearance'); // 집 사진(data URL) 같은 큰 값은 기기에 두지 않는다 — 저장 때마다 서버 것을 그대로 쓴다
@@ -366,7 +362,7 @@ class UserStore extends ChangeNotifier {
 /// 옛 항목 하나 → 정리된 모양 (collection-store.js normalizeCollectionEntry 그대로 — lib/sync/collection_merge.dart).
 /// 상태가 owned · wanted · deleted 가 아니면 null (버림)
 Map<String, Object?>? normalizeEntry(Object? raw, String member) {
-  final status = _map(raw)['status'];
+  final status = jMap(raw)['status'];
   if (status is! String || !collectionStatuses.contains(status)) return null;
   return normalizeCollectionEntry(raw, member: member);
 }
@@ -409,8 +405,8 @@ class ImportPreview {
     } on FormatException {
       throw const FormatException('JSON 이 아니에요. 옛 앱에서 내보낸 파일 그대로인지 확인해 주세요.');
     }
-    var j = _map(root);
-    final ls = _map(j['local_storage']);
+    var j = jMap(root);
+    final ls = jMap(j['local_storage']);
     if (ls.isNotEmpty) {
       Object? sub(String k) {
         final v = ls[k];
@@ -435,12 +431,12 @@ class ImportPreview {
       };
     }
 
-    final col = _map(j['collection']);
-    final memberItems = _map(col['member_items']);
-    var own = _map(col['items']);
+    final col = jMap(j['collection']);
+    final memberItems = jMap(col['member_items']);
+    var own = jMap(col['items']);
     // 내 버킷 이름 = items 와 같은 내용을 가진 member_items 키
     for (final e in memberItems.entries) {
-      final m = _map(e.value);
+      final m = jMap(e.value);
       if (own.isNotEmpty && m.length == own.length && m.keys.every(own.containsKey)) {
         p.member = e.key;
       } else if (m.isNotEmpty) {
@@ -449,15 +445,15 @@ class ImportPreview {
     }
     if (own.isEmpty && memberItems.length == 1) {
       p.member = memberItems.keys.first;
-      own = _map(memberItems.values.first);
+      own = jMap(memberItems.values.first);
       p.otherMembers.clear();
     }
     // 아주 옛날 모양: owned[] · wanted[] 만 있는 것
     final legacyNow = DateTime.now().toUtc().toIso8601String();
     if (own.isEmpty) {
       own = {
-        for (final id in _list(col['wanted']).whereType<String>()) id: {'status': 'wanted', 'updated_at': legacyNow},
-        for (final id in _list(col['owned']).whereType<String>()) id: {'status': 'owned', 'updated_at': legacyNow},
+        for (final id in jList(col['wanted']).whereType<String>()) id: {'status': 'wanted', 'updated_at': legacyNow},
+        for (final id in jList(col['owned']).whereType<String>()) id: {'status': 'owned', 'updated_at': legacyNow},
       };
     }
     for (final e in own.entries) {
@@ -475,25 +471,25 @@ class ImportPreview {
       if (n['status'] != 'deleted' && !e.key.startsWith('private-') && !knownKit(e.key)) p.unknown++;
     }
     for (final k in const ['overrides', 'series_label_overrides']) {
-      if (_map(j[k]).isNotEmpty) p.payloadExtra[k] = j[k];
+      if (jMap(j[k]).isNotEmpty) p.payloadExtra[k] = j[k];
     }
     // Hobby Atlas 자신의 백업 (설정 › 백업 파일로 내보내기)
-    p.payloadExtra.addAll(_map(j['payload_extra']));
-    p.collectionExtra.addAll(_map(j['collection_extra']));
-    if (p.payloadExtra.remove('custom_items') case final Object c) p.collectionExtra.putIfAbsent('custom_items', () => c);
+    p.payloadExtra.addAll(jMap(j['payload_extra']));
+    p.collectionExtra.addAll(jMap(j['collection_extra']));
+    if (p.payloadExtra.remove('custom_items') case final Object c) {
+      p.collectionExtra.putIfAbsent('custom_items', () => c);
+    }
     p.payloadExtra.remove('appearance');
-    if (_map(col['custom_items']).isNotEmpty) p.collectionExtra['custom_items'] = col['custom_items'];
+    if (jMap(col['custom_items']).isNotEmpty) p.collectionExtra['custom_items'] = col['custom_items'];
 
-    final local = _map(j['local_state']);
-    p.bbxOwnedParts.addAll(_list(local['bbx_owned_parts']).whereType<String>());
-    p.bbxManualMap.addAll({for (final e in _map(local['bbx_manual_map']).entries) e.key: '${e.value}'});
-    p.guideManualLit.addAll(_list(local['guide_manual_lit']).map((v) => v is num ? v.toInt() : int.tryParse('$v')).nonNulls);
-    p.recentViewed.addAll(_list(local['recent_viewed']).whereType<String>());
-    if (local['my_channels'] is List) p.myChannels = _list(local['my_channels']).whereType<String>().toList();
+    final local = jMap(j['local_state']);
+    p.bbxOwnedParts.addAll(jList(local['bbx_owned_parts']).whereType<String>());
+    p.bbxManualMap.addAll({for (final e in jMap(local['bbx_manual_map']).entries) e.key: '${e.value}'});
+    p.guideManualLit.addAll(
+      jList(local['guide_manual_lit']).map((v) => v is num ? v.toInt() : int.tryParse('$v')).nonNulls,
+    );
+    p.recentViewed.addAll(jList(local['recent_viewed']).whereType<String>());
+    if (local['my_channels'] is List) p.myChannels = jList(local['my_channels']).whereType<String>().toList();
     return p;
   }
 }
-
-String _str(Object? v) => v is String ? v : '';
-Map<String, Object?> _map(Object? v) => v is Map<String, Object?> ? v : const {};
-List<Object?> _list(Object? v) => v is List ? v : const [];
