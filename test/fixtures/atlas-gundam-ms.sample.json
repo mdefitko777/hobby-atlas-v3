@@ -1,0 +1,338 @@
+{
+ "schema": 1,
+ "updated_at": "2026-11-02",
+ "icon_template": "assets/gp/units/{icon}.webp",
+ "timelines": [
+  {
+   "id": "UC",
+   "names": {
+    "ja": "宇宙世紀",
+    "en": "Universal Century",
+    "ko": "우주세기"
+   }
+  },
+  {
+   "id": "CE",
+   "names": {
+    "ja": "コズミック・イラ",
+    "en": "Cosmic Era",
+    "ko": "코즈믹 에라"
+   }
+  },
+  {
+   "id": "AD",
+   "names": {
+    "ja": "西暦",
+    "en": "Anno Domini",
+    "ko": "서력"
+   }
+  },
+  {
+   "id": "BUILD",
+   "names": {
+    "ja": "ビルドシリーズ",
+    "en": "Build series",
+    "ko": "빌드 시리즈"
+   }
+  }
+ ],
+ "works": [
+  {
+   "id": "seed-destiny",
+   "names": {
+    "en": "Mobile Suit Gundam SEED DESTINY",
+    "ko": "기동전사 건담 SEED DESTINY"
+   },
+   "timeline": "CE",
+   "order": 54,
+   "gget_series_id": 3300
+  },
+  {
+   "id": "seed",
+   "names": {
+    "ja": "機動戦士ガンダムSEED",
+    "en": "Mobile Suit Gundam SEED",
+    "ko": "기동전사 건담 SEED"
+   },
+   "timeline": "CE",
+   "order": 52,
+   "gget_series_id": 3000,
+   "gget_series_ids": [
+    3000,
+    3100
+   ]
+  },
+  {
+   "id": "mobile-suit-gundam",
+   "names": {
+    "en": "Mobile Suit Gundam",
+    "ko": "기동전사 건담"
+   },
+   "timeline": "UC",
+   "order": 1,
+   "gget_series_id": 10
+  },
+  {
+   "id": "build-fighters",
+   "names": {
+    "en": "Gundam Build Fighters",
+    "ko": "건담 빌드 파이터즈"
+   },
+   "timeline": "BUILD",
+   "order": 3
+  },
+  {
+   "id": "empty-work",
+   "names": {
+    "en": "Nothing Here"
+   },
+   "timeline": "UC",
+   "order": 99
+  },
+  {
+   "id": "v",
+   "names": {
+    "en": "Victory Gundam",
+    "ko": "기동전사 V건담"
+   },
+   "timeline": "UC",
+   "order": 30,
+   "gget_series_id": 1500
+  },
+  {
+   "id": "00",
+   "names": {
+    "en": "Mobile Suit Gundam 00",
+    "ko": "기동전사 건담 00"
+   },
+   "timeline": "AD",
+   "order": 60
+  }
+ ],
+ "ms_redirects": {
+  "MS-06 Zaku II": "MS-06F Zaku II"
+ },
+ "ms": [
+  {
+   "id": "GAT-X105 Strike Gundam",
+   "model_numbers": [
+    "GAT-X105"
+   ],
+   "names": {
+    "ja": "ストライクガンダム",
+    "en": "Strike Gundam",
+    "ko": "스트라이크 건담"
+   },
+   "gget_ids": [
+    1300000100
+   ],
+   "icon": "g3000u00100",
+   "works": [
+    "seed",
+    "seed-destiny"
+   ],
+   "debut_work": "seed",
+   "timeline": "CE"
+  },
+  {
+   "id": "GAT-X102 Duel Gundam",
+   "model_numbers": [
+    "GAT-X102"
+   ],
+   "names": {
+    "ja": "デュエルガンダム",
+    "en": "Duel Gundam",
+    "ko": "듀얼 건담"
+   },
+   "gget_ids": [
+    1300000800,
+    1300000900
+   ],
+   "icon": "g3000u00800",
+   "works": [
+    "seed",
+    "build-fighters"
+   ],
+   "debut_work": "seed",
+   "timeline": "CE"
+  },
+  {
+   "id": "ZGMF-X10A Freedom Gundam",
+   "model_numbers": [
+    "ZGMF-X10A"
+   ],
+   "names": {
+    "ja": "フリーダムガンダム",
+    "en": "Freedom Gundam"
+   },
+   "gget_ids": [
+    1300004200
+   ],
+   "icon": "g3000u04200",
+   "works": [
+    "seed",
+    "seed-destiny"
+   ],
+   "debut_work": "seed",
+   "timeline": "CE"
+  },
+  {
+   "id": "GAT-X105+AQM/E-X01 Aile Strike Gundam",
+   "model_numbers": [
+    "GAT-X105+AQM/E-X01"
+   ],
+   "names": {
+    "ja": "エールストライクガンダム",
+    "en": "Aile Strike Gundam"
+   },
+   "debut_work": "seed",
+   "timeline": "CE"
+  },
+  {
+   "id": "ZGMF-X42S Destiny Gundam",
+   "model_numbers": [
+    "ZGMF-X42S"
+   ],
+   "names": {
+    "en": "Destiny Gundam",
+    "ko": "데스티니 건담"
+   },
+   "works": [
+    "seed-destiny"
+   ],
+   "debut_work": "seed-destiny",
+   "timeline": "CE"
+  },
+  {
+   "id": "MS-06F Zaku II",
+   "model_numbers": [
+    "MS-06F"
+   ],
+   "names": {
+    "ja": "量産型ザクII",
+    "en": "Zaku II",
+    "ko": "자쿠II"
+   },
+   "gget_ids": [
+    1001000900
+   ],
+   "icon": "g3000u00200",
+   "works": [
+    "mobile-suit-gundam",
+    "build-fighters"
+   ],
+   "debut_work": "mobile-suit-gundam",
+   "timeline": "UC"
+  },
+  {
+   "id": "Estard Passenger Jet",
+   "model_numbers": [],
+   "names": {
+    "en": "Estard Passenger Jet"
+   },
+   "works": [
+    "seed"
+   ],
+   "debut_work": "seed",
+   "timeline": "CE"
+  },
+  {
+   "id": "Launcher Parts Only",
+   "model_numbers": [],
+   "names": {
+    "en": "Launcher Parts Only"
+   },
+   "works": [
+    "seed"
+   ],
+   "debut_work": "seed",
+   "timeline": "CE"
+  },
+  {
+   "id": "GN-001 Gundam Exia",
+   "model_numbers": [
+    "GN-001"
+   ],
+   "names": {
+    "en": "Gundam Exia",
+    "ko": "건담 엑시아"
+   },
+   "gget_ids": [
+    1370000100
+   ],
+   "icon": "g3000u00300",
+   "works": [
+    "seed",
+    "00"
+   ],
+   "debut_work": "00",
+   "timeline": "AD"
+  },
+  {
+   "id": "LM314V21 Victory Two Gundam",
+   "model_numbers": [
+    "LM314V21"
+   ],
+   "names": {
+    "en": "Victory Two Gundam",
+    "ko": "V2 건담"
+   },
+   "gget_ids": [
+    1150000100
+   ],
+   "icon": "g3000u00400",
+   "works": [
+    "seed",
+    "v"
+   ],
+   "debut_work": "v"
+  },
+  {
+   "id": "GAT-X105B/FP Build Strike Gundam Full Package",
+   "model_numbers": [
+    "GAT-X105B/FP"
+   ],
+   "names": {
+    "en": "Build Strike Gundam Full Package",
+    "ko": "빌드 스트라이크 건담 풀 패키지"
+   },
+   "works": [
+    "build-fighters",
+    "seed"
+   ],
+   "debut_work": "build-fighters",
+   "timeline": "BUILD"
+  },
+  {
+   "id": "LCAM-01XA Archangel",
+   "model_numbers": [
+    "LCAM-01XA"
+   ],
+   "names": {
+    "en": "Archangel",
+    "ko": "아크엔젤"
+   },
+   "works": [
+    "seed"
+   ],
+   "debut_work": "seed",
+   "timeline": "CE"
+  },
+  {
+   "id": "GAT-01A1+AQM/E-A4E1 Jet Dagger",
+   "model_numbers": [
+    "GAT-01A1+AQM/E-A4E1"
+   ],
+   "names": {
+    "ja": "ジェットダガー",
+    "en": "Jet Dagger",
+    "ko": "제트 대거"
+   },
+   "gget_ids": [
+    1330000300
+   ],
+   "icon": "g3000u00500",
+   "timeline": "CE"
+  }
+ ]
+}

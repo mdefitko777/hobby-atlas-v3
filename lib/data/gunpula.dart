@@ -2,6 +2,7 @@
 // 여기 함수는 compute() 안(다른 isolate)에서도 돌아가야 해서 Flutter 위젯 · 전역 상태를 쓰지 않는다.
 import 'dart:convert';
 import '../json_util.dart';
+import 'gundam_atlas.dart' show atlasBoxartFile, atlasChaptersFile, atlasKitMsFile, atlasMsFile;
 
 /// Gunpula 저장소의 Pages 주소. 데이터는 data/, 이미지는 app/assets/
 const gunpulaBase = 'https://mdefitko777.github.io/Gunpula/';
@@ -12,14 +13,23 @@ const gunpulaRawBase = 'https://raw.githubusercontent.com/mdefitko777/Gunpula/ma
 /// 매일 갱신되는 순서대로 받는 파일들 (kits.json · search-index.json 은 받지 않는다).
 /// 새 소식 피드는 여기서 받지 않는다 — 알림 확인(lib/background/catalog_check_worker.dart)이 manifest 가 바뀔 때 한 번만 받는다.
 const franchiseIds = ['gundam', 'beyblade', 'pokemon', 'armored_core', 'fate'];
+
+/// 예전에 받던 건담 도감 파일 (gget) — 기기 캐시에서 지운다
+const retiredAuxFiles = ['gget-units.json', 'gget-kit-map.json', 'gget-series-sections.json'];
+
+/// 매핑(compute)에만 쓰고 기기에 따로 두지 않는 보조 파일
+const mapOnlyAuxFiles = {'grades.json', 'kit-first-seen.json', atlasBoxartFile};
+
 const auxFiles = [
   'grades.json',
   'kit-first-seen.json',
   'announcements.json',
   'atlas-groups.json',
-  'gget-units.json',
-  'gget-kit-map.json',
-  'gget-series-sections.json',
+  // 건담 도감 (lib/data/gundam_atlas.dart): MS 마스터 · 상품↔MS 연결 · 박스 아트(매핑 때만)
+  atlasMsFile,
+  atlasKitMsFile,
+  atlasBoxartFile,
+  atlasChaptersFile, // 화수 · 장 묶음 + 기체 종류 (없으면 404 → 그 보기만 숨김)
   'bbx-database.json',
   // 합쳐진 · 빠진 kit_id (Gunpula 정리 때 생김) — 저장된 기록을 남은 상품으로 옮긴다
   'kit-aliases.json',
@@ -209,10 +219,37 @@ String findJan(Iterable<String> texts) {
   return '';
 }
 
+/// 박스 아트 한 개 (data/atlas/gundam-boxart.json)
+/// kind '' = 상자 그림, 'dp' = 가샤폰 대지(세트 그림) → 대표 사진. 'maybe' = 확실하지 않음 → 사진 목록 끝에만.
+typedef BoxArt = ({String url, String kind});
+
+Map<String, BoxArt> parseBoxart(Object? json) => {
+  for (final e in jMap(jMap(json)['boxart']).entries)
+    if (resolveAsset(jMap(e.value)['url']) case final u when u.isNotEmpty && !deadImage(u))
+      e.key: (url: u, kind: jStr(jMap(e.value)['kind'])),
+};
+
+/// 대표 사진 · 사진 목록 정하기 — 박스 아트가 있으면 그것이 먼저, 원래 대표 사진은 두 번째로 남긴다
+({String cover, List<String> gallery}) pickCover({required String box, required List<String> gallery, BoxArt? art}) {
+  final old = (box.isNotEmpty && !deadImage(box)) ? box : (gallery.isEmpty ? '' : gallery.first);
+  final main = art != null && art.kind != 'maybe';
+  final cover = main ? art.url : old;
+  return (
+    cover: cover,
+    gallery: <String>{
+      if (cover.isNotEmpty) cover,
+      if (old.isNotEmpty) old,
+      ...gallery,
+      if (art != null && !main) art.url,
+    }.take(10).toList(),
+  );
+}
+
 /// compute() 작업: `split/kits-<franchise>.json` 한 개 → Kit.fromSlim 이 읽는 Map 목록
-/// msg = {raw, grades, firstSeen} (모두 JSON 글자)
+/// msg = {raw, grades, firstSeen, boxart?} (모두 JSON 글자 · boxart 는 건담만)
 List<Map<String, Object?>> mapKitsJob(Map<String, String> msg) {
   final kits = jList(jMap(jsonDecode(msg['raw']!))['kits']);
+  final boxart = msg['boxart'] == null ? const <String, BoxArt>{} : parseBoxart(jsonDecode(msg['boxart']!));
   final grades = {
     for (final g in jList(jMap(jsonDecode(msg['grades'] ?? '{}'))['grades']))
       if (jStr(jMap(g)['code']).isNotEmpty) jStr(jMap(g)['code']): jStr(jMap(g)['category']),
@@ -235,7 +272,8 @@ List<Map<String, Object?>> mapKitsJob(Map<String, String> msg) {
       for (final g in jList(r['gallery_image_urls']))
         if (resolveAsset(g) case final u when u.isNotEmpty && !deadImage(u)) u,
     ];
-    final cover = (box.isNotEmpty && !deadImage(box)) ? box : (gallery.isEmpty ? '' : gallery.first);
+    final pick = pickCover(box: box, gallery: gallery, art: boxart[id]);
+    final cover = pick.cover;
     final jan = findJan([id, ...sourceUrls, jStr(r['number']), jStr(images['box_art_url'])]);
     final pb = r['is_premium_bandai'] == true;
     final brands = <String>{
@@ -278,11 +316,7 @@ List<Map<String, Object?>> mapKitsJob(Map<String, String> msg) {
       'priceJpy': r['price_jpy'] is num ? (r['price_jpy']! as num).toInt() : null,
       'priceKrw': r['price_krw'] is num ? (r['price_krw']! as num).toInt() : null,
       'image': cover,
-      'gallery': [
-        if (cover.isNotEmpty) cover,
-        for (final g in gallery)
-          if (g != cover) g,
-      ].take(10).toList(),
+      'gallery': pick.gallery,
       'limited': r['is_limited'] == true,
       'pb': pb,
       'pbOpens': jStr(pbInfo['order_opens_at']).split('T').first,

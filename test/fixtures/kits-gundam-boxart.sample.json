@@ -1,0 +1,9 @@
+{
+  "kits": [
+    {"kit_id": "hg-strike", "franchise": "gundam", "names": {"ja": "HG ストライクガンダム", "ko": "HG 스트라이크 건담"}, "grade_code": "HG", "images": {"box_art_url": "./assets/catalog/gundam/hg-strike.jpg"}, "gallery_image_urls": ["./assets/catalog/gundam/hg-strike-2.jpg"]},
+    {"kit_id": "gsf-strike", "franchise": "gundam", "names": {"ja": "ガシャポン戦士f ストライク"}, "grade_code": "GSF", "images": {}, "gallery_image_urls": ["https://example.com/gsf-1.jpg"]},
+    {"kit_id": "pg-maybe", "franchise": "gundam", "names": {"ja": "PG ストライク"}, "grade_code": "PG", "images": {"box_art_url": "./assets/catalog/gundam/pg.jpg"}, "gallery_image_urls": []},
+    {"kit_id": "dead-box", "franchise": "gundam", "names": {"ja": "MG デュエル"}, "grade_code": "MG", "images": {"box_art_url": "./assets/catalog/gundam/mg-duel.jpg"}, "gallery_image_urls": []},
+    {"kit_id": "no-art", "franchise": "gundam", "names": {"ja": "RG ザク"}, "grade_code": "RG", "images": {"box_art_url": "./assets/catalog/gundam/rg-zaku.jpg"}, "gallery_image_urls": []}
+  ]
+}

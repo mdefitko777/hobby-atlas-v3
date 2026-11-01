@@ -5,6 +5,7 @@ import '../notifications/feed_rules.dart' show annStageLabels;
 import '../notifications/notify_models.dart';
 import '../notifications/notify_store.dart';
 import 'catalog.dart';
+import 'gundam_atlas.dart';
 import 'gunpula.dart';
 import 'user_store.dart';
 import '../sync/account.dart';
@@ -27,113 +28,133 @@ CollectStatus _best(Iterable<String> kitIds) {
   return best;
 }
 
-// ── 건담 도감: gget (SD 건담 G제네레이션 ETERNAL) 작품 · 기체 ──────────────────
-class _Gget {
-  _Gget(this.works, this.units, this.unitKits, this.workImage, this.workSection);
-  final List<Map<String, Object?>> works;
-  final List<Map<String, Object?>> units;
-  final Map<String, List<String>> unitKits;
-  final Map<int, String> workImage;
+// ── 건담 도감: Atlas (data/atlas/gundam-ms.json · gundam-kit-ms.json · gundam-chapters.json) ─────
+// 시대 → 작품 → 기체(MS) → 연결된 상품. 칸은 그 기체의 상품을 사면(좋아요면 컬러) 켜진다.
+// 옛 "손으로 켜기" 기록은 gget unit_id 그대로 두고, 그 id 를 가진 기체를 켠다.
+GundamAtlas? _atlasCache;
+List<Object?> _atlasKey = const [];
 
-  /// 작품 id → 시대 묶음 이름 (우주세기 UC · SEED 우주 …), 순서 = atlas-groups 순서
-  final Map<int, String> workSection;
-}
-
-Future<_Gget> _gget() async {
-  final u = jMap(await _cat.aux('gget-units.json'));
-  final km = jMap(await _cat.aux('gget-kit-map.json'));
-  final sec = jMap(await _cat.aux('gget-series-sections.json'));
-  final atlas = jMap(await _cat.aux('atlas-groups.json'));
-  final workImage = <int, String>{};
-  final workSection = <int, String>{};
-  for (final g in jList(jMap(atlas['franchises'])['gundam_timeline'])) {
-    final label = pickName(jMap(g)['labels']);
+Future<GundamAtlas> _atlas() async {
+  final ms = await _cat.aux(atlasMsFile);
+  final km = await _cat.aux(atlasKitMsFile);
+  final groups = await _cat.aux('atlas-groups.json');
+  final chapters = await _cat.aux(atlasChaptersFile); // 아직 없으면 null → 화수별 보기 · 종류 필터만 빠진다
+  final key = [ms, km, groups, chapters, _cat.byId];
+  if (_atlasCache case final a? when _sameAll(_atlasKey, key)) return a;
+  if (ms == null) throw const CatalogException('건담 도감 데이터를 받지 못했어요.');
+  // gget 시리즈 번호 → 공식 작품 로고 (atlas-groups 의 건담 시대 묶음)
+  final logos = <int, String>{};
+  for (final g in jList(jMap(jMap(groups)['franchises'])['gundam_timeline'])) {
     for (final w in jList(jMap(g)['works'])) {
-      final id = jInt(jMap(w)['work_id']);
-      workSection.putIfAbsent(id, () => label);
-      if (jStr(jMap(w)['image']).isNotEmpty) workImage[id] = jStr(jMap(w)['image']);
+      final img = jStr(jMap(w)['image']);
+      if (img.isNotEmpty) logos.putIfAbsent(jInt(jMap(w)['work_id']), () => img);
     }
   }
-  for (final w in jList(sec['works'])) {
-    final id = jInt(jMap(w)['work_id']);
-    if (jStr(jMap(w)['image']).isNotEmpty) workImage[id] = jStr(jMap(w)['image']);
+  var a = GundamAtlas.parse(ms, km, knownKit: _cat.byId.containsKey, workLogos: logos);
+  if (chapters != null) a = a.withChapters(parseChapters(chapters)).withUnitTypes(parseUnitTypes(chapters));
+  _atlasKey = key;
+  return _atlasCache = a;
+}
+
+bool _sameAll(List<Object?> a, List<Object?> b) {
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (!identical(a[i], b[i])) return false;
   }
-  return _Gget(
-    [for (final w in jList(u['works'])) jMap(w)],
-    [for (final x in jList(u['units'])) jMap(x)],
-    {for (final e in jMap(km['unit_kits']).entries) e.key: jList(e.value).whereType<String>().toList()},
-    workImage,
-    workSection,
-  );
+  return true;
 }
 
-bool _inWork(Map<String, Object?> unit, int workId) {
-  final ids = jList(unit['work_ids']);
-  return ids.isEmpty ? jInt(unit['work_id']) == workId : ids.any((w) => jInt(w) == workId);
+/// 기체 그림: gget 썸네일 → 없으면 연결된 상품의 대표 사진(박스 아트)
+String _unitImage(AtlasUnit u) {
+  if (u.icon.isNotEmpty) return u.icon;
+  for (final id in [...u.litKitIds, ...u.kitIds]) {
+    final img = _cat.byId[id]?.image ?? '';
+    if (img.isNotEmpty) return img;
+  }
+  return '';
 }
 
-CollectStatus _unitStatus(_Gget g, Map<String, Object?> unit) {
-  final id = jInt(unit['unit_id']);
-  final s = _best(g.unitKits['$id'] ?? const []);
-  if (s != CollectStatus.none) return s;
-  return _me.guideManualLit.contains(id) ? CollectStatus.owned : CollectStatus.none;
+bool _manualLit(AtlasUnit u) => u.ggetIds.any(_me.guideManualLit.contains);
+
+CollectStatus _unitStatus(AtlasUnit u) {
+  final s = _best(u.litKitIds);
+  if (s == CollectStatus.owned) return s;
+  return _manualLit(u) ? CollectStatus.owned : s;
+}
+
+/// 구매함에 넣은 때 (내 기록 updated_at)
+String _boughtAt(Iterable<String> kitIds) {
+  var last = '';
+  for (final id in kitIds) {
+    if (_kitStatus(id) != CollectStatus.owned) continue;
+    final at = jStr(_me.entry(id)?['updated_at']);
+    if (at.compareTo(last) > 0) last = at;
+  }
+  return last;
 }
 
 Future<List<GuideWork>> deriveGuideWorks() async {
   await _cat.ensureLoaded();
-  final g = await _gget();
-  final out = <GuideWork>[];
-  for (final w in g.works) {
-    final id = jInt(w['work_id']);
-    final units = [
-      for (final u in g.units)
-        if (_inWork(u, id)) u,
-    ];
-    if (units.isEmpty) continue;
-    out.add(
-      GuideWork(
-        id: '$id',
-        section: g.workSection[id] ?? '기타 작품',
-        name: jStr(w['name']),
-        image: g.workImage[id] ?? jStr(units.first['image_url']),
-        total: units.length,
-        owned: units.where((u) => _unitStatus(g, u) == CollectStatus.owned).length,
-      ),
-    );
-  }
-  // 시대 묶음 순서대로 (atlas-groups 순서), 묶음 안에서는 원래 순서
-  final order = <String>[];
-  for (final s in g.workSection.values) {
-    if (!order.contains(s)) order.add(s);
-  }
-  int rank(GuideWork w) => order.contains(w.section) ? order.indexOf(w.section) : order.length;
-  final indexed = [for (var i = 0; i < out.length; i++) (i, out[i])]
-    ..sort((a, b) {
-      final c = rank(a.$2).compareTo(rank(b.$2));
-      return c != 0 ? c : a.$1.compareTo(b.$1);
-    });
-  return [for (final e in indexed) e.$2];
+  final a = await _atlas();
+  return [
+    for (final w in a.works)
+      () {
+        final units = [for (final id in w.unitIds) a.units[id]!];
+        final status = [for (final u in units) _unitStatus(u)];
+        final kits = {for (final u in units) ...u.litKitIds};
+        return GuideWork(
+          id: w.id,
+          section: a.timeline(w.timeline)?.name ?? '기타 작품',
+          name: w.name,
+          image: w.image, // 공식 작품 로고만 (없으면 이름 칸)
+          imageSource: w.imageSource,
+          total: units.length,
+          owned: status.where((s) => s == CollectStatus.owned).length,
+          liked: status.where((s) => s == CollectStatus.wanted).length,
+          keywords: [for (final u in units) u.blob].join(' '),
+          grades: {
+            for (final k in kits)
+              if (_cat.byId[k]?.line case final l? when l.isNotEmpty) l,
+          }.toList(),
+          types: {for (final u in units) u.type}.toList(),
+          kits: kits.length,
+          boughtAt: _boughtAt(kits),
+        );
+      }(),
+  ];
 }
 
 Future<List<GuideUnit>> deriveGuideUnits(String workId) async {
   await _cat.ensureLoaded();
-  final g = await _gget();
-  final wid = int.tryParse(workId) ?? -1;
+  final a = await _atlas();
+  final w = a.work(workId);
+  if (w == null) return const [];
   return [
-    for (final u in g.units)
-      if (_inWork(u, wid))
+    for (final id in w.unitIds)
+      if (a.units[id] case final u?)
         GuideUnit(
-          id: '${jInt(u['unit_id'])}',
+          id: u.id,
           workId: workId,
-          name: jStr(u['name']),
-          nameEn: jStr(u['name']),
-          image: jStr(u['image_url']),
-          status: _unitStatus(g, u),
-          kitIds: [
-            for (final k in g.unitKits['${jInt(u['unit_id'])}'] ?? const <String>[])
-              if (_cat.byId.containsKey(k)) k,
-          ],
+          name: u.name,
+          nameEn: u.sub,
+          image: _unitImage(u),
+          status: _unitStatus(u),
+          kitIds: u.kitIds,
+          kitRoles: {for (final k in u.kits) k.kitId: k.role},
+          ggetIds: u.ggetIds,
+          type: u.type,
+          keywords: u.blob,
         ),
+  ];
+}
+
+/// 작품 안 화수 · 장 (gundam-chapters.json 이 없으면 빈 목록 → 화수별 보기를 숨긴다)
+Future<List<GuideChapter>> deriveGuideChapters(String workId) async {
+  await _cat.ensureLoaded();
+  final w = (await _atlas()).work(workId);
+  return [
+    for (final c in w?.chapters ?? const <AtlasChapter>[])
+      GuideChapter(name: c.name, episodes: c.episodes, unitIds: c.unitIds),
   ];
 }
 
@@ -141,20 +162,13 @@ Future<List<GuideUnit>> deriveGuideUnits(String workId) async {
 Future<Map<String, int>> deriveFriendGuide(List<String> ownedKitIds) async {
   if (ownedKitIds.isEmpty) return const {};
   await _cat.ensureLoaded();
-  final g = await _gget();
-  final owned = ownedKitIds.toSet();
-  final litUnits = <int>{
-    for (final u in g.units)
-      if ((g.unitKits['${jInt(u['unit_id'])}'] ?? const <String>[]).any(owned.contains)) jInt(u['unit_id']),
+  final a = await _atlas();
+  final lit = <String>{for (final k in ownedKitIds) ...?a.unitsByKit[k]};
+  if (lit.isEmpty) return const {};
+  return {
+    for (final w in a.works)
+      if (w.unitIds.where(lit.contains).length case final n when n > 0) w.id: n,
   };
-  if (litUnits.isEmpty) return const {};
-  final out = <String, int>{};
-  for (final w in g.works) {
-    final id = jInt(w['work_id']);
-    final n = g.units.where((u) => litUnits.contains(jInt(u['unit_id'])) && _inWork(u, id)).length;
-    if (n > 0) out['$id'] = n;
-  }
-  return out;
 }
 
 // ── 베이블레이드 X: phstudy 상품 · 시리즈 · 부품 ──────────────────────────────
@@ -255,26 +269,23 @@ Future<List<World>> deriveWorlds(String channelId) async {
   }
   final atlas = jMap(jMap(await _cat.aux('atlas-groups.json'))['franchises']);
   if (channelId == 'gundam') {
-    final g = await _gget();
+    // 시대 하나 = 묶음 하나 (기체가 여러 작품에 나와도 한 번만 센다)
+    final a = await _atlas();
     return [
-      for (final grp in jList(atlas['gundam_timeline']))
-        () {
-          final m = jMap(grp);
-          final workIds = {for (final w in jList(m['works'])) jInt(jMap(w)['work_id'])};
-          final units = [
-            for (final u in g.units)
-              if (workIds.any((w) => _inWork(u, w))) u,
-          ];
-          return World(
-            id: 'gundam-${jStr(m['id'])}',
-            franchiseId: 'gundam',
-            label: pickName(m['labels']),
-            subtitle: pickName(m['subtitle']),
-            image: jStr(m['image']),
-            total: units.length,
-            owned: units.where((u) => _unitStatus(g, u) == CollectStatus.owned).length,
-          );
-        }(),
+      for (final t in a.timelines)
+        if (a.works.where((w) => w.timeline == t.id).toList() case final works when works.isNotEmpty)
+          () {
+            final ids = {for (final w in works) ...w.unitIds};
+            return World(
+              id: 'gundam-${t.id.toLowerCase()}',
+              franchiseId: 'gundam',
+              label: t.name,
+              subtitle: t.nameEn,
+              image: a.timelineImage(t.id), // 그 시대 첫 작품의 공식 로고
+              total: ids.length,
+              owned: ids.where((id) => _unitStatus(a.units[id]!) == CollectStatus.owned).length,
+            );
+          }(),
     ];
   }
   return [
@@ -290,6 +301,7 @@ Future<List<World>> deriveWorlds(String channelId) async {
           image: jStr(m['image']),
           total: ids.length,
           owned: ids.where((id) => _kitStatus(id) == CollectStatus.owned).length,
+          kitIds: ids,
         );
       }(),
   ];
@@ -347,18 +359,18 @@ AppNotice noticeOf(NoticeRecord r, Kit? kit) => r.isAnnStage
         annId: r.annId,
       )
     : AppNotice(
-  id: r.id,
-  type: r.isPbWindow || (r.pb && r.kind == 'added')
-      ? NoticeType.reserve
-      : (r.reasons.contains('price') ? NoticeType.price : NoticeType.release),
-  title: kit?.name ?? r.title,
-  body: r.body,
-  image: kit?.image ?? '',
-  at: r.at.toLocal(),
-  read: r.seen,
-  franchiseId: r.wanted ? '' : r.franchise,
-  kitId: r.kitId,
-);
+        id: r.id,
+        type: r.isPbWindow || (r.pb && r.kind == 'added')
+            ? NoticeType.reserve
+            : (r.reasons.contains('price') ? NoticeType.price : NoticeType.release),
+        title: kit?.name ?? r.title,
+        body: r.body,
+        image: kit?.image ?? '',
+        at: r.at.toLocal(),
+        read: r.seen,
+        franchiseId: r.wanted ? '' : r.franchise,
+        kitId: r.kitId,
+      );
 
 // ── 내 정보 (이름 · 아이디 · 친구는 계정에서, 숫자는 기기 기록에서) ──────────────
 Future<Profile> deriveProfile() async {

@@ -7,7 +7,9 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hobby_atlas/data/catalog.dart';
 import 'package:hobby_atlas/data/derive.dart';
+import 'package:hobby_atlas/data/gundam_atlas.dart';
 import 'package:hobby_atlas/data/gunpula.dart';
+import 'package:hobby_atlas/json_util.dart';
 import 'package:hobby_atlas/data/user_store.dart';
 import 'package:hobby_atlas/models.dart';
 import 'package:hobby_atlas/notifications/feed_rules.dart';
@@ -23,14 +25,16 @@ void main() {
     String read(String f) => File('$dataDir/$f').readAsStringSync();
     final slim = <Map<String, Object?>>[
       for (final f in franchiseIds)
-        ...mapKitsJob({'raw': read('split/kits-$f.json'), 'grades': read('grades.json'), 'firstSeen': read('kit-first-seen.json')}),
+        ...mapKitsJob({
+          'raw': read('split/kits-$f.json'),
+          'grades': read('grades.json'),
+          'firstSeen': read('kit-first-seen.json'),
+          if (f == 'gundam' && File('$dataDir/$atlasBoxartFile').existsSync()) 'boxart': read(atlasBoxartFile),
+        }),
     ];
     Catalog.instance.debugSet(
       slim: slim,
-      aux: {
-        for (final f in auxFiles)
-          if (File('$dataDir/$f').existsSync()) f: jsonDecode(read(f)),
-      },
+      aux: {for (final f in auxFiles) f: File('$dataDir/$f').existsSync() ? jsonDecode(read(f)) : null},
     );
   });
 
@@ -50,12 +54,32 @@ void main() {
       expect(hg.jan, '4580886844760');
       expect(hg.image, startsWith('${gunpulaBase}app/assets/catalog/gundam/'));
     }
-    expect(kitMatches(c.kits.firstWhere((k) => k.jan.isNotEmpty), c.kits.firstWhere((k) => k.jan.isNotEmpty).jan), isTrue);
+    expect(
+      kitMatches(c.kits.firstWhere((k) => k.jan.isNotEmpty), c.kits.firstWhere((k) => k.jan.isNotEmpty).jan),
+      isTrue,
+    );
   }, skip: skip);
 
   test('건담 도감: 작품 묶음 · 기체 · 내 기록으로 점등', () async {
     final works = await deriveGuideWorks();
-    expect(works.length, greaterThan(90));
+    expect(works.length, greaterThan(70));
+    // 시대 가드: SEED 쪽(코즈믹 에라) 작품에 GN- (00) · LM3/4 (V건담) 기체가 없다
+    for (final w in works.where((w) => w.section == '코즈믹 에라')) {
+      for (final u in await deriveGuideUnits(w.id)) {
+        expect(u.id.startsWith('GN'), isFalse, reason: '${u.id} in ${w.id}');
+        expect(RegExp(r'^LM[34]\d').hasMatch(u.id), isFalse, reason: '${u.id} in ${w.id}');
+      }
+    }
+    // 박스 아트가 대표 사진
+    final box = jMap(jMap(jsonDecode(File('$dataDir/$atlasBoxartFile').readAsStringSync()))['boxart']);
+    final withBox = [
+      for (final e in box.entries)
+        if (jStr(jMap(e.value)['kind']) != 'maybe' && Catalog.instance.byId[e.key] != null) e,
+    ];
+    expect(
+      withBox.where((e) => Catalog.instance.byId[e.key]!.image == jStr(jMap(e.value)['url'])).length,
+      greaterThan(withBox.length * 0.95),
+    );
     expect(works.first.section, isNotEmpty);
     final seed = works.firstWhere((w) => w.name.contains('SEED'));
     final units = await deriveGuideUnits(seed.id);
@@ -68,7 +92,9 @@ void main() {
       UserStore.instance.setStatus(withKit.kitIds.first, CollectStatus.none);
     }
     // ignore: avoid_print
-    print('도감 작품 ${works.length}개, ${seed.name} 기체 ${units.length}개 (상품 연결 ${units.where((u) => u.kitIds.isNotEmpty).length})');
+    print(
+      '도감 작품 ${works.length}개, ${seed.name} 기체 ${units.length}개 (상품 연결 ${units.where((u) => u.kitIds.isNotEmpty).length})',
+    );
     // 친구 도감 비교: 친구가 그 상품을 샀으면 그 작품에 1칸 이상
     if (withKit.kitIds.isNotEmpty) {
       final friend = await deriveFriendGuide([withKit.kitIds.first]);
@@ -84,7 +110,9 @@ void main() {
     final lines = await deriveWorlds('beyblade');
     expect(lines.map((w) => w.label), contains('BX 라인'));
     // ignore: avoid_print
-    print('BBX ${tops.length}개, 부품 있는 것 ${tops.where((t) => t.parts.isNotEmpty).length}, 줄 ${lines.map((w) => w.label).join(',')}');
+    print(
+      'BBX ${tops.length}개, 부품 있는 것 ${tops.where((t) => t.parts.isNotEmpty).length}, 줄 ${lines.map((w) => w.label).join(',')}',
+    );
   }, skip: skip);
 
   test('세계관 · 공식 예고 · 알림', () async {
@@ -112,8 +140,10 @@ void main() {
     final notices = [for (final r in plan.records) noticeOf(r, Catalog.instance.byId[r.kitId])];
     expect(notices.where((n) => n.image.isNotEmpty).length, greaterThan(notices.length ~/ 2));
     // ignore: avoid_print
-    print('알림 첫 실행 ${plan.records.length}줄 (${entries.first.date} 기준 7일): '
-        '${plan.records.map((r) => r.franchise).toSet().join(',')}');
+    print(
+      '알림 첫 실행 ${plan.records.length}줄 (${entries.first.date} 기준 7일): '
+      '${plan.records.map((r) => r.franchise).toSet().join(',')}',
+    );
   }, skip: skip);
 
   // Gunpula 의 새 소식 파일(scripts/atlas/build_notify_feed.mjs)이 있는 데이터 폴더에서만 (Gunpula 브랜치 atlas/notify-feed)

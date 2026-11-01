@@ -4,29 +4,36 @@
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
 // │ G-1  │ 채널 타일 격자                      │ '전체'일 때: 도감을 볼 IP 고르기         │ P06           │
 // │ G-2  │ ? 버튼 → 바텀 시트                 │ 도감 읽는 법 (긴 범례 줄 대신)           │ P10 · P08     │
-// │ G-3  │ 섹션별 작품 카드 + 진행 막대          │ 건담 작품 도감 (수집 n/전체)            │ P01 · P06     │
+// │ G-3  │ 시대 섹션 + 작품 카드 + 진행 막대     │ 건담 작품 도감 (Atlas 시대 → 작품, 수집 n/전체) │ P01 · P06 │
 // │ G-4  │ 기체 칸 격자 (4단계)                 │ 흑백 → ♡ 컬러 → 리본 컬러·초록 테두리 → 내 사진·도는 고리 │ P01 · P04 │
 // │ G-4a │ Lv 막대 (좋아요 1 · 구매 2 · 사진 3점) │ 하나 더할 때마다 오르는 작품 레벨        │ P01           │
-// │ G-4b │ 칸 위 MarkOverlay (리본 · ♡)          │ 칸에서 바로 좋아요 · 구매함 (상품 사진과 같음) │ P07 · P04 │
-// │ G-5  │ 바텀 시트: 기체 → 대응 상품           │ 이 기체의 상품 → 상품 상세              │ P07           │
-// │ G-5b │ 시트의 TogglePill 3개                │ 좋아요 · 구매함 · 내 사진 (가짜 저장)    │ P03 · P07     │
+// │ G-4b │ 칸 위 MarkOverlay (리본 · ♡)          │ 상품 하나면 그 상품 · 없으면 손으로 켜기 · 여럿이면 시트 │ P07 · P04 │
+// │ G-4c │ ViewIconToggle + 장마다 SectionHeader · 칸 격자 │ 화수별 보기 (gundam-chapters 가 있을 때만) │ P01 · P07 │
+// │ G-5  │ 바텀 시트(끌어 올리기): 기체 → 상품    │ 이 기체의 상품 전부 → 상품 상세          │ P07           │
+// │ G-5a │ ThumbRow + ♡ · 책갈피 아이콘          │ 상품 줄: 등급 · 축척 · 발매월 · 바로 좋아요 · 구매함 │ P07 · P04 │
+// │ G-5b │ 시트의 TogglePill 2개                │ 손으로 켜기(기기 저장) · 내 사진(가짜)   │ P03 · P07     │
 // │ G-5c │ 바텀 시트(카메라 · 최근 사진) → 확인  │ 이 기체가 찍힌 사진이어야 켜짐 (가짜 판정) │ P05 · P09   │
 // │ G-6  │ 베이 칸 + n/3 · 부품 시트            │ 베이블레이드 X 도감 (부품 3개)          │ P01           │
 // │ G-6a │ 🔧 ToolIcon (베이 머리줄)            │ 조합 만들기 (화면 T) — 블레이드 · 래칫 · 비트 · 덱 │ P07     │
 // │ G-7  │ 세대 · 작품 카드 + 진행 막대          │ 포켓몬 세대 · Fate 작품 · AC 세대       │ P01           │
 // │ G-7b │ TagGameCards (포켓몬 세대 위)         │ MEZASTAR · Frienda 태그 도감 입구 (R)   │ P06           │
+// │ G-7a │ SectionListView (쌓기)              │ 묶음 카드 → 그 묶음 상품 (찾기 · 필터 · 격자/목록) │ P07 │
 // │ G-8  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 정리 안 된 작품     │ P01 · P09     │
-// │ G-9  │ FindBar (컬렉션 · 작품 도감 위)       │ 도감에서 찾기 + 필터(전체 · 켜진 것 · 아직) │ P04 · P07   │
+// │ G-9  │ FindBar + GuideFilterSheet(60% 시트) │ 도감에서 찾기(작품 · 기체 이름 · 형식번호) + 도감 필터: 단계(아직 · ♡ · 구매함 · 내 사진) · 상품 있는 것만 · 등급 · 종류 · 시대 · 정렬 │ P04 · P07 · P01 │
 // └──────────────────────────────────────────────────────────────────────────────────┘
-// 전환: 🔧 → T 베이 조합 만들기(쌓기). 작품 카드 → 작품 도감(쌓기) → 기체 시트(덮기) → D 상품 상세(쌓기). 베이 → 부품 시트(덮기).
+// 전환: 🔧 → T 베이 조합 만들기(쌓기). 작품 카드 → 작품 도감(쌓기) → 기체 시트(덮기) → D 상품 상세(쌓기, 이 기체 상품끼리 좌우). 베이 → 부품 시트(덮기).
 //       기체 시트 → 사진 고르기(덮기) → 확인 중(대화 상자) → 토스트.
+// 데이터: lib/data/derive.dart 건담 도감 ← lib/data/gundam_atlas.dart (data/atlas/gundam-ms · gundam-kit-ms · gundam-chapters).
+//       작품 · 시대 카드 그림 = 공식 작품 로고 (주소 · 출처는 데이터 쪽 GundamAtlas 가 정한다).
 import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../detail_pane.dart';
 import '../filter_sheet.dart';
 import '../level.dart';
+import '../marks.dart';
 import '../channels.dart';
+import '../data/gundam_atlas.dart' show roleLabels;
 import '../models.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -35,6 +42,7 @@ import 'd_kit_detail_screen.dart';
 import 'e_camera_screen.dart' show albumScenes;
 import 't_bbx_builder_screen.dart';
 import 'r_mezastar_screen.dart' show TagGameCards;
+import 'o_see_all_screen.dart' show SectionListView;
 
 class GuideView extends StatelessWidget {
   const GuideView({
@@ -44,7 +52,7 @@ class GuideView extends StatelessWidget {
     required this.onPickChannel,
     required this.loaders,
     this.query = '',
-    this.lit = LitState.any,
+    this.filter,
   });
 
   final String channel;
@@ -52,31 +60,58 @@ class GuideView extends StatelessWidget {
   final ValueChanged<String> onPickChannel;
   final Loaders loaders;
 
-  /// G-9 찾기 · 필터 (컬렉션의 FindBar)
+  /// G-9 찾기 (컬렉션의 FindBar 글자)
   final String query;
-  final LitState lit;
+
+  /// G-9 도감 필터 — 컬렉션의 필터 아이콘이 이 조건을 바꾸고, 도감은 지금 칸들을 [GuideFilterController.pool] 에 채운다
+  final GuideFilterController? filter;
 
   @override
   Widget build(BuildContext context) {
     if (channel == allChannelId) return _ChannelPicker(myChannels: myChannels, onPick: onPickChannel);
-    final find = _Find(query, lit);
-    return switch (channel) {
-      'gundam' => _GundamGuide(loaders: loaders, find: find),
-      'beyblade' => _BbxGuide(loaders: loaders, find: find),
-      _ => _WorldGuide(channel: channel, loaders: loaders, find: find),
-    };
+    final ctrl = filter ?? GuideFilterController();
+    return ListenableBuilder(
+      listenable: ctrl,
+      builder: (context, _) {
+        final find = _Find(query, ctrl);
+        return switch (channel) {
+          'gundam' => _GundamGuide(loaders: loaders, find: find),
+          'beyblade' => _BbxGuide(loaders: loaders, find: find),
+          _ => _WorldGuide(channel: channel, loaders: loaders, find: find),
+        };
+      },
+    );
   }
 }
 
-/// G-9 이름에 찾는 글자가 있고 · 켜짐 조건에 맞나
+/// G-9 찾기 글자 + 도감 필터
 class _Find {
-  const _Find(this.query, this.lit);
+  _Find(this.query, [GuideFilterController? ctrl]) : ctrl = ctrl ?? GuideFilterController();
   final String query;
-  final LitState lit;
+  final GuideFilterController ctrl;
 
-  bool get active => query.isNotEmpty || lit != LitState.any;
-  bool hit(String name, bool lit) =>
-      (query.isEmpty || name.toLowerCase().contains(query.toLowerCase())) && this.lit.hit(lit);
+  GuideFilter get filter => ctrl.filter;
+  bool get active => query.isNotEmpty || filter.active;
+  bool hitName(String text) => query.isEmpty || text.toLowerCase().contains(query.toLowerCase());
+
+  /// 찾기 + 필터 + 정렬. [pool] 은 필터 시트가 셀 재료로 남긴다 (찾기 글자로 거른 뒤)
+  List<T> apply<T>(
+    List<T> items,
+    String Function(T) text,
+    GuideFacet Function(T) facet, {
+    String groupLabel = '묶음',
+    bool photo = false,
+  }) {
+    final found = [
+      for (final x in items)
+        if (hitName(text(x))) x,
+    ];
+    ctrl
+      ..pool = [for (final x in found) facet(x)]
+      ..groupLabel = groupLabel
+      ..photoTier = photo;
+    return filter.apply(found, facet);
+  }
 }
 
 /// 찾기 · 필터에 맞는 것이 없을 때
@@ -231,9 +266,9 @@ class _WorkCard extends StatelessWidget {
 
 int _cols(double w, double min) => (w / min).floor().clamp(2, 6);
 
-/// G-3 건담 작품 도감
+/// G-3 건담 작품 도감 (시대 묶음 → 작품 카드)
 class _GundamGuide extends StatefulWidget {
-  const _GundamGuide({required this.loaders, this.find = const _Find('', LitState.any)});
+  const _GundamGuide({required this.loaders, required this.find});
   final Loaders loaders;
   final _Find find;
 
@@ -244,12 +279,36 @@ class _GundamGuide extends StatefulWidget {
 class _GundamGuideState extends State<_GundamGuide> {
   late Future<List<GuideWork>> _future = widget.loaders.guideWorks(); // STATE: GET /guideWorks
 
+  /// 마지막으로 센 내 기록 버전 — 좋아요 · 구매함 · 손으로 켜기가 바뀌면 수집 숫자를 다시 센다
+  int _seen = -1;
+
+  void _open(GuideWork w) {
+    final q = widget.find.query.toLowerCase();
+    // 작품 이름이 아니라 기체 이름으로 찾은 것이면 작품 안에서도 그 말로 거른다
+    final carry = q.isNotEmpty && !w.name.toLowerCase().contains(q);
+    openPage(
+      context,
+      WorkGuideScreen(
+        work: w,
+        loaders: widget.loaders,
+        initialQuery: carry ? widget.find.query : '',
+        initialFilter: widget.find.filter.copy(keepGroups: false), // 등급 · 단계 · 정렬을 이어받는다
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final v = Marks.of(context).version;
+    if (v != _seen) {
+      // STATE: 내 기록이 바뀜 → 다시 센다 (세는 동안 앞 숫자를 그대로 보여 준다)
+      if (_seen != -1) _future = widget.loaders.guideWorks();
+      _seen = v;
+    }
     return FutureBuilder<List<GuideWork>>(
       future: _future,
       builder: (context, snap) {
-        if (snap.connectionState != ConnectionState.done) return const LoadingView(); // G-8
+        if (!snap.hasData && !snap.hasError) return const LoadingView(); // G-8
         if (snap.hasError) {
           return ErrorView(
             message: '${snap.error}',
@@ -257,10 +316,8 @@ class _GundamGuideState extends State<_GundamGuide> {
           );
         }
         if (snap.data!.isEmpty) return const EmptyView(message: '도감 작품이 아직 없어요');
-        final works = [
-          for (final w in snap.data!)
-            if (widget.find.hit(w.name, w.owned > 0)) w,
-        ];
+        // G-9 작품 이름 · 기체 이름 · 형식번호로 찾기 + 도감 필터(단계 · 등급 · 종류 · 시대 · 정렬)
+        final works = widget.find.apply(snap.data!, (w) => '${w.name} ${w.keywords}', _workFacet, groupLabel: '시대');
         if (works.isEmpty) return _noHit;
         final sections = <String, List<GuideWork>>{};
         for (final w in works) {
@@ -296,7 +353,7 @@ class _GundamGuideState extends State<_GundamGuide> {
                           name: w.name,
                           owned: w.owned,
                           total: w.total,
-                          onTap: () => openPage(context, WorkGuideScreen(work: w, loaders: widget.loaders)),
+                          onTap: () => _open(w),
                         ),
                     ],
                   ),
@@ -310,11 +367,42 @@ class _GundamGuideState extends State<_GundamGuide> {
   }
 }
 
+/// 작품 카드 → 도감 필터 재료 (구매가 없으면 '아직', 좋아요 · 구매가 있으면 그 단계)
+GuideFacet _workFacet(GuideWork w) => GuideFacet(
+  name: w.name,
+  tiers: {if (w.owned == 0) GuideTier.none, if (w.liked > 0) GuideTier.liked, if (w.owned > 0) GuideTier.owned},
+  grades: w.grades.toSet(),
+  types: w.types.toSet(),
+  group: w.section,
+  kits: w.kits,
+  boughtAt: w.boughtAt,
+);
+
+/// 상품 상태 여러 개 중 가장 높은 것 (구매함 > 좋아요 > 없음)
+CollectStatus _bestOf(Iterable<CollectStatus> all) {
+  var best = CollectStatus.none;
+  for (final s in all) {
+    if (s == CollectStatus.owned) return s;
+    if (s == CollectStatus.wanted) best = s;
+  }
+  return best;
+}
+
 /// G-4 작품 하나의 기체 칸
 class WorkGuideScreen extends StatefulWidget {
-  const WorkGuideScreen({super.key, required this.work, required this.loaders});
+  const WorkGuideScreen({
+    super.key,
+    required this.work,
+    required this.loaders,
+    this.initialQuery = '',
+    this.initialFilter,
+  });
   final GuideWork work;
   final Loaders loaders;
+
+  /// 작품 도감에서 찾던 말 · 도감 필터(시대 빼고)를 이어받는다
+  final String initialQuery;
+  final GuideFilter? initialFilter;
 
   @override
   State<WorkGuideScreen> createState() => _WorkGuideScreenState();
@@ -324,104 +412,151 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
   late Future<List<GuideUnit>> _future = _load();
   List<GuideUnit> _units = const [];
 
-  // 이 화면에서 바꾼 상태 (가짜 — 저장하지 않음). 처음 값은 GET 결과에서.
-  final Set<String> _liked = {};
-  final Set<String> _owned = {};
+  /// 이 작품 기체들의 상품 — 칸 단계 · ♡ · 리본을 바로 바꾸려고 한 번에 받아 둔다
+  Map<String, Kit> _kits = const {};
 
-  /// G-9 이 작품 안에서 찾기 · 필터
-  String _query = '';
-  LitState _lit = LitState.any;
+  /// G-9 이 작품 안에서 찾기 · 도감 필터
+  late String _query = widget.initialQuery;
+  late GuideFilter _filter = widget.initialFilter?.copy() ?? GuideFilter();
 
-  /// 기체 id → 내가 올린 사진. 그 기체가 찍힌 사진일 때만 들어간다
+  /// G-4c 화수 · 장 묶음 (gundam-chapters.json 이 없으면 비어 있고 보기 단추도 없다)
+  List<GuideChapter> _chapters = const [];
+
+  /// true = 화수별 보기, false = 한 격자
+  bool _byChapter = false;
+
+  /// 기체 id → 내가 올린 사진 (가짜 판정 · 저장하지 않음). 그 기체가 찍힌 사진일 때만 들어간다
   final Map<String, String> _photos = {};
 
-  Future<List<GuideUnit>> _load() => widget.loaders.guideUnits(widget.work.id).then((units) {
-    // STATE: GET /guideUnits?workId= → 칸 + 처음 단계
+  Future<List<GuideUnit>> _load() async {
+    // STATE: GET /guideUnits?workId= → 칸, GET /kits?id= → 칸마다 상품
+    final units = await widget.loaders.guideUnits(widget.work.id);
+    final ids = {for (final u in units) ...u.kitIds}.toList();
+    var kits = <String, Kit>{};
+    if (ids.isNotEmpty) {
+      try {
+        kits = {for (final k in await widget.loaders.kitsByIds(ids)) k.id: k};
+      } on Object {
+        // 상품을 못 받아도 칸은 보인다 (불러온 때 상태로)
+      }
+    }
+    var chapters = const <GuideChapter>[];
+    try {
+      chapters = await widget.loaders.guideChapters(widget.work.id); // STATE: GET /guideChapters?workId=
+    } on Object {
+      // 화수 데이터가 없으면(404) 화수별 보기만 숨긴다
+    }
     _units = units;
-    _liked
-      ..clear()
-      ..addAll([
-        for (final u in units)
-          if (u.status == CollectStatus.wanted) u.id,
-      ]);
-    _owned
-      ..clear()
-      ..addAll([
-        for (final u in units)
-          if (u.status == CollectStatus.owned) u.id,
-      ]);
+    _kits = kits;
+    _chapters = chapters;
     return units;
-  });
+  }
 
-  CellTier _tierOf(GuideUnit u) => _photos.containsKey(u.id)
-      ? CellTier.photo
-      : _owned.contains(u.id)
-      ? CellTier.owned
-      : _liked.contains(u.id)
-      ? CellTier.liked
-      : CellTier.none;
+  List<Kit> _kitsOf(GuideUnit u, {bool litOnly = false}) => [
+    for (final id in litOnly ? u.litKitIds : u.kitIds) ?_kits[id],
+  ];
 
-  /// 상태 바꾸기 + 토스트(되돌리기). 레벨이 오르면 토스트에 같이 알린다
-  void _change(String message, VoidCallback apply) {
-    final liked = {..._liked};
-    final owned = {..._owned};
-    final photos = {..._photos};
-    setState(apply); // STATE: 칸 단계 → 색 · 테두리 · 고리 (레벨은 위 막대가 다시 센다)
-    showToast(
-      context,
-      message,
-      onUndo: () => setState(() {
-        _liked
-          ..clear()
-          ..addAll(liked);
-        _owned
-          ..clear()
-          ..addAll(owned);
-        _photos
-          ..clear()
-          ..addAll(photos);
-      }),
+  /// 기체 칸 → 도감 필터 재료 (단계 · 상품 등급 · 종류 · 상품 수 · 최근 구매)
+  GuideFacet _facet(Marks m, GuideUnit u) {
+    final tier = _tierOf(m, u);
+    final kits = _kitsOf(u, litOnly: true);
+    var bought = '';
+    for (final k in kits) {
+      if (!m.owned(k)) continue;
+      final at = m.store.entry(k.id)?['updated_at'];
+      if (at is String && at.compareTo(bought) > 0) bought = at;
+    }
+    return GuideFacet(
+      name: u.name,
+      tiers: {
+        switch (tier) {
+          CellTier.none => GuideTier.none,
+          CellTier.liked => GuideTier.liked,
+          CellTier.owned => GuideTier.owned,
+          CellTier.photo => GuideTier.photo,
+        },
+        if (tier == CellTier.photo) GuideTier.owned, // 사진 인증 칸도 구매함으로 찾힌다
+      },
+      grades: {
+        for (final k in kits)
+          if (k.line.isNotEmpty) k.line,
+      },
+      types: {if (u.type.isNotEmpty) u.type},
+      kits: u.litKitIds.length,
+      boughtAt: bought,
     );
   }
 
-  void _toggleLike(GuideUnit u) {
-    final on = !_liked.contains(u.id);
-    _change(on ? '「${u.name}」 좋아요' : '좋아요를 취소했어요', () => on ? _liked.add(u.id) : _liked.remove(u.id));
+  bool _manual(Marks m, GuideUnit u) => u.ggetIds.any(m.store.guideManualLit.contains);
+
+  /// 칸 단계: 내 사진 > 구매함(상품 · 손으로 켜기) > 좋아요 > 없음 — 내 기록에서 바로 센다
+  CellTier _tierOf(Marks m, GuideUnit u) {
+    if (_photos.containsKey(u.id)) return CellTier.photo;
+    final kits = _kitsOf(u, litOnly: true);
+    final s = kits.isNotEmpty
+        ? _bestOf(kits.map(m.statusOf))
+        : (u.ggetIds.isEmpty ? u.status : CollectStatus.none); // 상품을 못 받았으면 불러온 때 상태
+    if (s == CollectStatus.owned || _manual(m, u)) return CellTier.owned;
+    return s == CollectStatus.wanted ? CellTier.liked : CellTier.none;
   }
 
-  void _toggleOwn(GuideUnit u) {
-    final on = !_owned.contains(u.id);
-    final hadPhoto = _photos.containsKey(u.id);
-    _change(on ? '「${u.name}」 구매함에 넣었어요' : (hadPhoto ? '구매함에서 뺐어요 · 내 사진도 내렸어요' : '구매함에서 뺐어요'), () {
-      if (on) {
-        _owned.add(u.id);
+  /// 손으로 켜기 (상품이 없는 기체 · 옛 Gunpula 기록과 같은 gget id 로 기기에 저장)
+  void _setManual(GuideUnit u, bool on) {
+    if (u.ggetIds.isEmpty) return;
+    final store = Marks.read(context).store;
+    void apply(bool v) {
+      if (v) {
+        store.setManualLit(u.ggetIds.first, true);
       } else {
-        _owned.remove(u.id);
-        _photos.remove(u.id); // 안 가진 기체에 인증 사진은 남기지 않는다
+        for (final g in u.ggetIds) {
+          store.setManualLit(g, false);
+        }
       }
-    });
+    }
+
+    apply(on); // STATE: 손으로 켜기 → 칸 단계 (Marks 가 다시 그린다)
+    if (!on) setState(() => _photos.remove(u.id)); // 안 가진 기체에 인증 사진은 남기지 않는다
+    showToast(context, on ? '「${u.name}」 칸을 켰어요' : '손으로 켠 칸을 껐어요', onUndo: () => apply(!on));
+  }
+
+  /// G-4b 칸의 리본: 손으로 켠 칸이면 끄기 · 상품이 하나면 그 상품 · 없으면 손으로 켜기 · 여럿이면 시트
+  void _own(GuideUnit u) {
+    final m = Marks.read(context);
+    final kits = _kitsOf(u, litOnly: true);
+    if (_manual(m, u)) return _setManual(u, false);
+    if (kits.length == 1) {
+      if (m.owned(kits.first)) setState(() => _photos.remove(u.id));
+      return m.toggleOwn(context, kits.first);
+    }
+    if (kits.isEmpty && u.ggetIds.isNotEmpty) return _setManual(u, true);
+    _openUnit(u);
+  }
+
+  /// G-4b 칸의 ♡: 상품이 하나면 그 상품, 아니면 시트에서 고른다
+  void _like(GuideUnit u) {
+    final kits = _kitsOf(u, litOnly: true);
+    if (kits.length == 1) return Marks.read(context).toggleLike(context, kits.first);
+    _openUnit(u);
   }
 
   void _setPhoto(GuideUnit u, String? photo) {
-    _change(photo == null ? '「${u.name}」의 내 사진을 내렸어요' : '사진에서 「${u.name}」을(를) 찾았어요 · 인증 완료', () {
-      if (photo == null) {
-        _photos.remove(u.id);
-      } else {
-        _photos[u.id] = photo;
-        _owned.add(u.id); // 사진이 있으면 가진 것
-      }
-    });
+    final before = _photos[u.id];
+    setState(() => photo == null ? _photos.remove(u.id) : _photos[u.id] = photo); // STATE: 내 사진 → 도는 고리
+    showToast(
+      context,
+      photo == null ? '「${u.name}」의 내 사진을 내렸어요' : '사진에서 「${u.name}」을(를) 찾았어요 · 인증 완료',
+      onUndo: () => setState(() => before == null ? _photos.remove(u.id) : _photos[u.id] = before),
+    );
   }
 
   /// G-5c 내 사진 올리기: 카메라 · 최근 사진 → 사진 속 기체 확인(가짜) → 맞을 때만 켜짐
   Future<void> _uploadPhoto(GuideUnit u) async {
     // 가짜 판정 기준: 이 기체의 상품 사진 = "이 기체가 찍힌 사진"
-    var mine = <String>[];
-    try {
-      mine = [for (final k in await widget.loaders.kitsByIds(u.kitIds)) k.image];
-    } catch (_) {}
+    var mine = [
+      for (final k in _kitsOf(u))
+        if (k.image.isNotEmpty) k.image,
+    ];
     if (mine.isEmpty) mine = [u.image];
-    if (!mounted) return;
     final others = [
       for (final a in albumScenes)
         if (!mine.contains(a.photo)) a.photo,
@@ -446,32 +581,61 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
   }
 
   void _openUnit(GuideUnit u) {
-    VoidCallback close(BuildContext sheet, VoidCallback f) => () {
-      Navigator.pop(sheet);
-      f();
-    };
     showModalBottomSheet<void>(
       // G-5 덮기
       context: context,
       isScrollControlled: true,
       builder: (sheet) => _UnitSheet(
         unit: u,
-        tier: _tierOf(u),
-        liked: _liked.contains(u.id),
+        kits: _kitsOf(u),
+        tierOf: (m) => _tierOf(m, u),
         photo: _photos[u.id],
-        onLike: close(sheet, () => _toggleLike(u)),
-        onOwn: close(sheet, () => _toggleOwn(u)),
-        onPhoto: close(sheet, () => _uploadPhoto(u)),
-        onRemovePhoto: close(sheet, () => _setPhoto(u, null)),
+        onManual: (on) => _setManual(u, on),
+        onPhoto: () {
+          Navigator.pop(sheet);
+          _uploadPhoto(u);
+        },
+        onRemovePhoto: () {
+          Navigator.pop(sheet);
+          _setPhoto(u, null);
+        },
         loaders: widget.loaders,
       ),
     );
   }
 
+  Widget _grid(BoxConstraints box, Marks m, List<GuideUnit> units) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 16),
+    child: GridView.count(
+      crossAxisCount: _cols(box.maxWidth, 110),
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 10,
+      crossAxisSpacing: 10,
+      childAspectRatio: 0.72,
+      children: [
+        for (final u in units)
+          _LitCell(
+            // G-4 P01
+            key: ValueKey(u.id),
+            image: u.image,
+            name: u.name,
+            tier: _tierOf(m, u),
+            photo: _photos[u.id],
+            liked: _kitsOf(u, litOnly: true).any(m.liked),
+            onTap: () => _openUnit(u),
+            onLike: () => _like(u), // G-4b
+            onOwn: () => _own(u),
+          ),
+      ],
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     final w = widget.work;
-    final ownedNow = _units.isEmpty ? w.owned : _units.where((u) => _tierOf(u).index >= CellTier.owned.index).length;
+    final m = Marks.of(context); // 좋아요 · 구매함 · 손으로 켜기가 바뀌면 칸이 바로 바뀐다
+    final ownedNow = _units.isEmpty ? w.owned : _units.where((u) => _tierOf(m, u).index >= CellTier.owned.index).length;
     return Scaffold(
       appBar: AppBar(
         title: Column(
@@ -497,20 +661,24 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
             return ErrorView(message: '${snap.error}', onRetry: () => setState(() => _future = _load()));
           }
           final all = snap.data!;
-          final find = _Find(_query, _lit);
-          final units = [
-            for (final u in all)
-              if (find.hit(u.name, _tierOf(u) != CellTier.none)) u,
-          ];
           if (all.isEmpty) {
-            return EmptyView(
+            return const EmptyView(
               // G-8 P09
               icon: Icons.grid_view,
               message: '이 작품은 아직 기체 정리가 안 됐어요',
               detail: '정리되면 기체마다 칸이 생기고, 모은 만큼 불이 켜져요',
-              action: OutlinedButton(onPressed: () => showToast(context, '정리 요청을 보냈어요'), child: const Text('정리 요청하기')),
             );
           }
+          // G-9 이름 · 형식번호로 찾기 + 도감 필터
+          final found = [
+            for (final u in all)
+              if (_query.isEmpty || '${u.name} ${u.nameEn} ${u.keywords}'.toLowerCase().contains(_query.toLowerCase()))
+                u,
+          ];
+          final pool = [for (final u in found) _facet(m, u)];
+          final units = _filter.apply(found, (u) => _facet(m, u));
+          final byId = {for (final u in units) u.id: u};
+          final chapterView = _byChapter && _chapters.isNotEmpty;
           return LayoutBuilder(
             builder: (context, box) => ListView(
               padding: const EdgeInsets.only(bottom: 32),
@@ -519,39 +687,42 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
                 FindBar(
                   // G-9
                   hint: '${widget.work.name}에서 찾기',
+                  initial: widget.initialQuery,
                   onQuery: (q) => setState(() => _query = q), // STATE: 찾기 → 칸 거르기
-                  filterCount: _lit == LitState.any ? 0 : 1,
+                  filterCount: _filter.count,
                   onFilter: () async {
-                    final v = await showLitFilterSheet(context, initial: _lit);
-                    if (v != null) setState(() => _lit = v); // STATE: 켜짐 필터 → 칸 거르기
+                    final f = await showGuideFilterSheet(context, pool: pool, initial: _filter, groupLabel: '묶음');
+                    if (f != null) setState(() => _filter = f); // STATE: 도감 필터 → 칸 거르기 · 정렬
                   },
+                  tools: [
+                    if (_chapters.isNotEmpty)
+                      ViewIconToggle(
+                        // G-4c
+                        mine: _byChapter,
+                        onChanged: (v) => setState(() => _byChapter = v), // STATE: 한 격자 ↔ 화수별
+                        allIcon: Icons.grid_view_outlined,
+                        mineIcon: Icons.format_list_numbered,
+                        allTip: '한 격자',
+                        mineTip: '화수별',
+                      ),
+                  ],
                 ),
                 if (units.isEmpty) _noHit,
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: GridView.count(
-                    crossAxisCount: _cols(box.maxWidth, 110),
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    mainAxisSpacing: 10,
-                    crossAxisSpacing: 10,
-                    childAspectRatio: 0.72,
-                    children: [
-                      for (final u in units)
-                        _LitCell(
-                          // G-4 P01
-                          image: u.image,
-                          name: u.name,
-                          tier: _tierOf(u),
-                          photo: _photos[u.id],
-                          liked: _liked.contains(u.id),
-                          onTap: () => _openUnit(u),
-                          onLike: () => _toggleLike(u), // G-4b
-                          onOwn: () => _toggleOwn(u),
-                        ),
+                if (!chapterView)
+                  _grid(box, m, units)
+                else
+                  // G-4c 화수 · 장마다 그때 나온 기체 (한 기체가 여러 장에 나올 수 있다)
+                  for (final c in _chapters)
+                    if ([for (final id in c.unitIds) ?byId[id]] case final list when list.isNotEmpty) ...[
+                      SectionHeader(
+                        [c.episodes, c.name].where((x) => x.isNotEmpty).join(' · '),
+                        subtitle:
+                            '수집 ${list.where((u) => _tierOf(m, u).index >= CellTier.owned.index).length}'
+                            ' / ${list.length}',
+                        padding: const EdgeInsets.fromLTRB(16, 12, 12, 8),
+                      ),
+                      _grid(box, m, list),
                     ],
-                  ),
-                ),
               ],
             ),
           );
@@ -564,6 +735,7 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
 /// 도감 칸 한 개 — 단계가 오르면 톡 튀어 오른다
 class _LitCell extends StatefulWidget {
   const _LitCell({
+    super.key,
     required this.image,
     required this.name,
     required this.tier,
@@ -667,60 +839,73 @@ class _LitCellState extends State<_LitCell> with SingleTickerProviderStateMixin 
   }
 }
 
-/// G-5 기체 → 좋아요 · 구매함 · 내 사진 + 대응 상품
-class _UnitSheet extends StatefulWidget {
+/// G-5 기체 시트: 칸 단계 · 손으로 켜기 · 내 사진 + 이 기체의 상품 전부(등급 · 사진 · ♡ · 구매함)
+class _UnitSheet extends StatelessWidget {
   const _UnitSheet({
     required this.unit,
-    required this.tier,
-    required this.liked,
+    required this.kits,
+    required this.tierOf,
     required this.photo,
-    required this.onLike,
-    required this.onOwn,
+    required this.onManual,
     required this.onPhoto,
     required this.onRemovePhoto,
     required this.loaders,
   });
   final GuideUnit unit;
-  final CellTier tier;
-  final bool liked;
+
+  /// 연결된 상품 (그 기체 → 세트 → 완성품 → 부품 · SD 순)
+  final List<Kit> kits;
+
+  /// 내 기록으로 지금 칸 단계 (시트 안에서 ♡ · 리본을 누르면 바로 바뀐다)
+  final CellTier Function(Marks m) tierOf;
   final String? photo;
-  final VoidCallback onLike;
-  final VoidCallback onOwn;
+  final ValueChanged<bool> onManual;
   final VoidCallback onPhoto;
   final VoidCallback onRemovePhoto;
   final Loaders loaders;
 
   @override
-  State<_UnitSheet> createState() => _UnitSheetState();
-}
-
-class _UnitSheetState extends State<_UnitSheet> {
-  // 한 번만 부른다 (시트가 다시 그려져도 요청이 반복되지 않게)
-  late final Future<List<Kit>> _kits = widget.loaders.kitsByIds(widget.unit.kitIds); // STATE: GET /kits?id=
-
-  @override
   Widget build(BuildContext context) {
-    final unit = widget.unit;
-    final tier = widget.tier;
-    final owned = tier.index >= CellTier.owned.index;
+    final m = Marks.of(context);
+    final tier = tierOf(m);
+    final manual = unit.ggetIds.any(m.store.guideManualLit.contains);
     final status = switch (tier) {
       CellTier.photo => '구매함 · 내 사진으로 인증됨',
-      CellTier.owned => '구매함',
+      CellTier.owned => manual ? '구매함 · 손으로 켬' : '구매함',
       CellTier.liked => '좋아요',
       CellTier.none => '아직 없음',
     };
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+    final lit = [
+      for (final k in kits)
+        if (unit.litKitIds.contains(k.id)) k,
+    ];
+    final related = [
+      for (final k in kits)
+        if (!unit.litKitIds.contains(k.id)) k,
+    ];
+    Widget kitRow(Kit k) => _KitLine(
+      kit: k,
+      role: unit.roleOf(k.id),
+      onTap: () {
+        Navigator.pop(context);
+        openKitDetail(context, k, loaders: loaders, list: kits); // D 상품 상세 (이 기체 상품끼리 좌우로 넘김)
+      },
+    );
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: kits.length > 3 ? 0.7 : 0.5,
+      minChildSize: 0.3,
+      maxChildSize: 0.92,
+      builder: (context, scroll) => SafeArea(
+        child: ListView(
+          controller: scroll,
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           children: [
             Row(
               children: [
                 SizedBox.square(
                   dimension: 64,
-                  child: tierFrame(tier, cellImage(tier, unit.image, widget.photo), radius: 12),
+                  child: tierFrame(tier, cellImage(tier, unit.image, photo), radius: Gp.radius),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -731,10 +916,11 @@ class _UnitSheetState extends State<_UnitSheet> {
                         unit.name,
                         style: const TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w600),
                       ),
-                      Text(
-                        unit.nameEn,
-                        style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
-                      ),
+                      if (unit.nameEn.isNotEmpty)
+                        Text(
+                          unit.nameEn,
+                          style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                        ),
                       Text(
                         status,
                         style: TextStyle(
@@ -753,38 +939,30 @@ class _UnitSheetState extends State<_UnitSheet> {
               ],
             ),
             const SizedBox(height: 14),
-            // G-5b 한 단계씩: 좋아요 → 구매함 → 내 사진
+            // G-5b 손으로 켜기(상품 없이 · gget 기체만) · 내 사진
             Row(
               children: [
-                Expanded(
-                  child: TogglePill(
-                    label: '좋아요',
-                    icon: Icons.favorite_border,
-                    activeIcon: Icons.favorite,
-                    active: widget.liked,
-                    onTap: widget.onLike,
+                if (unit.ggetIds.isNotEmpty) ...[
+                  Expanded(
+                    child: TogglePill(
+                      label: '손으로 켜기',
+                      icon: Icons.bookmark_add_outlined,
+                      activeIcon: Icons.bookmark_added,
+                      color: Gp.own,
+                      active: manual,
+                      onTap: () => onManual(!manual), // STATE: 손으로 켜기 (기기에 저장)
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TogglePill(
-                    label: '구매함',
-                    icon: Icons.bookmark_add_outlined,
-                    activeIcon: Icons.bookmark_added,
-                    color: Gp.own,
-                    active: owned,
-                    onTap: widget.onOwn,
-                  ),
-                ),
-                const SizedBox(width: 8),
+                  const SizedBox(width: 8),
+                ],
                 Expanded(
                   child: TogglePill(
                     label: '내 사진',
                     icon: Icons.add_a_photo_outlined,
                     activeIcon: Icons.workspace_premium,
                     color: Gp.own,
-                    active: widget.photo != null,
-                    onTap: widget.onPhoto, // G-5c
+                    active: photo != null,
+                    onTap: onPhoto, // G-5c
                   ),
                 ),
               ],
@@ -794,59 +972,85 @@ class _UnitSheetState extends State<_UnitSheet> {
               children: [
                 Expanded(
                   child: Text(
-                    widget.photo == null ? '이 기체가 찍힌 내 사진을 올리면 칸에 색 고리가 돌아요' : '도감 칸에 이 사진이 보여요 · 다시 누르면 사진 바꾸기',
+                    photo == null ? '상품을 구매함에 넣거나 손으로 켜면 칸에 불이 들어와요' : '도감 칸에 이 사진이 보여요 · 다시 누르면 사진 바꾸기',
                     style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
                   ),
                 ),
-                if (widget.photo != null)
+                if (photo != null)
                   TextButton(
-                    onPressed: widget.onRemovePhoto,
+                    onPressed: onRemovePhoto,
                     style: TextButton.styleFrom(foregroundColor: Gp.muted, visualDensity: VisualDensity.compact),
                     child: const Text('사진 내리기'),
                   ),
               ],
             ),
-            const SectionHeader('이 기체의 상품', padding: EdgeInsets.fromLTRB(0, 10, 0, 10)),
-            FutureBuilder<List<Kit>>(
-              future: _kits,
-              builder: (context, snap) {
-                if (snap.connectionState != ConnectionState.done) {
-                  return const SizedBox(height: 90, child: Center(child: MiniSpinner()));
-                }
-                if (snap.hasError) {
-                  return const Text('상품을 불러오지 못했어요', style: TextStyle(color: Gp.muted));
-                }
-                final kits = snap.data!;
-                if (kits.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    child: Text(
-                      '대응 상품이 아직 없어요 · 새로 나오면 홈에 먼저 알려 드려요', // P09
-                      style: TextStyle(color: Gp.muted),
-                    ),
-                  );
-                }
-                return SizedBox(
-                  height: 130 + 32,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: kits.length,
-                    separatorBuilder: (_, _) => const SizedBox(width: 12),
-                    itemBuilder: (context, i) => ProductTile(
-                      image: kits[i].image,
-                      title: kits[i].name,
-                      imageWidth: 130,
-                      onTap: () {
-                        Navigator.pop(context);
-                        openKitDetail(context, kits[i], loaders: widget.loaders);
-                      },
-                    ),
-                  ),
-                );
-              },
+            SectionHeader(
+              '이 기체의 상품',
+              subtitle: lit.isEmpty ? '' : '${lit.length}개',
+              padding: const EdgeInsets.fromLTRB(0, 14, 0, 4),
             ),
+            if (lit.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Text(
+                  '대응 상품이 아직 없어요 · 새로 나오면 홈에 먼저 알려 드려요', // P09
+                  style: TextStyle(color: Gp.muted),
+                ),
+              ),
+            for (final k in lit) kitRow(k),
+            if (related.isNotEmpty) ...[
+              SectionHeader(
+                '관련 상품',
+                subtitle: '부품 · SD 캐릭터 — 칸은 켜지지 않아요',
+                padding: const EdgeInsets.fromLTRB(0, 14, 0, 4),
+              ),
+              for (final k in related) kitRow(k),
+            ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// G-5a 기체 시트의 상품 한 줄: 사진 · 이름 · 등급 줄 · ♡ · 구매함
+class _KitLine extends StatelessWidget {
+  const _KitLine({required this.kit, required this.role, required this.onTap});
+  final Kit kit;
+  final String role;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final m = Marks.of(context);
+    final liked = m.liked(kit);
+    final owned = m.owned(kit);
+    return ThumbRow(
+      image: kit.image,
+      title: kit.name,
+      tag: roleLabels[role] ?? '',
+      subtitle: [
+        kit.line,
+        if (kit.scale.isNotEmpty) kit.scale,
+        if (kit.date.length >= 7) kit.date.substring(0, 7).replaceAll('-', '.'),
+      ].where((s) => s.isNotEmpty).join(' · '),
+      size: 52,
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      onTap: onTap,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            tooltip: '좋아요',
+            onPressed: () => Marks.read(context).toggleLike(context, kit),
+            icon: LikedIcon(filled: liked, size: Gp.iM, color: liked ? Gp.accent : Gp.muted),
+          ),
+          IconButton(
+            tooltip: '구매함',
+            onPressed: () => Marks.read(context).toggleOwn(context, kit),
+            icon: OwnedIcon(filled: owned, size: Gp.iM, color: owned ? Gp.own : Gp.muted),
+          ),
+        ],
       ),
     );
   }
@@ -926,7 +1130,7 @@ class _CheckingDialog extends StatelessWidget {
 
 /// G-6 베이블레이드 X 도감
 class _BbxGuide extends StatefulWidget {
-  const _BbxGuide({required this.loaders, this.find = const _Find('', LitState.any)});
+  const _BbxGuide({required this.loaders, required this.find});
   final Loaders loaders;
   final _Find find;
 
@@ -947,10 +1151,24 @@ class _BbxGuideState extends State<_BbxGuide> {
           return ErrorView(message: '${snap.error}', onRetry: () => setState(() => _future = widget.loaders.bbxTops()));
         }
         if (snap.data!.isEmpty) return const EmptyView(message: '베이 도감이 아직 없어요');
-        final tops = [
-          for (final t in snap.data!)
-            if (widget.find.hit(t.name, t.owned > 0)) t,
-        ];
+        final m = Marks.of(context);
+        // G-9 찾기 + 도감 필터 (단계 = 부품 다 모음 · 상품 좋아요, 라인 = BX · UX · CX)
+        final tops = widget.find.apply(
+          snap.data!,
+          (t) => t.name,
+          (t) => GuideFacet(
+            name: t.name,
+            tiers: {
+              if (t.total > 0 && t.owned >= t.total) GuideTier.owned else GuideTier.none,
+              if (t.kitIds.any((id) => m.store.statusOf(id) == CollectStatus.wanted)) GuideTier.liked,
+            },
+            grades: {if (t.line.isNotEmpty) t.line},
+            kits: t.kitIds.length,
+            boughtAt: [
+              for (final id in t.kitIds) '${m.store.entry(id)?['updated_at'] ?? ''}',
+            ].fold('', (a, b) => b.compareTo(a) > 0 ? b : a),
+          ),
+        );
         if (tops.isEmpty) return _noHit;
         final done = tops.where((t) => t.total > 0 && t.owned >= t.total).length;
         return LayoutBuilder(
@@ -1069,7 +1287,7 @@ class _TopSheet extends StatelessWidget {
 
 /// G-7 포켓몬 세대 · Fate 작품 · AC 세대
 class _WorldGuide extends StatefulWidget {
-  const _WorldGuide({required this.channel, required this.loaders, this.find = const _Find('', LitState.any)});
+  const _WorldGuide({required this.channel, required this.loaders, required this.find});
   final String channel;
   final Loaders loaders;
   final _Find find;
@@ -1100,10 +1318,16 @@ class _WorldGuideState extends State<_WorldGuide> {
             onRetry: () => setState(() => _future = widget.loaders.worlds(widget.channel)),
           );
         }
-        final worlds = [
-          for (final w in snap.data!)
-            if (widget.find.hit(w.label, w.owned > 0)) w,
-        ];
+        // G-9 찾기 + 도감 필터 (단계 · 상품 있는 것 · 정렬)
+        final worlds = widget.find.apply(
+          snap.data!,
+          (w) => '${w.label} ${w.subtitle}',
+          (w) => GuideFacet(
+            name: w.label,
+            tiers: {if (w.owned > 0) GuideTier.owned else GuideTier.none},
+            kits: w.kitIds.length,
+          ),
+        );
         if (worlds.isEmpty && widget.find.active) return _noHit;
         if (worlds.isEmpty) {
           return EmptyView(
@@ -1145,7 +1369,7 @@ class _WorldGuideState extends State<_WorldGuide> {
                         owned: w.owned,
                         total: w.total,
                         fit: pokemon ? BoxFit.contain : BoxFit.cover,
-                        onTap: () => showSoon(context, '${w.label} 도감'),
+                        onTap: () => openPage(context, _WorldKitsPage(world: w, loaders: widget.loaders)), // G-7a
                       ),
                   ],
                 ),
@@ -1156,4 +1380,38 @@ class _WorldGuideState extends State<_WorldGuide> {
       },
     );
   }
+}
+
+/// G-7a 세계관 묶음 → 그 묶음 상품 (전체 목록과 같은 찾기 · 필터 · 격자/목록)
+class _WorldKitsPage extends StatefulWidget {
+  const _WorldKitsPage({required this.world, required this.loaders});
+  final World world;
+  final Loaders loaders;
+
+  @override
+  State<_WorldKitsPage> createState() => _WorldKitsPageState();
+}
+
+class _WorldKitsPageState extends State<_WorldKitsPage> {
+  late final Future<List<Kit>> _future = widget.loaders.kitsByIds(widget.world.kitIds); // STATE: GET /kits?id=
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: SafeArea(
+      child: FutureBuilder<List<Kit>>(
+        future: _future,
+        builder: (context, snap) {
+          if (snap.connectionState != ConnectionState.done) return const LoadingView();
+          if (snap.hasError) return ErrorView(message: '${snap.error}', onRetry: () => Navigator.pop(context));
+          return SectionListView(
+            title: widget.world.label,
+            subtitle: widget.world.subtitle,
+            kits: snap.data!,
+            onBack: () => Navigator.pop(context),
+            loaders: widget.loaders,
+          );
+        },
+      ),
+    ),
+  );
 }

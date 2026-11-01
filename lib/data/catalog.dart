@@ -1,6 +1,6 @@
 // Gunpula 상품 카탈로그 — 기기 캐시를 먼저 보여 주고, 뒤에서 GitHub Pages 의 새 데이터를 받는다.
 //   1) split/manifest.json (176 B) 의 updated_at · total 이 같으면 아무것도 받지 않는다
-//   2) 다르면 보조 파일 9개 → split/kits-<채널>.json 5개를 받아 compute() 에서 가벼운 모양으로 바꿔 저장
+//   2) 다르면 보조 파일(auxFiles) → split/kits-<채널>.json 5개를 받아 compute() 에서 가벼운 모양으로 바꿔 저장
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import '../json_util.dart';
 import '../models.dart';
 import 'blob_store.dart';
+import 'gundam_atlas.dart' show atlasBoxartFile;
 import 'gunpula.dart';
 import 'user_store.dart';
 
@@ -24,7 +25,8 @@ class Catalog extends ChangeNotifier {
   static const _metaKey = 'catalog_meta.json';
 
   /// 상품 매핑 규칙(lib/data/gunpula.dart)을 바꾸면 +1 → 기기 캐시를 버리고 다시 받아 정리한다
-  static const mapVersion = 3;
+  /// 4: 건담 박스 아트(data/atlas/gundam-boxart.json)를 대표 사진으로
+  static const mapVersion = 4;
 
   CatalogPhase phase = CatalogPhase.empty;
   String error = '';
@@ -99,7 +101,7 @@ class Catalog extends ChangeNotifier {
   /// 보조 파일(JSON) — 필요한 화면이 처음 부를 때 푼다
   Future<Object?> aux(String file) async {
     if (_aux.containsKey(file)) return _aux[file];
-    final text = await BlobStore.read('aux_$file');
+    final text = await BlobStore.read(auxKey(file));
     Object? v;
     if (text != null) {
       try {
@@ -116,6 +118,9 @@ class Catalog extends ChangeNotifier {
     if (v != null) _aux[file] = v; // 못 받았으면 기억하지 않는다 (다음에 다시)
     return v;
   }
+
+  /// 보조 파일의 기기 캐시 이름 — `atlas/…` 처럼 폴더가 붙은 이름도 한 파일로 (`/` → `__`)
+  static String auxKey(String file) => 'aux_${file.replaceAll('/', '__')}';
 
   /// 새 데이터 확인. [force] = manifest 가 같아도 다시 받기 (설정 › 지금 새로 받기)
   Future<bool> refresh({bool force = false}) async {
@@ -149,16 +154,20 @@ class Catalog extends ChangeNotifier {
             'raw': raw,
             'grades': aux['grades.json'] ?? '{}',
             'firstSeen': aux['kit-first-seen.json'] ?? '{}',
+            if (f == 'gundam' && aux[atlasBoxartFile] != null) 'boxart': aux[atlasBoxartFile]!,
           }),
         );
       }
       _step('정리하는 중');
       final slimText = await compute(jsonEncode, slim);
-      // first-seen 은 상품에 녹였으니 따로 두지 않는다
+      // first-seen · 등급 · 박스 아트는 상품에 녹였으니 따로 두지 않는다
       for (final e in aux.entries) {
-        if (e.key == 'kit-first-seen.json' || e.key == 'grades.json') continue;
-        await BlobStore.write('aux_${e.key}', e.value);
+        if (mapOnlyAuxFiles.contains(e.key)) continue;
+        await BlobStore.write(auxKey(e.key), e.value);
         _aux.remove(e.key);
+      }
+      for (final f in retiredAuxFiles) {
+        await BlobStore.delete(auxKey(f));
       }
       await BlobStore.write(_kitsKey, slimText);
       await BlobStore.write(
