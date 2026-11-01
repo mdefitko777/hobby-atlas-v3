@@ -451,7 +451,7 @@ class _PhotoFindScreenState extends State<PhotoFindScreen> {
 
 /// E-17 ? 도움말 — 글자 조각 아이콘 · 줄 오른쪽 아이콘
 List<HelpItem> photoFindHelp() => [
-  const HelpItem(Icons.touch_app_outlined, '조각 누르기 = 끄고 켜기 · 길게 = 이름으로 찾기'),
+  const HelpItem(Icons.touch_app_outlined, '누르면 끄기 · 길게 = 이름으로 찾기'),
   for (final k in OcrKind.values)
     if (_TokenChip._icon(k) case final icon?) HelpItem(icon, _TokenChip._label(k), color: Gp.accent),
   const HelpItem(Icons.link, '공유로 받은 주소 (100%)'),

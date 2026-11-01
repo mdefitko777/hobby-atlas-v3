@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../theme.dart';
 import 'buttons.dart';
+import 'sections.dart';
 import 'sheets.dart';
 import 'toolbar.dart';
 
@@ -118,11 +119,7 @@ class HelpSheet extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                title,
-                style: const TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 6),
+              SectionHeader(title, padding: const EdgeInsets.only(bottom: 6)), // 다른 시트와 같은 머리
               for (final i in items) row(i),
             ],
           ),

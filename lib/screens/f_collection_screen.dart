@@ -443,9 +443,10 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                   Expanded(
                     child: Text(
                       switch (_tab) {
-                        _Tab.owned => joinDot(['$pieces개', '지출 합계 ${won(spent)}', if (backlog > 0) '미조립 $backlog']),
+                        // 세 탭 모두 "개수 · 돈 · 더" 순서
+                        _Tab.owned => joinDot(['$pieces개', '지출 ${won(spent)}', if (backlog > 0) '미조립 $backlog']),
                         _Tab.preorder => joinDot(['${kits.length}건', if (due > 0) '낼 돈 ${won(due)}']),
-                        _Tab.liked => '합계 ${yen(total)} · $pieces개',
+                        _Tab.liked => joinDot(['$pieces개', '합계 ${yen(total)}']),
                       }, // F-4 P01
                       style: const TextStyle(color: Gp.muted, fontSize: Gp.t12),
                     ),

@@ -101,6 +101,9 @@ class BuildStatusRow extends StatelessWidget {
   const BuildStatusRow({super.key, required this.kitId});
   final String kitId;
 
+  /// 상세의 다른 기록 줄(수량 · 예약 · 구매가)과 같은 높이
+  static const rowHeight = 44.0;
+
   @override
   Widget build(BuildContext context) {
     final store = Marks.of(context).store;
@@ -111,6 +114,7 @@ class BuildStatusRow extends StatelessWidget {
           child: SquareSegments<BuildStage>(
             values: BuildStage.values,
             current: rec.stage,
+            height: rowHeight,
             onPick: (s) => store.setBuild(kitId, stage: s), // STATE: 조립 상태
             child: (s) => Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -130,8 +134,8 @@ class BuildStatusRow extends StatelessWidget {
             onTap: () => store.setBuild(kitId, painted: !rec.painted), // STATE: 도색
             borderRadius: BorderRadius.circular(Gp.rSmall),
             child: Container(
-              width: 34,
-              height: 34,
+              width: rowHeight,
+              height: rowHeight,
               decoration: BoxDecoration(
                 color: rec.painted ? Gp.star.withValues(alpha: 0.12) : Gp.panel,
                 borderRadius: BorderRadius.circular(Gp.rSmall),

@@ -61,20 +61,14 @@ class GpPickSheet extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
+        // 시트 머리는 모든 시트가 같은 SectionHeader (색 막대 + t16)
+        SectionHeader(
+          title,
           padding: const EdgeInsets.fromLTRB(20, 0, 8, 4),
-          child: Row(
-            children: [
-              Text(
-                title,
-                style: const TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w700),
-              ),
-              const Spacer(),
-              TextButton(
-                onPressed: onReset,
-                child: const Text('초기화', style: TextStyle(color: Gp.muted)),
-              ),
-            ],
+          trailing: TextButton(
+            onPressed: onReset,
+            style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+            child: const Text('초기화', style: TextStyle(color: Gp.muted)),
           ),
         ),
         Expanded(
@@ -145,16 +139,20 @@ class SquareSegments<T> extends StatelessWidget {
     required this.current,
     required this.child,
     required this.onPick,
+    this.height = 34,
   });
   final List<T> values;
   final T current;
   final Widget Function(T) child;
   final ValueChanged<T> onPick;
 
+  /// 필터 · 탭 줄 34, 상세의 기록 줄(수량 · 구매가와 같은 줄) 44
+  final double height;
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 34,
+      height: height,
       decoration: BoxDecoration(
         border: Border.all(color: Gp.line),
         borderRadius: BorderRadius.circular(Gp.rSmall),

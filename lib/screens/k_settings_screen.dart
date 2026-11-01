@@ -545,7 +545,7 @@ class HelpScreen extends StatelessWidget {
               children: [
                 const SectionHeader('알림'),
                 tip(Icons.schedule, '12시간마다 확인', '앱을 열 때도 한 번 더'),
-                tip(Icons.new_releases_outlined, '좋아요한 상품', '발매 D-7 · D-1 · 당일 (발매일이 정해진 것만)'),
+                tip(Icons.today_outlined, '좋아요한 상품', '발매 D-7 · D-1 · 당일 (발매일이 정해진 것만)'),
                 tip(Icons.battery_alert_outlined, '늦게 오면', '설정 › 알림 › 삼성 갤럭시 안내'),
               ],
             ),
