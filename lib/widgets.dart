@@ -7,6 +7,8 @@
 //   UnderlineTab 밑줄 탭 · PageDots 넘김 점 · ThumbRow 사진 줄 · TagPill 알약 글자 · TogglePill 켜고 끄는 버튼
 //   AccentBar 진행 막대 · SectionPanel 흰 띠 섹션 · AccentRing 브랜드 색 고리(돌아가는 것 포함) · joinDot
 //   AppImage · CircleThumb · RaisedCircleButton · ChannelGlyph · showSoon · showToast · navClearance · 가격 표기
+import 'dart:ui' show ImageFilter;
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
@@ -1332,6 +1334,35 @@ class ViewIconToggle extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [button(false, allIcon, allTip), const SizedBox(width: 2), button(true, Icons.person_outline, mineTip)],
+    );
+  }
+}
+
+/// 칸보다 작은 사진 — 남는 곳을 흰색 대신 같은 사진을 크게 · 흐리게 · 어둡게 깔고, 위에 사진 전체를 얹는다
+/// (공식 예고 배너. 포켓몬 예고 이미지처럼 가장자리가 번져 보이게)
+class BlurFitImage extends StatelessWidget {
+  const BlurFitImage(this.path, {super.key, this.blur = 18, this.dim = 0.35});
+  final String path;
+  final double blur;
+
+  /// 뒤 사진 어둡게 (0 = 그대로, 1 = 검정)
+  final double dim;
+
+  @override
+  Widget build(BuildContext context) {
+    if (path.isEmpty) return const AppImage('');
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ClipRect(
+          child: ImageFiltered(
+            imageFilter: ImageFilter.blur(sigmaX: blur, sigmaY: blur, tileMode: TileMode.clamp),
+            child: Transform.scale(scale: 1.15, child: AppImage(path)), // cover
+          ),
+        ),
+        ColoredBox(color: Colors.black.withValues(alpha: dim)),
+        AppImage(path, fit: BoxFit.contain),
+      ],
     );
   }
 }

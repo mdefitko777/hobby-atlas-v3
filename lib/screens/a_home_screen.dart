@@ -438,7 +438,7 @@ class _HeroBannerState extends State<_HeroBanner> {
                             children: [
                               SizedBox(
                                 height: imageH,
-                                child: ColoredBox(color: Gp.soft, child: AppImage(a.image, fit: BoxFit.contain)),
+                                child: BlurFitImage(a.image), // 남는 곳 = 같은 사진을 흐리고 어둡게
                               ),
                               Padding(
                                 padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
