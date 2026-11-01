@@ -20,7 +20,7 @@ SCREENS = [
     ('B', '검색', ['lib/screens/b_search_screen.dart']),
     ('O', '전체 목록 (홈 · 검색 안의 보기)', ['lib/screens/o_see_all_screen.dart']),
     ('D', '상품 상세', ['lib/screens/d_kit_detail_screen.dart']),
-    ('E', '찍어서 찾기 (카메라 · 인식 결과)', ['lib/screens/e_camera_screen.dart']),
+    ('E', '찍어서 찾기 (카메라 · 인식 결과 · 사진 · 공유로 찾기)', ['lib/screens/e_camera_screen.dart', 'lib/screens/e_photo_find_screen.dart']),
     ('H', '캘린더', ['lib/screens/h_calendar_screen.dart']),
     ('F', '컬렉션', ['lib/screens/f_collection_screen.dart']),
     ('G', '도감 (컬렉션의 다른 보기)', ['lib/screens/g_guide_view.dart']),

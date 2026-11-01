@@ -12,7 +12,7 @@
 // │ N-9  │ RefreshIndicator                   │ 당겨서 새 소식 확인                      │ P10           │
 // │ N-7  │ 바텀 시트: 수락 · 거절                │ 친구 요청 응답 (Gunpula v3 respond_friend) │ P05        │
 // │ N-8  │ 친구 줄 (사진 = 상품)                │ 내 좋아요를 친구가 이미 가짐 → 상품 상세   │ P01 · P09     │
-// │ N-8  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 알림 없음           │ P01 · P09     │
+// │ N-11 │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 알림 없음           │ P01 · P09     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 🔔 → 쌓기(push, 오른쪽에서). 줄 → 각 화면 쌓기. 요청 → 덮기(바텀 시트).
 // 범위: 내 채널의 상품 + 좋아요한 상품 · PB 예약(채널과 무관) + 친구 알림. 목록은 알림함(lib/notifications),
@@ -358,7 +358,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 ),
               ],
             ),
-            _ when snap.connectionState != ConnectionState.done => const LoadingView(), // N-8
+            _ when snap.connectionState != ConnectionState.done => const LoadingView(), // N-11
             _ => ErrorView(
               message: '${snap.error}',
               onRetry: () => setState(() => _future = widget.loaders.notifications()),
@@ -399,7 +399,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           child: SizedBox(
             height: box.maxHeight,
             child: EmptyView(
-              // N-8 P09
+              // N-11 P09
               icon: Icons.notifications_none,
               message: '새 알림이 없어요',
               detail: '내 채널 새 상품 · 좋아요한 상품 변화 · PB 예약이 여기에 모여요\n${_store.statusLine}',
