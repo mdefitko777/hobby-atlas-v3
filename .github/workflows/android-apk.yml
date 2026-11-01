@@ -20,6 +20,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 바뀐 점 = 지난 빌드 커밋부터 지금까지
 
       - uses: actions/setup-java@v4
         with:
@@ -58,8 +60,29 @@ jobs:
 
       - name: APK
         run: |
-          flutter build apk --release --build-number=${{ github.run_number }}
+          # arm64 만 (요즘 폰 전부 · 76 MB → 약 30 MB). APP_BUILD = 앱이 자기 빌드 번호를 안다 (업데이트 확인)
+          flutter build apk --release --target-platform android-arm64 \
+            --build-number=${{ github.run_number }} --dart-define=APP_BUILD=${{ github.run_number }}
           cp build/app/outputs/flutter-apk/app-release.apk hobby-atlas.apk
+
+      - name: version.json (앱 업데이트 확인용)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # 지난 빌드의 커밋 → 그 뒤 커밋 제목 = 바뀐 점. 커밋 메시지에 [minor] 가 있으면 묻지 않고 ⬇ 아이콘만
+          gh release download apk-latest -p version.json -O prev.json 2>/dev/null || echo '{}' > prev.json
+          prev=$(jq -r '.sha // empty' prev.json)
+          if [ -n "$prev" ] && git cat-file -e "$prev" 2>/dev/null; then range="$prev..HEAD"; else range="-5"; fi
+          git log --format=%s $range -- lib android assets pubspec.yaml | sed -e 's/^v3: //' -e 's/ — .*//' | head -8 > notes.txt
+          major=true
+          if git log -1 --format=%B | grep -q '\[minor\]'; then major=false; fi
+          jq -n --argjson build ${{ github.run_number }} --arg sha "$GITHUB_SHA" \
+            --arg built "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --argjson major $major \
+            --arg sha256 "$(sha256sum hobby-atlas.apk | cut -d' ' -f1)" --argjson size $(stat -c %s hobby-atlas.apk) \
+            --rawfile notes notes.txt \
+            '{build:$build, sha:$sha, built_at:$built, major:$major, apk:"hobby-atlas.apk", sha256:$sha256, size:$size,
+              notes:($notes | split("\n") | map(select(length > 0)))}' > version.json
+          cat version.json
 
       - uses: actions/upload-artifact@v4
         with:
@@ -72,10 +95,10 @@ jobs:
         run: |
           notes="커밋 ${GITHUB_SHA::7} · 빌드 ${{ github.run_number }} · $(date -u +%Y-%m-%dT%H:%MZ)"
           if gh release view apk-latest >/dev/null 2>&1; then
-            gh release upload apk-latest hobby-atlas.apk --clobber
+            gh release upload apk-latest hobby-atlas.apk version.json --clobber
             gh release edit apk-latest --notes "$notes" --target "$GITHUB_SHA"
           else
-            gh release create apk-latest hobby-atlas.apk --title "Hobby Atlas (최신 APK)" --notes "$notes" --prerelease --target "$GITHUB_SHA"
+            gh release create apk-latest hobby-atlas.apk version.json --title "Hobby Atlas (최신 APK)" --notes "$notes" --prerelease --target "$GITHUB_SHA"
           fi
 
       - name: 키 지우기

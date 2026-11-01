@@ -27,6 +27,7 @@ import '../notifications/local_notifier.dart';
 import '../notifications/notify_models.dart';
 import '../notifications/notify_store.dart';
 import '../theme.dart';
+import '../update/update_ui.dart';
 import '../widgets.dart';
 import 'p_sign_in_screen.dart';
 
@@ -473,11 +474,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   trailing: Text('$_language ›', style: const TextStyle(color: Gp.muted)),
                   onTap: _pickLanguage, // K-2
                 ),
-                const ListTile(
-                  leading: Icon(Icons.info_outline),
-                  title: Text('버전'),
-                  trailing: Text('Hobby Atlas v3 (개인용)', style: TextStyle(color: Gp.muted)),
-                ),
+                const VersionTile(), // 지금 빌드 · 업데이트 확인
               ],
             ),
           ),

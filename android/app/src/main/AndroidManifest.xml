@@ -1,10 +1,16 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <!-- Gunpula 데이터(GitHub Pages) · 이미지 · 동기화 -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <!-- 새 소식 알림: 안드로이드 13+ 알림 권한 · WorkManager 12시간 확인(인터넷 연결 조건 · 재부팅 뒤 다시 등록) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <!-- 앱 업데이트: 받은 APK 를 안드로이드 설치 창으로 (ota_update). 처음 한 번 "알 수 없는 앱 설치 허용" -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
+    <!-- ota_update 가 함께 넣는 권한 중 쓰지 않는 것 (앱 안 저장소만 쓴다 · 조용한 설치는 시스템 앱만) -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:node="remove"/>
+    <uses-permission android:name="android.permission.INSTALL_PACKAGES" tools:node="remove"/>
     <application
         android:label="Hobby Atlas"
         android:name="${applicationName}"
@@ -31,6 +37,16 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- 앱 업데이트: 받은 APK 를 설치 창에 넘기는 통로 (res/xml/filepaths.xml) -->
+        <provider
+            android:name="sk.fourq.otaupdate.OtaUpdateFileProvider"
+            android:authorities="${applicationId}.ota_update_provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/filepaths" />
+        </provider>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

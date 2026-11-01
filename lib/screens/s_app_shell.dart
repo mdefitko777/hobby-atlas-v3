@@ -35,6 +35,7 @@ import '../notifications/local_notifier.dart';
 import '../notifications/notify_store.dart';
 import '../sync/account.dart';
 import '../theme.dart';
+import '../update/update_ui.dart';
 import '../widgets.dart';
 import 'a_home_screen.dart';
 import 'b_search_screen.dart';
@@ -106,6 +107,7 @@ class _AppShellState extends State<AppShell> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _onNotificationTap(); // 앱이 꺼져 있을 때 알림을 눌러 켰으면
       _askNotifyOnce();
+      askUpdateOnce(context); // 큰 업데이트면 한 번 묻기 (나중에 → ⬇ 아이콘만)
     });
   }
 
@@ -269,6 +271,7 @@ class _AppShellState extends State<AppShell> {
             const SizedBox(width: 6),
             LevelButton(loaders: widget.loaders),
             const Spacer(),
+            const UpdateButton(), // 새 빌드가 있을 때만 ⬇
             bell,
             gear,
           ],
