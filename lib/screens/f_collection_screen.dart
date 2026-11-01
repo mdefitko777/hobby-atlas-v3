@@ -5,13 +5,13 @@
 // │ F-1  │ ChannelHeader                      │ 아바타 줄 + 내 채널 바 (C-0 공용)       │ P04 · P06     │
 // │ F-2  │ 밑줄 탭 2개 + 개수                   │ 좋아요 · 구매함                          │ P06 · P01     │
 // │ F-3  │ 아이콘 두 개 (목록 · 도감, 검색창 줄) │ 보기 방식 전환                          │ P07           │
-// │ F-4  │ Text(합계)                         │ 좋아요 정가 합계 · 구매함 지출 합계       │ P01           │
+// │ F-4  │ Text(합계)                         │ 좋아요 정가 합계 · 구매함 지출 합계 (× 수량) │ P01         │
 // │ F-5  │ ListView 줄 (사진 · 이름 · 가격)      │ 컬렉션 목록 → 상품 상세                 │ P08           │
 // │ F-6  │ 편집 → 체크박스 + 선택 삭제           │ 정리하기 (편집 모드에서만 삭제 보임)     │ P05 · P03     │
 // │ F-7  │ showDialog(확인) → 토스트(되돌리기)   │ 삭제 전 확인 · 바로 되돌리기             │ P05 · P03     │
 // │ F-8  │ GuideView (g_guide_view.dart)       │ 도감 — 모은 만큼 불이 켜지는 칸          │ P01 · P06     │
 // │ F-9  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 빈 컬렉션           │ P01 · P09     │
-// │ F-10 │ 🗑 아이콘(개수 배지) → 바텀 시트      │ 휴지통: 지운 상품 복원 (손 미끄러짐 대비)  │ P03 · P05     │
+// │ F-10 │ 🗑 아이콘(개수 배지) → 바텀 시트      │ 휴지통: 지운 상품 복원 (기기 저장 · 30일)  │ P03 · P05     │
 // │ F-11 │ jumpTick (내 정보 숫자에서)          │ 좋아요 · 구매함 · 도감으로 바로 이동       │ P07           │
 // │ F-12 │ FindBar (탭 아래)                   │ 이 탭 · 도감에서 찾기 + 필터(도감 = GuideFilterSheet) │ P04 · P07 │
 // └──────────────────────────────────────────────────────────────────────────────────┘
@@ -24,6 +24,7 @@ import '../api.dart';
 import '../marks.dart';
 import '../channels.dart';
 import '../data/catalog.dart';
+import '../data/user_store.dart';
 import '../filter_sheet.dart';
 import '../models.dart';
 import '../theme.dart';
@@ -83,8 +84,9 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
     super.dispose();
   }
 
-  /// 휴지통: 지운 상품 id → 어느 탭에서 지웠나 (true = 구매함). 지우기 = 앱 전체 Marks 에서 끄기
-  final Map<String, bool> _removed = {};
+  /// 휴지통 (UserStore.trash, 기기에 30일): 지운 상품 id → 어느 탭에서 지웠나 (true = 구매함).
+  /// 그 사이 다른 화면에서 다시 좋아요 · 구매함에 넣은 상품은 빼고 보여 준다. 지우기 = 앱 전체 Marks 에서 끄기
+  Map<String, bool> get _removed => trashView(Marks.read(context).store);
 
   @override
   List<String> get myChannels => widget.myChannels;
@@ -114,21 +116,23 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
     }
   }
 
-  /// F-10 휴지통 — 이 화면에서 지운 상품 (앱을 끄면 비워진다)
+  /// F-10 휴지통 — 지운 상품 (기기에 저장, 30일 지나면 버림)
   void _openTrash(List<Kit> all) {
+    final me = Marks.read(context).store..purgeTrash(DateTime.now());
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       builder: (sheet) => StatefulBuilder(
         builder: (sheet, setSheet) {
-          final gone = all.where((k) => _removed.containsKey(k.id)).toList();
+          final removed = _removed;
+          final gone = all.where((k) => removed.containsKey(k.id)).toList();
           void restore(Iterable<String> ids, String msg) {
             final list = [...ids];
             final marks = Marks.read(context);
             for (final k in all.where((k) => list.contains(k.id))) {
-              _removed[k.id]! ? marks.set(k, owned: true) : marks.set(k, liked: true); // 앱 전체에 다시 켜기
+              removed[k.id]! ? marks.set(k, owned: true) : marks.set(k, liked: true); // 앱 전체에 다시 켜기
             }
-            setState(() => list.forEach(_removed.remove)); // STATE: 복원 → 목록에 다시
+            me.trashRemove(list); // STATE: 복원 → 목록에 다시 (UserStore → 다시 그림)
             setSheet(() {});
             showToast(context, msg);
           }
@@ -167,7 +171,7 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                               image: k.image,
                               title: k.name,
                               size: 52,
-                              tag: _removed[k.id]! ? '구매함' : '좋아요',
+                              tag: removed[k.id]! ? '구매함' : '좋아요',
                               onTap: () => restore([k.id], '「${k.name}」을(를) 복원했어요'),
                               trailing: const Text(
                                 '복원',
@@ -243,10 +247,8 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
     }
 
     apply(false);
+    marks.store.trashAdd(gone, owned: tab); // STATE: 선택 → 목록에서 빠지고 휴지통으로 (기기에 저장)
     setState(() {
-      for (final id in gone) {
-        _removed[id] = tab; // STATE: 선택 → 목록에서 빠지고 휴지통으로
-      }
       _selected.clear();
       _editing = false;
     });
@@ -256,7 +258,7 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
       '$n개를 삭제했어요',
       onUndo: () {
         apply(true);
-        setState(() => gone.forEach(_removed.remove));
+        marks.store.trashRemove(gone);
       },
     ); // P03
   }
@@ -392,9 +394,11 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
               ),
       );
     }
-    final total = kits.fold<int>(0, (s, k) => s + (k.priceJpy ?? 0));
-    final pieces = kits.length;
-    final spent = kits.fold<int>(0, (s, k) => s + (_paid(k).krw ?? 0)); // 구매함: 적은 구매가, 없으면 정가 × 환율
+    // F-4 합계 × 수량 (좋아요 = 갖고 싶은 수, 구매함 = 가진 수)
+    final me = Marks.of(context).store;
+    final total = kits.fold<int>(0, (s, k) => s + (k.priceJpy ?? 0) * me.quantityOf(k.id));
+    final pieces = kits.fold<int>(0, (s, k) => s + me.quantityOf(k.id));
+    final spent = kits.fold<int>(0, (s, k) => s + (_paid(k).krw ?? 0) * me.quantityOf(k.id)); // 적은 구매가, 없으면 정가 × 환율
     return Stack(
       children: [
         ListView(
@@ -406,7 +410,7 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                 children: [
                   Expanded(
                     child: Text(
-                      _ownedTab ? '${kits.length}개 · 지출 합계 ${won(spent)}' : '합계 ${yen(total)} · $pieces개', // F-4 P01
+                      _ownedTab ? '$pieces개 · 지출 합계 ${won(spent)}' : '합계 ${yen(total)} · $pieces개', // F-4 P01
                       style: const TextStyle(color: Gp.muted, fontSize: Gp.t12),
                     ),
                   ),
@@ -431,7 +435,12 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                   title: k.name,
                   titleLines: 2,
                   size: 68,
-                  subtitle: joinDot([channelOf(k.franchiseId).label, k.line, k.series]),
+                  subtitle: joinDot([
+                    if (me.quantityOf(k.id) > 1) '×${me.quantityOf(k.id)}', // D-7 수량
+                    channelOf(k.franchiseId).label,
+                    k.line,
+                    k.series,
+                  ]),
                   leading: _editing
                       ? Icon(
                           _selected.contains(k.id) ? Icons.check_circle : Icons.radio_button_unchecked,
@@ -538,11 +547,15 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
           _ownedTab ? marks.toggleLike(context, k) : marks.toggleOwn(context, k); // STATE: 옮기기 (토스트 되돌리기)
         } else {
           final wasOwned = _ownedTab;
-          marks.set(k, liked: false, owned: false); // STATE: 빼기
+          marks.set(k, liked: false, owned: false); // STATE: 빼기 → 휴지통
+          marks.store.trashAdd([k.id], owned: wasOwned);
           showToast(
             context,
             wasOwned ? '구매함에서 뺐어요' : '좋아요에서 뺐어요',
-            onUndo: () => wasOwned ? marks.set(k, owned: true) : marks.set(k, liked: true),
+            onUndo: () {
+              wasOwned ? marks.set(k, owned: true) : marks.set(k, liked: true);
+              marks.store.trashRemove([k.id]);
+            },
           );
         }
         return false; // 목록은 Marks 가 바뀌면 다시 그려진다
@@ -596,3 +609,10 @@ class _TopRow extends StatelessWidget {
     );
   }
 }
+
+/// 휴지통에 보여 줄 것: 지운 뒤 다시 좋아요 · 구매함에 넣지 않은 상품 → 구매함에서 지웠나
+Map<String, bool> trashView(UserStore me) => {
+  for (final e in me.trash.entries)
+    if (me.statusOf(e.key) != CollectStatus.owned && me.statusOf(e.key) != CollectStatus.wanted)
+      e.key: e.value.from == 'owned',
+};

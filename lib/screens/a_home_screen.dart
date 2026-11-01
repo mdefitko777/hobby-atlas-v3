@@ -36,10 +36,8 @@ import 'f_collection_screen.dart' show CollectionJump;
 import 'j_announcement_screen.dart';
 import 'o_see_all_screen.dart';
 
-/// 최근 본 상품 — 상세를 열 때마다 기기에 남긴다. 아직 없으면 가짜 데이터(db.json) 예시
-List<String> get recentViewedIds => UserStore.instance.recentViewed.isNotEmpty
-    ? UserStore.instance.recentViewed
-    : const ['gu03', 'be43', 'po21', 'fa30', 'ar35'];
+/// 최근 본 상품 — 상세를 열 때마다 기기에 남긴다. 아직 본 것이 없으면 빈 줄(줄 자체가 안 보임)
+List<String> get recentViewedIds => UserStore.instance.recentViewed;
 
 /// 이번 달 발매 줄 제목
 String get currentMonthTitle => '${appNow().month}월 발매';

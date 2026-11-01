@@ -7,14 +7,15 @@
 // │ D-4  │ 제목 + 일본어 원래 이름              │ 상품명 (공식 사이트 검색용 원문)        │ P02           │
 // │ D-5  │ Text(¥) + 발매일 + 한정 표시         │ 일본 정가 · 발매 · 한정/PB              │ P02 · P01     │
 // │ D-5b │ 정가 아래 시세 한 줄 → 바텀 시트      │ 정가 ↔ 국내 시세 (시세는 이 한 곳에만)   │ P01 · P08     │
-// │ D-5c │ 구매함일 때 "내 구매가" 줄 → 입력 시트 │ 내가 낸 돈 기록 (가짜 저장)             │ P01 · P03     │
+// │ D-5c │ 구매함일 때 "내 구매가" 줄 → 입력 시트 │ 내가 낸 돈 기록 (한 개 값 · 동기화)      │ P01 · P03     │
 // │ D-5d │ KitPhotoStrip (T-8)                │ 구매함이면 이 상품의 내 사진 + 넣기       │ P07           │
 // │ D-6  │ 하단 고정 바: ♡ 좋아요 · 리본 구매함   │ 좋아요 · 구매함 (따로 켜고 끔, 앱 전체 한 벌) │ P03 · P04 │
+// │ D-7  │ − n + (1–99)                       │ 수량: 좋아요 = 갖고 싶은 수 · 구매함 = 가진 수 │ P03 · P01 │
 // │ D-8  │ 가로 스크롤 요약 줄 → 바텀 시트       │ 공식 정보 (요약 → 전체 표)              │ P08 · P06     │
-// │ D-9  │ 시세 시트: 가격 범위 · 플랫폼 3칸     │ 국내 시세 자세히 (없으면 이유 + 찾아볼 곳) │ P01 · P08   │
+// │ D-9  │ 시세 시트: 모은 시세 없음 · 플랫폼 3칸 │ 국내 시세 찾아보기 (Gunpula 에 시세 없음) │ P01 · P08   │
 // │ D-10 │ 가로 ProductTile (GET /kits)        │ 같은 작품의 다른 상품                   │ P06           │
 // │ D-11 │ 세로 사진 목록                      │ 상품 상세 (공식 사진 전부)              │ P02           │
-// │ D-12 │ TextButton → showDialog(확인)       │ 정보 오류 제보 (보내기 전 확인)         │ P05 · P09     │
+// │ D-12 │ TextButton → reportDataIssue 시트   │ 정보 오류 제보 → GitHub 이슈(미리 채움)  │ P05 · P09     │
 // │ D-13 │ LayoutBuilder ≥720dp                │ 넓은 화면: 사진 왼쪽 · 정보 오른쪽      │ 적응형        │
 // │ D-14 │ 하단 고정 바 왼쪽: 복사 · 공식        │ 상품명 복사 · 공식 상품 페이지(출처)    │ P07 · P10     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
@@ -33,6 +34,7 @@ import '../channels.dart';
 import '../data/catalog.dart';
 import '../data/user_store.dart';
 import '../models.dart';
+import '../report.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 't_photo_screen.dart' show KitPhotoStrip;
@@ -139,7 +141,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SectionHeader('국내 시세', padding: EdgeInsets.fromLTRB(0, 0, 0, 12)),
-              _MarketCard(market: k.market, onOpen: _external),
+              _MarketCard(onOpen: _external),
             ],
           ),
         ),
@@ -178,13 +180,13 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
                 Navigator.pop(sheet);
                 final before = _paid;
                 setState(() => _paid = v); // STATE: 구매가 → 줄 금액
-                UserStore.instance.setDetails(k.id, purchasePrice: v);
+                UserStore.instance.setPurchasePrice(k.id, v); // 보관 장소 · 메모는 그대로
                 showToast(
                   context,
                   v == null ? '구매가를 지웠어요' : '구매가 ${won(v)}을 적었어요',
                   onUndo: () {
                     setState(() => _paid = before);
-                    UserStore.instance.setDetails(k.id, purchasePrice: before);
+                    UserStore.instance.setPurchasePrice(k.id, before);
                   },
                 );
               },
@@ -217,24 +219,11 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
     if (!ok && mounted) showToast(context, '$where을(를) 열지 못했어요');
   }
 
-  Future<void> _report() async {
-    final ok = await showDialog<bool>(
-      // D-12 P05
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('정보 오류 제보'),
-        content: Text(
-          '「${k.name}」의 이름 · 가격 · 발매일 중 틀린 곳을 운영자에게 알릴까요?\n'
-          '보낸 뒤에는 운영자가 확인할 때까지 그대로 보여요.',
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('취소')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('제보하기')),
-        ],
-      ),
-    );
-    if (ok == true && mounted) showToast(context, '제보를 받았어요. 확인되면 알려 드릴게요');
-  }
+  /// D-12 정보 오류 제보 — 무엇이 틀렸나 고르고 GitHub 이슈로 (lib/report.dart)
+  Future<void> _report() => reportDataIssue(context, kit: k);
+
+  /// D-7 수량 (좋아요 · 구매함일 때) — 한 번 누를 때마다 저장 (동기화 · 컬렉션 합계)
+  void _setQty(int q) => UserStore.instance.setQuantity(k.id, q); // STATE: 수량 (UserStore → Marks 다시 그림)
 
   /// 공식 정보 (요약 줄과 바텀 시트가 같은 목록을 쓴다)
   List<(String, String)> get _specs => [
@@ -388,29 +377,26 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
                       style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
                     ),
                     const SizedBox(width: 10),
-                    Expanded(
+                    const Expanded(
                       child: Text(
-                        switch (k.market) {
-                          final m? => '${won(m.normalKrw).replaceAll('원', '')} ~ ${won(m.conservativeKrw)}',
-                          null => '아직 모인 시세가 없어요',
-                        },
-                        style: TextStyle(
-                          fontSize: Gp.t14,
-                          fontWeight: k.market == null ? FontWeight.w400 : FontWeight.w600,
-                          color: k.market == null ? Gp.muted : Gp.ink,
-                        ),
+                        '모은 시세 없음 · 찾아보기', // Gunpula 에 국내 시세가 없다 — 숫자를 지어내지 않는다
+                        style: TextStyle(fontSize: Gp.t14, color: Gp.muted),
                       ),
                     ),
-                    if (k.market case final m?)
-                      Text(
-                        '거래 ${m.samples}건',
-                        style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
-                      ),
-                    const Icon(Icons.chevron_right, size: Gp.iM, color: Gp.muted),
+                    const Icon(Icons.north_east, size: Gp.iS, color: Gp.muted),
                   ],
                 ),
               ),
             ),
+            if (_owned || _wanted) ...[
+              const SizedBox(height: 8),
+              _QtyRow(
+                // D-7
+                owned: _owned,
+                qty: Marks.of(context).store.quantityOf(k.id),
+                onChanged: _setQty,
+              ),
+            ],
             if (_owned) ...[
               const SizedBox(height: 8),
               // D-5c 구매함이면 내가 낸 돈
@@ -709,35 +695,29 @@ class _SpecSheet extends StatelessWidget {
   }
 }
 
-/// D-9 시세 카드 — 가격 범위 → (가는 선) → 플랫폼 3칸
+/// D-9 시세 카드 — Gunpula 는 국내 시세를 모으지 않는다 → 그렇다고 말하고 플랫폼 3칸(상품명 검색)으로
 class _MarketCard extends StatelessWidget {
-  const _MarketCard({required this.market, required this.onOpen});
+  const _MarketCard({required this.onOpen});
 
-  final Market? market;
   final ValueChanged<String> onOpen;
 
   @override
   Widget build(BuildContext context) {
-    final m = market;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (m == null)
-          const Text(
-            '아직 모인 시세가 없어요 · 아래에서 지금 가격을 찾아보세요', // P09
-            style: TextStyle(color: Gp.muted),
-          )
-        else ...[
-          Text(
-            '${won(m.normalKrw).replaceAll('원', '')} ~ ${won(m.conservativeKrw)}',
-            style: const TextStyle(fontSize: Gp.t19, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            '국내 시세 · 거래 ${m.samples}건',
-            style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
-          ),
-        ],
+        const Row(
+          children: [
+            Icon(Icons.info_outline, size: Gp.iS, color: Gp.faint),
+            SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                '모은 시세가 없어요 · 상품명으로 찾아보기', // P09
+                style: TextStyle(color: Gp.muted),
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 12),
         const Divider(height: 1),
         IntrinsicHeight(
@@ -769,6 +749,51 @@ class _MarketCard extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// D-7 수량 줄: 아이콘(♡ · 리본) + − n + (1–99)
+class _QtyRow extends StatelessWidget {
+  const _QtyRow({required this.owned, required this.qty, required this.onChanged});
+  final bool owned;
+  final int qty;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget step(IconData icon, String tip, int to) => IconButton(
+      tooltip: tip,
+      visualDensity: VisualDensity.compact,
+      onPressed: to < 1 || to > 99 ? null : () => onChanged(to),
+      icon: Icon(icon, size: Gp.iM),
+    );
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 2, 4, 2),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(Gp.radius),
+        border: Border.all(color: Gp.line),
+      ),
+      child: Row(
+        children: [
+          Text(
+            owned ? '가진 수' : '갖고 싶은 수',
+            style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+          ),
+          const Spacer(),
+          step(Icons.remove, '하나 빼기', qty - 1),
+          SizedBox(
+            width: 28,
+            child: Text(
+              '$qty',
+              key: const ValueKey('kit-qty'),
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w600),
+            ),
+          ),
+          step(Icons.add, '하나 더', qty + 1),
+        ],
+      ),
     );
   }
 }

@@ -10,7 +10,7 @@
 // │ O-3  │ 고른 필터 한 줄 + showPickSheet      │ 지금 거르는 조건 · 정렬 4가지 (아래 시트)  │ P01 · P07     │
 // │ O-4  │ 격자 ProductTile(+ ♡) / ThumbRow     │ 상품 (가격 · 발매일 보임) → D 상세       │ P08 · P07     │
 // │ O-5  │ 밑줄 탭 + 16:9 카드                  │ 공식 예고: 공식 발표 · 상품화 확정 · 예약  │ P02 · P06     │
-// │ O-6  │ 기록 지우기 → showDialog → 토스트     │ 최근 본 기록 비우기 (되돌리기)            │ P05 · P03     │
+// │ O-6  │ 기록 지우기 → showDialog → 토스트     │ 최근 본 기록 비우기 (기기 기록 · 되돌리기)  │ P05 · P03     │
 // │ O-7  │ 위 검색창 (이 목록 안에서만 찾기)      │ "최근 추가에서 찾기"                     │ P07 · P04     │
 // │ O-8  │ EmptyView                          │ 거른 결과 · 찾은 결과 없음 · 기록 없음     │ P09           │
 // └──────────────────────────────────────────────────────────────────────────────────┘
@@ -215,8 +215,17 @@ class _SectionListViewState extends State<SectionListView> {
       ),
     );
     if (ok != true || !mounted) return;
+    final me = Marks.read(context).store;
+    final before = me.clearRecentViewed(); // 기기의 최근 본 기록 (홈 줄도 같이 비워진다)
     setState(() => _cleared = widget.kits); // STATE: 기록 지우기 → 빈 목록
-    showToast(context, '최근 본 기록을 지웠어요', onUndo: () => setState(() => _cleared = const []));
+    showToast(
+      context,
+      '최근 본 기록을 지웠어요',
+      onUndo: () {
+        me.restoreRecentViewed(before);
+        if (mounted) setState(() => _cleared = const []);
+      },
+    );
   }
 
   /// O-2 아래에서 올라오는 필터 시트 (검색 · 전체 목록 공통 — lib/filter_sheet.dart)
