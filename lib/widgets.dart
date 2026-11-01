@@ -6,12 +6,13 @@
 //   GpSearchBar 검색창 · SectionHeader 색 막대 제목 · ProductTile 상품 카드 · PhotoThumb 둥근 사진 · MarkOverlay/QuickMarks (리본 = 구매함 · ♡ = 좋아요)
 //   UnderlineTab 밑줄 탭 · PageDots 넘김 점 · ThumbRow 사진 줄 · TagPill 알약 글자 · TogglePill 켜고 끄는 버튼
 //   AccentBar 진행 막대 · SectionPanel 흰 띠 섹션 · AccentRing 브랜드 색 고리(돌아가는 것 포함) · joinDot
-//   AppImage · CircleThumb · RaisedCircleButton · ChannelGlyph · showSoon · showToast · navClearance · 가격 표기
+//   AppImage(`local:파일` = 내 사진) · LocalPhotoImage · CircleThumb · RaisedCircleButton · ChannelGlyph · showSoon · showToast · navClearance · 가격 표기
 import 'dart:ui' show ImageFilter;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
+import 'data/photo_files.dart';
 import 'detail_pane.dart';
 import 'marks.dart';
 import 'models.dart';
@@ -148,6 +149,7 @@ class AppImage extends StatelessWidget {
   Widget build(BuildContext context) {
     Widget fallback(BuildContext _, Object _, StackTrace? _) => _Placeholder(placeholder);
     if (path.isEmpty) return _Placeholder(placeholder);
+    if (path.startsWith(localPhotoPrefix)) return LocalPhotoImage(path.substring(localPhotoPrefix.length), fit: fit);
     // 인터넷 사진은 기기에 남겨 두고(비행기 모드에서도 본 것은 보인다), 실패하면 이름 글자 자리표시
     final Widget img = path.startsWith('http')
         ? CachedNetworkImage(
@@ -188,6 +190,43 @@ class AppImage extends StatelessWidget {
       ),
     );
   }
+}
+
+/// AppImage 경로 앞에 붙이면 내 사진 파일 (도감 칸 등 그림 경로 하나만 받는 곳)
+const localPhotoPrefix = 'local:';
+
+/// 내 사진 (기기 파일 — lib/data/photo_files.dart). 못 읽으면 회색 칸
+class LocalPhotoImage extends StatefulWidget {
+  const LocalPhotoImage(this.file, {super.key, this.fit = BoxFit.cover});
+  final String file;
+  final BoxFit fit;
+
+  @override
+  State<LocalPhotoImage> createState() => _LocalPhotoImageState();
+}
+
+class _LocalPhotoImageState extends State<LocalPhotoImage> {
+  late Future<ImageProvider?> _img = PhotoFiles.instance.provider(widget.file);
+
+  @override
+  void didUpdateWidget(LocalPhotoImage old) {
+    super.didUpdateWidget(old);
+    if (old.file != widget.file) _img = PhotoFiles.instance.provider(widget.file);
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<ImageProvider?>(
+    future: _img,
+    builder: (context, snap) => switch (snap.data) {
+      final img? => Image(
+        image: img,
+        fit: widget.fit,
+        gaplessPlayback: true,
+        errorBuilder: (_, _, _) => const _Placeholder(''),
+      ),
+      _ => const ColoredBox(color: Gp.soft),
+    },
+  );
 }
 
 class _Placeholder extends StatelessWidget {

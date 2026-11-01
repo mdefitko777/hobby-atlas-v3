@@ -49,6 +49,9 @@ class MeState {
   final String avatar;
   final Map<String, Object?> preferences;
 
+  /// 내 취향 태그 (preferences.tags) — 없으면 null (아직 안 정함)
+  List<String>? get tags => preferences['tags'] is List ? jList(preferences['tags']).whereType<String>().toList() : null;
+
   /// v3 내 행의 리비전 (save_state 의 p_base_revision)
   final int revision;
   final Map<String, Object?> payload;
@@ -190,6 +193,12 @@ class FriendsService extends ChangeNotifier {
     if (n.isEmpty) return Future.error(const FriendsFailure('이름을 적어 주세요'));
     return _act('gunpula_v3_update_profile', {'p_display_name': n.length > 40 ? n.substring(0, 40) : n});
   }
+
+  /// 취향 태그 — preferences 의 다른 값은 그대로 두고 tags 만 바꾼다 (update_profile 은 preferences 를 통째로 바꾼다)
+  Future<void> setTags(List<String> tags) =>
+      _act('gunpula_v3_update_profile', {
+        'p_preferences': {...?me?.preferences, 'tags': tags},
+      });
 
   /// 아이디로 찾기 (정확히 같은 아이디만) — 없으면 null
   Future<FriendSearch?> search(String handle) async {

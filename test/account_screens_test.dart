@@ -180,7 +180,7 @@ void main() {
     await loadMe(tester);
     await show(tester, ProfileScreen(loaders: _loaders, onJump: (_) {}));
     expect(find.text('@bbang'), findsWidgets);
-    await tester.tap(find.text('아이디로 친구 추가'));
+    await tester.tap(find.byTooltip('아이디로 친구 추가'));
     await settle(tester);
     await tester.enterText(find.widgetWithText(TextField, '친구 아이디'), 'New_One');
     await tester.tap(find.text('찾기'));

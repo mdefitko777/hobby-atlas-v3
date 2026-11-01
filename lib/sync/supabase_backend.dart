@@ -1,4 +1,4 @@
-// 진짜 백엔드 — Gunpula 의 Supabase 프로젝트 (옛 앱과 같은 계정 · 같은 데이터).
+// 진짜 백엔드 — Gunpula 의 Supabase 프로젝트 (옛 앱과 같은 계정 · 같은 데이터). RPC · 로그인 · 사진 Storage(photos 버킷).
 // supabase_flutter 를 부르는 곳은 이 파일 하나뿐이다. 테스트는 이 파일을 쓰지 않는다 (가짜 RpcClient · AuthService).
 //
 // 주소 · anon key: config/supabase.json (앱 자산). 옛 앱 app/sync-config.js 와 같은 공개용 값이다 —
@@ -16,6 +16,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'photo_share.dart';
 import 'rpc.dart';
 
 class BackendConfig {
@@ -227,4 +228,46 @@ class SupabaseRpc implements RpcClient {
       throw const OfflineException('서버가 답하지 않아요');
     }
   }
+}
+
+/// 사진 Storage — `photos` 버킷 (docs/supabase-v3-photos.sql). 경로 `<user_id>/<photo_id>.jpg`, 쓰기는 내 폴더만 · 읽기는 나 + 친구.
+class SupabasePhotoStorage implements PhotoStorage {
+  SupabasePhotoStorage(this._auth);
+  final SupabaseAuthService _auth;
+
+  static const bucket = 'photos';
+
+  Future<StorageFileApi> _api() async {
+    await _auth.whenReady;
+    final client = _auth.client;
+    if (client == null || client.auth.currentSession == null) throw const OfflineException('로그인이 필요해요');
+    return client.storage.from(bucket);
+  }
+
+  Future<T> _guardStorage<T>(Future<T> Function(StorageFileApi api) f) async {
+    try {
+      return await f(await _api()).timeout(const Duration(seconds: 40));
+    } on StorageException catch (e) {
+      throw PhotoStorageException(e.message, status: e.statusCode ?? '');
+    } on http.ClientException {
+      throw const OfflineException('인터넷에 연결되지 않았어요');
+    } on TimeoutException {
+      throw const OfflineException('서버가 답하지 않아요');
+    }
+  }
+
+  @override
+  Future<void> upload(String path, Uint8List bytes) => _guardStorage(
+    (api) => api.uploadBinary(
+      path,
+      bytes,
+      fileOptions: const FileOptions(contentType: 'image/jpeg', upsert: true),
+    ),
+  );
+
+  @override
+  Future<void> remove(List<String> paths) => _guardStorage((api) => api.remove(paths));
+
+  @override
+  Future<Uint8List> download(String path) => _guardStorage((api) => api.download(path));
 }

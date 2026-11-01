@@ -31,7 +31,8 @@
 
 ## 작업 방식
 - 상태: 앱 전체 한 벌은 위쪽 Host(InheritedWidget) + 저장소 객체(ChangeNotifier), 화면 안 표시는 `setState`. 내 기록 = `MarksHost`/`UserStore`, 계정 · 동기화 · 친구 = `AccountScope`/`Account`.
-- 게시물 · 사진 인증 · 워터마크 · 알 수도 있는 친구 · 공유 공간 탭은 서버가 없어 화면에서 뺐다 (나중에 Supabase Storage 로).
+- 사진 벽(내 정보 · 친구 보기): 내 사진은 기기(앱 문서 폴더 `photos/`, 목록은 `UserStore` local_state `photos`), 친구에게 보이기를 켠 것만 Supabase Storage `photos` 버킷 `<user_id>/<photo_id>.jpg` 로 (`lib/sync/photo_share.dart`). 서버 SQL = `docs/supabase-v3-photos.sql` — 안 돌렸으면 사진은 기기에만 · ⚠ 하나. 취향 태그 = v3 `preferences.tags` (+ 기기 `profile_tags`).
+- 알 수도 있는 친구 · 공유 공간 탭은 서버가 없어 화면에서 뺐다.
 - 무거운 JSON(kits-gundam 9 MB)은 `Isolate.run` 으로 푼다.
 - 확인: 경로에 한글이 있어 `flutter analyze` 가 멈춘다 → `dart analyze lib test tool` 0 issues + `flutter test`.
 - 커밋은 `v3: …` 로 시작하고, 단계마다 commit + push (origin = hobby-atlas-v3).

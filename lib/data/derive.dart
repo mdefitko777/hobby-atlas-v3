@@ -368,7 +368,7 @@ Future<Profile> deriveProfile() async {
     name: name,
     handle: a.handle,
     avatarText: name.characters.isEmpty ? '나' : name.characters.first,
-    tags: const [],
+    tags: List.of(_me.profileTags), // 내 정보 화면은 UserStore · 계정에서 바로 읽는다
     spendKrw: _me.spendKrw,
     workspace: a.sync.workspace?.name ?? '',
     inviteCode: '',
