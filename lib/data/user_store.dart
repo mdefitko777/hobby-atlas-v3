@@ -45,6 +45,10 @@ class UserStore extends ChangeNotifier {
   /// 공유되는 기록(구매함 · 좋아요)을 내가 바꿀 때마다 +1 (서버에서 받은 것은 세지 않음)
   int sharedRevision = 0;
 
+  /// 이 기기의 구매함 · 좋아요가 어느 계정 것인지 (Supabase user id, 아직 로그인한 적 없으면 '').
+  /// 다른 계정으로 로그인하면 앞 계정의 기록을 새 계정에 올리지 않도록 동기화가 본다.
+  String syncedAccount = '';
+
   // 옛 앱에서 기기에만 있던 값 (백업 · 클라우드에 없음)
   final Set<String> bbxOwnedParts = {};
   final Map<String, String> bbxManualMap = {};
@@ -89,6 +93,7 @@ class UserStore extends ChangeNotifier {
     final sync = _map(j['sync']);
     cloudDirty = sync['dirty'] == true;
     extrasDirty = sync['extras_dirty'] == true;
+    syncedAccount = _str(sync['account']);
     final local = _map(j['local_state']);
     bbxOwnedParts
       ..clear()
@@ -110,7 +115,7 @@ class UserStore extends ChangeNotifier {
     'collection': {'items': _items},
     'payload_extra': payloadExtra,
     'collection_extra': collectionExtra,
-    'sync': {'dirty': cloudDirty, 'extras_dirty': extrasDirty},
+    'sync': {'dirty': cloudDirty, 'extras_dirty': extrasDirty, 'account': syncedAccount},
     'local_state': {
       'bbx_owned_parts': bbxOwnedParts.toList(),
       'bbx_manual_map': bbxManualMap,
@@ -265,6 +270,28 @@ class UserStore extends ChangeNotifier {
       ..remove('appearance'); // 집 사진(data URL) 같은 큰 값은 기기에 두지 않는다 — 저장 때마다 서버 것을 그대로 쓴다
     this.collectionExtra = Map.of(collectionExtra);
     revision++;
+    notifyListeners();
+    _persistSoon();
+  }
+
+  /// 처음 로그인한 계정 — 로그인 전에 기기에서 모은 기록은 이 계정 것으로 본다
+  void bindAccount(String accountId) {
+    if (syncedAccount == accountId) return;
+    syncedAccount = accountId;
+    _persistSoon();
+  }
+
+  /// 다른 계정으로 로그인했다 → 앞 계정의 구매함 · 좋아요(와 아직 못 올린 변경)는 새 계정에 섞지 않는다.
+  /// 앞 계정 것은 서버의 그 계정에 그대로 있다. 베이 부품 · 도감 손으로 켜기 · 최근 본 것(기기에만)은 둔다.
+  void resetForAccount(String accountId) {
+    syncedAccount = accountId;
+    member = 'member';
+    _items.clear();
+    payloadExtra = {};
+    collectionExtra = {};
+    cloudDirty = false;
+    extrasDirty = false;
+    revision++; // sharedRevision 은 그대로 — "내가 바꾼 것"이 아니라 다시 올리지 않는다
     notifyListeners();
     _persistSoon();
   }

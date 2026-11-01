@@ -57,6 +57,9 @@ abstract interface class AuthService implements Listenable {
   bool get signedIn;
   String get email;
 
+  /// 로그인한 계정의 id (Supabase auth user id, 로그아웃이면 '') — 다른 계정으로 바꿔 로그인했는지 알아보는 데만 쓴다
+  String get userId;
+
   /// 메일로 6자리 코드 보내기 (처음 쓰는 메일이면 계정이 만들어진다)
   Future<void> sendCode(String email);
 
@@ -75,6 +78,8 @@ class NoAuth extends ChangeNotifier implements AuthService {
   bool get signedIn => false;
   @override
   String get email => '';
+  @override
+  String get userId => '';
   @override
   Future<void> sendCode(String email) => Future.error(const AuthFailure('계정 연결 설정이 없어요 (config/supabase.json)'));
   @override

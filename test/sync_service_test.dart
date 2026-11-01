@@ -430,6 +430,77 @@ void main() {
     });
   });
 
+  group('다른 계정으로 로그인 (형 폰에서 동생이)', () {
+    late SwitchRpc rpc;
+
+    Account makeSwitchable() {
+      server = FakeServer(v2Payload: oldAppPayload());
+      rpc = SwitchRpc(server);
+      auth = FakeAuth(signedIn: true);
+      store = UserStore.memory();
+      account = Account(
+        auth: auth,
+        rpc: rpc,
+        store: store,
+        debounce: const Duration(milliseconds: 20),
+        pollEvery: const Duration(hours: 1),
+      );
+      addTearDown(account.dispose);
+      return account;
+    }
+
+    test('앞 계정 기록을 새 계정에 올리지 않고, 새 계정 것으로 바꾼다', () async {
+      makeSwitchable().start();
+      await account.sync.idle;
+      expect(store.ownedCount, 1);
+      await account.signOut();
+      store.setStatus('kit-while-out', CollectStatus.owned); // 로그아웃 동안 바꾼 것도 앞 계정 기기 기록
+      // 동생 계정: 공유 공간 없음, v3 에 자기 기록
+      final bro = FakeServer(
+        handle: 'dongsaeng',
+        displayName: '동생',
+        v3Payload: {
+          'schema_version': 1,
+          'collection': {
+            'member_items': {
+              '동생': {'kit-bro': entry('owned', '2026-10-20T00:00:00.000Z', by: '동생')},
+            },
+          },
+        },
+      );
+      rpc.target = bro;
+      auth.email = 'bro@example.com';
+      auth.signedIn = true;
+      await account.sync.idle;
+      await Future<void>.delayed(const Duration(milliseconds: 60));
+      await account.sync.idle;
+      expect(store.statusOf('kit-a'), isNull); // 형 기록 없음
+      expect(store.statusOf('kit-while-out'), isNull);
+      expect(store.statusOf('kit-bro'), CollectStatus.owned);
+      expect(store.member, '동생');
+      expect(store.cloudDirty, isFalse);
+      final text = bro.v3Payload.toString();
+      expect(text, isNot(contains('kit-a')));
+      expect(text, isNot(contains('kit-while-out')));
+      expect(account.sync.accountSwitched, isTrue);
+      expect(account.sync.statusLine, contains('다른 계정'));
+      // 앞 계정(형)의 서버 기록은 그대로
+      expect((v2Mine()['kit-a'] as Map)['status'], 'owned');
+    });
+
+    test('같은 계정으로 다시 로그인하면 로그아웃 동안 바꾼 것도 올라간다', () async {
+      makeSwitchable().start();
+      await account.sync.idle;
+      await account.signOut();
+      store.setStatus('kit-while-out', CollectStatus.owned);
+      auth.signedIn = true;
+      await account.sync.idle;
+      expect(v2Mine()['kit-while-out']?['status'], 'owned');
+      expect(store.ownedCount, 2);
+      expect(account.sync.accountSwitched, isFalse);
+    });
+  });
+
   test('설정이 없으면 늘 로그아웃 (NoAuth · NoBackendRpc)', () async {
     final a = Account.offline();
     addTearDown(a.dispose);

@@ -19,6 +19,7 @@
 - 동기화 순서 (`lib/sync/sync_service.dart`): v2 `get_state` → 내 버킷만 상품별로 합침(늦은 `updated_at`, 지움 = `deleted`, 별칭 `member`·`ttungyimu…` 는 나에게, `냐아` 버림) → 달라졌으면 v2 `save_state` → 같은 payload 를 v3 `save_state(p_base_revision)` 에 복사, `40001` 이면 `get_me` → 합침 → 재시도(최대 3번). v2 공유 공간이 없는 계정은 v3 내 행이 원본.
   - 내 버킷 이름 = 서버 `members[is_self].name` 의 버킷, 없으면 `items` 와 같은 버킷(옛 앱이 이름을 안 정했으면 `member`).
   - 언제: 로그인 직후 · 앱으로 돌아올 때 · 앞에 있는 동안 15초마다(v2 만, v3 는 1분에 한 번) · 바꾸고 0.7초 뒤. 오프라인이면 기기에 남겨 두고(`cloudDirty`) 다음에 다시.
+  - 기기 기록의 주인 = 처음 로그인한 계정(`UserStore.syncedAccount`, Supabase user id). 다른 계정으로 로그인하면 앞 계정 기록을 새 계정에 합치지 않고 비운 뒤 새 계정 것을 받는다 (베이 부품 등 기기에만 있는 값은 둔다).
 - 테스트는 진짜 서버에 닿지 않는다: `test/support/fake_backend.dart` 의 가짜 서버 · 가짜 로그인. 진짜 계정으로 로그인해 보는 것은 사람만.
 
 ## 비밀

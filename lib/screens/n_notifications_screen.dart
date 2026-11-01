@@ -99,6 +99,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   final Set<String> _read = {};
   final Set<String> _removed = {};
 
+  @override
+  void initState() {
+    super.initState();
+    // 열 때 받은 친구 요청을 한 번 새로 (실패해도 받아 둔 것으로 보여 준다)
+    final a = AccountScope.read(context);
+    if (a.signedIn) a.friends.refresh().then((_) {}, onError: (Object _) {});
+  }
+
   bool _isRead(AppNotice n) => n.read || _read.contains(n.id);
 
   /// 계정의 받은 친구 요청 → 알림 줄 (id 'req-<아이디>')

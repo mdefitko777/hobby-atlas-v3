@@ -130,6 +130,9 @@ class SupabaseAuthService extends ChangeNotifier implements AuthService {
   @override
   String get email => _client?.auth.currentUser?.email ?? '';
 
+  @override
+  String get userId => _client?.auth.currentSession?.user.id ?? '';
+
   GoTrueClient get _auth {
     final c = _client;
     if (c == null) throw const AuthFailure('계정 연결 설정이 없어요 (config/supabase.json)');

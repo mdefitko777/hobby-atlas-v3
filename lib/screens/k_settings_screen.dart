@@ -170,9 +170,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (dialog) => AlertDialog(
         title: const Text('로그아웃할까요?'),
         content: Text(
-          account.store.cloudDirty
-              ? '아직 올리지 못한 변경이 있어요. 로그아웃해도 이 기기에는 남지만, 다시 로그인할 때까지 다른 기기에는 보이지 않아요.'
-              : '이 기기의 구매함 · 좋아요는 그대로 남아요.',
+          '${account.store.cloudDirty ? '아직 올리지 못한 변경이 있어요. 로그아웃해도 이 기기에는 남지만, '
+                    '다시 로그인할 때까지 다른 기기에는 보이지 않아요.' : '이 기기의 구매함 · 좋아요는 그대로 남아요.'}'
+          '\n\n다른 계정으로 로그인하면 이 기기의 구매함 · 좋아요는 그 계정 것으로 바뀌어요 (지금 계정 것은 서버에 그대로 있어요).',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(dialog, false), child: const Text('취소')),

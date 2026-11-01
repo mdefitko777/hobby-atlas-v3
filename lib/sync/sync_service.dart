@@ -9,6 +9,8 @@
 //   · v2 공유 공간이 없는 계정(동생 · 친구)은 v3 내 행이 원본이다.
 // 언제: 로그인 직후 · 앱으로 돌아올 때 · 앞에 있는 동안 15초마다 · 기록을 바꾸고 0.7초 뒤.
 // 오프라인이면 바꾼 것은 기기에 남고(cloudDirty), 다음 번에 다시 올린다.
+// 기기의 기록은 처음 로그인한 계정 것이다(UserStore.syncedAccount). 로그아웃 뒤 다른 계정으로 로그인하면
+// 앞 계정 기록을 새 계정에 합치지 않고 비운 뒤 새 계정 것을 받는다 (형 폰에서 동생이 로그인해도 섞이지 않게).
 // Hobby Atlas 에만 있는 값(베이 부품 · 도감 손으로 켜기)은 아직 기기에만 둔다.
 library;
 
@@ -113,6 +115,9 @@ class SyncService extends ChangeNotifier with WidgetsBindingObserver {
   /// v3 save_state 가 40001 로 부딪힌 횟수 (진단용)
   int v3Conflicts = 0;
 
+  /// 이번 로그인에서 앞 계정의 기기 기록을 비우고 이 계정 것으로 바꿨음 (설정 화면 안내용)
+  bool accountSwitched = false;
+
   bool _started = false;
   bool _wasSignedIn = false;
   bool _running = false;
@@ -177,6 +182,7 @@ class SyncService extends ChangeNotifier with WidgetsBindingObserver {
       _debounceTimer?.cancel();
       workspace = null;
       selfName = '';
+      accountSwitched = false;
       friends.clear();
       _set(SyncPhase.off, '');
     } else if (!now && phase != SyncPhase.off) {
@@ -226,6 +232,7 @@ class SyncService extends ChangeNotifier with WidgetsBindingObserver {
     if (phase != SyncPhase.synced) _set(SyncPhase.syncing, '');
     try {
       await store.load();
+      _bindAccount();
       // 15초 받기는 v2 만 (payload 에 집 사진 data URL 이 있어 무겁다). v3 get_me(친구 요청 · 복사본 확인)는
       // 로그인 · 돌아옴 · 직접 · 저장할 때, 그리고 받기 4번에 1번(약 1분).
       var full = reason != 'poll' || (++_polls % 4 == 0);
@@ -246,6 +253,20 @@ class SyncService extends ChangeNotifier with WidgetsBindingObserver {
       _running = false;
       _current = null;
     }
+  }
+
+  /// 기기 기록의 주인 계정 확인 — 처음이면 지금 계정으로 정하고, 다른 계정이면 앞 계정 기록을 비운다
+  void _bindAccount() {
+    final id = auth.userId;
+    if (id.isEmpty || store.syncedAccount == id) return;
+    if (store.syncedAccount.isEmpty) {
+      store.bindAccount(id); // 처음 로그인: 로그인 전에 모은 기록도 이 계정에 올린다
+      return;
+    }
+    _debounceTimer?.cancel();
+    store.resetForAccount(id);
+    _seenShared = store.sharedRevision;
+    accountSwitched = true;
   }
 
   /// v3 get_me — 함수가 없는 프로젝트면 null (친구 기능 없이 계속)
@@ -417,6 +438,7 @@ class SyncService extends ChangeNotifier with WidgetsBindingObserver {
       SyncPhase.synced => [
         '동기화됨${lastSyncedAt == null ? '' : ' · ${_ago(lastSyncedAt!)}'}',
         if (workspace case final w?) '공유 공간 「${w.name}」 · $selfName${w.canEdit ? '' : ' (읽기 전용)'}' else '내 계정에 저장',
+        if (accountSwitched) '다른 계정이라 이 기기의 구매함 · 좋아요를 이 계정 것으로 바꿨어요',
       ].join('\n'),
       SyncPhase.offline => dirty ? '오프라인 — 바꾼 것은 기기에 있고, 연결되면 올려요' : '오프라인 — 연결되면 다시 받아요',
       SyncPhase.error => '동기화하지 못했어요: $message${dirty ? '\n바꾼 것은 기기에 남아 있어요' : ''}',

@@ -27,6 +27,10 @@ class FakeAuth extends ChangeNotifier implements AuthService {
   @override
   bool get signedIn => _signedIn;
 
+  /// 메일 = 계정 하나 (가짜 id)
+  @override
+  String get userId => _signedIn && email.isNotEmpty ? 'uid:$email' : '';
+
   set signedIn(bool v) {
     _signedIn = v;
     notifyListeners();
@@ -44,6 +48,15 @@ class FakeAuth extends ChangeNotifier implements AuthService {
 
   @override
   Future<void> signOut() async => signedIn = false;
+}
+
+/// 로그인한 계정에 따라 다른 가짜 서버 (진짜 앱은 RPC 하나가 지금 로그인한 계정으로 부른다)
+class SwitchRpc implements RpcClient {
+  SwitchRpc(this.target);
+  RpcClient target;
+
+  @override
+  Future<Object?> call(String fn, [Map<String, Object?> params = const {}]) => target(fn, params);
 }
 
 class FakeServer implements RpcClient {
