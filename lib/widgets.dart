@@ -1274,17 +1274,21 @@ class ViewIconToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 고른 쪽 = 검색창과 같은 떠 있는 흰 칸 (높이도 검색창과 같게), 안 고른 쪽 = 아이콘만
     Widget button(bool v, IconData icon, String tip) => Tooltip(
       message: tip,
-      child: Material(
-        color: v == mine ? Gp.accent.withValues(alpha: 0.12) : Colors.transparent,
-        borderRadius: BorderRadius.circular(Gp.radius),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(Gp.radius),
-          onTap: () => onChanged(v),
-          child: SizedBox.square(
-            dimension: 38,
-            child: Icon(icon, size: Gp.iM, color: v == mine ? Gp.accent : Gp.faint),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        decoration: v == mine ? Gp.raised(radius: Gp.radius) : const BoxDecoration(),
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(Gp.radius),
+            onTap: () => onChanged(v),
+            child: SizedBox.square(
+              dimension: 44,
+              child: Icon(icon, size: Gp.iM, color: v == mine ? Gp.accent : Gp.faint),
+            ),
           ),
         ),
       ),
@@ -1340,6 +1344,44 @@ class DateTag extends StatelessWidget {
       child: Text(
         text,
         style: TextStyle(fontSize: Gp.t11, fontWeight: FontWeight.w700, color: c),
+      ),
+    );
+  }
+}
+
+/// 주 버튼 (화면에 하나) — 브랜드 그라데이션 파랑→민트 + 부드러운 그림자. 누를 수 없으면 회색
+class GradientButton extends StatelessWidget {
+  const GradientButton({super.key, required this.label, required this.onPressed, this.height = 46});
+  final String label;
+  final VoidCallback? onPressed;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final on = onPressed != null;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      height: height,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(Gp.radius),
+        gradient: on ? Gp.accentGradient : null,
+        color: on ? null : Gp.soft,
+        boxShadow: on
+            ? [BoxShadow(color: Gp.accent.withValues(alpha: 0.25), blurRadius: 14, offset: const Offset(0, 6))]
+            : null,
+      ),
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(Gp.radius),
+          onTap: onPressed,
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w700, color: on ? Colors.white : Gp.faint),
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -146,15 +146,15 @@ class _Stats extends StatelessWidget {
       ),
     );
     // 뜻이 같은 둘을 한 칸에: 수집(♡ | 리본) · 돈(이번 달 | 총)
+    // 검색창과 같은 떠 있는 재질 (흰→옅은 회색 · 부드러운 그림자)
     Widget group(Widget a, Widget b) => Expanded(
-      child: Material(
-        color: Gp.panel,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(Gp.radius),
-          side: const BorderSide(color: Gp.line),
-        ),
-        child: IntrinsicHeight(
-          child: Row(children: [a, const VerticalDivider(width: 1, indent: 10, endIndent: 10), b]),
+      child: DecoratedBox(
+        decoration: Gp.raised(radius: Gp.radius),
+        child: Material(
+          type: MaterialType.transparency,
+          child: IntrinsicHeight(
+            child: Row(children: [a, const VerticalDivider(width: 1, indent: 10, endIndent: 10), b]),
+          ),
         ),
       ),
     );

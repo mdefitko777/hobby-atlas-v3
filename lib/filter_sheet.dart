@@ -356,13 +356,9 @@ class _FilterSheetState extends State<FilterSheet> {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
-            child: FilledButton(
+            child: GradientButton(
+              label: hits == 0 ? '맞는 상품 없음' : '$hits개 보기', // P01 고르는 동안 개수
               onPressed: hits == 0 ? null : () => Navigator.pop(context, _draft),
-              style: FilledButton.styleFrom(
-                minimumSize: const Size.fromHeight(44),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Gp.radius)),
-              ),
-              child: Text(hits == 0 ? '맞는 상품 없음' : '$hits개 보기'), // P01 고르는 동안 개수
             ),
           ),
         ],

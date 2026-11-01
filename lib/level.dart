@@ -22,7 +22,18 @@ class LevelChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: small ? 6 : 9, vertical: small ? 1 : 3),
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(Gp.rSmall), color: levelColor(level)),
+      // 레벨 색은 그대로, 위쪽을 조금 밝게 + 같은 색 그림자 (빛 받은 듯)
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(Gp.rSmall),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color.lerp(levelColor(level), Colors.white, 0.25)!, levelColor(level)],
+        ),
+        boxShadow: [
+          BoxShadow(color: levelColor(level).withValues(alpha: 0.35), blurRadius: 8, offset: const Offset(0, 3)),
+        ],
+      ),
       child: Text(
         'Lv.$level',
         style: TextStyle(fontSize: small ? Gp.t11 : Gp.t12, fontWeight: FontWeight.w700, color: Colors.white),
