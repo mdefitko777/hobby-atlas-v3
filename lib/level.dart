@@ -42,36 +42,6 @@ class LevelChip extends StatelessWidget {
   }
 }
 
-/// 도감 칸 단계 — 흑백 · 컬러(좋아요) · 초록 테두리(구매) · 도는 고리(사진 인증)
-enum CellTier { none, liked, owned, photo }
-
-/// 단계별 칸 틀 (도감 칸 · ? 견본 공통)
-Widget tierFrame(CellTier tier, Widget child, {double radius = 12}) {
-  final photo = tier == CellTier.photo;
-  final inner = Container(
-    decoration: BoxDecoration(
-      color: Gp.panel,
-      borderRadius: BorderRadius.circular(photo ? radius - 2 : radius),
-      border: switch (tier) {
-        CellTier.photo => null,
-        CellTier.owned => Border.all(color: Gp.own, width: 2.2), // 가진 것 = 민트
-        _ => Border.all(color: Gp.line),
-      },
-    ),
-    clipBehavior: Clip.antiAlias,
-    child: child,
-  );
-  return photo ? AccentRing(radius: radius, spin: true, child: inner) : inner;
-}
-
-/// 칸 안 그림: 내 사진이면 꽉 채우고, 아니면 공식 그림 (없음 = 흑백)
-Widget cellImage(CellTier tier, String image, String? photo) => tier == CellTier.photo && photo != null
-    ? AppImage(photo)
-    : Padding(
-        padding: const EdgeInsets.all(6),
-        child: AppImage(image, fit: BoxFit.contain, grayscale: tier == CellTier.none),
-      );
-
 /// 레벨 시트의 한 칸 (도감 작품 · 세대 · 라인)
 typedef LitSeries = ({String title, String image, int owned, int total});
 

@@ -23,7 +23,6 @@ import 'package:flutter/material.dart';
 import '../data/catalog.dart';
 import '../data/user_store.dart';
 import '../detail_pane.dart';
-import '../level.dart' show CellTier, tierFrame;
 import '../sync/account.dart';
 import '../sync/sync_service.dart';
 import '../notifications/local_notifier.dart';

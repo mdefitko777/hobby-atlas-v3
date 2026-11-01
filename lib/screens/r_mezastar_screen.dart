@@ -645,7 +645,7 @@ class _SetStrip extends StatelessWidget {
   }
 }
 
-/// R-5 태그 칸 — 아직 = 흑백, 가짐 = 컬러 + 민트 테두리 (건담 도감 칸과 같은 틀)
+/// R-5 태그 칸 — 아직 = 흑백, 가짐 = 컬러 + 민트 테두리 (건담 도감 칸과 같은 TierCell)
 class TagCell extends StatelessWidget {
   const TagCell({super.key, required this.card, required this.owned, required this.onTap, this.onLongPress});
   final TagCard card;
@@ -654,56 +654,42 @@ class TagCell extends StatelessWidget {
   final VoidCallback? onLongPress;
 
   @override
-  Widget build(BuildContext context) {
-    final tier = owned ? CellTier.owned : CellTier.none;
-    return Semantics(
-      button: true,
-      selected: owned,
-      label: '${card.name} ${card.number}',
-      child: GestureDetector(
-        onTap: onTap,
-        onLongPress: onLongPress,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: AnimatedScale(
-                scale: owned ? 1 : 0.96,
-                duration: const Duration(milliseconds: 220),
-                curve: Curves.easeOutBack,
-                child: tierFrame(
-                  tier,
-                  Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      cellImage(tier, card.image, null),
-                      if (card.badge.isNotEmpty) Positioned(left: 4, top: 4, child: TagPill(card.badge, filled: true)),
-                      if (owned) const Positioned(right: 4, bottom: 4, child: OwnedIcon(size: Gp.iM)),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              card.number,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: Gp.t11, color: Gp.faint),
-            ),
-            Text(
-              card.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: Gp.t12, color: owned ? Gp.ink : Gp.muted),
-            ),
-          ],
-        ),
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    selected: owned,
+    label: '${card.name} ${card.number}',
+    child: TierCell(
+      image: card.image,
+      tier: owned ? CellTier.owned : CellTier.none,
+      square: false,
+      gap: 4,
+      onTap: onTap,
+      onLongPress: onLongPress,
+      overlays: [
+        if (card.badge.isNotEmpty) Positioned(left: 4, top: 4, child: TagPill(card.badge, filled: true)),
+        if (owned) const Positioned(right: 4, bottom: 4, child: OwnedIcon(size: Gp.iM)),
+      ],
+      caption: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            card.number,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: Gp.t11, color: Gp.faint),
+          ),
+          Text(
+            card.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: Gp.t12, color: owned ? Gp.ink : Gp.muted),
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
 }
 
 // ── R-6 태그 시트 ─────────────────────────────────────────────────────────────────
