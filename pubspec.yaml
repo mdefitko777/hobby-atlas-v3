@@ -54,6 +54,10 @@ dependencies:
   image_picker: ^1.2.4
   # 바코드 찾기 (화면 E): 기기 안 ML Kit 로 상자 뒷면 JAN 읽기 — 서버 · 인터넷 필요 없음
   mobile_scanner: ^7.4.3
+  # 사진 글자 읽기 (화면 E-8 · E-11): 기기 안 ML Kit 일본어 · 한국어 글자 인식 → 상품 후보 (lib/ocr/ · lib/logic/ocr_lookup.dart)
+  google_mlkit_text_recognition: ^0.17.1
+  # 공유로 받기: 다른 앱의 "공유 → Hobby Atlas" 사진 · 글 · 주소 (lib/share/share_intake.dart)
+  receive_sharing_intent: ^1.9.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

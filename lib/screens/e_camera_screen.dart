@@ -9,13 +9,12 @@
 // │ E-5  │ image_picker (카메라 · 갤러리)        │ 사진 찍기 · 앨범에서 고르기              │ P07           │
 // │ E-6  │ 바코드 결과: 상세 / 여러 개면 목록    │ 바코드 = JAN 이 같은 상품               │ P01 · P10     │
 // │ E-7  │ 모르는 바코드 패널 (제보 · 다시 · 검색) │ 이 바코드의 상품이 아직 없어요          │ P09 · P03     │
-// │ E-8  │ 사진 + "이름으로 찾기" + 결과 줄       │ 사진 인식 없음 → 이름 · 설명으로 찾기     │ P09 · P10     │
-// │ E-9  │ 줄 오른쪽 📎 / 리본+                  │ 구매함 상품에 사진 붙이기 (내 사진 · 사진 벽) │ P07 · P03 │
+// │ E-8  │ PhotoFindScreen (e_photo_find_screen) │ 사진 글자 읽기 → 후보 · 이름으로 찾기 (E-8 ~ E-16) │ P09 · P10 │
 // │ E-10 │ LoadingView / ErrorView / EmptyView  │ 불러오기 3상태                          │ P01 · P09     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 앱 셸 카메라 버튼 → 추가 시트 → 바코드: E 카메라(아래에서 올라옴) → 찾으면 D 상세로 바꿔 쌓기.
 //       사진 · 앨범: 휴대폰 카메라 / 사진 고르기 → E-8 사진으로 찾기(쌓기) → D 상세(쌓기).
-// 사진으로 상품을 알아보는 AI 는 없다 (서버 · 유료 API 가 필요) — 가짜 후보를 만들지 않고 이름 · 설명 검색으로 이어 준다.
+// 사진은 기기 안 ML Kit 로 상자 · 화면의 "글자"만 읽어 상품 후보를 고른다 (lib/logic/ocr_lookup.dart). 물건 모양을 알아보는 AI 는 없다.
 import 'dart:async';
 import 'dart:typed_data';
 
@@ -26,16 +25,12 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../api.dart';
 import '../channels.dart';
-import '../data/photo_files.dart';
-import '../marks.dart';
 import '../models.dart';
 import '../report.dart';
-import '../sentence_search.dart';
-import '../sync/account.dart';
 import '../theme.dart';
 import '../widgets.dart';
-import 'b_search_screen.dart' show SentenceCandidates;
 import 'd_kit_detail_screen.dart';
+import 'e_photo_find_screen.dart';
 import 't_photo_screen.dart' show photoPicker;
 
 enum CameraMode { photo, barcode }
@@ -450,187 +445,6 @@ class BarcodeResultScreen extends StatelessWidget {
               onTap: () => openKitDetail(context, k, loaders: loaders, list: kits),
             ),
         ],
-      ),
-    );
-  }
-}
-
-/// E-8 사진으로 찾기 — 사진을 보여 주고, 이름 · 설명으로 찾아 고른 구매함 상품에 사진을 붙인다
-class PhotoFindScreen extends StatefulWidget {
-  const PhotoFindScreen({super.key, required this.photo, required this.loaders, required this.onGoSearch});
-
-  final Uint8List photo;
-  final Loaders loaders;
-  final VoidCallback onGoSearch;
-
-  @override
-  State<PhotoFindScreen> createState() => _PhotoFindScreenState();
-}
-
-class _PhotoFindScreenState extends State<PhotoFindScreen> {
-  late Future<List<Kit>> _future = _load();
-
-  Future<List<Kit>> _load() => widget.loaders.kits([for (final c in allChannels) c.id]);
-  String _query = '';
-
-  /// 이 화면에서 사진을 붙인 상품 (✓)
-  final Set<String> _attached = {};
-
-  (String, List<SentenceHit>)? _memo;
-
-  List<SentenceHit> _hits(List<Kit> kits) {
-    if (_memo case (final q, final h) when q == _query) return h;
-    final h = sentenceSearch(_query, kits);
-    _memo = (_query, h);
-    return h;
-  }
-
-  /// E-9 이 상품에 사진 붙이기 (내 사진 목록 · 사진 벽 · 상세 사진 줄에 보인다)
-  Future<void> _attach(Kit k) async {
-    final store = Marks.read(context).store;
-    final share = AccountScope.read(context).photos;
-    final p = MyPhoto.create(kitId: k.id);
-    await PhotoFiles.instance.write(p.file, widget.photo);
-    store.addPhoto(p);
-    share.syncSoon();
-    if (!mounted) return;
-    setState(() => _attached.add(k.id)); // STATE: 붙임 → ✓
-    showToast(
-      context,
-      '「${k.name}」에 사진을 붙였어요',
-      onUndo: () {
-        store.removePhoto(p.id);
-        share.syncSoon();
-        unawaited(PhotoFiles.instance.delete(p.file));
-        if (mounted) setState(() => _attached.remove(k.id));
-      },
-    );
-  }
-
-  Widget _row(Kit k, List<Kit> list) {
-    final marks = Marks.of(context);
-    final owned = marks.owned(k);
-    final done = _attached.contains(k.id);
-    return ThumbRow(
-      image: k.image,
-      title: k.name,
-      subtitle: joinDot([channelOf(k.franchiseId).label, k.line]),
-      onTap: () => openKitDetail(context, k, loaders: widget.loaders, list: list),
-      trailing: done
-          ? const Icon(Icons.check_circle, color: Gp.accent)
-          : owned
-          ? IconButton(
-              tooltip: '사진 붙이기',
-              onPressed: () => _attach(k),
-              icon: const Icon(Icons.add_photo_alternate_outlined, color: Gp.ink),
-            )
-          : IconButton(
-              tooltip: '구매함에 넣기', // 구매함 상품에만 붙인다 → 먼저 넣기
-              onPressed: () => Marks.read(context).toggleOwn(context, k),
-              icon: const Icon(Icons.bookmark_add_outlined, color: Gp.muted),
-            ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          '사진으로 찾기',
-          style: TextStyle(fontSize: Gp.t19, fontWeight: FontWeight.w600),
-        ),
-      ),
-      body: FutureBuilder<List<Kit>>(
-        future: _future,
-        builder: (context, snap) {
-          final kits = snap.data ?? const <Kit>[];
-          final marks = Marks.of(context);
-          final owned = [
-            for (final k in kits)
-              if (marks.owned(k)) k,
-          ];
-          final hits = _query.isEmpty ? const <SentenceHit>[] : _hits(kits);
-          final byName = _query.isEmpty
-              ? owned
-              : [
-                  for (final k in kits)
-                    if (kitMatches(k, _query)) k,
-                ].take(40).toList();
-          return ListView(
-            padding: const EdgeInsets.only(bottom: 32),
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(Gp.rLarge),
-                  child: ColoredBox(
-                    color: Gp.soft,
-                    child: SizedBox(
-                      height: 220,
-                      child: Image.memory(widget.photo, fit: BoxFit.contain, gaplessPlayback: true),
-                    ),
-                  ),
-                ),
-              ),
-              const Padding(
-                // E-8 P09 — 사진 인식이 없다는 것을 그대로
-                padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: Row(
-                  children: [
-                    Icon(Icons.image_not_supported_outlined, size: Gp.iS, color: Gp.faint),
-                    SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        '사진으로 알아보기는 아직 없어요 · 이름이나 생김새로 찾아 주세요',
-                        style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: TextField(
-                  textInputAction: TextInputAction.search,
-                  decoration: const InputDecoration(
-                    hintText: '이름으로 찾기',
-                    prefixIcon: Icon(Icons.search),
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                  onChanged: (q) => setState(() => _query = q.trim()), // STATE: 찾기 → 후보 · 결과
-                ),
-              ),
-              if (snap.connectionState != ConnectionState.done)
-                const SizedBox(height: 160, child: LoadingView()) // E-10
-              else if (snap.hasError)
-                ErrorView(message: '${snap.error}', onRetry: () => setState(() => _future = _load()))
-              else ...[
-                if (hits.isNotEmpty)
-                  SentenceCandidates(
-                    hits: hits,
-                    onTap: (k) => openKitDetail(context, k, loaders: widget.loaders),
-                  ),
-                if (_query.isEmpty && owned.isNotEmpty)
-                  SectionHeader('구매함', subtitle: '${owned.length}개', padding: const EdgeInsets.fromLTRB(16, 18, 12, 4)),
-                for (final k in byName) _row(k, byName),
-                if (byName.isEmpty && hits.isEmpty)
-                  EmptyView(
-                    icon: _query.isEmpty ? Icons.bookmark_added_outlined : Icons.search_off,
-                    message: _query.isEmpty ? '구매함이 비어 있어요' : '「$_query」와 일치하는 상품이 없어요',
-                    action: _query.isEmpty
-                        ? null
-                        : OutlinedButton.icon(
-                            onPressed: () => reportDataIssue(context, kind: ReportKind.missingKit, unitName: _query),
-                            icon: const Icon(Icons.flag_outlined, size: Gp.iM),
-                            label: const Text('없는 상품 제보'),
-                          ),
-                  ),
-              ],
-            ],
-          );
-        },
       ),
     );
   }

@@ -71,4 +71,9 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // 사진 글자 읽기 (google_mlkit_text_recognition, lib/ocr/text_reader_io.dart): 라틴 모델은 플러그인이 넣고,
+    // 일본어(상자 글자) · 한국어(한글 스크린숏) 모델은 여기서 앱에 함께 넣는다 — 기기 안에서 바로 · 인터넷 없이.
+    // 크기: 모델 하나에 arm64 기준 약 4 MB (라틴 + 일본어 + 한국어 ≈ +12 MB)
+    implementation("com.google.mlkit:text-recognition-japanese:16.0.1")
+    implementation("com.google.mlkit:text-recognition-korean:16.0.1")
 }

@@ -22,7 +22,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:launchMode="singleTop"
+            android:launchMode="singleTask"
             android:taskAffinity=""
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
@@ -39,6 +39,25 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+            <!-- 공유로 받기 (lib/share/share_intake.dart · receive_sharing_intent): 다른 앱의 "공유 → Hobby Atlas"
+                 사진(스크린숏) → 글자 읽어 찾기 / 글 · 주소 → 주소 · 글자로 찾기. 여러 장이면 첫 장만.
+                 launchMode=singleTask: 켜져 있는 앱으로 받는다 (공유한 앱 안에 두 번째 Hobby Atlas 를 띄우지 않게 —
+                 두 개가 같은 user.json 을 함께 쓰면 기록이 엇갈린다). 받은 파일은 플러그인이 앱 캐시로 복사 → 저장소 권한 필요 없음 -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:mimeType="image/*"/>
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:mimeType="text/plain"/>
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND_MULTIPLE"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:mimeType="image/*"/>
             </intent-filter>
         </activity>
         <!-- 앱 업데이트: 받은 APK 를 설치 창에 넘기는 통로 (res/xml/filepaths.xml) -->

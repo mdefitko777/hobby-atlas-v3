@@ -2,6 +2,7 @@
 // 여기 함수는 compute() 안(다른 isolate)에서도 돌아가야 해서 Flutter 위젯 · 전역 상태를 쓰지 않는다.
 import 'dart:convert';
 import '../json_util.dart';
+import '../logic/url_lookup.dart' show isListingUrl;
 import 'gundam_atlas.dart' show atlasBoxartFile, atlasChaptersFile, atlasKitMsFile, atlasMsFile;
 
 /// Gunpula 저장소의 Pages 주소. 데이터는 data/, 이미지는 app/assets/
@@ -322,6 +323,11 @@ List<Map<String, Object?>> mapKitsJob(Map<String, String> msg) {
       'pbOpens': jStr(pbInfo['order_opens_at']).split('T').first,
       'pbCloses': jStr(pbInfo['order_closes_at']).split('T').first,
       'officialUrl': sourceUrls.isEmpty ? '' : sourceUrls.first,
+      // 공유로 받은 주소 찾기 (lib/logic/url_lookup.dart) — 목록 · 검색 페이지는 상품 하나를 가리키지 않아 뺀다
+      'sourceUrls': [
+        for (final u in sourceUrls)
+          if (!isListingUrl(u)) u,
+      ],
       // 굿즈 세부 종류 (티켓 · 의류 · 블루레이 …) — 데이터에 있으면 유형은 굿즈(카드 게임은 카드)
       'goodsKind': goodsKindLabels[jStr(r['goods_kind'])] ?? '',
       'jan': jan,

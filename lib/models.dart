@@ -66,6 +66,7 @@ class Kit {
     this.firstSeen = '',
     this.blob = '',
     this.goodsKind = '',
+    this.sourceUrls = const [],
   });
 
   final String id;
@@ -129,6 +130,10 @@ class Kit {
   /// 굿즈 세부 종류 (티켓 · 의류 · 블루레이 …, 한국어). 굿즈가 아니면 빈 글자
   final String goodsKind;
 
+  /// 출처 페이지 전부 (source_urls — 공유로 받은 주소 찾기, lib/logic/url_lookup.dart).
+  /// 이 칸이 생기기 전 기기 캐시에는 없다 → 다음 새 데이터 때 채워진다 (그동안은 [officialUrl] 만)
+  final List<String> sourceUrls;
+
   /// lib/data/gunpula.dart mapKitsJob 의 결과 → Kit.
   /// [recentSince] 이후에 처음 들어온 상품 = 최근 추가, [monthPrefix]('yyyy-mm')에 발매 = 이번 달
   static Kit fromSlim(Map<String, Object?> j, {required String recentSince, required String monthPrefix}) {
@@ -166,6 +171,7 @@ class Kit {
       firstSeen: firstSeen,
       blob: _s(j, 'blob'),
       goodsKind: _s(j, 'goodsKind'),
+      sourceUrls: _strs(j['sourceUrls']),
     );
   }
 

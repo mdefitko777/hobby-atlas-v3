@@ -16,6 +16,7 @@ import 'detail_pane.dart';
 import 'marks.dart';
 import 'notifications/notify_store.dart';
 import 'screens/s_app_shell.dart';
+import 'share/share_intake.dart';
 import 'sync/account.dart';
 import 'sync/supabase_backend.dart';
 import 'theme.dart';
@@ -32,6 +33,8 @@ void main() {
   auth.start().ignore();
   // 새 소식 알림: 알림함 읽기 · 휴대폰 알림 준비 · 12시간 확인 등록 · 앱을 열 때 · 돌아올 때 확인
   NotifyStore.instance.start(me: UserStore.instance, meLoaded: meLoaded).ignore();
+  // 공유로 받기: 다른 앱의 "공유 → Hobby Atlas" (공유로 켜졌으면 그 사진 · 글을 앱 셸이 연다)
+  ShareIntake.instance.start().ignore();
   runApp(const HobbyAtlasApp());
 }
 

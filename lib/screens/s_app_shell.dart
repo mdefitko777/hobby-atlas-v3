@@ -33,6 +33,7 @@ import '../level.dart';
 import '../marks.dart';
 import '../notifications/local_notifier.dart';
 import '../notifications/notify_store.dart';
+import '../share/share_intake.dart';
 import '../sync/account.dart';
 import '../theme.dart';
 import '../update/update_ui.dart';
@@ -41,6 +42,7 @@ import 'a_home_screen.dart';
 import 'b_search_screen.dart';
 import 'd_kit_detail_screen.dart';
 import 'e_camera_screen.dart';
+import 'e_photo_find_screen.dart' show openShared;
 import 'f_collection_screen.dart';
 import 'h_calendar_screen.dart';
 import 'i_profile_screen.dart';
@@ -105,8 +107,10 @@ class _AppShellState extends State<AppShell> {
   void initState() {
     super.initState();
     LocalNotifier.taps.addListener(_onNotificationTap);
+    ShareIntake.instance.incoming.addListener(_onShared);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _onNotificationTap(); // 앱이 꺼져 있을 때 알림을 눌러 켰으면
+      _onShared(); // 공유로 켜졌으면
       _askNotifyOnce();
       askUpdateOnce(context); // 큰 업데이트면 한 번 묻기 (나중에 → ⬇ 아이콘만)
     });
@@ -127,6 +131,7 @@ class _AppShellState extends State<AppShell> {
   @override
   void dispose() {
     LocalNotifier.taps.removeListener(_onNotificationTap);
+    ShareIntake.instance.incoming.removeListener(_onShared);
     _me?.removeListener(_onUserStore);
     super.dispose();
   }
@@ -166,6 +171,13 @@ class _AppShellState extends State<AppShell> {
       }
     }
     if (mounted) openNotifications(context, myChannels: _myChannels, loaders: widget.loaders, notify: _notify);
+  }
+
+  /// 다른 앱에서 "공유 → Hobby Atlas" 로 받은 사진 · 글 · 주소 → 사진 · 공유로 찾기 (E-8 · E-15)
+  void _onShared() {
+    if (!mounted) return;
+    final item = ShareIntake.instance.take();
+    if (item != null) openShared(context, item, loaders: widget.loaders, onGoSearch: _goSearch).ignore();
   }
 
   /// 처음 실행 때 한 번: 알림 권한(안드로이드 13+) → 허용하면 삼성 배터리 안내
