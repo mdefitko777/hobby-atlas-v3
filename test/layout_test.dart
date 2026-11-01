@@ -7,6 +7,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hobby_atlas/api.dart';
+import 'package:hobby_atlas/clock.dart';
+import 'package:hobby_atlas/data/user_store.dart';
 import 'package:hobby_atlas/detail_pane.dart';
 import 'package:hobby_atlas/marks.dart';
 import 'package:hobby_atlas/widgets.dart';
@@ -66,7 +68,7 @@ Future<void> _show(WidgetTester tester, Size size, Widget home) async {
   await tester.pumpWidget(
     MaterialApp(
       theme: buildGpTheme(),
-      builder: (context, child) => MarksHost(child: PaneHost(child: child!)),
+      builder: (context, child) => MarksHost(store: UserStore.memory(), child: PaneHost(child: child!)),
       home: home,
     ),
   );
@@ -77,6 +79,7 @@ Future<void> _show(WidgetTester tester, Size size, Widget home) async {
 }
 
 void main() {
+  fixedNow = DateTime(2026, 10, 25, 21); // 가짜 데이터(db.json)의 오늘
   final kit = _list<Kit>('kits', Kit.fromJson).firstWhere((k) => k.id == 'gu02');
   final friend = Profile.fromJson(db['profile'])!.friends.first;
   final seed = _list<GuideWork>('guideWorks', GuideWork.fromJson).firstWhere((w) => w.id == 'w3000');
@@ -141,7 +144,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: buildGpTheme(),
-        builder: (context, child) => MarksHost(child: child!),
+        builder: (context, child) => MarksHost(store: UserStore.memory(), child: child!),
         home: Scaffold(
           body: Column(
             children: [

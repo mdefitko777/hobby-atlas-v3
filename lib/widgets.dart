@@ -7,6 +7,7 @@
 //   UnderlineTab 밑줄 탭 · PageDots 넘김 점 · ThumbRow 사진 줄 · TagPill 알약 글자 · TogglePill 켜고 끄는 버튼
 //   AccentBar 진행 막대 · SectionPanel 흰 띠 섹션 · AccentRing 브랜드 색 고리(돌아가는 것 포함) · joinDot
 //   AppImage · CircleThumb · RaisedCircleButton · ChannelGlyph · showSoon · showToast · navClearance · 가격 표기
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import 'detail_pane.dart';
@@ -143,8 +144,15 @@ class AppImage extends StatelessWidget {
   Widget build(BuildContext context) {
     Widget fallback(BuildContext _, Object _, StackTrace? _) => _Placeholder(placeholder);
     if (path.isEmpty) return _Placeholder(placeholder);
+    // 인터넷 사진은 기기에 남겨 두고(비행기 모드에서도 본 것은 보인다), 실패하면 이름 글자 자리표시
     final Widget img = path.startsWith('http')
-        ? Image.network(path, fit: fit, errorBuilder: fallback)
+        ? CachedNetworkImage(
+            imageUrl: path,
+            fit: fit,
+            fadeInDuration: const Duration(milliseconds: 150),
+            placeholder: (_, _) => const ColoredBox(color: Gp.soft),
+            errorWidget: (_, _, _) => _Placeholder(placeholder),
+          )
         : Image.asset(path, fit: fit, errorBuilder: fallback);
     if (!grayscale) return img;
     return Opacity(

@@ -24,9 +24,13 @@ import '../widgets.dart';
 import 'c_channel_screen.dart';
 import 'd_kit_detail_screen.dart';
 import 'j_announcement_screen.dart';
+import '../clock.dart';
 
 /// 프로토타입의 오늘
-final calendarToday = DateTime(2026, 10, 25);
+DateTime get calendarToday {
+  final n = appNow();
+  return DateTime(n.year, n.month, n.day);
+}
 
 const _weekdays = ['일', '월', '화', '수', '목', '금', '토'];
 

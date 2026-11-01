@@ -21,6 +21,9 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../channels.dart';
+import '../clock.dart';
+import '../data/catalog.dart';
+import '../data/user_store.dart';
 import '../models.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -29,14 +32,20 @@ import 'd_kit_detail_screen.dart';
 import 'j_announcement_screen.dart';
 import 'o_see_all_screen.dart';
 
-/// 가짜 "최근 본 상품" 기록 — 영구 저장 금지라 상수로 둔다.
-const recentViewedIds = ['gu03', 'be43', 'po21', 'fa30', 'ar35'];
+/// 최근 본 상품 — 상세를 열 때마다 기기에 남긴다. 아직 없으면 가짜 데이터(db.json) 예시
+List<String> get recentViewedIds =>
+    UserStore.instance.recentViewed.isNotEmpty ? UserStore.instance.recentViewed : const ['gu03', 'be43', 'po21', 'fa30', 'ar35'];
 
 /// 이번 달 발매 줄 제목
-const currentMonthTitle = '10월 발매';
+String get currentMonthTitle => '${appNow().month}월 발매';
 
-/// "최근 3일" 기간 (프로토타입의 오늘 = 2026-10-25)
-const recentRangeLabel = '10.23 – 10.25';
+/// "최근 추가" 기간 = 데이터에 가장 늦게 들어온 날 기준 3일 (Gunpula 갱신이 멈추면 그 날짜에 머문다)
+String get recentRangeLabel {
+  final c = Catalog.instance;
+  if (c.recentSince.isEmpty) return '최근 3일';
+  String md(String d) => '${d.substring(5, 7)}.${d.substring(8, 10)}';
+  return '${md(c.recentSince)} – ${md(c.recentUntil)}';
+}
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({

@@ -23,11 +23,13 @@
 //              → v2는 사용자에게 필요한 정가 · 버전 · 출처만, 수정은 "제보" 한 줄로.
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
+import 'package:url_launcher/url_launcher.dart';
 
 import '../api.dart';
 import '../marks.dart';
 import '../detail_pane.dart';
 import '../channels.dart';
+import '../data/user_store.dart';
 import '../models.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -44,8 +46,18 @@ void openKitDetail(BuildContext context, Kit kit, {Loaders loaders = const Loade
 /// 넓은 화면 기준 (사진 왼쪽 · 정보 오른쪽)
 const detailWideBreakpoint = 720.0;
 
-/// 시세를 찾아볼 국내 플랫폼 (프로토타입: 외부 링크는 열지 않는다)
+/// 시세를 찾아볼 국내 플랫폼 → 상품명으로 검색한 페이지를 브라우저로 연다
 const marketPlatforms = ['네이버쇼핑', '번개장터', '중고나라'];
+
+String marketSearchUrl(String platform, String query) {
+  final q = Uri.encodeComponent(query);
+  return switch (platform) {
+    '네이버쇼핑' => 'https://search.shopping.naver.com/search/all?query=$q',
+    '번개장터' => 'https://m.bunjang.co.kr/search/products?q=$q',
+    '중고나라' => 'https://web.joongna.com/search/$q',
+    _ => 'https://www.google.com/search?q=$q',
+  };
+}
 
 class KitDetailScreen extends StatefulWidget {
   const KitDetailScreen({super.key, required this.kit, this.loaders = const Loaders()});
@@ -66,8 +78,18 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
 
   Kit get k => widget.kit;
 
-  /// 내가 낸 돈 (구매함일 때). 바꿔도 저장하지 않는다
-  late int? _paid = widget.kit.purchaseKrw;
+  @override
+  void initState() {
+    super.initState();
+    // 최근 본 상품 (홈 맨 아래 줄) — 그리는 중에 알리지 않게 다음 프레임에
+    WidgetsBinding.instance.addPostFrameCallback((_) => UserStore.instance.markViewed(widget.kit.id));
+  }
+
+  /// 내가 낸 돈 (구매함일 때) — 기기에 저장, 컬렉션 지출 합계에 들어간다
+  late int? _paid = switch (UserStore.instance.entry(widget.kit.id)?['purchase_price']) {
+    final num v => v.toInt(),
+    _ => widget.kit.purchaseKrw,
+  };
 
   /// D-9 국내 시세 자세히 (바텀 시트) — 시세는 이 한 곳에서만 보여 준다
   void _openMarket() {
@@ -120,10 +142,14 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
                 Navigator.pop(sheet);
                 final before = _paid;
                 setState(() => _paid = v); // STATE: 구매가 → 줄 금액
+                UserStore.instance.setDetails(k.id, purchasePrice: v);
                 showToast(
                   context,
                   v == null ? '구매가를 지웠어요' : '구매가 ${won(v)}을 적었어요',
-                  onUndo: () => setState(() => _paid = before),
+                  onUndo: () {
+                    setState(() => _paid = before);
+                    UserStore.instance.setDetails(k.id, purchasePrice: before);
+                  },
                 );
               },
               style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(46)),
@@ -144,7 +170,16 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
     showToast(context, '$what을(를) 복사했어요');
   }
 
-  void _external(String where) => showToast(context, '$where을(를) 브라우저에서 열어요');
+  /// 공식 상품 페이지 · 국내 시세 검색을 브라우저로
+  Future<void> _external(String where) async {
+    final url = where == '공식 상품 페이지' ? k.officialUrl : marketSearchUrl(where, k.name);
+    if (url.isEmpty) {
+      showToast(context, '공식 페이지 주소가 없는 상품이에요');
+      return;
+    }
+    final ok = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    if (!ok && mounted) showToast(context, '$where을(를) 열지 못했어요');
+  }
 
   Future<void> _report() async {
     final ok = await showDialog<bool>(
@@ -175,6 +210,9 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
     ('스케일', k.scale),
     ('발매', dateDot(k.date)),
     ('정가', yen(k.priceJpy)),
+    ('브랜드', k.brands.join(' · ')),
+    if (k.pbOpens.isNotEmpty || k.pbCloses.isNotEmpty) ('PB 예약', '${dateDot(k.pbOpens)} – ${dateDot(k.pbCloses)}'),
+    ('바코드', k.jan),
   ].where((e) => e.$2.isNotEmpty).toList();
 
   void _openSpecs() {

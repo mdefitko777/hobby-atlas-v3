@@ -10,6 +10,8 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hobby_atlas/api.dart';
+import 'package:hobby_atlas/clock.dart';
+import 'package:hobby_atlas/data/user_store.dart';
 import 'package:hobby_atlas/detail_pane.dart';
 import 'package:hobby_atlas/marks.dart';
 import 'package:hobby_atlas/models.dart';
@@ -99,7 +101,7 @@ Future<void> _open(WidgetTester tester, Size size, Widget home) async {
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: _theme(),
-        builder: (context, child) => MarksHost(child: PaneHost(child: child!)),
+        builder: (context, child) => MarksHost(store: UserStore.memory(), child: PaneHost(child: child!)),
         home: home,
       ),
     ),
@@ -110,6 +112,7 @@ Future<void> _open(WidgetTester tester, Size size, Widget home) async {
 const phone = Size(390, 844);
 
 void main() {
+  fixedNow = DateTime(2026, 10, 25, 21); // 가짜 데이터(db.json)의 오늘
   setUpAll(_loadFonts);
   final kits = [for (final k in db['kits']! as List) Kit.fromJson(k)!];
   final profile = Profile.fromJson(db['profile'])!;

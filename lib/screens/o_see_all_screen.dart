@@ -26,6 +26,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'd_kit_detail_screen.dart';
 import 'j_announcement_screen.dart';
+import '../clock.dart';
 
 /// 홈에서 펼칠 수 있는 목록
 enum HomeSection { recent, month, announcements, viewed }
@@ -70,7 +71,7 @@ extension on ReleaseState {
 }
 
 /// 프로토타입의 오늘 (캘린더와 같음) — 발매됨/예정 나누기
-const _today = '2026-10-25';
+String get _today => appNow().toIso8601String().substring(0, 10);
 
 /// O-2 필터 조건 (가짜 저장 없음, 이 목록 안에서만)
 class KitFilter {

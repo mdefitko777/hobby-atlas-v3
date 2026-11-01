@@ -25,9 +25,10 @@ import 'd_kit_detail_screen.dart';
 import 'i_profile_screen.dart';
 import 'j_announcement_screen.dart';
 import 'k_settings_screen.dart';
+import '../clock.dart';
 
 /// 프로토타입의 "지금" (캘린더의 오늘과 같은 날 저녁)
-final noticeNow = DateTime(2026, 10, 25, 21);
+DateTime get noticeNow => appNow();
 
 void openNotifications(BuildContext context, {required List<String> myChannels, Loaders loaders = const Loaders()}) {
   openPage(context, NotificationsScreen(myChannels: myChannels, loaders: loaders));

@@ -56,6 +56,15 @@ class Kit {
     required this.market,
     required this.keywords,
     this.purchaseKrw,
+    this.seriesKey = '',
+    this.priceKrw,
+    this.pbOpens = '',
+    this.pbCloses = '',
+    this.officialUrl = '',
+    this.jan = '',
+    this.brands = const [],
+    this.firstSeen = '',
+    this.blob = '',
   });
 
   final String id;
@@ -90,6 +99,70 @@ class Kit {
 
   /// 구매함일 때 내가 실제로 낸 돈(원). 없으면 null
   final int? purchaseKrw;
+
+  // ── Gunpula 실제 데이터에만 있는 값 ──
+  final String seriesKey;
+
+  /// 한국 포켓몬스토어 상품의 원화 가격
+  final int? priceKrw;
+
+  /// 프리미엄 반다이 예약 기간 (Wayback 사본이라 오래됐을 수 있음)
+  final String pbOpens;
+  final String pbCloses;
+
+  /// 공식 상품 페이지 (source_urls 첫 번째)
+  final String officialUrl;
+
+  /// 바코드 13자리 (kit_id · 주소 · 품번에서 찾은 것, 약 40%만 있음)
+  final String jan;
+
+  /// 출처 사이트로 추정한 브랜드
+  final List<String> brands;
+
+  /// Gunpula 에 처음 들어온 날 (kit-first-seen.json)
+  final String firstSeen;
+
+  /// 검색용 소문자 한 줄 (이름 4개 언어 · 작품 · 라인 · JAN …)
+  final String blob;
+
+  /// lib/data/gunpula.dart mapKitsJob 의 결과 → Kit.
+  /// [recentSince] 이후에 처음 들어온 상품 = 최근 추가, [monthPrefix]('yyyy-mm')에 발매 = 이번 달
+  static Kit fromSlim(Map<String, Object?> j, {required String recentSince, required String monthPrefix}) {
+    final firstSeen = _s(j, 'firstSeen');
+    final date = _s(j, 'date');
+    return Kit(
+      id: _s(j, 'id'),
+      franchiseId: _s(j, 'franchiseId'),
+      name: _s(j, 'name'),
+      nameJa: _s(j, 'nameJa'),
+      series: _s(j, 'series'),
+      line: _s(j, 'line'),
+      type: _s(j, 'type'),
+      scale: _s(j, 'scale'),
+      universe: _s(j, 'universe'),
+      date: date,
+      priceJpy: _iOrNull(j, 'priceJpy'),
+      image: _s(j, 'image'),
+      gallery: _strs(j['gallery']),
+      limited: _b(j, 'limited'),
+      pb: _b(j, 'pb'),
+      status: CollectStatus.none, // 내 기록은 UserStore 에서 (lib/marks.dart)
+      wantedQty: 0,
+      recent: firstSeen.isNotEmpty && recentSince.isNotEmpty && firstSeen.compareTo(recentSince) >= 0,
+      month: date.startsWith(monthPrefix),
+      market: null,
+      keywords: _strs(j['keywords']),
+      seriesKey: _s(j, 'seriesKey'),
+      priceKrw: _iOrNull(j, 'priceKrw'),
+      pbOpens: _s(j, 'pbOpens'),
+      pbCloses: _s(j, 'pbCloses'),
+      officialUrl: _s(j, 'officialUrl'),
+      jan: _s(j, 'jan'),
+      brands: _strs(j['brands']),
+      firstSeen: firstSeen,
+      blob: _s(j, 'blob'),
+    );
+  }
 
   static Kit? fromJson(Object? json) {
     if (json is! Map<String, Object?>) return null;
@@ -322,7 +395,11 @@ class Announcement {
     required this.source,
     required this.image,
     required this.hero,
+    this.url = '',
   });
+
+  /// 공식 원문 (뉴스 · 유튜브)
+  final String url;
 
   final String id;
   final String franchiseId;
@@ -584,6 +661,8 @@ class AppNotice {
 bool kitMatches(Kit k, String query) {
   final q = query.trim().toLowerCase();
   if (q.isEmpty) return true;
+  // 실제 데이터: 미리 만든 소문자 한 줄에서 (8,800개를 글자마다 다시 소문자로 바꾸지 않게)
+  if (k.blob.isNotEmpty) return q.split(RegExp(r'\s+')).every(k.blob.contains);
   // keywords: 한글 줄임말(수성 · 철혈 …) · 다른 표기로도 찾히게
   return [k.name, k.nameJa, k.series, k.line, k.type, ...k.keywords].any((f) => f.toLowerCase().contains(q));
 }
