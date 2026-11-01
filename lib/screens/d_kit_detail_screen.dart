@@ -223,7 +223,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
   Future<void> _report() => reportDataIssue(context, kit: k);
 
   /// D-7 수량 (좋아요 · 구매함일 때) — 한 번 누를 때마다 저장 (동기화 · 컬렉션 합계)
-  void _setQty(int q) => UserStore.instance.setQuantity(k.id, q); // STATE: 수량 (UserStore → Marks 다시 그림)
+  void _setQty(int q) => Marks.read(context).store.setQuantity(k.id, q); // STATE: 수량 (UserStore → Marks 다시 그림)
 
   /// 공식 정보 (요약 줄과 바텀 시트가 같은 목록을 쓴다)
   List<(String, String)> get _specs => [

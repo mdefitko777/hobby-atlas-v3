@@ -14,6 +14,8 @@ import 'package:hobby_atlas/data/user_store.dart';
 import 'package:hobby_atlas/models.dart';
 import 'package:hobby_atlas/notifications/feed_rules.dart';
 import 'package:hobby_atlas/notifications/notify_models.dart';
+import 'package:hobby_atlas/screens/b_search_screen.dart' show sentenceExamples;
+import 'package:hobby_atlas/sentence_search.dart';
 
 const dataDir = String.fromEnvironment('GUNPULA_DATA');
 
@@ -58,6 +60,17 @@ void main() {
       kitMatches(c.kits.firstWhere((k) => k.jan.isNotEmpty), c.kits.firstWhere((k) => k.jan.isNotEmpty).jan),
       isTrue,
     );
+  }, skip: skip);
+
+  test('설명으로 찾기: 예시 문장마다 후보 · 바코드로 상품', () {
+    final kits = Catalog.instance.kits;
+    for (final q in sentenceExamples) {
+      final hits = sentenceSearch(q, kits);
+      expect(hits, isNotEmpty, reason: q);
+      expect(hits.first.score, greaterThanOrEqualTo(60), reason: q);
+    }
+    final withJan = kits.firstWhere((k) => k.jan.isNotEmpty);
+    expect(kitsWithBarcode(kits, withJan.jan), contains(withJan));
   }, skip: skip);
 
   test('건담 도감: 작품 묶음 · 기체 · 내 기록으로 점등', () async {
