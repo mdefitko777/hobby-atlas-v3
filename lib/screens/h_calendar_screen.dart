@@ -148,7 +148,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
 
   /// 이 달의 일정 — 'yyyy-mm-dd' 는 그날, 'yyyy-mm' 은 날짜 미정
   List<_Event> _events(_CalData d, Marks marks) {
-    final ym = '${_month.year}-${_month.month.toString().padLeft(2, '0')}';
+    final ym = monthKey(_month);
     int? dayOf(String date) => date.length >= 10 ? int.tryParse(date.substring(8, 10)) : null;
     _find.filter.statusOf = marks.statusOf;
     if (_mine) {

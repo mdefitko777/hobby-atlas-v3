@@ -188,23 +188,6 @@ class _Stats extends StatelessWidget {
   }
 }
 
-/// 상품의 다가오는 날짜 (PB 예약 마감 > 발매일) — 없으면 null. My Page · 캘린더 공통
-({String sortKey, String label, bool urgent})? upcomingOf(Kit k, {bool wanted = true}) {
-  final now = appNow();
-  final today = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-  if (wanted && k.pbCloses.length >= 10 && k.pbCloses.compareTo(today) >= 0) {
-    final d = DateTime.parse(k.pbCloses).difference(DateTime(now.year, now.month, now.day)).inDays;
-    return (sortKey: k.pbCloses, label: d == 0 ? 'PB 오늘' : 'PB D-$d', urgent: true);
-  }
-  if (k.date.length == 10 && k.date.compareTo(today) >= 0) {
-    return (sortKey: k.date, label: dateDot(k.date.substring(5)), urgent: false);
-  }
-  if (k.date.length == 7 && k.date.compareTo(today.substring(0, 7)) >= 0) {
-    return (sortKey: '${k.date}-99', label: '${int.parse(k.date.substring(5))}월', urgent: false);
-  }
-  return null;
-}
-
 /// A-22 좋아요 — 날짜가 다가오는 것부터 4개 (날짜 없는 것은 최근 담은 순으로 채움)
 class _LikedSoon extends StatelessWidget {
   const _LikedSoon({required this.kits, required this.loaders});

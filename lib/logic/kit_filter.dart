@@ -1,5 +1,6 @@
 // 상품 필터 규칙 — 내 상태 · 발매 · 판매 · 가격 · 종류 · 라인 · 작품 (화면 없이 테스트할 수 있는 순수 Dart)
 import '../clock.dart';
+import '../format.dart';
 import '../models.dart';
 import 'kit_rules.dart';
 
@@ -52,7 +53,7 @@ bool isBaseOrEvent(Kit k) {
   return n.contains('ガンダムベース') || n.contains('GUNDAM BASE') || n.contains('イベント') || n.contains('EXPO');
 }
 
-String _today() => appNow().toIso8601String().substring(0, 10);
+String _today() => dayKey(appNow());
 
 /// 필터 조건 (이 목록 안에서만, 저장하지 않음)
 class KitFilter {

@@ -1,5 +1,7 @@
 // db.json 레코드 → Dart 객체. 모양이 맞지 않는 레코드는 null로 버린다(화면이 죽지 않게).
 // db.json 최상위 키: kits · worlds · guideWorks · guideUnits · bbxTops · bbxParts · announcements · profile
+import 'json_util.dart';
+
 enum CollectStatus { owned, wanted, none }
 
 CollectStatus parseCollectStatus(Object? v) => switch (v) {
@@ -8,7 +10,6 @@ CollectStatus parseCollectStatus(Object? v) => switch (v) {
   _ => CollectStatus.none,
 };
 
-String _s(Map<String, Object?> j, String k) => j[k] is String ? j[k]! as String : '';
 int _i(Map<String, Object?> j, String k) => j[k] is num ? (j[k]! as num).toInt() : 0;
 int? _iOrNull(Map<String, Object?> j, String k) => j[k] is num ? (j[k]! as num).toInt() : null;
 bool _b(Map<String, Object?> j, String k) => j[k] == true;
@@ -132,21 +133,21 @@ class Kit {
   /// lib/data/gunpula.dart mapKitsJob 의 결과 → Kit.
   /// [recentSince] 이후에 처음 들어온 상품 = 최근 추가, [monthPrefix]('yyyy-mm')에 발매 = 이번 달
   static Kit fromSlim(Map<String, Object?> j, {required String recentSince, required String monthPrefix}) {
-    final firstSeen = _s(j, 'firstSeen');
-    final date = _s(j, 'date');
+    final firstSeen = jStr(j['firstSeen']);
+    final date = jStr(j['date']);
     return Kit(
-      id: _s(j, 'id'),
-      franchiseId: _s(j, 'franchiseId'),
-      name: _s(j, 'name'),
-      nameJa: _s(j, 'nameJa'),
-      series: _s(j, 'series'),
-      line: _s(j, 'line'),
-      type: _s(j, 'type'),
-      scale: _s(j, 'scale'),
-      universe: _s(j, 'universe'),
+      id: jStr(j['id']),
+      franchiseId: jStr(j['franchiseId']),
+      name: jStr(j['name']),
+      nameJa: jStr(j['nameJa']),
+      series: jStr(j['series']),
+      line: jStr(j['line']),
+      type: jStr(j['type']),
+      scale: jStr(j['scale']),
+      universe: jStr(j['universe']),
       date: date,
       priceJpy: _iOrNull(j, 'priceJpy'),
-      image: _s(j, 'image'),
+      image: jStr(j['image']),
       gallery: _strs(j['gallery']),
       limited: _b(j, 'limited'),
       pb: _b(j, 'pb'),
@@ -156,16 +157,16 @@ class Kit {
       month: date.startsWith(monthPrefix),
       market: null,
       keywords: _strs(j['keywords']),
-      seriesKey: _s(j, 'seriesKey'),
+      seriesKey: jStr(j['seriesKey']),
       priceKrw: _iOrNull(j, 'priceKrw'),
-      pbOpens: _s(j, 'pbOpens'),
-      pbCloses: _s(j, 'pbCloses'),
-      officialUrl: _s(j, 'officialUrl'),
-      jan: _s(j, 'jan'),
+      pbOpens: jStr(j['pbOpens']),
+      pbCloses: jStr(j['pbCloses']),
+      officialUrl: jStr(j['officialUrl']),
+      jan: jStr(j['jan']),
       brands: _strs(j['brands']),
       firstSeen: firstSeen,
-      blob: _s(j, 'blob'),
-      goodsKind: _s(j, 'goodsKind'),
+      blob: jStr(j['blob']),
+      goodsKind: jStr(j['goodsKind']),
     );
   }
 
@@ -175,17 +176,17 @@ class Kit {
     if (id is! String) return null;
     return Kit(
       id: id,
-      franchiseId: _s(json, 'franchiseId'),
-      name: _s(json, 'name'),
-      nameJa: _s(json, 'nameJa'),
-      series: _s(json, 'series'),
-      line: _s(json, 'line'),
-      type: _s(json, 'type'),
-      scale: _s(json, 'scale'),
-      universe: _s(json, 'universe'),
-      date: _s(json, 'date'),
+      franchiseId: jStr(json['franchiseId']),
+      name: jStr(json['name']),
+      nameJa: jStr(json['nameJa']),
+      series: jStr(json['series']),
+      line: jStr(json['line']),
+      type: jStr(json['type']),
+      scale: jStr(json['scale']),
+      universe: jStr(json['universe']),
+      date: jStr(json['date']),
       priceJpy: _iOrNull(json, 'priceJpy'),
-      image: _s(json, 'image'),
+      image: jStr(json['image']),
       gallery: _strs(json['gallery']),
       limited: _b(json, 'limited'),
       pb: _b(json, 'pb'),
@@ -230,10 +231,10 @@ class World {
     if (id is! String) return null;
     return World(
       id: id,
-      franchiseId: _s(json, 'franchiseId'),
-      label: _s(json, 'label'),
-      subtitle: _s(json, 'subtitle'),
-      image: _s(json, 'image'),
+      franchiseId: jStr(json['franchiseId']),
+      label: jStr(json['label']),
+      subtitle: jStr(json['subtitle']),
+      image: jStr(json['image']),
       total: _i(json, 'total'),
       owned: _i(json, 'owned'),
       kitIds: _strs(json['kitIds']),
@@ -296,12 +297,12 @@ class GuideWork {
     if (id is! String) return null;
     return GuideWork(
       id: id,
-      section: _s(json, 'section'),
-      name: _s(json, 'name'),
-      image: _s(json, 'image'),
+      section: jStr(json['section']),
+      name: jStr(json['name']),
+      image: jStr(json['image']),
       total: _i(json, 'total'),
       owned: _i(json, 'owned'),
-      keywords: _s(json, 'keywords'),
+      keywords: jStr(json['keywords']),
       liked: _i(json, 'liked'),
       grades: _strs(json['grades']),
       kits: _i(json, 'kits'),
@@ -366,13 +367,13 @@ class GuideUnit {
     if (id is! String) return null;
     return GuideUnit(
       id: id,
-      workId: _s(json, 'workId'),
-      name: _s(json, 'name'),
-      nameEn: _s(json, 'nameEn'),
-      image: _s(json, 'image'),
+      workId: jStr(json['workId']),
+      name: jStr(json['name']),
+      nameEn: jStr(json['nameEn']),
+      image: jStr(json['image']),
       status: parseCollectStatus(json['status']),
       kitIds: _strs(json['kitIds']),
-      type: _s(json, 'type'),
+      type: jStr(json['type']),
     );
   }
 }
@@ -419,11 +420,11 @@ class BbxPart {
     final raw = json['stats'];
     return BbxPart(
       id: id,
-      typeLabel: _s(json, 'typeLabel'),
-      name: _s(json, 'name'),
-      image: _s(json, 'image'),
+      typeLabel: jStr(json['typeLabel']),
+      name: jStr(json['name']),
+      image: jStr(json['image']),
       have: _b(json, 'have'),
-      topId: _s(json, 'topId'),
+      topId: jStr(json['topId']),
       stats: raw is Map<String, Object?>
           ? {
               for (final e in raw.entries)
@@ -463,9 +464,9 @@ class BbxTop {
     final parts = json['parts'];
     return BbxTop(
       id: id,
-      line: _s(json, 'line'),
-      name: _s(json, 'name'),
-      image: _s(json, 'image'),
+      line: jStr(json['line']),
+      name: jStr(json['name']),
+      image: jStr(json['image']),
       owned: _i(json, 'owned'),
       total: _i(json, 'total'),
       parts: parts is List ? parts.map(BbxPart.fromJson).nonNulls.toList() : const [],
@@ -512,12 +513,12 @@ class Announcement {
     if (id is! String) return null;
     return Announcement(
       id: id,
-      franchiseId: _s(json, 'franchiseId'),
-      title: _s(json, 'title'),
-      status: _s(json, 'status'),
-      date: _s(json, 'date'),
-      source: _s(json, 'source'),
-      image: _s(json, 'image'),
+      franchiseId: jStr(json['franchiseId']),
+      title: jStr(json['title']),
+      status: jStr(json['status']),
+      date: jStr(json['date']),
+      source: jStr(json['source']),
+      image: jStr(json['image']),
       hero: _b(json, 'hero'),
     );
   }
@@ -573,13 +574,13 @@ class Profile {
     final friends = json['friends'];
     final suggested = json['suggested'];
     return Profile(
-      name: _s(json, 'name'),
-      handle: _s(json, 'handle'),
-      avatarText: _s(json, 'avatarText'),
+      name: jStr(json['name']),
+      handle: jStr(json['handle']),
+      avatarText: jStr(json['avatarText']),
       tags: _strs(json['tags']),
       spendKrw: _i(json, 'spendKrw'),
-      workspace: _s(json, 'workspace'),
-      inviteCode: _s(json, 'inviteCode'),
+      workspace: jStr(json['workspace']),
+      inviteCode: jStr(json['inviteCode']),
       members: [
         if (members is List)
           for (final m in members.whereType<Map<String, Object?>>()) Member.fromJson(m),
@@ -591,17 +592,17 @@ class Profile {
       suggested: [
         if (suggested is List)
           for (final m in suggested.whereType<Map<String, Object?>>())
-            (name: _s(m, 'name'), handle: _s(m, 'handle'), mutual: _i(m, 'mutual')),
+            (name: jStr(m['name']), handle: jStr(m['handle']), mutual: _i(m, 'mutual')),
       ],
       showcase: [
         if (showcase is List)
           for (final m in showcase.whereType<Map<String, Object?>>())
             ShowcasePhoto(
-              id: _s(m, 'id'),
-              owner: _s(m, 'owner'),
-              image: _s(m, 'image'),
-              unit: _s(m, 'unit'),
-              work: _s(m, 'work'),
+              id: jStr(m['id']),
+              owner: jStr(m['owner']),
+              image: jStr(m['image']),
+              unit: jStr(m['unit']),
+              work: jStr(m['work']),
               watermark: _b(m, 'watermark'),
             ),
       ],
@@ -630,15 +631,15 @@ class Member {
   factory Member.fromJson(Map<String, Object?> m) {
     final guide = m['guide'];
     return Member(
-      name: _s(m, 'name'),
-      handle: _s(m, 'handle'),
-      role: _s(m, 'role'),
+      name: jStr(m['name']),
+      handle: jStr(m['handle']),
+      role: jStr(m['role']),
       self: _b(m, 'self'),
       liked: _i(m, 'liked'),
       lit: _i(m, 'lit'),
       owned: _i(m, 'owned'),
       verified: _i(m, 'verified'),
-      status: _s(m, 'status'),
+      status: jStr(m['status']),
       group: m['group'] is String ? m['group']! as String : 'friend',
       likedIds: _strs(m['likedIds']),
       ownedIds: _strs(m['ownedIds']),
@@ -732,21 +733,21 @@ class AppNotice {
   static AppNotice? fromJson(Object? json) {
     if (json is! Map<String, Object?>) return null;
     final id = json['id'];
-    final at = DateTime.tryParse(_s(json, 'at'));
+    final at = DateTime.tryParse(jStr(json['at']));
     final type = NoticeType.values.where((t) => t.name == json['type']).firstOrNull;
     if (id is! String || at == null || type == null) return null;
     return AppNotice(
       id: id,
       type: type,
-      title: _s(json, 'title'),
-      body: _s(json, 'body'),
-      image: _s(json, 'image'),
+      title: jStr(json['title']),
+      body: jStr(json['body']),
+      image: jStr(json['image']),
       at: at,
       read: _b(json, 'read'),
-      franchiseId: _s(json, 'franchiseId'),
-      kitId: _s(json, 'kitId'),
-      annId: _s(json, 'annId'),
-      friend: _s(json, 'friend'),
+      franchiseId: jStr(json['franchiseId']),
+      kitId: jStr(json['kitId']),
+      annId: jStr(json['annId']),
+      friend: jStr(json['friend']),
     );
   }
 }

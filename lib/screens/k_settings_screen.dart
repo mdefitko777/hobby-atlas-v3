@@ -296,7 +296,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   /// 내 기록을 파일로 (토큰 · 비밀값은 원래 없음)
   Future<void> _export() async {
     final now = DateTime.now();
-    final day = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final day = dayKey(now);
     final json = const JsonEncoder.withIndent(
       ' ',
     ).convert({'exported_at': now.toUtc().toIso8601String(), 'app': 'hobby-atlas-v3', ...UserStore.instance.toJson()});

@@ -335,7 +335,7 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
                   for (final c in _chapters)
                     if ([for (final id in c.unitIds) ?byId[id]] case final list when list.isNotEmpty) ...[
                       SectionHeader(
-                        [c.episodes, c.name].where((x) => x.isNotEmpty).join(' · '),
+                        joinDot([c.episodes, c.name]),
                         subtitle:
                             '수집 ${list.where((u) => _tierOf(m, u).index >= CellTier.owned.index).length}'
                             ' / ${list.length}',
@@ -548,11 +548,7 @@ class _KitLine extends StatelessWidget {
       image: kit.image,
       title: kit.name,
       tag: roleLabels[role] ?? '',
-      subtitle: [
-        kit.line,
-        if (kit.scale.isNotEmpty) kit.scale,
-        if (kit.date.length >= 7) kit.date.substring(0, 7).replaceAll('-', '.'),
-      ].where((s) => s.isNotEmpty).join(' · '),
+      subtitle: joinDot([kit.line, kit.scale, if (kit.date.length >= 7) dateDot(kit.date.substring(0, 7))]),
       size: 52,
       padding: const EdgeInsets.symmetric(vertical: 6),
       onTap: onTap,

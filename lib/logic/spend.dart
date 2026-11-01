@@ -1,4 +1,5 @@
 // 지출 계산 — 구매함 기록(collection-store 모양)의 구매가 × 수량 (순수 Dart)
+import '../format.dart';
 import '../json_util.dart';
 
 /// 기록 한 줄의 수량 1–99 (기록이 없거나 값이 없으면 1)
@@ -21,7 +22,7 @@ int spendTotal(Map<String, Map<String, Object?>> items, int? Function(String id)
 
 /// [now] 가 든 달의 지출 — 산 날짜를 따로 적지 않아, 구매함 기록을 마지막으로 바꾼 달(기기 시간)로 센다
 int spendInMonthOf(Map<String, Map<String, Object?>> items, DateTime now, int? Function(String id)? listPrice) {
-  final prefix = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+  final prefix = monthKey(now);
   return items.entries.fold(0, (s, e) {
     final at = DateTime.tryParse(jStr(e.value['updated_at']))?.toLocal().toIso8601String() ?? '';
     return e.value['status'] == 'owned' && at.startsWith(prefix) ? s + paidFor(e.key, e.value, listPrice) : s;

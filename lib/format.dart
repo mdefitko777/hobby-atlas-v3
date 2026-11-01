@@ -10,6 +10,17 @@ String yen(int? v) => v == null ? '가격 미정' : '¥${_comma(v)}';
 /// 날짜 한 가지 모양: "2026-10-05" → "2026.10.05", "2027-07" → "2027.07" (상세 · 목록 · 공고 공통)
 String dateDot(String d) => d.replaceAll('-', '.');
 
+String _two(int n) => n.toString().padLeft(2, '0');
+
+/// 달 열쇠 "2026-10" (그 DateTime 의 시간대 그대로 — 발매월 · 이번 달 지출 비교)
+String monthKey(DateTime d) => '${d.year}-${_two(d.month)}';
+
+/// 날 열쇠 "2026-10-05"
+String dayKey(DateTime d) => '${monthKey(d)}-${_two(d.day)}';
+
+/// 짧은 때: "11.01 13:20" (마지막 확인 시각)
+String shortDateTime(DateTime d) => '${d.month}.${_two(d.day)} ${_two(d.hour)}:${_two(d.minute)}';
+
 /// 원화: 41,000원
 String won(int v) => '${_comma(v)}원';
 
