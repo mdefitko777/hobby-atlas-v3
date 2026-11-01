@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 릴리스 빌드의 리소스 줄이기(R8)가 Dart 에서 이름으로만 부르는 알림 아이콘을 지우지 않게 -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_stat_notify" />

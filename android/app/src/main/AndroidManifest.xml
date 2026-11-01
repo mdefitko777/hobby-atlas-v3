@@ -1,6 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Gunpula 데이터(GitHub Pages) · 이미지 · 동기화 -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- 새 소식 알림: 안드로이드 13+ 알림 권한 · WorkManager 12시간 확인(인터넷 연결 조건 · 재부팅 뒤 다시 등록) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <application
         android:label="Hobby Atlas"
         android:name="${applicationName}"

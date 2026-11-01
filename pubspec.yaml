@@ -43,6 +43,9 @@ dependencies:
   supabase_flutter: ^2.18.3
   # 로그인 세션(refresh token)을 SharedPreferences 평문 대신 안드로이드 키스토어 암호화로 보관
   flutter_secure_storage: ^11.2.0
+  # 새 소식 알림 (Phase 4a): 휴대폰 알림 · 채널 · 누르면 이동 / 앱이 꺼져 있어도 12시간마다 확인 (안드로이드 WorkManager)
+  flutter_local_notifications: ^22.3.2
+  workmanager: ^0.10.10
 
 dev_dependencies:
   flutter_test:

@@ -10,6 +10,8 @@ import 'package:hobby_atlas/data/derive.dart';
 import 'package:hobby_atlas/data/gunpula.dart';
 import 'package:hobby_atlas/data/user_store.dart';
 import 'package:hobby_atlas/models.dart';
+import 'package:hobby_atlas/notifications/feed_rules.dart';
+import 'package:hobby_atlas/notifications/notify_models.dart';
 
 const dataDir = String.fromEnvironment('GUNPULA_DATA');
 
@@ -92,6 +94,48 @@ void main() {
     expect(anns, isNotEmpty);
     expect(anns.first.title, isNotEmpty);
     expect(anns.where((a) => a.hero).length, lessThanOrEqualTo(6));
-    expect(await deriveNotifications(), isNotEmpty);
   }, skip: skip);
+
+  test('알림: 실제 update-feed-lite 30일 → 기본 규칙 · 처음 실행', () {
+    final entries = parseFeed(jsonDecode(File('$dataDir/update-feed-lite.json').readAsStringSync()));
+    expect(entries.length, greaterThan(10));
+    final plan = planCheck(
+      config: NotifyConfig(channels: const ['gundam', 'beyblade', 'pokemon']),
+      state: NotifyState(),
+      entries: entries,
+      manifestSig: 'x',
+      now: DateTime.parse('${entries.first.date}T12:00:00'),
+    );
+    expect(plan.records, isNotEmpty);
+    expect(plan.records.every((r) => r.seen), isTrue);
+    // 알림함 줄 → 화면: 카탈로그에 있는 상품이면 사진이 붙는다
+    final notices = [for (final r in plan.records) noticeOf(r, Catalog.instance.byId[r.kitId])];
+    expect(notices.where((n) => n.image.isNotEmpty).length, greaterThan(notices.length ~/ 2));
+    // ignore: avoid_print
+    print('알림 첫 실행 ${plan.records.length}줄 (${entries.first.date} 기준 7일): '
+        '${plan.records.map((r) => r.franchise).toSet().join(',')}');
+  }, skip: skip);
+
+  // Gunpula 의 새 소식 파일(scripts/atlas/build_notify_feed.mjs)이 있는 데이터 폴더에서만 (Gunpula 브랜치 atlas/notify-feed)
+  final atlasFile = File('$dataDir/atlas/notify-feed.json');
+  test('알림: 새 소식 파일 ⊇ lite 피드 (알릴 만한 상품) · manifest 와 같은 판', () {
+    final atlas = parseFeed(jsonDecode(atlasFile.readAsStringSync()));
+    final lite = parseFeed(jsonDecode(File('$dataDir/update-feed-lite.json').readAsStringSync()));
+    final manifest = jsonDecode(File('$dataDir/split/manifest.json').readAsStringSync());
+    expect(feedMatches(atlas, manifest), isTrue);
+    final atlasIds = {
+      for (final e in atlas)
+        for (final i in e.items) '${e.date}|${i.kitId}',
+    };
+    final liteIds = {
+      for (final e in lite)
+        if (e.date.compareTo(atlas.last.date) >= 0)
+          for (final i in e.items)
+            if (i.meaningful) '${e.date}|${i.kitId}',
+    };
+    expect(liteIds.difference(atlasIds), isEmpty);
+    expect(atlas.expand((e) => e.items).every((i) => i.meaningful), isTrue); // 사진만 바뀐 것은 이미 빠져 있다
+    // ignore: avoid_print
+    print('새 소식 파일 ${atlas.length}일 ${atlasIds.length}개 · 같은 기간 lite ${liteIds.length}개');
+  }, skip: skip ?? (atlasFile.existsSync() ? null : 'atlas/notify-feed.json 없음'));
 }

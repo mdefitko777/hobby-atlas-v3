@@ -13,10 +13,12 @@ import 'package:hobby_atlas/detail_pane.dart';
 import 'package:hobby_atlas/marks.dart';
 import 'package:hobby_atlas/widgets.dart';
 import 'package:hobby_atlas/models.dart';
+import 'package:hobby_atlas/notifications/notify_store.dart';
 import 'package:hobby_atlas/screens/d_kit_detail_screen.dart';
 import 'package:hobby_atlas/screens/f_collection_screen.dart';
 import 'package:hobby_atlas/screens/g_guide_view.dart';
 import 'package:hobby_atlas/screens/i_profile_screen.dart';
+import 'package:hobby_atlas/screens/k_settings_screen.dart';
 import 'package:hobby_atlas/screens/l_friend_collection_screen.dart';
 import 'package:hobby_atlas/screens/n_notifications_screen.dart';
 import 'package:hobby_atlas/screens/s_app_shell.dart';
@@ -89,7 +91,12 @@ void main() {
     '상품 상세': () => KitDetailScreen(kit: kit, loaders: fakeLoaders),
     '내 정보': () => ProfileScreen(loaders: fakeLoaders, onJump: (_) {}),
     '친구 컬렉션': () => FriendCollectionScreen(friend: friend, initial: CollectionJump.guide, loaders: fakeLoaders),
-    '알림': () => NotificationsScreen(myChannels: const ['gundam', 'beyblade', 'pokemon'], loaders: fakeLoaders),
+    '알림': () => NotificationsScreen(
+      myChannels: const ['gundam', 'beyblade', 'pokemon'],
+      loaders: fakeLoaders,
+      notify: NotifyStore.memory(),
+    ),
+    '설정 (알림 규칙)': () => SettingsScreen(notify: NotifyStore.memory()),
     '작품 도감': () => WorkGuideScreen(work: seed, loaders: fakeLoaders),
   };
 
