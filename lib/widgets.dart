@@ -852,7 +852,17 @@ class RingAvatar extends StatelessWidget {
   }
 }
 
-/// Lv 알약 (그라데이션) — 도감 레벨 막대 · 친구 서랍
+/// 레벨 색 — 10레벨마다 바뀐다: 회색 · 초록 · 파랑 · 보라 · 금색 · 빨강(50+)
+Color levelColor(int level) => switch (level ~/ 10) {
+  0 => const Color(0xFF888780),
+  1 => const Color(0xFF639922),
+  2 => Gp.accent,
+  3 => const Color(0xFF7F77DD),
+  4 => const Color(0xFFBA7517),
+  _ => const Color(0xFFE24B4A),
+};
+
+/// Lv 표 (레벨 색) — My Page · 도감 레벨 막대 · 친구 서랍
 class LevelChip extends StatelessWidget {
   const LevelChip({super.key, required this.level, this.small = false});
   final int level;
@@ -862,7 +872,7 @@ class LevelChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: small ? 6 : 9, vertical: small ? 1 : 3),
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), gradient: Gp.accentGradient),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(5), color: levelColor(level)),
       child: Text(
         'Lv.$level',
         style: TextStyle(fontSize: small ? Gp.t11 : Gp.t12, fontWeight: FontWeight.w700, color: Colors.white),
@@ -1277,3 +1287,10 @@ String dateDot(String d) => d.replaceAll('-', '.');
 
 /// 원화: 41,000원
 String won(int v) => '${_comma(v)}원';
+
+/// 원화 짧게 (My Page 숫자 칸): 9,800원 · 18.4만 · 243만
+String wonShort(int v) {
+  if (v < 10000) return won(v);
+  final man = v / 10000;
+  return man < 100 ? '${man.toStringAsFixed(1).replaceAll('.0', '')}만' : '${man.round()}만';
+}

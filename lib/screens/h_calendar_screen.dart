@@ -4,7 +4,8 @@
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
 // │ H-1  │ ChannelHeader                      │ 아바타 줄 + 내 채널 바 (C-0 공용)       │ P04 · P06     │
 // │ H-2  │ ‹ 2026년 10월 › + 오늘              │ 달 넘기기 · 오늘로                      │ P03 · P07     │
-// │ H-3  │ 7열 달력 + 날짜 아래 ● · ○ + 범례     │ ● 발매일(확정) · ○ 예고·공지가 있는 날    │ P01 · P06     │
+// │ H-3  │ 7열 달력 + 날짜 아래 색 점 (뜻은 ?)    │ 파랑 발매 · 회색 예고 · 빨강 PB 마감 · 민트 산 날 │ P01 · P06 │
+// │ H-9  │ 밑줄 탭 전체 · 내 일정               │ 좋아요 · 구매함 상품의 날짜만            │ P06           │
 // │ H-3b │ 전체 · 발매 · 예고 밑줄 탭            │ 일정 종류 거르기                        │ P06 · P07     │
 // │ H-4  │ 날짜 누르기 (다시 누르면 해제)        │ 그날만 보기 / 한 달 전체 보기           │ P03           │
 // │ H-5  │ 날짜별 묶음 목록 + 종류 알약 + D-n    │ 발매(검정 알약) · 예고 단계(회색 알약)   │ P01 · P02     │
@@ -18,6 +19,8 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../channels.dart';
+import '../data/user_store.dart';
+import '../marks.dart';
 import '../models.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -36,7 +39,22 @@ const _weekdays = ['일', '월', '화', '수', '목', '금', '토'];
 
 /// 달력 한 줄의 일정 (발매 상품 또는 공식 예고)
 class _Event {
-  const _Event({required this.title, required this.image, required this.sub, this.kit, this.ann, this.day});
+  const _Event({
+    required this.title,
+    required this.image,
+    required this.sub,
+    this.kit,
+    this.ann,
+    this.day,
+    this.dot = Gp.accent,
+    this.tag = '',
+  });
+
+  /// 달력 점 색: 파랑 발매 · 회색 예고 · 빨강 PB 예약 마감 · 민트 산 날
+  final Color dot;
+
+  /// 줄 알약 글자 (비면 발매 / 예고 단계)
+  final String tag;
   final String title;
   final String image;
   final String sub;
@@ -85,6 +103,9 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
   /// 0 = 전체 · 1 = 발매 · 2 = 예고
   int _kind = 0;
 
+  /// 전체 / 내 일정 (좋아요 · 구매함 상품의 날짜만)
+  bool _mine = false;
+
   @override
   List<String> get myChannels => widget.myChannels;
 
@@ -115,9 +136,50 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
   });
 
   /// 이 달의 일정 — 'yyyy-mm-dd' 는 그날, 'yyyy-mm' 은 날짜 미정
-  List<_Event> _events(_CalData d) {
+  List<_Event> _events(_CalData d, Marks marks) {
     final ym = '${_month.year}-${_month.month.toString().padLeft(2, '0')}';
     int? dayOf(String date) => date.length >= 10 ? int.tryParse(date.substring(8, 10)) : null;
+    if (_mine) {
+      final me = UserStore.instance;
+      final out = <_Event>[];
+      for (final k in d.kits) {
+        final st = marks.statusOf(k);
+        if (st == CollectStatus.none) continue;
+        if (st == CollectStatus.wanted && k.pbCloses.startsWith(ym)) {
+          out.add(
+            _Event(
+              title: k.name,
+              image: k.image,
+              sub: 'PB 예약 마감',
+              kit: k,
+              day: dayOf(k.pbCloses),
+              dot: Gp.danger,
+              tag: 'PB',
+            ),
+          );
+        }
+        if (k.date.startsWith(ym)) {
+          out.add(
+            _Event(title: k.name, image: k.image, sub: joinDot([k.line, yen(k.priceJpy)]), kit: k, day: dayOf(k.date)),
+          );
+        }
+        final at = DateTime.tryParse('${me.entry(k.id)?['updated_at'] ?? ''}')?.toLocal();
+        if (st == CollectStatus.owned && at != null && at.year == _month.year && at.month == _month.month) {
+          out.add(
+            _Event(
+              title: k.name,
+              image: k.image,
+              sub: joinDot([k.line, k.series]),
+              kit: k,
+              day: at.day,
+              dot: Gp.own,
+              tag: '구매',
+            ),
+          );
+        }
+      }
+      return out;
+    }
     return [
       for (final k in d.kits)
         if (k.date.startsWith(ym))
@@ -129,7 +191,8 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
             day: dayOf(k.date),
           ),
       for (final a in d.announcements)
-        if (a.date.startsWith(ym)) _Event(title: a.title, image: a.image, sub: a.source, ann: a, day: dayOf(a.date)),
+        if (a.date.startsWith(ym))
+          _Event(title: a.title, image: a.image, sub: a.source, ann: a, day: dayOf(a.date), dot: Gp.faint),
     ];
   }
 
@@ -153,18 +216,16 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
               if (snap.hasError) {
                 return ErrorView(message: '${snap.error}', onRetry: () => setState(reloadScope));
               }
-              final events = _events(snap.data!);
+              final events = _events(snap.data!, Marks.of(context));
+              final dots = <int, Set<Color>>{};
+              for (final e in events) {
+                if (e.day case final d?) (dots[d] ??= {}).add(e.dot);
+              }
               final calendar = _MonthCalendar(
                 month: _month,
                 selected: _day,
-                releaseDays: {
-                  for (final e in events)
-                    if (e.isRelease) ?e.day,
-                },
-                noticeDays: {
-                  for (final e in events)
-                    if (!e.isRelease) ?e.day,
-                },
+                dots: dots,
+                mine: _mine,
                 onPrev: () => _moveMonth(-1),
                 onNext: () => _moveMonth(1),
                 onToday: () => setState(() {
@@ -180,7 +241,10 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
                     return Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        SizedBox(width: 380, child: SingleChildScrollView(child: calendar)),
+                        SizedBox(
+                          width: 380,
+                          child: SingleChildScrollView(child: Column(children: [_tabs(), calendar])),
+                        ),
                         const VerticalDivider(width: 1),
                         Expanded(child: ListView(children: _list(events))),
                       ],
@@ -188,7 +252,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
                   }
                   return ListView(
                     padding: EdgeInsets.only(bottom: navClearance(context)),
-                    children: [calendar, ..._list(events)],
+                    children: [_tabs(), calendar, ..._list(events)],
                   );
                 },
               );
@@ -199,9 +263,20 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
     );
   }
 
+  /// 전체 / 내 일정 (홈의 전체 소식 / My Page 와 같은 밑줄 탭)
+  Widget _tabs() => Padding(
+    padding: const EdgeInsets.fromLTRB(10, 2, 10, 4),
+    child: Row(
+      children: [
+        UnderlineTab(label: '전체', selected: !_mine, onTap: () => setState(() => _mine = false)),
+        UnderlineTab(label: '내 일정', selected: _mine, onTap: () => setState(() => _mine = true)),
+      ],
+    ),
+  );
+
   List<Widget> _list(List<_Event> all) {
     final inDay = _day == null ? all : all.where((e) => e.day == _day).toList();
-    final shown = inDay.where((e) => _kind == 0 || (_kind == 1) == e.isRelease).toList();
+    final shown = _mine ? inDay : inDay.where((e) => _kind == 0 || (_kind == 1) == e.isRelease).toList();
     final kinds = Padding(
       // H-3b 종류 거르기
       padding: const EdgeInsets.fromLTRB(8, 10, 8, 0),
@@ -224,11 +299,13 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
     );
     if (shown.isEmpty) {
       return [
-        kinds,
+        if (!_mine) kinds,
         EmptyView(
           // H-8 P09
           icon: Icons.event_busy_outlined,
-          message: _day == null ? '${_month.month}월에는 발매 · 예고 일정이 없어요' : '${_month.month}월 $_day일에는 일정이 없어요',
+          message: _mine
+              ? '${_month.month}월에는 좋아요 · 구매함 상품의 일정이 없어요'
+              : (_day == null ? '${_month.month}월에는 발매 · 예고 일정이 없어요' : '${_month.month}월 $_day일에는 일정이 없어요'),
           detail: _day == null ? '다른 달로 넘기거나 채널을 바꿔 보세요' : '날짜를 다시 누르면 한 달 전체를 봐요',
         ),
       ];
@@ -236,7 +313,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
     final days = (shown.map((e) => e.day).nonNulls.toSet().toList())..sort();
     final undated = shown.where((e) => e.day == null).toList();
     return [
-      kinds,
+      if (!_mine) kinds,
       if (_day != null)
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
@@ -273,8 +350,8 @@ class _MonthCalendar extends StatelessWidget {
   const _MonthCalendar({
     required this.month,
     required this.selected,
-    required this.releaseDays,
-    required this.noticeDays,
+    required this.dots,
+    required this.mine,
     required this.onPrev,
     required this.onNext,
     required this.onToday,
@@ -284,9 +361,9 @@ class _MonthCalendar extends StatelessWidget {
   final DateTime month;
   final int? selected;
 
-  /// ● 발매일이 있는 날 · ○ 예고 · 공지가 있는 날
-  final Set<int> releaseDays;
-  final Set<int> noticeDays;
+  /// 날짜 → 그날 점 색들 (글자 범례 없이 색으로, 뜻은 ? 에)
+  final Map<int, Set<Color>> dots;
+  final bool mine;
   final VoidCallback onPrev;
   final VoidCallback onNext;
   final VoidCallback onToday;
@@ -319,6 +396,11 @@ class _MonthCalendar extends StatelessWidget {
                 ),
               ),
               IconButton(tooltip: '다음 달', onPressed: onNext, icon: const Icon(Icons.chevron_right)),
+              IconButton(
+                tooltip: '점 색',
+                onPressed: () => _showLegend(context, mine),
+                icon: const Icon(Icons.help_outline, size: 18, color: Gp.faint),
+              ),
             ],
           ),
           if (!isThisMonth)
@@ -353,34 +435,11 @@ class _MonthCalendar extends StatelessWidget {
                   day: d,
                   today: isThisMonth && d == calendarToday.day,
                   selected: selected == d,
-                  release: releaseDays.contains(d),
-                  notice: noticeDays.contains(d),
+                  dots: dots[d] ?? const {},
                   sunday: (lead + d - 1) % 7 == 0,
                   onTap: () => onPick(d),
                 ),
             ],
-          ),
-          // 범례 (P10)
-          const Padding(
-            padding: EdgeInsets.only(top: 4),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _Dot(filled: true),
-                SizedBox(width: 5),
-                Text(
-                  '발매일',
-                  style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
-                ),
-                SizedBox(width: 16),
-                _Dot(filled: false),
-                SizedBox(width: 5),
-                Text(
-                  '예고 · 공지',
-                  style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
-                ),
-              ],
-            ),
           ),
         ],
       ),
@@ -388,23 +447,46 @@ class _MonthCalendar extends StatelessWidget {
   }
 }
 
-/// ● 발매일(브랜드 색 채움) · ○ 예고·공지(회색 테두리)
+/// 점 색 뜻 (? 를 눌렀을 때만)
+void _showLegend(BuildContext context, bool mine) {
+  Widget row(Color c, String label) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 6),
+    child: Row(
+      children: [
+        _Dot(color: c),
+        const SizedBox(width: 10),
+        Text(label, style: const TextStyle(fontSize: Gp.t14)),
+      ],
+    ),
+  );
+  showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    builder: (_) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: mine
+              ? [row(Gp.danger, 'PB 예약 마감'), row(Gp.accent, '발매'), row(Gp.own, '산 날')]
+              : [row(Gp.accent, '발매'), row(Gp.faint, '공식 예고 · 공지')],
+        ),
+      ),
+    ),
+  );
+}
+
 class _Dot extends StatelessWidget {
-  const _Dot({required this.filled});
-  final bool filled;
+  const _Dot({required this.color});
+  final Color color;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 6,
-      height: 6,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: filled ? Gp.accent : null,
-        border: filled ? null : Border.all(color: Gp.muted, width: 1.2),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Container(
+    width: 6,
+    height: 6,
+    decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+  );
 }
 
 class _DayCell extends StatelessWidget {
@@ -412,8 +494,7 @@ class _DayCell extends StatelessWidget {
     required this.day,
     required this.today,
     required this.selected,
-    required this.release,
-    required this.notice,
+    required this.dots,
     required this.sunday,
     required this.onTap,
   });
@@ -421,8 +502,7 @@ class _DayCell extends StatelessWidget {
   final int day;
   final bool today;
   final bool selected;
-  final bool release;
-  final bool notice;
+  final Set<Color> dots;
   final bool sunday;
   final VoidCallback onTap;
 
@@ -462,9 +542,7 @@ class _DayCell extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  if (release) const _Dot(filled: true),
-                  if (release && notice) const SizedBox(width: 3),
-                  if (notice) const _Dot(filled: false),
+                  for (final (i, c) in dots.take(3).indexed) ...[if (i > 0) const SizedBox(width: 3), _Dot(color: c)],
                 ],
               ),
             ),
@@ -507,7 +585,7 @@ class _EventRow extends StatelessWidget {
       image: event.image,
       title: event.title,
       subtitle: event.sub,
-      tag: kit != null ? '발매' : (ann?.status ?? '예고'), // 확정 발매 = 검정 알약, 예고 단계 = 회색 알약
+      tag: event.tag.isNotEmpty ? event.tag : (kit != null ? '발매' : (ann?.status ?? '예고')), // 발매 = 검정, 예고 = 회색
       tagStrong: kit != null,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       onTap: () {

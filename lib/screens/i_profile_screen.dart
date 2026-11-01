@@ -530,7 +530,7 @@ class _Stats extends StatelessWidget {
                 const VerticalDivider(width: 1, indent: 6, endIndent: 6),
                 stat(
                   '도감 레벨',
-                  'Lv.${guideLevel(lit, verified)}',
+                  'Lv.${guideLevel(lit, verified, owned: owned, liked: liked)}',
                   CollectionJump.guide,
                   extra: verified == 0
                       ? null // 사진 인증은 아직 서버가 없어 0 이면 배지를 숨긴다

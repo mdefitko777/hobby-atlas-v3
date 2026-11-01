@@ -17,6 +17,7 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../data/user_store.dart';
 import '../models.dart';
 import '../sync/account.dart';
 import '../sync/friends_service.dart';
@@ -181,7 +182,14 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
                           style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
                         ),
                         const SizedBox(height: 5),
-                        LevelChip(level: guideLevel(lit, 0)),
+                        LevelChip(
+                          level: guideLevel(
+                            lit,
+                            0,
+                            owned: UserStore.instance.ownedCount,
+                            liked: UserStore.instance.wantedCount,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -291,7 +299,13 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
       title: Row(
         children: [
           Flexible(child: Text(m.name, overflow: TextOverflow.ellipsis)),
-          if (m.lit > 0) ...[const SizedBox(width: 6), LevelChip(level: guideLevel(m.lit, m.verified), small: true)],
+          if (m.lit + m.owned > 0) ...[
+            const SizedBox(width: 6),
+            LevelChip(
+              level: guideLevel(m.lit, m.verified, owned: m.owned, liked: m.liked),
+              small: true,
+            ),
+          ],
         ],
       ),
       subtitle: Text(
@@ -302,7 +316,28 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
         overflow: TextOverflow.ellipsis,
         style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
       ),
+      // ★ 특별 관심 — My Page ★ 에 이 친구 소식이 뜬다 (기기에만)
+      trailing: m.handle.isEmpty
+          ? null
+          : IconButton(
+              tooltip: '특별 관심',
+              onPressed: () => setState(
+                () => UserStore.instance.setSpecialFriend(
+                  m.handle,
+                  !UserStore.instance.specialFriends.contains(m.handle),
+                ),
+              ),
+              icon: UserStore.instance.specialFriends.contains(m.handle)
+                  ? const Icon(Icons.star_rounded, color: Color(0xFFBA7517))
+                  : const Icon(Icons.star_border_rounded, color: Gp.faint),
+            ),
       onTap: () => _close(() => widget.onOpenFriend(m)),
+    );
+    // 특별 관심이 위로
+    shown.sort(
+      (a, b) =>
+          (UserStore.instance.specialFriends.contains(b.handle) ? 1 : 0) -
+          (UserStore.instance.specialFriends.contains(a.handle) ? 1 : 0),
     );
     return SectionPanel(
       padding: const EdgeInsets.only(bottom: 8),

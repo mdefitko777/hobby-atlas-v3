@@ -673,8 +673,24 @@ String kitWork(Kit k) => k.franchiseId == 'beyblade' ? 'BEYBLADE X' : k.series;
 /// 작품 도감 전체의 점등 칸 수
 int litCount(Iterable<GuideWork> works) => works.fold(0, (s, w) => s + w.owned);
 
-/// 도감 레벨 (모든 작품 합): 구매 칸 2점 + 사진 인증 1점 더, 5점마다 한 단계
-int guideLevel(int lit, int verified) => 1 + (lit * 2 + verified) ~/ 5;
+/// 수집 경험치 — 구매 10 · 도감 새 칸 5 · 사진 인증 3 · 좋아요 1 (My Page ? 에 같은 표)
+int collectorXp({int owned = 0, int lit = 0, int verified = 0, int liked = 0}) =>
+    owned * 10 + lit * 5 + verified * 3 + liked;
+
+/// 경험치 → 레벨 · 이번 레벨에서 모은 양 · 다음 레벨까지 필요한 양 (레벨 n 에서 n+1 까지 50 + 10·(n-1))
+({int level, int into, int need}) levelOf(int xp) {
+  var level = 1, rest = xp, need = 50;
+  while (rest >= need) {
+    rest -= need;
+    level++;
+    need = 50 + 10 * (level - 1);
+  }
+  return (level: level, into: rest, need: need);
+}
+
+/// 수집 레벨 (My Page · 도감 · 내 정보 · 친구 서랍 공통)
+int guideLevel(int lit, int verified, {int owned = 0, int liked = 0}) =>
+    levelOf(collectorXp(owned: owned, lit: lit, verified: verified, liked: liked)).level;
 
 /// 워터마크 글자: 앱 이름 줄임(GP) + 올린 사람 아이디
 String watermarkText(String handle) => 'HA · @$handle';

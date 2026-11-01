@@ -59,6 +59,9 @@ class UserStore extends ChangeNotifier {
   /// 내 채널 (채널 바 · 알림 범위). 처음 설치하면 건담 · 베이블레이드 · 포켓몬
   final List<String> myChannels = [...defaultMyChannels];
 
+  /// 특별 관심 친구 (@아이디) — My Page ★ 에 이 사람들 소식만. 기기에만
+  final Set<String> specialFriends = {};
+
   /// 바뀔 때마다 +1 (Marks 가 다시 그릴지 판단)
   int revision = 0;
   Future<void>? _loading;
@@ -115,6 +118,9 @@ class UserStore extends ChangeNotifier {
     myChannels
       ..clear()
       ..addAll(local['my_channels'] is List ? _list(local['my_channels']).whereType<String>() : defaultMyChannels);
+    specialFriends
+      ..clear()
+      ..addAll(_list(local['special_friends']).whereType<String>());
   }
 
   Map<String, Object?> toJson() => {
@@ -130,6 +136,7 @@ class UserStore extends ChangeNotifier {
       'guide_manual_lit': guideManualLit.toList(),
       'recent_viewed': recentViewed,
       'my_channels': myChannels,
+      'special_friends': specialFriends.toList(),
     },
   };
 
@@ -182,6 +189,16 @@ class UserStore extends ChangeNotifier {
     return e['status'] == 'owned' && p is num ? s + p.toInt() : s;
   });
 
+  /// 이번 달 지출 — 산 날짜를 따로 적지 않아, 구매함 기록을 마지막으로 바꾼 달로 센다
+  int spendInMonth(DateTime now) {
+    final prefix = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+    return _items.values.fold(0, (s, e) {
+      final p = e['purchase_price'];
+      final at = DateTime.tryParse(_str(e['updated_at']))?.toLocal().toIso8601String() ?? '';
+      return e['status'] == 'owned' && p is num && at.startsWith(prefix) ? s + p.toInt() : s;
+    });
+  }
+
   // ── 쓰기 ──
   String _now() => DateTime.now().toUtc().toIso8601String();
 
@@ -223,6 +240,10 @@ class UserStore extends ChangeNotifier {
       ..insert(0, kitId);
     if (recentViewed.length > 40) recentViewed.removeRange(40, recentViewed.length);
     _changed();
+  }
+
+  void setSpecialFriend(String handle, bool on) {
+    if (on ? specialFriends.add(handle) : specialFriends.remove(handle)) _changed();
   }
 
   void setMyChannels(List<String> ids) {
