@@ -16,17 +16,7 @@ Future<Profile> deriveProfile() async {
     showcase: const [],
     friends: [
       for (final f in a.signedIn ? a.friends.friends : const <PublicProfile>[])
-        Member(
-          name: f.name,
-          handle: f.handle,
-          role: '친구',
-          self: false,
-          liked: a.friends.collections[f.handle]?.likedIds.length ?? 0,
-          lit: 0,
-          owned: a.friends.collections[f.handle]?.ownedIds.length ?? 0,
-          likedIds: a.friends.collections[f.handle]?.likedIds ?? const [],
-          ownedIds: a.friends.collections[f.handle]?.ownedIds ?? const [],
-        ),
+        friendMemberOf(f, a.friends.collections[f.handle]),
     ],
     suggested: const [],
   );

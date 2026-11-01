@@ -20,10 +20,10 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../data/catalog.dart';
-import '../data/friend_overlap.dart';
 import '../data/user_store.dart';
 import '../detail_pane.dart';
 import '../channels.dart';
+import '../logic/friends.dart';
 import '../models.dart';
 import '../sync/account.dart';
 import '../sync/friends_service.dart' show FriendsFailure;

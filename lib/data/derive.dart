@@ -13,6 +13,8 @@ import 'gunpula.dart';
 import 'user_store.dart';
 import '../sync/account.dart';
 import '../json_util.dart';
+import '../logic/collection_rules.dart' show bestStatus;
+import '../logic/friends.dart' show friendMemberOf;
 import '../sync/friends_service.dart' show PublicProfile;
 
 part 'derive/announcements.dart';
@@ -28,12 +30,4 @@ UserStore get _me => UserStore.instance;
 CollectStatus _kitStatus(String id) => _me.statusOf(id) ?? CollectStatus.none;
 
 /// 여러 상품 중 가장 높은 상태 (구매함 > 좋아요 > 없음)
-CollectStatus _best(Iterable<String> kitIds) {
-  var best = CollectStatus.none;
-  for (final id in kitIds) {
-    final s = _kitStatus(id);
-    if (s == CollectStatus.owned) return s;
-    if (s == CollectStatus.wanted) best = s;
-  }
-  return best;
-}
+CollectStatus _best(Iterable<String> kitIds) => bestStatus(kitIds.map(_kitStatus));

@@ -26,9 +26,9 @@ import '../clock.dart';
 import '../data/catalog.dart';
 import '../data/photo_files.dart';
 import '../data/social_local.dart';
+import '../logic/friends.dart';
 import '../sync/account.dart';
 import '../sync/friends_service.dart';
-import '../sync/photo_share.dart';
 import '../sync/sync_service.dart' show Workspace;
 import '../theme.dart';
 import '../widgets.dart';
@@ -462,41 +462,6 @@ class SuggestionsPanel extends StatelessWidget {
       },
     );
   }
-}
-
-/// 친구의 가장 최근 일 — 구매함 · 좋아요에 담은 것 또는 보이기로 둔 사진
-class FriendEvent {
-  const FriendEvent(this.kind, this.kitId, this.at);
-
-  /// 'owned' · 'wanted' · 'photo'
-  final String kind;
-  final String kitId;
-  final DateTime at;
-}
-
-FriendEvent? latestFriendEvent(FriendCollection? c, FriendWall? w) {
-  FriendEvent? best;
-  void consider(FriendEvent e) {
-    if (best == null || e.at.isAfter(best!.at)) best = e;
-  }
-
-  for (final e in c?.items.entries ?? const <MapEntry<String, Map<String, Object?>>>[]) {
-    final st = '${e.value['status'] ?? ''}';
-    final at = DateTime.tryParse('${e.value['updated_at'] ?? ''}');
-    if (at != null && (st == 'owned' || st == 'wanted')) consider(FriendEvent(st, e.key, at));
-  }
-  for (final p in w?.photos ?? const <FriendPhoto>[]) {
-    final at = DateTime.tryParse(p.createdAt);
-    if (at != null) consider(FriendEvent('photo', p.kitId, at));
-  }
-  return best;
-}
-
-/// [sinceIso] 뒤에 올라온 친구 사진 수 (처음 여는 것이면 0)
-int newPhotoCount(FriendWall? w, String sinceIso) {
-  final since = DateTime.tryParse(sinceIso);
-  if (since == null || w == null) return 0;
-  return w.photos.where((p) => DateTime.tryParse(p.createdAt)?.isAfter(since) ?? false).length;
 }
 
 /// U-8 친구 상태 한 줄 (M-7) — 아이콘 + 상품 이름 + 언제. 일이 없으면 [fallback]

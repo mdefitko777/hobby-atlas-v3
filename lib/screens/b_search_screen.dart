@@ -13,7 +13,7 @@
 // │ B-8  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 결과 없음          │ P01 · P09     │
 // │ B-10 │ TagSearchSection (R 화면 파일)        │ 메자스타 · 프렌다 태그 · 게임 이름 찾기   │ P07 · P06     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
-// 검색은 기기 안: 받아 둔 Gunpula 목록에서 거른다. 설명으로 찾기 = lib/sentence_search.dart (낱말 맞추기, 서버 · AI 없음).
+// 검색은 기기 안: 받아 둔 Gunpula 목록에서 거른다. 설명으로 찾기 = lib/logic/sentence_search.dart (낱말 맞추기, 서버 · AI 없음).
 // 서버가 없어 "인기 검색어" 순위는 만들지 않는다 → 내 검색 횟수(자주 찾은)와 이번 주 새 상품으로.
 // 현행 앱 문제: 정확한 이름을 모르면 못 찾음 · 필터 입구가 여러 개 → v2는 검색창 하나 + 말로 찾기.
 import 'package:flutter/material.dart';
@@ -21,9 +21,10 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../data/user_store.dart';
 import '../channels.dart';
+import '../logic/kit_rules.dart';
 import '../marks.dart';
 import '../models.dart';
-import '../sentence_search.dart';
+import '../logic/sentence_search.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'c_channel_screen.dart';
@@ -33,19 +34,6 @@ import 'r_mezastar_screen.dart' show TagSearchSection;
 
 /// B-5 설명으로 찾기 예시 (실제 데이터에서 후보가 나오는 문장)
 const sentenceExamples = ['샤아 전용 자쿠 HG', '수성의 마녀 에어리얼 HG', '이브이 인형', '드래곤 블레이드 베이'];
-
-/// "새로 들어온" = 가장 늦게 들어온 날부터 7일 안 (새것부터, [limit] 개)
-List<Kit> newThisWeek(List<Kit> kits, {int limit = 8}) {
-  final seen = [
-    for (final k in kits)
-      if (k.firstSeen.length >= 10) k,
-  ]..sort((a, b) => b.firstSeen.compareTo(a.firstSeen));
-  if (seen.isEmpty) return const [];
-  final top = DateTime.tryParse(seen.first.firstSeen.substring(0, 10));
-  if (top == null) return seen.take(limit).toList();
-  final since = top.subtract(const Duration(days: 6)).toIso8601String().substring(0, 10);
-  return seen.where((k) => k.firstSeen.compareTo(since) >= 0).take(limit).toList();
-}
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({

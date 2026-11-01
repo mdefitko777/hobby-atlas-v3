@@ -10,6 +10,7 @@ import 'package:hobby_atlas/data/photo_files.dart';
 import 'package:hobby_atlas/data/social_local.dart';
 import 'package:hobby_atlas/data/user_store.dart';
 import 'package:hobby_atlas/detail_pane.dart';
+import 'package:hobby_atlas/logic/friends.dart';
 import 'package:hobby_atlas/marks.dart';
 import 'package:hobby_atlas/models.dart';
 import 'package:hobby_atlas/screens/f_collection_screen.dart' show CollectionJump;

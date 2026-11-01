@@ -19,6 +19,7 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../logic/kit_rules.dart';
 import '../marks.dart';
 import '../channels.dart';
 import '../models.dart';

@@ -30,6 +30,7 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../detail_pane.dart';
+import '../logic/collection_rules.dart' show bestStatus;
 import '../report.dart';
 import '../level.dart';
 import '../marks.dart';
@@ -379,16 +380,6 @@ GuideFacet _workFacet(GuideWork w) => GuideFacet(
   boughtAt: w.boughtAt,
 );
 
-/// 상품 상태 여러 개 중 가장 높은 것 (구매함 > 좋아요 > 없음)
-CollectStatus _bestOf(Iterable<CollectStatus> all) {
-  var best = CollectStatus.none;
-  for (final s in all) {
-    if (s == CollectStatus.owned) return s;
-    if (s == CollectStatus.wanted) best = s;
-  }
-  return best;
-}
-
 /// G-4 작품 하나의 기체 칸
 class WorkGuideScreen extends StatefulWidget {
   const WorkGuideScreen({
@@ -506,7 +497,7 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
     if (_photos.containsKey(u.id)) return CellTier.photo;
     final kits = _kitsOf(u, litOnly: true);
     final s = kits.isNotEmpty
-        ? _bestOf(kits.map(m.statusOf))
+        ? bestStatus(kits.map(m.statusOf))
         : (u.ggetIds.isEmpty ? u.status : CollectStatus.none); // 상품을 못 받았으면 불러온 때 상태
     if (s == CollectStatus.owned || _manual(m, u)) return CellTier.owned;
     return s == CollectStatus.wanted ? CellTier.liked : CellTier.none;

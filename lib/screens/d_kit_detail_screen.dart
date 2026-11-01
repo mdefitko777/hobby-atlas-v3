@@ -29,11 +29,12 @@ import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:url_launcher/url_launcher.dart';
 
 import '../api.dart';
+import '../logic/friends.dart';
+import '../logic/market.dart';
 import '../marks.dart';
 import '../detail_pane.dart';
 import '../channels.dart';
 import '../data/catalog.dart';
-import '../data/friend_overlap.dart';
 import '../sync/account.dart';
 import '../data/user_store.dart';
 import '../models.dart';
@@ -86,19 +87,6 @@ class _KitPagerState extends State<KitPager> {
 
 /// 넓은 화면 기준 (사진 왼쪽 · 정보 오른쪽)
 const detailWideBreakpoint = 720.0;
-
-/// 시세를 찾아볼 국내 플랫폼 → 상품명으로 검색한 페이지를 브라우저로 연다
-const marketPlatforms = ['네이버쇼핑', '번개장터', '중고나라'];
-
-String marketSearchUrl(String platform, String query) {
-  final q = Uri.encodeComponent(query);
-  return switch (platform) {
-    '네이버쇼핑' => 'https://search.shopping.naver.com/search/all?query=$q',
-    '번개장터' => 'https://m.bunjang.co.kr/search/products?q=$q',
-    '중고나라' => 'https://web.joongna.com/search/$q',
-    _ => 'https://www.google.com/search?q=$q',
-  };
-}
 
 class KitDetailScreen extends StatefulWidget {
   const KitDetailScreen({super.key, required this.kit, this.loaders = const Loaders()});

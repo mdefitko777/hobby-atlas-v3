@@ -21,10 +21,11 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../logic/collection_rules.dart';
+import '../logic/kit_rules.dart';
 import '../marks.dart';
 import '../channels.dart';
 import '../data/catalog.dart';
-import '../data/user_store.dart';
 import '../models.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -608,10 +609,3 @@ class _TopRow extends StatelessWidget {
     );
   }
 }
-
-/// 휴지통에 보여 줄 것: 지운 뒤 다시 좋아요 · 구매함에 넣지 않은 상품 → 구매함에서 지웠나
-Map<String, bool> trashView(UserStore me) => {
-  for (final e in me.trash.entries)
-    if (me.statusOf(e.key) != CollectStatus.owned && me.statusOf(e.key) != CollectStatus.wanted)
-      e.key: e.value.from == 'owned',
-};

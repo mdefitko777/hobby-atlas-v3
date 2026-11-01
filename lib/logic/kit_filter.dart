@@ -1,6 +1,7 @@
 // 상품 필터 규칙 — 내 상태 · 발매 · 판매 · 가격 · 종류 · 라인 · 작품 (화면 없이 테스트할 수 있는 순수 Dart)
 import '../clock.dart';
 import '../models.dart';
+import 'kit_rules.dart';
 
 enum MineState { any, liked, owned, none }
 

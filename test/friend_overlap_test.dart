@@ -1,6 +1,6 @@
 // 친구와 겹치는 상품 (알림 N-8 · 상품 상세 D-5e)
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hobby_atlas/data/friend_overlap.dart';
+import 'package:hobby_atlas/logic/friends.dart';
 import 'package:hobby_atlas/sync/friends_service.dart';
 
 FriendCollection _c(String h, Map<String, String> status) => FriendCollection(

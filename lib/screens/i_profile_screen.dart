@@ -32,6 +32,7 @@ import '../clock.dart';
 import '../data/social_local.dart' show ProfileImageKind;
 import '../detail_pane.dart';
 import '../level.dart';
+import '../logic/level_math.dart';
 import '../marks.dart';
 import '../models.dart';
 import '../sync/account.dart';

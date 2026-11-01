@@ -14,6 +14,7 @@ import '../api.dart';
 import '../clock.dart';
 import '../data/catalog.dart';
 import '../data/user_store.dart';
+import '../logic/kit_rules.dart';
 import '../marks.dart';
 import '../models.dart';
 import '../sync/account.dart';

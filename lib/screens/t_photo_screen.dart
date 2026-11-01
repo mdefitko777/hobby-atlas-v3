@@ -16,6 +16,7 @@
 // 전환: 사진 칸 → 쌓기(push). 넣기 · 상품 잇기 → 덮기(바텀 시트). 지우기 → 확인 대화상자.
 library;
 
+import '../logic/kit_rules.dart';
 import 'dart:async';
 import 'dart:ui' as ui;
 

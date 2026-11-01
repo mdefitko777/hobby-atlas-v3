@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 
 import '../logic/kit_filter.dart';
+import '../logic/kit_rules.dart';
 import '../models.dart';
 import '../theme.dart';
 import 'buttons.dart';

@@ -4,7 +4,7 @@
 //   3) 표에 없는 나머지 낱말은 조사를 떼고 그대로 상품 글자(이름 4개 언어 · 작품 · 라인 · 종류 · 키워드)에서 찾는다
 //   4) 상품마다 맞은 낱말의 무게 / 전체 무게 = 일치도 %, 맞은 낱말 = 이유
 // Flutter 위젯을 쓰지 않는다 (단위 테스트).
-import 'models.dart';
+import '../models.dart';
 
 /// 낱말 표의 한 뜻
 enum ConceptField { name, series, line, type, franchise }
