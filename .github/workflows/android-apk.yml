@@ -69,13 +69,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # 지난 빌드의 커밋 → 그 뒤 커밋 제목 = 바뀐 점. 커밋 메시지에 [minor] 가 있으면 묻지 않고 ⬇ 아이콘만
+          # 지난 빌드의 커밋 → 그 뒤 커밋 제목 = 바뀐 점. 마지막 커밋 제목(첫 줄)에 [minor] 가 있으면 묻지 않고 ⬇ 아이콘만
           gh release download apk-latest -p version.json -O prev.json 2>/dev/null || echo '{}' > prev.json
           prev=$(jq -r '.sha // empty' prev.json)
           if [ -n "$prev" ] && git cat-file -e "$prev" 2>/dev/null; then range="$prev..HEAD"; else range="-5"; fi
           git log --format=%s $range -- lib android assets pubspec.yaml | sed -e 's/^v3: //' -e 's/ — .*//' | head -8 > notes.txt
           major=true
-          if git log -1 --format=%B | grep -q '\[minor\]'; then major=false; fi
+          if git log -1 --format=%s | grep -q '\[minor\]'; then major=false; fi
           jq -n --argjson build ${{ github.run_number }} --arg sha "$GITHUB_SHA" \
             --arg built "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --argjson major $major \
             --arg sha256 "$(sha256sum hobby-atlas.apk | cut -d' ' -f1)" --argjson size $(stat -c %s hobby-atlas.apk) \
