@@ -700,16 +700,32 @@ class QuickMarks extends StatelessWidget {
   }
 }
 
+/// 구매함 표시 아이콘 (상품 카드의 리본과 같은 모양 · 민트) — 글자 대신 쓴다
+class RibbonIcon extends StatelessWidget {
+  const RibbonIcon({super.key, this.size = 16, this.color = Gp.own});
+  final double size;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => ClipPath(
+    clipper: const _RibbonClipper(notch: 0.28),
+    child: Container(width: size * 0.78, height: size, color: color),
+  );
+}
+
 /// 책갈피 리본 모양 (아래 가운데가 파인 사각형)
 class _RibbonClipper extends CustomClipper<Path> {
-  const _RibbonClipper();
+  const _RibbonClipper({this.notch});
+
+  /// 파인 깊이 (높이 비율). 없으면 8px
+  final double? notch;
 
   @override
   Path getClip(Size s) => Path()
     ..moveTo(0, 0)
     ..lineTo(s.width, 0)
     ..lineTo(s.width, s.height)
-    ..lineTo(s.width / 2, s.height - 8)
+    ..lineTo(s.width / 2, s.height - (notch == null ? 8 : s.height * notch!))
     ..lineTo(0, s.height)
     ..close();
 

@@ -58,7 +58,7 @@ String pickName(Object? names, [List<String> order = const ['ko', 'ja', 'en', 'z
 
 // ── 제품 라인 · 상품 유형 (grades.json 에는 한국어 이름이 없다) ────────────────
 const _lineLabels = {
-  'GUNDAM_MERCH': '가샤폰 굿즈',
+  'GUNDAM_MERCH': '굿즈',
   'ROBOT_SPIRITS': 'ROBOT魂',
   'NG': 'No Grade',
   'METAL_BUILD': 'METAL BUILD',
@@ -103,7 +103,16 @@ String lineLabel(String code, String subline, String kitId) {
   return _lineLabels[code] ?? code;
 }
 
-String typeLabel(String code, String category) {
+// 이름으로 가르는 상품 종류 — 굿즈 묶음(GUNDAM_MERCH · *_GOODS)에 카드 · 진짜 가샤폰이 섞여 있다
+const _cardWords = ['カードダス', 'ウエハース', 'カードゲーム', 'カード', 'トレカ', 'TCG', '카드팩', '카드 게임'];
+const _capsuleWords = ['ガシャポン', 'ガチャ', 'カプセル', '가샤폰', '캡슐'];
+bool _hasAny(String name, List<String> words) => words.any(name.contains);
+
+/// 상품 유형. [name] 은 일본어 이름 + 한국어 이름 (카드 · 가샤폰 낱말을 찾는다)
+String typeLabel(String code, String category, [String name = '']) {
+  // 가샤폰 = 캡슐 장난감만, 카드팩 · 웨하스 = 카드, 나머지 굿즈 (상품 이름이 묶음 코드보다 정확하다)
+  if (_hasAny(name, _cardWords)) return '카드';
+  if (code == 'GUNDAM_MERCH' || code.endsWith('_GOODS')) return _hasAny(name, _capsuleWords) ? '가샤폰' : '굿즈';
   switch (code) {
     case 'POKE_PLUSH':
       return '인형';
@@ -214,7 +223,7 @@ List<Map<String, Object?>> mapKitsJob(Map<String, String> msg) {
     final nameJa = pickName(names, const ['ja', 'en', 'ko']);
     final seriesLabel = pickName(labels);
     final line = lineLabel(code, subline, id);
-    final type = typeLabel(code, grades[code] ?? '');
+    final type = typeLabel(code, grades[code] ?? '', '${_str(names['ja'])} ${_str(names['ko'])}');
     final keywords = <String>{
       _str(names['en']),
       _str(names['zh']),

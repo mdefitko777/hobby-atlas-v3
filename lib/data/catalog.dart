@@ -19,6 +19,9 @@ class Catalog extends ChangeNotifier {
   static const _kitsKey = 'catalog_kits.json';
   static const _metaKey = 'catalog_meta.json';
 
+  /// 상품 매핑 규칙(lib/data/gunpula.dart)을 바꾸면 +1 → 기기 캐시를 버리고 다시 받아 정리한다
+  static const mapVersion = 2;
+
   CatalogPhase phase = CatalogPhase.empty;
   String error = '';
 
@@ -69,6 +72,8 @@ class Catalog extends ChangeNotifier {
     final slim = await BlobStore.read(_kitsKey);
     if (meta == null || slim == null) return;
     try {
+      // 예전 규칙으로 정리한 캐시 (예: 굿즈가 전부 가샤폰이던 때) → 쓰지 않고 새로 받는다
+      if ((jsonDecode(meta) as Map<String, Object?>)['map_version'] != mapVersion) return;
       manifest = (jsonDecode(meta) as Map<String, Object?>)['manifest'] as Map<String, Object?>? ?? const {};
       _slim = await compute(_decodeSlim, slim);
       _rebuild();
@@ -151,7 +156,7 @@ class Catalog extends ChangeNotifier {
         _aux.remove(e.key);
       }
       await BlobStore.write(_kitsKey, slimText);
-      await BlobStore.write(_metaKey, jsonEncode({'manifest': m, 'fetched_at': DateTime.now().toIso8601String()}));
+      await BlobStore.write(_metaKey, jsonEncode({'manifest': m, 'map_version': mapVersion, 'fetched_at': DateTime.now().toIso8601String()}));
       manifest = m;
       _slim = slim;
       _rebuild();
