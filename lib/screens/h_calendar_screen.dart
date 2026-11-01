@@ -18,6 +18,7 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../filter_sheet.dart' show SquareSegments;
 import '../channels.dart';
 import '../data/user_store.dart';
 import '../marks.dart';
@@ -265,12 +266,18 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
 
   /// 전체 / 내 일정 (홈의 전체 소식 / My Page 와 같은 밑줄 탭)
   Widget _tabs() => Padding(
-    padding: const EdgeInsets.fromLTRB(10, 2, 10, 4),
-    child: Row(
-      children: [
-        UnderlineTab(label: '전체', selected: !_mine, onTap: () => setState(() => _mine = false)),
-        UnderlineTab(label: '내 일정', selected: _mine, onTap: () => setState(() => _mine = true)),
-      ],
+    padding: const EdgeInsets.fromLTRB(16, 4, 16, 6),
+    child: Align(
+      alignment: Alignment.centerLeft,
+      child: SizedBox(
+        width: 210,
+        child: SquareSegments<bool>(
+          values: const [false, true],
+          current: _mine,
+          child: (v) => Text(v ? '내 일정' : '전체'),
+          onPick: (v) => setState(() => _mine = v),
+        ),
+      ),
     ),
   );
 

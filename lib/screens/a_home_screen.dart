@@ -20,6 +20,7 @@ import 'dart:async' show Timer;
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../filter_sheet.dart' show SquareSegments;
 import '../channels.dart';
 import '../clock.dart';
 import '../data/catalog.dart';
@@ -321,13 +322,19 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
         children: [
           search,
           Padding(
-            // A-10 전체 소식 | My Page
-            padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
-            child: Row(
-              children: [
-                UnderlineTab(label: '전체 소식', selected: !_mine, onTap: () => setState(() => _mine = false)),
-                UnderlineTab(label: 'My Page', selected: _mine, onTap: () => setState(() => _mine = true)),
-              ],
+            // A-10 전체 소식 | My Page — 위 채널 바(밑줄)와 다르게 네모 세그먼트 (필터와 같은 부품)
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: SizedBox(
+                width: 210,
+                child: SquareSegments<bool>(
+                  values: const [false, true],
+                  current: _mine,
+                  child: (v) => Text(v ? 'My Page' : '전체 소식'),
+                  onPick: (v) => setState(() => _mine = v),
+                ),
+              ),
             ),
           ),
           if (_mine) MyPageView(loaders: widget.loaders, onJump: widget.onJump), // A-20~24
