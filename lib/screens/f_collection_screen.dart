@@ -13,7 +13,7 @@
 // │ F-9  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 빈 컬렉션           │ P01 · P09     │
 // │ F-10 │ 🗑 아이콘(개수 배지) → 바텀 시트      │ 휴지통: 지운 상품 복원 (손 미끄러짐 대비)  │ P03 · P05     │
 // │ F-11 │ jumpTick (내 정보 숫자에서)          │ 좋아요 · 구매함 · 도감으로 바로 이동       │ P07           │
-// │ F-12 │ FindBar (탭 아래)                   │ 이 탭 · 도감에서 찾기 + 필터              │ P04 · P07     │
+// │ F-12 │ FindBar (탭 아래)                   │ 이 탭 · 도감에서 찾기 + 필터(도감 = GuideFilterSheet) │ P04 · P07 │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 줄 → D 상품 상세(쌓기). 빈 상태 "검색하러 가기" → 검색 탭(옆으로).
 // 현행 앱 문제: 컬렉션 화면에 빨간 "전체 삭제"가 늘 보임(실수 위험) · 도감이 따로 떨어진 화면
@@ -72,10 +72,16 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
   bool _editing = false;
   final Set<String> _selected = {};
 
-  /// F-12 찾기 · 필터 (목록 = 상품 필터, 도감 = 켜짐 필터)
+  /// F-12 찾기 · 필터 (목록 = 상품 필터, 도감 = 도감 필터)
   String _query = '';
   KitFilter _filter = KitFilter();
-  LitState _lit = LitState.any;
+  final _guideFilter = GuideFilterController();
+
+  @override
+  void dispose() {
+    _guideFilter.dispose();
+    super.dispose();
+  }
 
   /// 휴지통: 지운 상품 id → 어느 탭에서 지웠나 (true = 구매함). 지우기 = 앱 전체 Marks 에서 끄기
   final Map<String, bool> _removed = {};
@@ -195,11 +201,11 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
     ];
   }
 
-  /// F-12 필터 시트 — 목록: 상품 필터(검색 화면과 같은 시트), 도감: 켜짐
+  /// F-12 필터 시트 — 목록: 상품 필터(검색 화면과 같은 시트), 도감: 도감 필터(단계 · 등급 · 종류 · 시대 · 정렬)
   Future<void> _openFilter(List<Kit> all) async {
     if (_guide) {
-      final v = await showLitFilterSheet(context, initial: _lit);
-      if (v != null) setState(() => _lit = v); // STATE: 켜짐 필터 → 도감 칸
+      await _guideFilter.openSheet(context); // STATE: 도감 필터 → 도감 칸 (단계 · 등급 · 종류 · 시대 · 정렬)
+      if (mounted) setState(() {});
       return;
     }
     _filter.statusOf = Marks.read(context).statusOf;
@@ -306,7 +312,7 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                     // F-12 모든 탭과 같은 줄: [검색창][필터][목록 · 도감]
                     hint: _guide ? '도감에서 찾기' : (_ownedTab ? '구매함에서 찾기' : '좋아요에서 찾기'),
                     onQuery: (q) => setState(() => _query = q), // STATE: 찾기 → 목록 · 도감
-                    filterCount: _guide ? (_lit == LitState.any ? 0 : 1) : _filter.count,
+                    filterCount: _guide ? _guideFilter.filter.count : _filter.count,
                     onFilter: _guide && channel == allChannelId ? null : () => _openFilter(all),
                     tools: [
                       ViewIconToggle(
@@ -332,7 +338,7 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                             onPickChannel: selectChannel,
                             loaders: widget.loaders,
                             query: _query,
-                            lit: _lit,
+                            filter: _guideFilter,
                           )
                         : _list(_visible(all), all),
                   ),

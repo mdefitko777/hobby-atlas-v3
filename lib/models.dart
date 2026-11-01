@@ -210,6 +210,7 @@ class World {
     required this.image,
     required this.total,
     required this.owned,
+    this.kitIds = const [],
   });
 
   final String id;
@@ -219,6 +220,9 @@ class World {
   final String image;
   final int total;
   final int owned;
+
+  /// 이 묶음의 상품 (도감 카드 → 상품 목록)
+  final List<String> kitIds;
 
   static World? fromJson(Object? json) {
     if (json is! Map<String, Object?>) return null;
@@ -232,6 +236,7 @@ class World {
       image: _s(json, 'image'),
       total: _i(json, 'total'),
       owned: _i(json, 'owned'),
+      kitIds: _strs(json['kitIds']),
     );
   }
 }
@@ -245,14 +250,45 @@ class GuideWork {
     required this.image,
     required this.total,
     required this.owned,
+    this.keywords = '',
+    this.liked = 0,
+    this.grades = const [],
+    this.types = const [],
+    this.kits = 0,
+    this.boughtAt = '',
+    this.imageSource = '',
   });
 
   final String id;
+
+  /// 시대 묶음 이름 (우주세기 · 코즈믹 에라 …)
   final String section;
   final String name;
   final String image;
   final int total;
   final int owned;
+
+  /// 찾기용: 이 작품 기체들의 이름 · 형식번호 (소문자) — 기체 이름으로도 작품을 찾는다
+  final String keywords;
+
+  // 도감 필터 재료
+  /// 좋아요 단계 기체 수
+  final int liked;
+
+  /// 기체들의 상품 등급 · 라인 (HG · MG · ROBOT魂 …)
+  final List<String> grades;
+
+  /// 기체 종류 (MS · MA · 전함 …)
+  final List<String> types;
+
+  /// 칸을 켜는 상품 수
+  final int kits;
+
+  /// 마지막으로 구매함에 넣은 때 (updated_at, 없으면 '')
+  final String boughtAt;
+
+  /// [image] 출처 (공식 작품 로고)
+  final String imageSource;
 
   static GuideWork? fromJson(Object? json) {
     if (json is! Map<String, Object?>) return null;
@@ -265,6 +301,10 @@ class GuideWork {
       image: _s(json, 'image'),
       total: _i(json, 'total'),
       owned: _i(json, 'owned'),
+      keywords: _s(json, 'keywords'),
+      liked: _i(json, 'liked'),
+      grades: _strs(json['grades']),
+      kits: _i(json, 'kits'),
     );
   }
 }
@@ -279,15 +319,46 @@ class GuideUnit {
     required this.image,
     required this.status,
     required this.kitIds,
+    this.kitRoles = const {},
+    this.ggetIds = const [],
+    this.type = '',
+    this.keywords = '',
   });
 
+  /// 기체 id — Atlas MS id (예: "RX-78-2 Gundam")
   final String id;
   final String workId;
   final String name;
+
+  /// 둘째 줄 (형식번호 · 영어 이름)
   final String nameEn;
   final String image;
+
+  /// 상품 + 손으로 켜기로 정한 상태 (불러온 때 기준)
   final CollectStatus status;
+
+  /// 연결된 상품 전부 (그 기체 → 세트 → 완성품 → 부품 · SD 순)
   final List<String> kitIds;
+
+  /// kit_id → 연결 역할 (main · set_member · figure · accessory_for · sd_character). 없으면 main
+  final Map<String, String> kitRoles;
+
+  /// 옛 gget unit_id — 도감 손으로 켜기 기록의 키 (없으면 손으로 켤 수 없고 상품으로만 켜진다)
+  final List<int> ggetIds;
+
+  /// 기체 종류 (MS · MA · 전함 · 전투기 · 차량 · 기타, 모르면 '')
+  final String type;
+
+  /// 찾기용 (모든 언어 이름 · 형식번호, 소문자)
+  final String keywords;
+
+  String roleOf(String kitId) => kitRoles[kitId] ?? 'main';
+
+  /// 구매하면 칸이 켜지는 상품 (부품 · SD 캐릭터 연결은 제외)
+  List<String> get litKitIds => [
+    for (final k in kitIds)
+      if (roleOf(k) != 'accessory_for' && roleOf(k) != 'sd_character') k,
+  ];
 
   static GuideUnit? fromJson(Object? json) {
     if (json is! Map<String, Object?>) return null;
@@ -301,8 +372,22 @@ class GuideUnit {
       image: _s(json, 'image'),
       status: parseCollectStatus(json['status']),
       kitIds: _strs(json['kitIds']),
+      type: _s(json, 'type'),
     );
   }
+}
+
+/// 작품 안 묶음 — 화수 범위(장) 또는 한 화 (data/atlas/gundam-chapters.json)
+class GuideChapter {
+  const GuideChapter({required this.name, required this.episodes, required this.unitIds});
+
+  final String name;
+
+  /// "1–3화" · "12화" (없으면 '')
+  final String episodes;
+
+  /// 이 장에 나오는 기체 (도감 칸이 있는 것만)
+  final List<String> unitIds;
 }
 
 /// 베이블레이드 부품 (블레이드 · 래칫 · 비트)

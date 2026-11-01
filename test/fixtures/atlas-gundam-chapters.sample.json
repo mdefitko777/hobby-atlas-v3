@@ -1,0 +1,103 @@
+{
+ "schema": 1,
+ "updated_at": "2026-11-02",
+ "unit_types": {
+  "LCAM-01XA Archangel": "Ship",
+  "Archangel-class": "Ship"
+ },
+ "extra_ms": {
+  "ZGMF-515 CGUE Custom": {
+   "names": {
+    "en": "CGUE Custom"
+   },
+   "type": "Suit"
+  }
+ },
+ "ms_kits": {},
+ "works": {
+  "seed": {
+   "kind": "series",
+   "arcs": [
+    {
+     "id": "gget-30000105",
+     "order": 2,
+     "title": {
+      "ja": "フェイズシフトダウン",
+      "ko": "페이즈 시프트 다운"
+     },
+     "episode_from": 5,
+     "episode_to": 5,
+     "ms": [
+      {
+       "ms": "ZGMF-X10A Freedom Gundam",
+       "side": "ally"
+      }
+     ]
+    },
+    {
+     "id": "gget-30000103",
+     "order": 1,
+     "title": {
+      "ja": "その名はガンダム",
+      "en": "Its Name: Gundam",
+      "ko": "그 이름은 건담"
+     },
+     "episode_from": 1,
+     "episode_to": 3,
+     "ms": [
+      {
+       "ms": "GAT-X105 Strike Gundam",
+       "side": "ally"
+      },
+      {
+       "ms": "Archangel-class",
+       "side": "ally"
+      },
+      {
+       "ms": "GAT-X102 Duel Gundam",
+       "side": "enemy"
+      }
+     ]
+    },
+    {
+     "id": "gget-30000199",
+     "order": 3,
+     "title": {
+      "ja": "空っぽ"
+     },
+     "episode_from": 9,
+     "episode_to": 10,
+     "ms": [
+      {
+       "ms": "Archangel-class",
+       "side": "ally"
+      }
+     ]
+    }
+   ],
+   "episodes": []
+  },
+  "mobile-suit-gundam": {
+   "kind": "films",
+   "arcs": [],
+   "episodes": [
+    {
+     "no": 1,
+     "title_ja": "ガンダム大地に立つ",
+     "title_en": "Gundam Rises",
+     "ms": [
+      {
+       "ms": "MS-06F Zaku II",
+       "role": "debut"
+      }
+     ]
+    },
+    {
+     "no": 2,
+     "title_ja": "ガンダム破壊命令",
+     "ms": []
+    }
+   ]
+  }
+ }
+}

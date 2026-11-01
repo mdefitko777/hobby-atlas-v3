@@ -72,6 +72,9 @@ Future<Profile> fetchProfile() => _guard(deriveProfile);
 /// 친구 도감 비교: 친구가 산 상품 → 작품 id 별 모은 기체 수
 Future<Map<String, int>> fetchFriendGuide(List<String> ownedKitIds) => _guard(() => deriveFriendGuide(ownedKitIds));
 
+/// 건담 작품 도감: 화수 · 장 묶음 (data/atlas/gundam-chapters.json — 없으면 빈 목록)
+Future<List<GuideChapter>> fetchGuideChapters(String workId) => _guard(() => deriveGuideChapters(workId));
+
 /// 화면 사이에 그대로 넘겨 주는 데이터 함수 묶음 (의존성 주입).
 /// 앱은 기본값(실제 데이터)을, 테스트는 가짜 함수를 넣는다.
 class Loaders {
@@ -87,6 +90,7 @@ class Loaders {
     this.profile = fetchProfile,
     this.notifications = fetchNotifications,
     this.friendGuide = fetchFriendGuide,
+    this.guideChapters = fetchGuideChapters,
   });
 
   final Future<List<Kit>> Function(List<String> channelIds) kits;
@@ -100,4 +104,7 @@ class Loaders {
   final Future<Profile> Function() profile;
   final Future<List<AppNotice>> Function() notifications;
   final Future<Map<String, int>> Function(List<String> ownedKitIds) friendGuide;
+
+  /// 건담 작품 안 화수 · 장 (없으면 빈 목록)
+  final Future<List<GuideChapter>> Function(String workId) guideChapters;
 }

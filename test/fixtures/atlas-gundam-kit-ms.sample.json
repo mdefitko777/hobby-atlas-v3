@@ -1,0 +1,124 @@
+{
+ "schema": 1,
+ "updated_at": "2026-11-02",
+ "links": {
+  "hg-strike": [
+   {
+    "ms": "GAT-X105 Strike Gundam",
+    "role": "main",
+    "method": "jan",
+    "confidence": 1
+   }
+  ],
+  "mg-strike": [
+   {
+    "ms": "GAT-X105 Strike Gundam",
+    "role": "main",
+    "method": "jan",
+    "confidence": 1
+   }
+  ],
+  "robot-strike": [
+   {
+    "ms": "GAT-X105 Strike Gundam",
+    "role": "figure",
+    "method": "name_exact",
+    "confidence": 0.9
+   }
+  ],
+  "set-strike-duel": [
+   {
+    "ms": "GAT-X105 Strike Gundam",
+    "role": "set_member",
+    "method": "set_split",
+    "confidence": 0.9
+   },
+   {
+    "ms": "GAT-X102 Duel Gundam",
+    "role": "set_member",
+    "method": "set_split",
+    "confidence": 0.9
+   }
+  ],
+  "parts-strike": [
+   {
+    "ms": "GAT-X105 Strike Gundam",
+    "role": "accessory_for",
+    "method": "name_exact",
+    "confidence": 0.8
+   }
+  ],
+  "sd-musha-strike": [
+   {
+    "ms": "GAT-X105 Strike Gundam",
+    "role": "sd_character",
+    "method": "name_contains",
+    "confidence": 0.7
+   }
+  ],
+  "hg-aile": [
+   {
+    "ms": "GAT-X105+AQM/E-X01 Aile Strike Gundam",
+    "role": "main",
+    "method": "jan",
+    "confidence": 1
+   }
+  ],
+  "hg-destiny": [
+   {
+    "ms": "ZGMF-X42S Destiny Gundam",
+    "role": "main",
+    "method": "jan",
+    "confidence": 1
+   }
+  ],
+  "hg-zaku": [
+   {
+    "ms": "MS-06 Zaku II",
+    "role": "main",
+    "method": "name_exact",
+    "confidence": 0.9
+   }
+  ],
+  "not-in-catalog": [
+   {
+    "ms": "ZGMF-X10A Freedom Gundam",
+    "role": "main",
+    "method": "jan",
+    "confidence": 1
+   }
+  ],
+  "parts-launcher": [
+   {
+    "ms": "Launcher Parts Only",
+    "role": "accessory_for",
+    "method": "name_exact",
+    "confidence": 0.8
+   }
+  ],
+  "hg-build-strike-fp": [
+   {
+    "ms": "GAT-X105B/FP Build Strike Gundam Full Package",
+    "role": "main",
+    "method": "jan",
+    "confidence": 1
+   }
+  ],
+  "ex-archangel": [
+   {
+    "ms": "LCAM-01XA Archangel",
+    "role": "main",
+    "method": "name_exact",
+    "confidence": 0.9
+   }
+  ]
+ },
+ "kit_works": {
+  "hg-aile": [
+   "seed"
+  ],
+  "hg-strike": [
+   "seed"
+  ]
+ }
+}

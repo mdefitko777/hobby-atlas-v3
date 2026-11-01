@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "updated_at": "2026-11-01T08:25:17.488Z",
+  "boxart": {
+    "hg-strike": {"url": "https://bandai-a.akamaihd.net/bc/img/model/b/1000000001_9.jpg", "source": "bandai_spirits_last", "confidence": "high"},
+    "gsf-strike": {"url": "https://bandai-a.akamaihd.net/bc/img/model/b/1000000002_1.jpg", "source": "gashapon_dp", "confidence": "medium", "kind": "dp"},
+    "pg-maybe": {"url": "https://bandai-a.akamaihd.net/bc/img/model/b/1000000003_4.jpg", "source": "bandai_spirits_last", "confidence": "low", "kind": "maybe"},
+    "dead-box": {"url": "https://bandai-hobby.net/x.jpg", "source": "x", "confidence": "high"}
+  }
+}
