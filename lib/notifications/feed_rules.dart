@@ -281,6 +281,44 @@ NoticeRecord _pbRecord(String id, String kind, PbWindow w, String date, String b
   wanted: true,
 );
 
+// ── 알림 받는 공식 예고 ──────────────────────────────────────────────────────
+/// announcements.json status → 화면 글자 (순서 = 단계 순서)
+const annStageLabels = {'announced': '공식 발표', 'product_confirmed': '상품화 확정', 'preorder_open': '예약 시작', 'released': '발매'};
+
+/// 화면 글자 → status (없으면 announced)
+String annStageKey(String label) =>
+    annStageLabels.entries.where((e) => e.value == label).firstOrNull?.key ?? 'announced';
+
+int annRank(String stage) => annStageLabels.keys.toList().indexOf(stage);
+
+/// 알림 받는 예고 중 단계가 앞으로 넘어간 것 → 알림함 줄 (`ann-<id>-<단계>`, 이미 있는 줄은 [known] 으로 건너뛴다).
+/// [announcements] = announcements.json 을 푼 값 (못 받았으면 null → 없음)
+List<NoticeRecord> annStageRecords(NotifyConfig config, Object? announcements, Set<String> known, DateTime now) {
+  if (config.followed.isEmpty) return const [];
+  final byId = {
+    for (final a in jList(jMap(announcements)['announcements']))
+      if (jMap(a) case final m when jStr(m['id']).isNotEmpty) jStr(m['id']): m,
+  };
+  return [
+    for (final e in config.followed.entries)
+      if (byId[e.key] case final m?)
+        if (jStr(m['status']) case final stage
+            when annRank(stage) > annRank(e.value.stage) && !known.contains('ann-${e.key}-$stage'))
+          NoticeRecord(
+            id: 'ann-${e.key}-$stage',
+            kind: 'ann_stage',
+            kitId: '',
+            annId: e.key,
+            title: e.value.title,
+            body: '${annStageLabels[e.value.stage] ?? '공식 발표'} → ${annStageLabels[stage]}',
+            at: now,
+            franchise: e.value.franchise,
+            reasons: [stage],
+            wanted: true, // 채널과 상관없이 보인다
+          ),
+  ];
+}
+
 /// 처음 실행 때 채우는 지난 소식 · 오래 꺼져 있다 켜졌을 때 조용히 넣는 범위 (가장 새 피드 날짜 기준)
 const catchUpDays = 7;
 
@@ -346,6 +384,7 @@ CheckPlan planCheck({
   String error = '',
   String source = '',
   String pending = '',
+  Object? announcements,
 }) {
   final known = {for (final r in state.inbox) r.id, ...state.seenFeed};
   final first = state.lastSeen.isEmpty;
@@ -367,6 +406,7 @@ CheckPlan planCheck({
     }
   }
   records.addAll(pbWindowRecords(config, known, now));
+  records.addAll(annStageRecords(config, announcements, known, now));
   return CheckPlan(
     records: records,
     lastSeen: lastSeen,
@@ -392,12 +432,12 @@ class SystemAlert {
   /// 같은 id 면 앞의 알림을 바꿔 쓴다 (새 상품 요약은 늘 하나)
   final int id;
 
-  /// catalog · wanted · pb
+  /// catalog · wanted · pb · ann
   final String channel;
   final String title;
   final String body;
 
-  /// `kit:<kit_id>` → 상품 상세 / `inbox` → 알림 화면
+  /// `kit:<kit_id>` → 상품 상세 / `ann:<franchise>:<예고 id>` → 예고 / `inbox` → 알림 화면
   final String payload;
 }
 
@@ -474,6 +514,30 @@ List<SystemAlert> buildAlerts(Iterable<NoticeRecord> fresh) {
           title: r.kind == 'pb_open' ? 'PB 예약 시작 · ${r.title}' : 'PB 예약 마감 임박 · ${r.title}',
           body: r.body,
           payload: 'kit:${r.kitId}',
+        ),
+      );
+    }
+  }
+  final ann = live.where((r) => r.channel == 'ann').toList();
+  if (ann.length > 3) {
+    out.add(
+      SystemAlert(
+        id: stableId('ann'),
+        channel: 'ann',
+        title: '알림 받는 공식 예고 ${ann.length}개가 다음 단계로',
+        body: _names(ann),
+        payload: 'inbox',
+      ),
+    );
+  } else {
+    for (final r in ann) {
+      out.add(
+        SystemAlert(
+          id: stableId(r.id),
+          channel: 'ann',
+          title: '${annStageLabels[r.reasons.firstOrNull] ?? '다음 단계'} · ${r.title}',
+          body: r.body,
+          payload: 'ann:${r.franchise}:${r.annId}',
         ),
       );
     }

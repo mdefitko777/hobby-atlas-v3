@@ -12,6 +12,7 @@ import '../data/blob_store.dart';
 import '../data/catalog.dart';
 import '../data/user_store.dart';
 import '../models.dart';
+import 'feed_rules.dart' show annRank, annStageKey;
 import 'local_notifier.dart';
 import 'notify_models.dart';
 
@@ -150,6 +151,7 @@ class NotifyStore extends ChangeNotifier {
     String sig(NotifyState s) => '${s.inbox.length}|${s.inbox.firstOrNull?.id}|${s.inbox.lastOrNull?.id}';
     if (sig(next) != sig(state)) inboxRevision++;
     state = next;
+    _catchUpFollowed();
     notifyListeners();
   }
 
@@ -213,6 +215,34 @@ class NotifyStore extends ChangeNotifier {
   void setRule(String key, bool v) {
     config.rules[key] = v;
     _configChanged();
+  }
+
+  // ── 공식 예고 알림 받기 ──
+  bool isFollowing(String annId) => config.followed.containsKey(annId);
+
+  /// [stage] = 지금 단계 (화면 글자). 이 단계보다 앞으로 넘어가면 알림
+  void setFollow(String annId, bool on, {required String stage, String title = '', String franchise = ''}) {
+    if (on) {
+      config.followed[annId] = FollowedAnn(stage: annStageKey(stage), title: title, franchise: franchise);
+    } else {
+      config.followed.remove(annId);
+    }
+    _configChanged();
+  }
+
+  /// 알림함에 들어온 예고 단계 줄 → 알림 받는 예고의 단계를 그만큼 올린다 (알림함 줄이 오래돼 지워져도 다시 울리지 않게)
+  void _catchUpFollowed() {
+    var changed = false;
+    for (final r in state.inbox) {
+      final f = config.followed[r.annId];
+      final stage = r.reasons.firstOrNull;
+      if (!r.isAnnStage || f == null || stage == null) continue;
+      if (annRank(stage) > annRank(f.stage)) {
+        config.followed[r.annId] = FollowedAnn(stage: stage, title: f.title, franchise: f.franchise);
+        changed = true;
+      }
+    }
+    if (changed) _scheduleConfig();
   }
 
   void markHintShown() {

@@ -3,6 +3,7 @@
 //   2) 다르면 data/atlas/notify-feed.json (날짜마다 알릴 만한 변화 전부) 을 받는다. 아직 없거나 manifest 보다 옛 판이면
 //      data/update-feed-lite.json (날짜마다 20개까지) 으로 채운다 — 지난번 본 날짜 이후만 거른다 (lib/notifications/feed_rules.dart)
 //   3) 같은 판의 피드를 못 받았으면(Pages · Gunpula Atlas 작업이 늦음) manifest 를 "다 봤다"고 적지 않는다 → 다음 확인에서 다시
+//   3b) 알림 받는 공식 예고가 있으면 data/announcements.json 도 받아 단계가 넘어간 것을 알림으로
 //   4) notify_state.json 에 합쳐 쓰고(잠금 · 다시 읽어 합치기), 알림이 켜져 있으면 휴대폰 알림
 // 백그라운드에서는 notify_config.json(앱 화면이 써 둔 설정 · 내 채널 · 좋아요)만 읽는다. user.json · 카탈로그는 열지 않는다.
 import 'dart:convert';
@@ -23,6 +24,9 @@ const catalogCheckTask = 'catalogCheck';
 
 /// Gunpula 새 소식 파일 (scripts/atlas/build_notify_feed.mjs — 날짜마다 알릴 만한 변화 전부, 개수 제한 없음)
 const notifyFeedPath = 'data/atlas/notify-feed.json';
+
+/// 공식 예고 (알림 받기를 누른 예고의 단계를 본다)
+const announcementsPath = 'data/announcements.json';
 
 /// 예전 피드 (날짜마다 추가 20 · 변경 20개까지) — 위 파일이 아직 없거나 늦을 때만
 const liteFeedPath = 'data/update-feed-lite.json';
@@ -193,7 +197,10 @@ Future<CheckOutcome> runCatalogCheck({bool background = false, DateTime? now, Fe
     }
   }
 
+  // 알림 받는 예고가 있으면 예고 파일도 (단계가 넘어갔는지)
+  final announcements = config.followed.isEmpty ? null : _decode(await get(announcementsPath));
   final plan = planCheck(
+    announcements: announcements,
     config: config,
     state: before,
     entries: entries,

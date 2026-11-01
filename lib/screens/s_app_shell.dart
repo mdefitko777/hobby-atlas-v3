@@ -43,6 +43,7 @@ import 'e_camera_screen.dart';
 import 'f_collection_screen.dart';
 import 'h_calendar_screen.dart';
 import 'i_profile_screen.dart';
+import 'j_announcement_screen.dart';
 import 'k_settings_screen.dart';
 import 'm_friends_drawer.dart';
 import 'n_notifications_screen.dart';
@@ -137,6 +138,16 @@ class _AppShellState extends State<AppShell> {
     final payload = LocalNotifier.taps.value;
     if (payload == null || !mounted) return;
     LocalNotifier.taps.value = null;
+    // ann:<franchise>:<예고 id> → 공식 예고 (예고 단계 알림)
+    if (payload.split(':') case ['ann', final ch, final id]) {
+      try {
+        final a = (await widget.loaders.announcements([ch])).where((a) => a.id == id).firstOrNull;
+        if (!mounted) return;
+        if (a != null) return openAnnouncement(context, a, loaders: widget.loaders);
+      } on ApiException catch (e) {
+        if (mounted) showToast(context, e.message);
+      }
+    }
     final kitId = payload.startsWith('kit:') ? payload.substring(4) : '';
     if (kitId.isNotEmpty) {
       _notify.markKitRead(kitId);

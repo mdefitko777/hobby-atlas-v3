@@ -1,6 +1,6 @@
 // 휴대폰 알림 (flutter_local_notifications) — 안드로이드에서만. 웹 미리보기 · 테스트(Windows)에서는 아무것도 하지 않는다.
 // 채널(안드로이드 설정 › 알림에서 따로 끌 수 있는 묶음): 새 상품 · 변경 / 좋아요한 상품 / PB 예약
-// 누르면 payload 로 이동: kit:<kit_id> → 상품 상세, inbox → 알림 화면 (앱 셸이 [taps] 를 듣는다)
+// 누르면 payload 로 이동: kit:<kit_id> → 상품 상세, ann:<franchise>:<id> → 공식 예고, inbox → 알림 화면 (앱 셸이 [taps] 를 듣는다)
 import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
@@ -40,6 +40,12 @@ class LocalNotifier {
       'pb_windows',
       '프리미엄 반다이 예약',
       description: '좋아요한 PB 상품의 예약 시작 · 마감 임박 (Wayback 기록이라 늦거나 틀릴 수 있어요)',
+      importance: Importance.high,
+    ),
+    'ann': AndroidNotificationChannel(
+      'announcement_stages',
+      '알림 받는 공식 예고',
+      description: '알림 받기를 누른 공식 예고가 상품화 확정 · 예약 시작 · 발매로 넘어가면',
       importance: Importance.high,
     ),
   };

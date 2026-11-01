@@ -1,6 +1,7 @@
 // 카탈로그 + 내 기록 → 화면 모델 (도감 · 세계관 · 베이블레이드 · 공식 예고 · 알림 · 내 정보).
 // 숫자(모은 칸 · 진행도)는 db.json 처럼 미리 적힌 값이 아니라 매번 내 기록에서 센다.
 import '../models.dart';
+import '../notifications/feed_rules.dart' show annStageLabels;
 import '../notifications/notify_models.dart';
 import '../notifications/notify_store.dart';
 import 'catalog.dart';
@@ -295,8 +296,6 @@ Future<List<World>> deriveWorlds(String channelId) async {
 }
 
 // ── 공식 예고 (announcements.json: 일본어 제목만 있음) ─────────────────────────
-const _stageLabels = {'announced': '공식 발표', 'product_confirmed': '상품화 확정', 'preorder_open': '예약 시작', 'released': '발매'};
-
 Future<List<Announcement>> deriveAnnouncements(List<String> channelIds) async {
   await _cat.ensureLoaded();
   final set = channelIds.toSet();
@@ -313,12 +312,13 @@ Future<List<Announcement>> deriveAnnouncements(List<String> channelIds) async {
           id: jStr(m['id']),
           franchiseId: jStr(m['franchise']),
           title: pickName(m['names']),
-          status: _stageLabels[jStr(m['status'])] ?? '공식 발표',
+          status: annStageLabels[jStr(m['status'])] ?? '공식 발표',
           date: jStr(m['announced_at']),
           source: jStr(m['source_name']),
           image: image,
           hero: image.isNotEmpty && heroes++ < 6,
           url: jStr(m['source_url']),
+          video: jStr(m['video_id']),
         );
       }(),
   ];
@@ -334,7 +334,19 @@ Future<List<AppNotice>> deriveNotifications() async {
 }
 
 /// 알림함 한 줄 → 화면 모델
-AppNotice noticeOf(NoticeRecord r, Kit? kit) => AppNotice(
+AppNotice noticeOf(NoticeRecord r, Kit? kit) => r.isAnnStage
+    ? AppNotice(
+        id: r.id,
+        type: NoticeType.announce,
+        title: r.title,
+        body: r.body,
+        image: '',
+        at: r.at.toLocal(),
+        read: r.seen,
+        franchiseId: r.franchise,
+        annId: r.annId,
+      )
+    : AppNotice(
   id: r.id,
   type: r.isPbWindow || (r.pb && r.kind == 'added')
       ? NoticeType.reserve

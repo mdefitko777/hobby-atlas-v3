@@ -416,7 +416,7 @@ class _SectionListViewState extends State<SectionListView> {
                       itemBuilder: (context, i) {
                         final a = list[i];
                         return GestureDetector(
-                          onTap: () => openAnnouncement(context, a, loaders: widget.loaders),
+                          onTap: () => openAnnouncement(context, a, loaders: widget.loaders, list: list),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [

@@ -333,7 +333,7 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
             _HeroBanner(
               // A-3 떠 있는 카드
               items: heroes,
-              onTap: (a) => openAnnouncement(context, a, loaders: widget.loaders),
+              onTap: (a) => openAnnouncement(context, a, loaders: widget.loaders, list: heroes),
             ),
           if (!_mine)
             for (final row in rows)
@@ -513,7 +513,7 @@ class _HorizontalRow extends StatelessWidget {
               if (kit != null) {
                 openKitDetail(context, kit, loaders: loaders, list: [for (final it in row.items) ?it.kit]);
               } else if (ann != null) {
-                openAnnouncement(context, ann, loaders: loaders);
+                openAnnouncement(context, ann, loaders: loaders, list: [for (final it in row.items) ?it.ann]);
               }
             },
             marks: kit == null ? null : QuickMarks(kit: kit), // A-9 P07

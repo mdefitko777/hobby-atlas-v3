@@ -401,10 +401,14 @@ class Announcement {
     required this.image,
     required this.hero,
     this.url = '',
+    this.video = '',
   });
 
   /// 공식 원문 (뉴스 · 유튜브)
   final String url;
+
+  /// 유튜브 영상 id (영상 예고만)
+  final String video;
 
   final String id;
   final String franchiseId;

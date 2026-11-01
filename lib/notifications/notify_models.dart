@@ -77,10 +77,12 @@ class NotifyConfig {
     List<String>? channels,
     Set<String>? wanted,
     List<PbWindow>? pb,
+    Map<String, FollowedAnn>? followed,
   }) : rules = {...notifyRuleDefaults, ...?rules},
        channels = channels ?? const ['gundam', 'beyblade', 'pokemon'],
        wanted = wanted ?? const {},
-       pb = pb ?? const [];
+       pb = pb ?? const [],
+       followed = followed ?? {};
 
   /// 휴대폰 알림을 보낼지 (알림함은 꺼도 채워진다)
   bool enabled;
@@ -99,6 +101,9 @@ class NotifyConfig {
   Set<String> wanted;
   List<PbWindow> pb;
 
+  /// 알림 받는 공식 예고 (예고 id → 누를 때의 단계). 단계가 넘어가면 알림 (채널 · 규칙과 상관없이)
+  final Map<String, FollowedAnn> followed;
+
   bool rule(String key) => rules[key] ?? notifyRuleDefaults[key] ?? false;
 
   Map<String, Object?> toJson() => {
@@ -111,6 +116,7 @@ class NotifyConfig {
     'channels': channels,
     'wanted': wanted.toList(),
     'pb': [for (final w in pb) w.toJson()],
+    if (followed.isNotEmpty) 'followed': {for (final e in followed.entries) e.key: e.value.toJson()},
   };
 
   static NotifyConfig fromJson(Object? json) {
@@ -127,7 +133,25 @@ class NotifyConfig {
       channels: j['channels'] is List ? jList(j['channels']).whereType<String>().toList() : null,
       wanted: jList(j['wanted']).whereType<String>().toSet(),
       pb: jList(j['pb']).map(PbWindow.fromJson).nonNulls.toList(),
+      followed: {for (final e in jMap(j['followed']).entries) e.key: ?FollowedAnn.fromJson(e.value)},
     );
+  }
+}
+
+/// 알림 받는 공식 예고 한 개 — [stage] 는 announcements.json 의 status (announced · product_confirmed …)
+class FollowedAnn {
+  const FollowedAnn({required this.stage, required this.title, required this.franchise});
+  final String stage;
+  final String title;
+  final String franchise;
+
+  Map<String, Object?> toJson() => {'stage': stage, 'title': title, 'franchise': franchise};
+
+  static FollowedAnn? fromJson(Object? json) {
+    final j = jMap(json);
+    final stage = jStr(j['stage']);
+    if (stage.isEmpty) return null;
+    return FollowedAnn(stage: stage, title: jStr(j['title']), franchise: jStr(j['franchise']));
   }
 }
 
@@ -147,13 +171,17 @@ class NoticeRecord {
     this.wanted = false,
     this.watched = false,
     this.seen = false,
+    this.annId = '',
   });
 
-  /// `feed-<피드 날짜>-<kit_id>` · `pb-open-<kit_id>-<날짜>` · `pb-close-<kit_id>-<날짜>`
+  /// `feed-<피드 날짜>-<kit_id>` · `pb-open-<kit_id>-<날짜>` · `pb-close-<kit_id>-<날짜>` · `ann-<예고 id>-<단계>`
   final String id;
 
-  /// added · changed · pb_open · pb_close
+  /// added · changed · pb_open · pb_close · ann_stage
   final String kind;
+
+  /// ann_stage: 공식 예고 id (단계는 [reasons] 첫 칸)
+  final String annId;
   final String kitId;
   final String title;
   final String body;
@@ -179,9 +207,10 @@ class NoticeRecord {
   final bool seen;
 
   bool get isPbWindow => kind == 'pb_open' || kind == 'pb_close';
+  bool get isAnnStage => kind == 'ann_stage';
 
-  /// 휴대폰 알림 채널 — catalog(새 상품 · 변경) · wanted(좋아요한 상품) · pb(PB 예약)
-  String get channel => isPbWindow ? 'pb' : (wanted ? 'wanted' : 'catalog');
+  /// 휴대폰 알림 채널 — catalog(새 상품 · 변경) · wanted(좋아요한 상품) · pb(PB 예약) · ann(알림 받는 공식 예고)
+  String get channel => isAnnStage ? 'ann' : (isPbWindow ? 'pb' : (wanted ? 'wanted' : 'catalog'));
 
   Map<String, Object?> toJson() => {
     'id': id,
@@ -197,6 +226,7 @@ class NoticeRecord {
     if (wanted) 'wanted': true,
     if (watched) 'watched': true,
     if (seen) 'seen': true,
+    if (annId.isNotEmpty) 'ann': annId,
   };
 
   static NoticeRecord? fromJson(Object? json) {
@@ -218,6 +248,7 @@ class NoticeRecord {
       wanted: j['wanted'] == true,
       watched: j['watched'] == true,
       seen: j['seen'] == true,
+      annId: jStr(j['ann']),
     );
   }
 }
@@ -377,7 +408,7 @@ class NotifyState {
   }
 
   /// 알림함(이 파일)이 만드는 줄의 id 인가
-  static bool isInboxId(String id) => id.startsWith('feed-') || id.startsWith('pb-');
+  static bool isInboxId(String id) => id.startsWith('feed-') || id.startsWith('pb-') || id.startsWith('ann-');
 }
 
 /// 32비트 FNV-1a — 휴대폰 알림 id 가 isolate · 실행마다 같도록 (String.hashCode 는 보장되지 않음)
