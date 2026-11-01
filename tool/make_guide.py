@@ -30,6 +30,7 @@ SCREENS = [
     ('L', '친구 컬렉션', ['lib/screens/l_friend_collection_screen.dart']),
     ('N', '알림', ['lib/screens/n_notifications_screen.dart']),
     ('K', '설정', ['lib/screens/k_settings_screen.dart']),
+    ('V', '처음 데이터 받기', ['lib/screens/v_first_run_screen.dart']),
 ]
 
 
