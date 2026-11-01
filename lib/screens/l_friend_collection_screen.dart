@@ -9,6 +9,7 @@
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 친구 프로필 숫자 → 쌓기. 상품 줄 → D 상품 상세(쌓기).
 // 쓰임: 선물 고르기(친구 좋아요) · 겹쳐 사지 않기(친구 구매함에 "내 좋아요" 표시) · 도감 비교.
+// v3: 친구의 좋아요 · 구매함 id 는 Gunpula v3 get_friend_collection (I 화면이 받아서 넘겨 줌), 도감 칸은 그 구매함으로 센다.
 import 'package:flutter/cupertino.dart' show CupertinoPageRoute;
 import 'package:flutter/material.dart';
 
@@ -194,9 +195,11 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
         Row(
           children: [
             const VerifiedBadge(size: 18),
-            Text(
-              '  인증 ${f.verified}개 · 점등 ${f.lit}칸',
-              style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+            Expanded(
+              child: Text(
+                '  ${f.verified > 0 ? '인증 ${f.verified}개 · ' : ''}점등 ${f.lit}칸 (산 상품 기준)',
+                style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+              ),
             ),
           ],
         ),

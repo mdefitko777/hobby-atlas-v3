@@ -2,12 +2,14 @@
 //
 // ┌──────── 디자인 가이드 대응표: K 설정 ──────────────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
+// │ K-0  │ ListTile × 3 (로그인 · 상태 · 로그아웃) │ 계정 · 동기화 (옛 Gunpula 와 같은 계정)   │ P01 · P05 · P10 │
 // │ K-1  │ SwitchListTile × 2                 │ 새 소식 알림 · 내 채널 소식만 (준비 중)    │ P03 · P07     │
 // │ K-2  │ ListTile → 바텀 시트(선택)          │ 언어                                   │ P04           │
 // │ K-3  │ ListTile → 파일 · 붙여넣기 → 확인     │ 옛 Gunpula 에서 가져오기 · 백업          │ P10           │
 // │ K-4  │ ListTile                           │ 상품 데이터 기준일 · 지금 새로 받기 · 버전 │ P10           │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 앱 셸 ⚙ → 쌓기(push, 오른쪽에서). 언어 → 덮기(바텀 시트). 가져오기 → 덮기(시트 · 확인 대화상자).
+// 로그인 → P 로그인 화면(쌓기). 로그아웃 → 확인 대화상자(덮기).
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -17,8 +19,11 @@ import 'package:flutter/material.dart';
 import '../data/catalog.dart';
 import '../data/user_store.dart';
 import '../detail_pane.dart';
+import '../sync/account.dart';
+import '../sync/sync_service.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'p_sign_in_screen.dart';
 
 void openSettings(BuildContext context) {
   openPage(context, const SettingsScreen());
@@ -130,7 +135,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (ok != true || !mounted) return;
     UserStore.instance.applyImport(p);
     setState(() {});
-    showToast(context, '가져왔어요 · 구매함 ${UserStore.instance.ownedCount} · 좋아요 ${UserStore.instance.wantedCount}');
+    final signedIn = AccountScope.read(context).signedIn;
+    showToast(
+      context,
+      '가져왔어요 · 구매함 ${UserStore.instance.ownedCount} · 좋아요 ${UserStore.instance.wantedCount}'
+      '${signedIn ? ' · 계정에도 올려요' : ''}',
+    );
   }
 
   Future<String?> _askPaste() {
@@ -151,6 +161,79 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
     ).whenComplete(c.dispose);
+  }
+
+  Future<void> _signOut() async {
+    final account = AccountScope.read(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: const Text('로그아웃할까요?'),
+        content: Text(
+          account.store.cloudDirty
+              ? '아직 올리지 못한 변경이 있어요. 로그아웃해도 이 기기에는 남지만, 다시 로그인할 때까지 다른 기기에는 보이지 않아요.'
+              : '이 기기의 구매함 · 좋아요는 그대로 남아요.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialog, false), child: const Text('취소')),
+          FilledButton(onPressed: () => Navigator.pop(dialog, true), child: const Text('로그아웃')),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    await account.signOut();
+    if (mounted) showToast(context, '로그아웃했어요');
+  }
+
+  /// K-0 계정 · 동기화
+  Widget _accountPanel(Account a) {
+    final sync = a.sync;
+    final busy = sync.phase == SyncPhase.syncing;
+    return SectionPanel(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SectionHeader('계정 · 동기화'),
+          if (!a.ready)
+            const ListTile(leading: Icon(Icons.cloud_outlined), title: Text('계정 확인 중…'))
+          else if (!a.available)
+            const ListTile(
+              leading: Icon(Icons.cloud_off_outlined),
+              title: Text('계정 연결 설정이 없어요'),
+              subtitle: Text('config/supabase.json · 기기에만 저장 중'),
+            )
+          else if (!a.signedIn)
+            ListTile(
+              leading: const Icon(Icons.login),
+              title: const Text('로그인'),
+              subtitle: const Text('옛 Gunpula 앱과 같은 메일로 로그인하면 컬렉션이 그대로 와요'),
+              trailing: const Icon(Icons.chevron_right, color: Gp.faint),
+              onTap: () => openSignIn(context),
+            )
+          else ...[
+            ListTile(
+              leading: Icon(switch (sync.phase) {
+                SyncPhase.offline => Icons.cloud_off_outlined,
+                SyncPhase.error => Icons.error_outline,
+                _ => Icons.cloud_done_outlined,
+              }, color: sync.phase == SyncPhase.error ? Gp.danger : null),
+              title: Text(a.email.isEmpty ? '로그인됨' : a.email),
+              subtitle: Text(sync.statusLine),
+              isThreeLine: sync.statusLine.contains('\n'),
+              trailing: busy
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                  : TextButton(onPressed: () => sync.syncNow(reason: 'manual'), child: const Text('지금 동기화')),
+            ),
+            ListTile(
+              leading: const Icon(Icons.logout),
+              title: const Text('로그아웃'),
+              onTap: _signOut,
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   /// 내 기록을 파일로 (토큰 · 비밀값은 원래 없음)
@@ -178,6 +261,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     final cat = Catalog.instance;
     final me = UserStore.instance;
+    final account = AccountScope.of(context); // 로그인 · 동기화 상태가 바뀌면 다시 그림
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -188,6 +272,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.only(bottom: 40),
         children: [
+          _accountPanel(account),
           SectionPanel(
             padding: const EdgeInsets.only(bottom: 6),
             child: Column(

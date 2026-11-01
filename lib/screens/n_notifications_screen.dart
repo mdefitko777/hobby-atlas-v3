@@ -8,17 +8,20 @@
 // │ N-4  │ 줄 누르기 → 읽음 + 이동               │ 상품 상세 · 공고 · 친구 프로필 · 친구 요청 │ P07          │
 // │ N-5  │ Dismissible → 토스트(되돌리기)        │ 밀어서 지우기                           │ P03 · P05     │
 // │ N-6  │ AppBar: 모두 읽음 · ⚙                │ 한 번에 읽음 · 알림 설정(K)              │ P07           │
-// │ N-7  │ 바텀 시트: 수락 · 거절                │ 친구 요청 응답 (가짜)                   │ P05           │
+// │ N-7  │ 바텀 시트: 수락 · 거절                │ 친구 요청 응답 (Gunpula v3 respond_friend) │ P05        │
 // │ N-8  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 알림 없음           │ P01 · P09     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 🔔 → 쌓기(push, 오른쪽에서). 줄 → 각 화면 쌓기. 요청 → 덮기(바텀 시트).
 // 범위: 내 채널의 상품 · 예고 알림 + 친구 알림 (채널과 무관). 읽음 · 삭제는 저장하지 않는다.
+// 받은 친구 요청(계정 get_me)은 맨 위 「친구 요청」 묶음에 시간 대신 "수락 · 거절"로 보인다.
 import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../detail_pane.dart';
 import '../channels.dart';
 import '../models.dart';
+import '../sync/account.dart';
+import '../sync/friends_service.dart' show FriendsFailure;
 import '../theme.dart';
 import '../widgets.dart';
 import 'd_kit_detail_screen.dart';
@@ -98,11 +101,27 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   bool _isRead(AppNotice n) => n.read || _read.contains(n.id);
 
-  /// 내 채널 범위 + 지우지 않은 것
-  List<AppNotice> _scoped(List<AppNotice> all) => all
-      .where((n) => !_removed.contains(n.id))
-      .where((n) => n.franchiseId.isEmpty || widget.myChannels.contains(n.franchiseId))
-      .toList();
+  /// 계정의 받은 친구 요청 → 알림 줄 (id 'req-<아이디>')
+  List<AppNotice> _requests(Account account) => [
+    if (account.signedIn)
+      for (final p in account.friends.incoming)
+        AppNotice(
+          id: 'req-${p.handle}',
+          type: NoticeType.request,
+          title: '${p.name}님의 친구 요청',
+          body: '@${p.handle} · 수락하면 서로의 구매함 · 좋아요를 볼 수 있어요',
+          image: '',
+          at: noticeNow,
+          read: false,
+          friend: p.handle,
+        ),
+  ];
+
+  /// 내 채널 범위 + 지우지 않은 것 (받은 친구 요청이 맨 앞)
+  List<AppNotice> _scoped(List<AppNotice> all, List<AppNotice> requests) => [
+    ...requests,
+    ...all.where((n) => n.franchiseId.isEmpty || widget.myChannels.contains(n.franchiseId)),
+  ].where((n) => !_removed.contains(n.id)).toList();
 
   void _readAll(List<AppNotice> list) {
     final ids = [
@@ -146,6 +165,27 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
+  /// 계정 요청이면 서버에 답한다 (가짜 데이터 요청은 목록에서만 빠짐)
+  Future<void> _respond(AppNotice n, {required bool accept}) async {
+    final account = AccountScope.read(context);
+    final real = n.id.startsWith('req-') && account.signedIn;
+    if (!real) {
+      if (accept) {
+        setState(() => _removed.add(n.id));
+        showToast(context, '친구가 됐어요 · 친구 서랍에서 볼 수 있어요');
+      } else {
+        _remove(n);
+      }
+      return;
+    }
+    try {
+      await account.friends.respond(n.friend, accept: accept);
+      if (mounted) showToast(context, accept ? '친구가 됐어요 · 친구 서랍에서 볼 수 있어요' : '요청을 거절했어요');
+    } on FriendsFailure catch (e) {
+      if (mounted) showToast(context, e.message);
+    }
+  }
+
   /// N-7 친구 요청 응답
   void _answerRequest(AppNotice n) {
     showModalBottomSheet<void>(
@@ -164,7 +204,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     child: OutlinedButton(
                       onPressed: () {
                         Navigator.pop(sheet);
-                        _remove(n);
+                        _respond(n, accept: false);
                       },
                       child: const Text('거절'),
                     ),
@@ -174,8 +214,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     child: FilledButton(
                       onPressed: () {
                         Navigator.pop(sheet);
-                        setState(() => _removed.add(n.id));
-                        showToast(context, '친구가 됐어요 · 친구 서랍에서 볼 수 있어요');
+                        _respond(n, accept: true);
                       },
                       child: const Text('수락'),
                     ),
@@ -191,10 +230,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final requests = _requests(AccountScope.of(context)); // 요청이 바뀌면 다시 그림
     return FutureBuilder<List<AppNotice>>(
       future: _future,
       builder: (context, snap) {
-        final scoped = snap.hasData ? _scoped(snap.data!) : const <AppNotice>[];
+        final scoped = _scoped(snap.hasData ? snap.data! : const [], requests);
         final list = _tab == _Tab.all ? scoped : scoped.where((n) => n.type.tab == _tab).toList();
         return Scaffold(
           appBar: AppBar(
@@ -265,7 +305,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
     final groups = <String, List<AppNotice>>{};
     for (final n in list) {
-      (groups[_groupOf(n.at)] ??= []).add(n);
+      (groups[n.id.startsWith('req-') ? '친구 요청' : _groupOf(n.at)] ??= []).add(n);
     }
     final channels = widget.myChannels.map((id) => channelOf(id).label).join(' · ');
     return ListView(
@@ -292,7 +332,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 color: Gp.soft,
                 child: const Icon(Icons.delete_outline, color: Gp.danger),
               ),
-              child: _NoticeRow(notice: n, read: _isRead(n), onTap: () => _open(n)),
+              child: _NoticeRow(
+                notice: n,
+                read: _isRead(n),
+                time: n.id.startsWith('req-') ? '누르면 수락 · 거절' : noticeTime(n.at),
+                onTap: () => _open(n),
+              ),
             ),
         ],
       ],
@@ -302,9 +347,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
 /// N-3 알림 한 줄
 class _NoticeRow extends StatelessWidget {
-  const _NoticeRow({required this.notice, required this.read, required this.onTap});
+  const _NoticeRow({required this.notice, required this.read, required this.time, required this.onTap});
   final AppNotice notice;
   final bool read;
+
+  /// "3시간 전" · 친구 요청은 "누르면 수락 · 거절"
+  final String time;
   final VoidCallback onTap;
 
   @override
@@ -365,7 +413,7 @@ class _NoticeRow extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    noticeTime(n.at),
+                    time,
                     style: const TextStyle(fontSize: Gp.t11, color: Gp.faint),
                   ),
                 ],

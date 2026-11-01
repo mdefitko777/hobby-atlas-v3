@@ -1,12 +1,16 @@
 // 내 수집 기록 — 기기에 저장, 옛 Gunpula 앱(app/collection-store.js)과 같은 모양.
 //   items[kit_id] = {status: owned|wanted|deleted, updated_at, updated_by, quantity 1–99, note?, storage?, purchase_price?}
 // 지운 것도 'deleted' 로 남겨 둔다 (나중에 동기화할 때 "지웠다"가 이기도록).
+// 로그인하면 lib/sync/sync_service.dart 가 이 기록을 옛 앱과 같은 Supabase payload 에 합쳐 올린다:
+//   · 공유되는 것 = 구매함 · 좋아요(내 버킷) — 바꾸면 sharedRevision +1, cloudDirty = true
+//   · 이 기기에만 = 베이 부품 · 베이 연결 · 도감 손으로 켜기 · 최근 본 것 (payload 에 넣지 않음)
 import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
 import '../models.dart';
+import '../sync/collection_merge.dart' show collectionStatuses, normalizeCollectionEntry;
 import 'blob_store.dart';
 
 class UserStore extends ChangeNotifier {
@@ -26,8 +30,20 @@ class UserStore extends ChangeNotifier {
 
   final Map<String, Map<String, Object?>> _items = {};
 
-  /// 옛 payload 에서 그대로 보관만 하는 값 (overrides · series_label_overrides · custom_items)
+  /// 옛 payload 에서 그대로 보관만 하는 값 (overrides · series_label_overrides …, appearance 는 빼고)
   Map<String, Object?> payloadExtra = {};
+
+  /// payload.collection 의 기본 4키 말고 나머지 (custom_items …) — 그대로 보관만
+  Map<String, Object?> collectionExtra = {};
+
+  /// 아직 서버에 올리지 않은 내 기록 변경이 있음 (오프라인 · 실패 → 다음 동기화 때 다시)
+  bool cloudDirty = false;
+
+  /// 백업 파일에서 가져온 overrides 등이 아직 안 올라감 → 다음 저장 때만 서버 값과 합친다
+  bool extrasDirty = false;
+
+  /// 공유되는 기록(구매함 · 좋아요)을 내가 바꿀 때마다 +1 (서버에서 받은 것은 세지 않음)
+  int sharedRevision = 0;
 
   // 옛 앱에서 기기에만 있던 값 (백업 · 클라우드에 없음)
   final Set<String> bbxOwnedParts = {};
@@ -37,12 +53,14 @@ class UserStore extends ChangeNotifier {
 
   /// 바뀔 때마다 +1 (Marks 가 다시 그릴지 판단)
   int revision = 0;
-  bool _loaded = false;
+  Future<void>? _loading;
   Timer? _saveTimer;
 
-  Future<void> load() async {
-    if (_loaded || !persist) return;
-    _loaded = true;
+  /// 파일에서 읽기 — 여러 번 불러도 한 번만 읽고, 읽는 중이면 끝날 때까지 기다린다 (동기화가 먼저 덮어쓰지 않게)
+  Future<void> load() => _loading ??= _load();
+
+  Future<void> _load() async {
+    if (!persist) return;
     final text = await BlobStore.read(_key);
     if (text == null) return;
     try {
@@ -64,7 +82,13 @@ class UserStore extends ChangeNotifier {
         for (final e in _map(_map(j['collection'])['items']).entries)
           e.key: ?normalizeEntry(e.value, member),
       });
-    payloadExtra = Map.of(_map(j['payload_extra']));
+    payloadExtra = Map.of(_map(j['payload_extra']))..remove('appearance');
+    collectionExtra = Map.of(_map(j['collection_extra']));
+    // 예전 파일: custom_items 를 payload_extra 에 두었다 → collection 쪽으로
+    if (payloadExtra.remove('custom_items') case final Object c) collectionExtra.putIfAbsent('custom_items', () => c);
+    final sync = _map(j['sync']);
+    cloudDirty = sync['dirty'] == true;
+    extrasDirty = sync['extras_dirty'] == true;
     final local = _map(j['local_state']);
     bbxOwnedParts
       ..clear()
@@ -85,6 +109,8 @@ class UserStore extends ChangeNotifier {
     'member': member,
     'collection': {'items': _items},
     'payload_extra': payloadExtra,
+    'collection_extra': collectionExtra,
+    'sync': {'dirty': cloudDirty, 'extras_dirty': extrasDirty},
     'local_state': {
       'bbx_owned_parts': bbxOwnedParts.toList(),
       'bbx_manual_map': bbxManualMap,
@@ -93,9 +119,18 @@ class UserStore extends ChangeNotifier {
     },
   };
 
-  void _changed() {
+  /// [shared] = 구매함 · 좋아요처럼 서버에 올라가야 하는 변경
+  void _changed({bool shared = false}) {
     revision++;
+    if (shared) {
+      sharedRevision++;
+      cloudDirty = true;
+    }
     notifyListeners();
+    _persistSoon();
+  }
+
+  void _persistSoon() {
     if (!persist) return;
     _saveTimer?.cancel();
     _saveTimer = Timer(const Duration(milliseconds: 400), () => BlobStore.write(_key, jsonEncode(toJson())));
@@ -103,6 +138,9 @@ class UserStore extends ChangeNotifier {
 
   // ── 읽기 ──
   Map<String, Object?>? entry(String kitId) => _items[kitId];
+
+  /// 내 버킷 전체 (읽기 전용) — 동기화가 서버 payload 와 합칠 때
+  Map<String, Map<String, Object?>> get items => Map.unmodifiable(_items);
 
   /// 기록이 없으면 null (가짜 데이터 테스트에서는 상품의 status 를 그대로 쓴다)
   CollectStatus? statusOf(String kitId) => switch (_items[kitId]?['status']) {
@@ -148,7 +186,7 @@ class UserStore extends ChangeNotifier {
       'updated_by': member,
       'quantity': old?['quantity'] ?? 1,
     };
-    _changed();
+    _changed(shared: true);
   }
 
   /// 수량 · 산 값 · 보관 장소 · 메모 (null 이면 지움)
@@ -162,7 +200,7 @@ class UserStore extends ChangeNotifier {
     put('storage', storage);
     put('note', note);
     _items[kitId] = next;
-    _changed();
+    _changed(shared: true);
   }
 
   void markViewed(String kitId) {
@@ -194,35 +232,59 @@ class UserStore extends ChangeNotifier {
         _items[e.key] = e.value;
       }
     }
-    payloadExtra = {...payloadExtra, ...p.payloadExtra};
+    if (p.payloadExtra.isNotEmpty || p.collectionExtra.isNotEmpty) {
+      payloadExtra = {...payloadExtra, ...p.payloadExtra}..remove('appearance');
+      collectionExtra = {...collectionExtra, ...p.collectionExtra};
+      extrasDirty = true;
+    }
     bbxOwnedParts.addAll(p.bbxOwnedParts);
     bbxManualMap.addAll(p.bbxManualMap);
     guideManualLit.addAll(p.guideManualLit);
     for (final id in p.recentViewed.reversed) {
       if (!recentViewed.contains(id)) recentViewed.insert(0, id);
     }
-    _changed();
+    _changed(shared: p.items.isNotEmpty || extrasDirty);
+  }
+
+  // ── 동기화 (lib/sync/sync_service.dart 만 부른다) ──
+  /// 서버와 합친 결과를 받아 들인다. 내가 바꾼 것으로 세지 않는다 (다시 올리지 않게).
+  void applyCloud({
+    required String member,
+    required Map<String, Map<String, Object?>> selfItems,
+    required Map<String, Object?> payloadExtra,
+    required Map<String, Object?> collectionExtra,
+  }) {
+    this.member = member.trim().isEmpty ? this.member : member.trim();
+    _items
+      ..clear()
+      ..addAll({
+        for (final e in selfItems.entries) e.key: ?normalizeEntry(e.value, this.member),
+      });
+    this.payloadExtra = Map.of(payloadExtra)
+      ..remove('collection')
+      ..remove('appearance'); // 집 사진(data URL) 같은 큰 값은 기기에 두지 않는다 — 저장 때마다 서버 것을 그대로 쓴다
+    this.collectionExtra = Map.of(collectionExtra);
+    revision++;
+    notifyListeners();
+    _persistSoon();
+  }
+
+  /// [atSharedRevision] 까지의 변경이 서버에 올라갔다. 그 뒤에 또 바꿨으면 dirty 는 그대로.
+  void markSynced(int atSharedRevision) {
+    if (sharedRevision != atSharedRevision) return;
+    if (!cloudDirty && !extrasDirty) return;
+    cloudDirty = false;
+    extrasDirty = false;
+    _persistSoon();
   }
 }
 
-/// 옛 항목 하나 → 정리된 모양 (collection-store.js normalizeCollectionEntry)
+/// 옛 항목 하나 → 정리된 모양 (collection-store.js normalizeCollectionEntry 그대로 — lib/sync/collection_merge.dart).
+/// 상태가 owned · wanted · deleted 가 아니면 null (버림)
 Map<String, Object?>? normalizeEntry(Object? raw, String member) {
-  final e = _map(raw);
-  final status = _str(e['status']);
-  if (!const {'owned', 'wanted', 'deleted'}.contains(status)) return null;
-  final q = e['quantity'] ?? e['wanted_quantity'];
-  final qty = (q is num ? q.toInt() : int.tryParse('$q') ?? 1).clamp(1, 99);
-  final out = <String, Object?>{
-    'status': status,
-    'updated_at': _str(e['updated_at']).isEmpty ? DateTime.now().toUtc().toIso8601String() : _str(e['updated_at']),
-    'updated_by': _str(e['updated_by']).isEmpty ? member : _str(e['updated_by']),
-    'quantity': qty,
-  };
-  if (_str(e['note']).isNotEmpty) out['note'] = _str(e['note']);
-  if (_str(e['storage']).isNotEmpty) out['storage'] = _str(e['storage']);
-  final price = num.tryParse('${e['purchase_price'] ?? ''}'.replaceAll(RegExp(r'[^\d.]'), ''));
-  if (price != null) out['purchase_price'] = price.round();
-  return out;
+  final status = _map(raw)['status'];
+  if (status is! String || !collectionStatuses.contains(status)) return null;
+  return normalizeCollectionEntry(raw, member: member);
 }
 
 /// 가져오기 전에 보여 줄 숫자 + 실제로 넣을 값.
@@ -237,6 +299,9 @@ class ImportPreview {
   String member = '';
   final Map<String, Map<String, Object?>> items = {};
   final Map<String, Object?> payloadExtra = {};
+
+  /// collection.custom_items 등 (비공개 위시 — 보관만)
+  final Map<String, Object?> collectionExtra = {};
   final Set<String> bbxOwnedParts = {};
   final Map<String, String> bbxManualMap = {};
   final Set<int> guideManualLit = {};
@@ -327,7 +392,10 @@ class ImportPreview {
     }
     // Hobby Atlas 자신의 백업 (설정 › 백업 파일로 내보내기)
     p.payloadExtra.addAll(_map(j['payload_extra']));
-    if (_map(col['custom_items']).isNotEmpty) p.payloadExtra['custom_items'] = col['custom_items'];
+    p.collectionExtra.addAll(_map(j['collection_extra']));
+    if (p.payloadExtra.remove('custom_items') case final Object c) p.collectionExtra.putIfAbsent('custom_items', () => c);
+    p.payloadExtra.remove('appearance');
+    if (_map(col['custom_items']).isNotEmpty) p.collectionExtra['custom_items'] = col['custom_items'];
 
     final local = _map(j['local_state']);
     p.bbxOwnedParts.addAll(_list(local['bbx_owned_parts']).whereType<String>());
