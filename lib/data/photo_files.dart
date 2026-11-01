@@ -24,6 +24,7 @@ class MyPhoto {
     this.watermark = true,
     this.uploadedTo = '',
     this.deleted = false,
+    this.restored = false,
   });
 
   /// 새 사진 (id = 시각 + 무작위, 서버 경로 `<user_id>/<id>.jpg` 에도 그대로)
@@ -55,6 +56,9 @@ class MyPhoto {
   /// 지웠는데 서버에서 아직 못 내렸다 (내리면 목록에서 빠진다)
   final bool deleted;
 
+  /// 다시 설치 · 다른 기기에서 서버 목록으로 되찾은 사진 (파일은 처음 볼 때 Storage 에서 받는다 — lib/sync/photo_restore.dart)
+  final bool restored;
+
   MyPhoto copyWith({String? kitId, String? unitId, bool? shared, bool? watermark, String? uploadedTo, bool? deleted}) =>
       MyPhoto(
         id: id,
@@ -66,6 +70,7 @@ class MyPhoto {
         watermark: watermark ?? this.watermark,
         uploadedTo: uploadedTo ?? this.uploadedTo,
         deleted: deleted ?? this.deleted,
+        restored: restored,
       );
 
   Map<String, Object?> toJson() => {
@@ -78,6 +83,7 @@ class MyPhoto {
     'watermark': watermark,
     if (uploadedTo.isNotEmpty) 'uploaded_to': uploadedTo,
     if (deleted) 'deleted': true,
+    if (restored) 'restored': true,
   };
 
   static MyPhoto? fromJson(Object? raw) {
@@ -95,6 +101,7 @@ class MyPhoto {
       watermark: m['watermark'] != false,
       uploadedTo: jStr(m['uploaded_to']),
       deleted: m['deleted'] == true,
+      restored: m['restored'] == true,
     );
   }
 }
@@ -110,6 +117,35 @@ abstract class PhotoFiles {
 
   /// 화면에 그릴 그림 (없으면 null)
   Future<ImageProvider?> provider(String name);
+
+  /// 기기에 없는 사진 파일을 서버(Storage)에서 받아 오는 곳 — lib/sync/photo_restore.dart 가 끼운다. 못 받으면 null
+  static Future<Uint8List?> Function(String name)? fetchMissing;
+
+  final Map<String, Future<Uint8List?>> _fetching = {};
+
+  /// 기기 파일, 없으면 [fetchMissing] 으로 받아 photos/ 에 저장한 뒤 (같은 파일을 겹쳐 받지 않는다)
+  Future<Uint8List?> readOrFetch(String name) async {
+    final b = await read(name);
+    if (b != null) return b;
+    final fetch = fetchMissing;
+    if (fetch == null) return null;
+    return _fetching[name] ??= () async {
+      try {
+        final got = await fetch(name);
+        if (got != null) await write(name, got);
+        return got;
+      } finally {
+        _fetching.remove(name);
+      }
+    }();
+  }
+
+  /// [provider] 와 같고, 파일이 없으면 먼저 받아 본다 (되찾은 사진은 처음 볼 때 받는다)
+  Future<ImageProvider?> providerOrFetch(String name) async {
+    final p = await provider(name);
+    if (p != null || fetchMissing == null) return p;
+    return await readOrFetch(name) == null ? null : provider(name);
+  }
 }
 
 /// 메모리 (테스트 · 웹 미리보기)

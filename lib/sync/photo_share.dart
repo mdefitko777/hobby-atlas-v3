@@ -208,6 +208,8 @@ class PhotoShareService extends ChangeNotifier {
     try {
       for (final p in work) {
         if (_needsRemove(p, uid)) {
+          // 되찾은 사진을 숨기면 서버 파일이 사라진다 → 먼저 기기에 받아 둔다 (못 받으면 다음에)
+          if (!p.deleted && p.restored && await PhotoFiles.instance.readOrFetch(p.file) == null) continue;
           await _rpc()('gunpula_v3_delete_photo', {'p_photo_id': p.id});
           await storage.remove([pathOf(uid, p.id)]);
           if (p.deleted) {
@@ -216,7 +218,7 @@ class PhotoShareService extends ChangeNotifier {
             store.updatePhoto(p.copyWith(uploadedTo: ''));
           }
         } else {
-          final bytes = await PhotoFiles.instance.read(p.file);
+          final bytes = await PhotoFiles.instance.readOrFetch(p.file);
           if (bytes == null) continue; // 파일이 사라졌다 — 올릴 수 없음
           await storage.upload(pathOf(uid, p.id), bytes);
           await _rpc()('gunpula_v3_put_photo', {

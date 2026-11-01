@@ -67,7 +67,7 @@ class AppImage extends StatelessWidget {
 /// AppImage 경로 앞에 붙이면 내 사진 파일 (도감 칸 등 그림 경로 하나만 받는 곳)
 const localPhotoPrefix = 'local:';
 
-/// 내 사진 (기기 파일 — lib/data/photo_files.dart). 못 읽으면 회색 칸, [fallback] 을 주면 파일이 없거나 깨졌을 때 그것
+/// 내 사진 (기기 파일 — lib/data/photo_files.dart, 되찾은 사진은 처음 볼 때 서버에서 받는다). 못 읽으면 회색 칸, [fallback] 을 주면 파일이 없거나 깨졌을 때 그것
 /// (아바타 · 배경 · 친구 아바타는 첫 글자)
 class LocalPhotoImage extends StatefulWidget {
   const LocalPhotoImage(this.file, {super.key, this.fit = BoxFit.cover, this.fallback});
@@ -80,12 +80,12 @@ class LocalPhotoImage extends StatefulWidget {
 }
 
 class _LocalPhotoImageState extends State<LocalPhotoImage> {
-  late Future<ImageProvider?> _img = PhotoFiles.instance.provider(widget.file);
+  late Future<ImageProvider?> _img = PhotoFiles.instance.providerOrFetch(widget.file);
 
   @override
   void didUpdateWidget(LocalPhotoImage old) {
     super.didUpdateWidget(old);
-    if (old.file != widget.file) _img = PhotoFiles.instance.provider(widget.file);
+    if (old.file != widget.file) _img = PhotoFiles.instance.providerOrFetch(widget.file);
   }
 
   @override
