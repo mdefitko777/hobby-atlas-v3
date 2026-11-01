@@ -60,9 +60,14 @@ jobs:
 
       - name: APK
         run: |
-          # arm64 만 (요즘 폰 전부 · 76 MB → 약 30 MB). APP_BUILD = 앱이 자기 빌드 번호를 안다 (업데이트 확인)
+          # arm64 만 (요즘 폰 전부 · 76 MB → 약 40 MB). APP_BUILD = 앱이 자기 빌드 번호를 안다 (업데이트 확인)
+          # 버전 이름 = pubspec 앞 두 자리 + 빌드 번호 (1.1.6) — 설정 › 버전 · 업데이트 시트에 보인다
+          mm=$(sed -nE 's/^version: *([0-9]+\.[0-9]+)\..*/\1/p' pubspec.yaml)
+          name="$mm.${{ github.run_number }}"
+          echo "APP_VERSION=$name" >> "$GITHUB_ENV"
           flutter build apk --release --target-platform android-arm64 \
-            --build-number=${{ github.run_number }} --dart-define=APP_BUILD=${{ github.run_number }}
+            --build-name=$name --build-number=${{ github.run_number }} \
+            --dart-define=APP_BUILD=${{ github.run_number }} --dart-define=APP_VERSION=$name
           cp build/app/outputs/flutter-apk/app-release.apk hobby-atlas.apk
 
       - name: version.json (앱 업데이트 확인용)
@@ -76,11 +81,11 @@ jobs:
           git log --format=%s $range -- lib android assets pubspec.yaml | sed -e 's/^v3: //' -e 's/ — .*//' | head -8 > notes.txt
           major=true
           if git log -1 --format=%s | grep -q '\[minor\]'; then major=false; fi
-          jq -n --argjson build ${{ github.run_number }} --arg sha "$GITHUB_SHA" \
+          jq -n --argjson build ${{ github.run_number }} --arg version "$APP_VERSION" --arg sha "$GITHUB_SHA" \
             --arg built "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --argjson major $major \
             --arg sha256 "$(sha256sum hobby-atlas.apk | cut -d' ' -f1)" --argjson size $(stat -c %s hobby-atlas.apk) \
             --rawfile notes notes.txt \
-            '{build:$build, sha:$sha, built_at:$built, major:$major, apk:"hobby-atlas.apk", sha256:$sha256, size:$size,
+            '{build:$build, version:$version, sha:$sha, built_at:$built, major:$major, apk:"hobby-atlas.apk", sha256:$sha256, size:$size,
               notes:($notes | split("\n") | map(select(length > 0)))}' > version.json
           cat version.json
 

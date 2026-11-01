@@ -72,7 +72,7 @@ Future<void> showUpdateSheet(BuildContext context, UpdateInfo info, {AppUpdate? 
                         style: TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w700),
                       ),
                     ),
-                    SoftTag('빌드 ${info.build}'),
+                    SoftTag(info.versionLabel),
                   ],
                 ),
                 const SizedBox(height: 4),
@@ -187,7 +187,7 @@ class _VersionTileState extends State<VersionTile> {
         leading: const Icon(Icons.info_outline),
         title: const Text('버전'),
         subtitle: Text(
-          u.available == null ? 'Hobby Atlas · $appVersionLabel' : 'Hobby Atlas · $appVersionLabel → 빌드 ${u.available!.build} 있음',
+          u.available == null ? 'Hobby Atlas · $appVersionLabel' : 'Hobby Atlas · $appVersionLabel → ${u.available!.versionLabel} 있음',
         ),
         trailing: _checking
             ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))

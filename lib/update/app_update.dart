@@ -20,12 +20,16 @@ const appBuild = int.fromEnvironment('APP_BUILD');
 const updateBase = 'https://github.com/mdefitko777/hobby-atlas-v3/releases/download/apk-latest/';
 
 /// 설정 › 버전 에 보이는 글자
-String get appVersionLabel => appBuild > 0 ? '빌드 $appBuild' : '개발 빌드';
+String get appVersionLabel => appBuild <= 0 ? '개발 빌드' : (appVersion.isEmpty ? '빌드 $appBuild' : appVersion);
+
+/// 이 APK 의 버전 이름 (1.1.6 = pubspec 앞 두 자리 + 빌드 번호, --dart-define=APP_VERSION)
+const appVersion = String.fromEnvironment('APP_VERSION');
 
 /// version.json 한 벌
 class UpdateInfo {
   const UpdateInfo({
     required this.build,
+    this.version = '',
     required this.builtAt,
     required this.major,
     required this.apk,
@@ -35,6 +39,10 @@ class UpdateInfo {
   });
 
   final int build;
+
+  /// 1.1.6 (옛 version.json 에는 없다 → 빌드 번호로)
+  final String version;
+  String get versionLabel => version.isEmpty ? '빌드 $build' : version;
   final String builtAt;
 
   /// true = 앱을 열 때 한 번 묻는다, false(커밋에 [minor]) = ⬇ 아이콘만
@@ -54,6 +62,7 @@ class UpdateInfo {
     if (build <= 0) return null;
     return UpdateInfo(
       build: build,
+      version: jStr(j['version']),
       builtAt: jStr(j['built_at']),
       major: j['major'] != false,
       apk: jStr(j['apk']).isEmpty ? 'hobby-atlas.apk' : jStr(j['apk']),

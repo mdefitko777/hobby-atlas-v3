@@ -9,6 +9,7 @@ import 'package:hobby_atlas/update/update_ui.dart';
 
 final _json = jsonEncode({
   'build': 42,
+  'version': '1.1.42',
   'sha': 'abc',
   'built_at': '2026-11-02T03:00:00Z',
   'major': true,
@@ -25,6 +26,8 @@ void main() {
   test('version.json → UpdateInfo · [minor] 는 묻지 않음 · 빌드 없으면 버림', () {
     final i = UpdateInfo.fromJson(jsonDecode(_json))!;
     expect(i.build, 42);
+    expect(i.versionLabel, '1.1.42');
+    expect(UpdateInfo.fromJson({'build': 5})!.versionLabel, '빌드 5'); // 옛 version.json
     expect(i.major, isTrue);
     expect(i.sizeLabel, '30 MB');
     expect(i.notes, hasLength(2));
@@ -59,7 +62,7 @@ void main() {
     await u.check(fetch: (_) async => _json);
     await tester.pump();
     expect(find.byTooltip('업데이트'), findsOneWidget);
-    expect(find.text('Hobby Atlas · 개발 빌드 → 빌드 42 있음'), findsOneWidget);
+    expect(find.text('Hobby Atlas · 개발 빌드 → 1.1.42 있음'), findsOneWidget);
 
     await tester.tap(find.byTooltip('업데이트'));
     await tester.pumpAndSettle();
