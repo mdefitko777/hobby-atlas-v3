@@ -1,0 +1,83 @@
+# 서명된 안드로이드 APK 를 만들어 릴리스 `apk-latest` 에 올린다.
+# 필요한 Actions 비밀값: ANDROID_KEYSTORE_BASE64 · ANDROID_KEYSTORE_PASSWORD (키는 저장소 밖에 보관)
+name: Android APK
+
+on:
+  push:
+    branches: [main]
+    paths: ['lib/**', 'android/**', 'assets/**', 'pubspec.yaml', 'pubspec.lock', '.github/workflows/android-apk.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-apk
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.4'
+          channel: stable
+          cache: true
+
+      - name: 서명 키 준비
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 / ANDROID_KEYSTORE_PASSWORD 비밀값이 없습니다. 디버그 키로 만들면 나중에 덮어 설치가 안 되므로 멈춥니다."
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > android/app/release.jks
+          {
+            echo "storeFile=release.jks"
+            echo "storePassword=$KEYSTORE_PASSWORD"
+            echo "keyAlias=hobbyatlas"
+            echo "keyPassword=$KEYSTORE_PASSWORD"
+          } > android/key.properties
+
+      - run: flutter pub get
+
+      - name: 검사
+        run: |
+          dart analyze lib test tool
+          flutter test
+
+      - name: APK
+        run: |
+          flutter build apk --release --build-number=${{ github.run_number }}
+          cp build/app/outputs/flutter-apk/app-release.apk hobby-atlas.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hobby-atlas-apk
+          path: hobby-atlas.apk
+
+      - name: 릴리스 apk-latest 에 올리기
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          notes="커밋 ${GITHUB_SHA::7} · 빌드 ${{ github.run_number }} · $(date -u +%Y-%m-%dT%H:%MZ)"
+          if gh release view apk-latest >/dev/null 2>&1; then
+            gh release upload apk-latest hobby-atlas.apk --clobber
+            gh release edit apk-latest --notes "$notes" --target "$GITHUB_SHA"
+          else
+            gh release create apk-latest hobby-atlas.apk --title "Hobby Atlas (최신 APK)" --notes "$notes" --prerelease --target "$GITHUB_SHA"
+          fi
+
+      - name: 키 지우기
+        if: always()
+        run: rm -f android/app/release.jks android/key.properties
