@@ -295,15 +295,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   /// 내 기록을 파일로 (토큰 · 비밀값은 원래 없음)
   Future<void> _export() async {
-    final now = DateTime.now();
-    final day = dayKey(now);
-    final json = const JsonEncoder.withIndent(
-      ' ',
-    ).convert({'exported_at': now.toUtc().toIso8601String(), 'app': 'hobby-atlas-v3', ...UserStore.instance.toJson()});
+    final backup = UserStore.instance.backupFile(DateTime.now());
     try {
       final uri = await FilePicker.saveFile(
-        fileName: 'hobby-atlas-backup-$day.json',
-        bytes: Uint8List.fromList(utf8.encode(json)),
+        fileName: backup.fileName,
+        bytes: Uint8List.fromList(utf8.encode(backup.text)),
         mimeType: 'application/json',
       );
       if (mounted && uri != null) showToast(context, '백업을 저장했어요');

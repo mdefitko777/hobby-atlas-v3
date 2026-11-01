@@ -16,6 +16,7 @@ import 'package:flutter/foundation.dart';
 
 import '../bbx/combo.dart' show Combo, Deck;
 import '../channels.dart' show defaultMyChannels;
+import '../format.dart' show dayKey;
 import '../json_util.dart';
 import '../logic/spend.dart';
 import '../models.dart';
@@ -332,6 +333,15 @@ class UserStore extends ChangeNotifier with _AtlasLocal, _History, _ProfileLocal
     revision++;
     notifyListeners();
   }
+
+  // ── 백업 파일 (설정 › 내보내기 · 가져오기) ──
+  /// 내 기록을 백업 파일로 — 이름 + 글자 (토큰 · 비밀값은 원래 없음). 다시 읽는 쪽은 [ImportPreview]
+  ({String fileName, String text}) backupFile(DateTime now) => (
+    fileName: 'hobby-atlas-backup-${dayKey(now)}.json',
+    text: const JsonEncoder.withIndent(
+      ' ',
+    ).convert({'exported_at': now.toUtc().toIso8601String(), 'app': 'hobby-atlas-v3', ...toJson()}),
+  );
 
   // ── 옛 Gunpula 에서 가져오기 ──
   /// [knownKit] = 지금 카탈로그에 있는 kit_id 인지 (없는 것은 "찾을 수 없음"으로 센다)
