@@ -1,9 +1,14 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:path_provider/path_provider.dart';
 
 class BlobStore {
   static Directory? _dir;
+
+  /// 테스트: path_provider 없이 임시 폴더에 쓴다
+  @visibleForTesting
+  static set debugDirectory(Directory d) => _dir = d;
 
   static Future<Directory> _root() async {
     final d = _dir ??= Directory('${(await getApplicationSupportDirectory()).path}/hobby_atlas');

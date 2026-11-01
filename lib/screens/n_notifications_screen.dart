@@ -8,17 +8,20 @@
 // │ N-4  │ 줄 누르기 → 읽음 + 이동               │ 상품 상세 · 공고 · 친구 프로필 · 친구 요청 │ P07          │
 // │ N-5  │ Dismissible → 토스트(되돌리기)        │ 밀어서 지우기                           │ P03 · P05     │
 // │ N-6  │ AppBar: 모두 읽음 · ⚙                │ 한 번에 읽음 · 알림 설정(K)              │ P07           │
+// │ N-9  │ RefreshIndicator                   │ 당겨서 새 소식 확인                      │ P10           │
 // │ N-7  │ 바텀 시트: 수락 · 거절                │ 친구 요청 응답 (가짜)                   │ P05           │
 // │ N-8  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 알림 없음           │ P01 · P09     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 🔔 → 쌓기(push, 오른쪽에서). 줄 → 각 화면 쌓기. 요청 → 덮기(바텀 시트).
-// 범위: 내 채널의 상품 · 예고 알림 + 친구 알림 (채널과 무관). 읽음 · 삭제는 저장하지 않는다.
+// 범위: 내 채널의 상품 + 좋아요한 상품 · PB 예약(채널과 무관) + 친구 알림. 목록은 알림함(lib/notifications),
+// 읽음 · 지움은 기기에 저장된다 (NotifyStore — 🔔 숫자와 같은 값).
 import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../detail_pane.dart';
 import '../channels.dart';
 import '../models.dart';
+import '../notifications/notify_store.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'd_kit_detail_screen.dart';
@@ -30,8 +33,13 @@ import '../clock.dart';
 /// 프로토타입의 "지금" (캘린더의 오늘과 같은 날 저녁)
 DateTime get noticeNow => appNow();
 
-void openNotifications(BuildContext context, {required List<String> myChannels, Loaders loaders = const Loaders()}) {
-  openPage(context, NotificationsScreen(myChannels: myChannels, loaders: loaders));
+void openNotifications(
+  BuildContext context, {
+  required List<String> myChannels,
+  Loaders loaders = const Loaders(),
+  NotifyStore? notify,
+}) {
+  openPage(context, NotificationsScreen(myChannels: myChannels, loaders: loaders, notify: notify));
 }
 
 enum _Tab { all, goods, announce, friends }
@@ -80,28 +88,52 @@ String _groupOf(DateTime at) {
 }
 
 class NotificationsScreen extends StatefulWidget {
-  const NotificationsScreen({super.key, required this.myChannels, this.loaders = const Loaders()});
+  const NotificationsScreen({super.key, required this.myChannels, this.loaders = const Loaders(), this.notify});
   final List<String> myChannels;
   final Loaders loaders;
+
+  /// 읽음 · 지움을 적는 곳 (기본: 앱 전체 한 벌, 테스트는 NotifyStore.memory())
+  final NotifyStore? notify;
 
   @override
   State<NotificationsScreen> createState() => _NotificationsScreenState();
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  late Future<List<AppNotice>> _future = widget.loaders.notifications(); // STATE: GET /notifications
+  NotifyStore get _store => widget.notify ?? NotifyStore.instance;
+  late Future<List<AppNotice>> _future = widget.loaders.notifications(); // STATE: 알림함
+  late int _rev = _store.inboxRevision;
   _Tab _tab = _Tab.all;
 
-  // 읽음 · 지움 (가짜 — 저장하지 않음)
-  final Set<String> _read = {};
-  final Set<String> _removed = {};
+  @override
+  void initState() {
+    super.initState();
+    _store.addListener(_onStore);
+  }
 
-  bool _isRead(AppNotice n) => n.read || _read.contains(n.id);
+  @override
+  void dispose() {
+    _store.removeListener(_onStore);
+    super.dispose();
+  }
 
-  /// 내 채널 범위 + 지우지 않은 것
+  /// 알림함이 바뀌면(백그라운드 확인 · 당겨서 새로 고침) 목록을 다시, 읽음 · 지움만 바뀌면 다시 그리기만
+  void _onStore() {
+    if (!mounted) return;
+    setState(() {
+      if (_store.inboxRevision != _rev) {
+        _rev = _store.inboxRevision;
+        _future = widget.loaders.notifications(); // STATE: 새 알림 → 목록 다시
+      }
+    });
+  }
+
+  bool _isRead(AppNotice n) => _store.isRead(n.id, fallback: n.read);
+
+  /// 내 채널 범위(설정 › 내 채널 소식만) + 지우지 않은 것. franchiseId 가 빈 것(좋아요 · PB 예약 · 친구)은 늘 보인다.
   List<AppNotice> _scoped(List<AppNotice> all) => all
-      .where((n) => !_removed.contains(n.id))
-      .where((n) => n.franchiseId.isEmpty || widget.myChannels.contains(n.franchiseId))
+      .where((n) => !_store.isDismissed(n.id))
+      .where((n) => n.franchiseId.isEmpty || !_store.config.onlyMine || widget.myChannels.contains(n.franchiseId))
       .toList();
 
   void _readAll(List<AppNotice> list) {
@@ -110,23 +142,36 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         if (!_isRead(n)) n.id,
     ];
     if (ids.isEmpty) return;
-    setState(() => _read.addAll(ids)); // STATE: 모두 읽음 → 점 · 굵은 글씨 사라짐
-    showToast(context, '${ids.length}개를 읽음으로 표시했어요', onUndo: () => setState(() => _read.removeAll(ids)));
+    _store.setRead(ids, true); // STATE: 모두 읽음 → 점 · 굵은 글씨 사라짐 · 🔔 숫자 0 (저장)
+    showToast(context, '${ids.length}개를 읽음으로 표시했어요', onUndo: () => _store.setRead(ids, false));
   }
 
   void _remove(AppNotice n) {
-    setState(() => _removed.add(n.id)); // STATE: 밀어서 지우기 → 목록에서 빠짐
-    showToast(context, '알림을 지웠어요', onUndo: () => setState(() => _removed.remove(n.id)));
+    final wasRead = _isRead(n);
+    _store.setDismissed(n.id, true); // STATE: 밀어서 지우기 → 목록에서 빠짐 (저장)
+    showToast(
+      context,
+      '알림을 지웠어요',
+      onUndo: () {
+        _store.setDismissed(n.id, false);
+        if (!wasRead) _store.setRead([n.id], false);
+      },
+    );
   }
 
   /// N-4 읽음 + 이동
   Future<void> _open(AppNotice n) async {
-    setState(() => _read.add(n.id)); // STATE: 누름 → 읽음
+    _store.setRead([n.id], true); // STATE: 누름 → 읽음 (저장)
     try {
       if (n.type == NoticeType.request) return _answerRequest(n);
       if (n.kitId.isNotEmpty) {
         final kits = await widget.loaders.kitsByIds([n.kitId]);
-        if (mounted && kits.isNotEmpty) openKitDetail(context, kits.first, loaders: widget.loaders);
+        if (!mounted) return;
+        if (kits.isNotEmpty) {
+          openKitDetail(context, kits.first, loaders: widget.loaders);
+        } else {
+          showToast(context, '이 상품은 지금 카탈로그에 없어요');
+        }
       } else if (n.annId.isNotEmpty) {
         final anns = await widget.loaders.announcements([n.franchiseId]);
         final a = anns.where((a) => a.id == n.annId).firstOrNull;
@@ -174,7 +219,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     child: FilledButton(
                       onPressed: () {
                         Navigator.pop(sheet);
-                        setState(() => _removed.add(n.id));
+                        _store.setDismissed(n.id, true);
                         showToast(context, '친구가 됐어요 · 친구 서랍에서 볼 수 있어요');
                       },
                       child: const Text('수락'),
@@ -215,17 +260,24 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ],
           ),
           body: switch (snap) {
-            _ when snap.connectionState != ConnectionState.done => const LoadingView(), // N-8
-            _ when snap.hasError => ErrorView(
-              message: '${snap.error}',
-              onRetry: () => setState(() => _future = widget.loaders.notifications()),
-            ),
-            _ => Column(
+            // 다시 부르는 중에는 앞 목록을 그대로 (깜빡이지 않게)
+            _ when snap.hasData => Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _tabs(scoped),
-                Expanded(child: _list(list)),
+                Expanded(
+                  child: RefreshIndicator(
+                    // N-9 당겨서 지금 확인
+                    onRefresh: () => _store.checkNow(force: true),
+                    child: _list(list),
+                  ),
+                ),
               ],
+            ),
+            _ when snap.connectionState != ConnectionState.done => const LoadingView(), // N-8
+            _ => ErrorView(
+              message: '${snap.error}',
+              onRetry: () => setState(() => _future = widget.loaders.notifications()),
             ),
           },
         );
@@ -256,11 +308,20 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Widget _list(List<AppNotice> list) {
     if (list.isEmpty) {
-      return const EmptyView(
-        // N-8 P09
-        icon: Icons.notifications_none,
-        message: '새 알림이 없어요',
-        detail: '좋아요한 상품의 발매 · 내 채널 예고 · 친구 소식이 여기에 모여요',
+      // 당겨서 새로 고침이 되도록 스크롤 가능한 빈 화면
+      return LayoutBuilder(
+        builder: (context, box) => SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: SizedBox(
+            height: box.maxHeight,
+            child: EmptyView(
+              // N-8 P09
+              icon: Icons.notifications_none,
+              message: '새 알림이 없어요',
+              detail: '알림 규칙(PB · SEED/00 · BBX …)에 맞는 내 채널 새 상품, 좋아요한 상품의 변화와 PB 예약 기간이 여기에 모여요\n${_store.statusLine}',
+            ),
+          ),
+        ),
       );
     }
     final groups = <String, List<AppNotice>>{};
@@ -268,13 +329,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       (groups[_groupOf(n.at)] ??= []).add(n);
     }
     final channels = widget.myChannels.map((id) => channelOf(id).label).join(' · ');
+    final scope = _store.config.onlyMine ? '내 채널($channels)' : '모든 채널';
     return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.only(bottom: 32),
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
           child: Text(
-            '내 채널($channels) 소식과 친구 소식 · 왼쪽으로 밀면 지워요',
+            '$scope 소식 · 좋아요한 상품 · 왼쪽으로 밀면 지워요\n${_store.statusLine}',
             style: const TextStyle(fontSize: Gp.t12, color: Gp.faint),
           ),
         ),

@@ -39,6 +39,9 @@ dependencies:
   file_picker: ^13.3.0
   cached_network_image: ^4.0.6
   web: ^1.1.2
+  # 새 소식 알림 (Phase 4a): 휴대폰 알림 · 채널 · 누르면 이동 / 앱이 꺼져 있어도 12시간마다 확인 (안드로이드 WorkManager)
+  flutter_local_notifications: ^22.3.2
+  workmanager: ^0.10.10
 
 dev_dependencies:
   flutter_test:

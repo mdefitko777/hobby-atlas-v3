@@ -2,7 +2,9 @@
 //
 // ┌──────── 디자인 가이드 대응표: K 설정 ──────────────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
-// │ K-1  │ SwitchListTile × 2                 │ 새 소식 알림 · 내 채널 소식만 (준비 중)    │ P03 · P07     │
+// │ K-1  │ SwitchListTile × 2                 │ 새 소식 알림(휴대폰) · 내 채널 소식만      │ P03 · P07     │
+// │ K-5  │ FilterChip 묶음 2개                 │ 알림 규칙: 관심 항목 · 세계관 전체          │ P04 · P05     │
+// │ K-6  │ ListTile · 대화상자                  │ 마지막 확인 · 지금 확인 · 삼성 배터리 안내   │ P10           │
 // │ K-2  │ ListTile → 바텀 시트(선택)          │ 언어                                   │ P04           │
 // │ K-3  │ ListTile → 파일 · 붙여넣기 → 확인     │ 옛 Gunpula 에서 가져오기 · 백업          │ P10           │
 // │ K-4  │ ListTile                           │ 상품 데이터 기준일 · 지금 새로 받기 · 버전 │ P10           │
@@ -17,6 +19,9 @@ import 'package:flutter/material.dart';
 import '../data/catalog.dart';
 import '../data/user_store.dart';
 import '../detail_pane.dart';
+import '../notifications/local_notifier.dart';
+import '../notifications/notify_models.dart';
+import '../notifications/notify_store.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -24,18 +29,80 @@ void openSettings(BuildContext context) {
   openPage(context, const SettingsScreen());
 }
 
+/// 삼성 갤럭시: 오래 안 연 앱을 재워 12시간 확인이 멈추는 것을 막는 방법 (처음 알림을 켰을 때 한 번 · 설정에서 언제든)
+Future<void> showBatteryHint(BuildContext context, NotifyStore notify) async {
+  notify.markHintShown();
+  await showDialog<void>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('알림이 늦게 오면 (삼성 갤럭시)'),
+      content: const SingleChildScrollView(
+        child: Text(
+          '갤럭시는 한동안 안 연 앱을 "절전 앱"으로 재워서, 12시간마다 하는 새 소식 확인이 멈출 수 있어요.\n\n'
+          '1. 설정 › 배터리 › 백그라운드 사용 제한 › 절전 예외 앱 › + 에서 Hobby Atlas 추가\n'
+          '   ("절전 앱" · "초절전 앱" 목록에 있으면 빼 주세요)\n'
+          '2. 설정 › 애플리케이션 › Hobby Atlas › 배터리 › 제한 없음\n\n'
+          '앱을 열 때도 한 번 더 확인하니, 못 받은 소식은 앱을 열면 알림 화면에 모여요.',
+          style: TextStyle(height: 1.45),
+        ),
+      ),
+      actions: [FilledButton(onPressed: () => Navigator.pop(context), child: const Text('알겠어요'))],
+    ),
+  );
+}
+
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+  const SettingsScreen({super.key, this.notify});
+
+  /// 알림 설정 한 벌 (기본: 앱 전체, 테스트는 NotifyStore.memory())
+  final NotifyStore? notify;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool _notify = true;
-  bool _onlyMine = true;
+  NotifyStore get _n => widget.notify ?? NotifyStore.instance;
   String _language = '한국어';
   bool _refreshing = false;
+
+  /// 휴대폰 설정에서 이 앱 알림이 켜져 있나 (안드로이드에서만, 모르면 null)
+  bool? _permitted;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkPermission();
+  }
+
+  Future<void> _checkPermission() async {
+    final p = await LocalNotifier.permitted();
+    if (mounted && p != _permitted) setState(() => _permitted = p); // STATE: 휴대폰 알림 권한 → 안내 문구
+  }
+
+  /// K-1 새 소식 알림: 켜면 안드로이드 13+ 권한 창, 처음 켰으면 삼성 배터리 안내
+  Future<void> _setNotify(bool on) async {
+    final ok = await _n.setEnabled(on);
+    if (!mounted) return;
+    await _checkPermission();
+    if (!mounted) return;
+    if (!ok) {
+      showToast(context, '알림 권한이 꺼져 있어요 · 휴대폰 설정 › 애플리케이션 › Hobby Atlas › 알림에서 켤 수 있어요');
+    } else if (on && LocalNotifier.supported && !_n.config.hintShown) {
+      await showBatteryHint(context, _n);
+    } else if (on && !LocalNotifier.supported) {
+      showToast(context, '웹 미리보기에서는 휴대폰 알림을 보내지 않아요 · 알림 화면에는 모여요');
+    }
+  }
+
+  Future<void> _checkNow() async {
+    final r = await _n.checkNow(force: true);
+    if (!mounted) return;
+    showToast(
+      context,
+      r == null ? '이미 확인 중이에요' : (r.error.isNotEmpty ? r.error : (r.liveCount == 0 ? '새 소식이 없어요' : '새 알림 ${r.liveCount}개')),
+    );
+  }
 
   Future<void> _pickLanguage() async {
     final l = await showPickSheet(
@@ -174,6 +241,86 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  /// K-1 · K-5 · K-6 알림
+  Widget _notifySection() {
+    final c = _n.config;
+    Widget chip(String key) => FilterChip(
+      label: Text(notifyRuleLabels[key] ?? key),
+      selected: c.rule(key),
+      showCheckmark: false,
+      selectedColor: Gp.accent.withValues(alpha: 0.14),
+      side: BorderSide(color: c.rule(key) ? Gp.accent : Gp.line),
+      onSelected: (v) => _n.setRule(key, v), // STATE: 규칙 → 다음 확인부터 (저장)
+    );
+    Widget chips(String title, List<String> keys) => Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontSize: Gp.t12, color: Gp.muted)),
+          const SizedBox(height: 6),
+          Wrap(spacing: 6, runSpacing: 6, children: [for (final k in keys) chip(k)]),
+        ],
+      ),
+    );
+    final blocked = c.enabled && _permitted == false;
+    return SectionPanel(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SectionHeader('알림'),
+          SwitchListTile(
+            // K-1 P03
+            secondary: const Icon(Icons.notifications_none),
+            title: const Text('새 소식 알림'),
+            subtitle: Text(
+              blocked
+                  ? '휴대폰 설정에서 이 앱 알림이 꺼져 있어요 (설정 › 애플리케이션 › Hobby Atlas › 알림)'
+                  : '휴대폰 알림 · 12시간마다 + 앱을 열 때 확인 (끄면 알림 화면에만 모여요)',
+            ),
+            value: c.enabled && _permitted != false,
+            activeThumbColor: Gp.accent,
+            onChanged: _setNotify, // STATE: 알림 스위치 (저장 · 권한 요청)
+          ),
+          SwitchListTile(
+            secondary: const Icon(Icons.filter_alt_outlined),
+            title: const Text('내 채널 소식만'),
+            subtitle: const Text('내 채널 밖 상품은 알리지 않아요 (좋아요한 상품은 늘)'),
+            value: c.onlyMine,
+            activeThumbColor: Gp.accent,
+            onChanged: _n.setOnlyMine, // STATE: 채널 범위 (저장)
+          ),
+          chips('관심 항목', notifyInterestRules), // K-5
+          chips('세계관 전체 (그 채널의 새 상품 전부)', notifyWorldRules),
+          ListTile(
+            // K-6
+            leading: const Icon(Icons.history),
+            title: const Text('새 소식 확인'),
+            subtitle: Text(_n.statusLine),
+            trailing: _n.checking
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                : TextButton(onPressed: _checkNow, child: const Text('지금 확인')),
+          ),
+          if (LocalNotifier.supported)
+            ListTile(
+              leading: const Icon(Icons.battery_alert_outlined),
+              title: const Text('알림이 늦게 오면 (삼성 갤럭시)'),
+              subtitle: const Text('절전 예외 앱에 넣는 방법'),
+              onTap: () => showBatteryHint(context, _n),
+            ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Text(
+              'PB 예약 기간은 프리미엄 반다이 페이지의 Wayback 기록에서 읽은 값이라 늦거나 틀릴 수 있어요.',
+              style: TextStyle(fontSize: Gp.t11, color: Gp.faint),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cat = Catalog.instance;
@@ -223,31 +370,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ),
           ),
-          SectionPanel(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SectionHeader('알림 (준비 중)'),
-                SwitchListTile(
-                  // K-1 P03
-                  secondary: const Icon(Icons.notifications_none),
-                  title: const Text('새 소식 알림'),
-                  subtitle: const Text('새 상품 · 예고 · 친구 소식'),
-                  value: _notify,
-                  activeThumbColor: Gp.accent,
-                  onChanged: (v) => setState(() => _notify = v), // STATE: 알림 스위치
-                ),
-                SwitchListTile(
-                  secondary: const Icon(Icons.filter_alt_outlined),
-                  title: const Text('내 채널 소식만'),
-                  subtitle: const Text('관심 없는 IP의 알림은 받지 않아요'),
-                  value: _onlyMine,
-                  activeThumbColor: Gp.accent,
-                  onChanged: _notify ? (v) => setState(() => _onlyMine = v) : null, // 알림이 꺼지면 함께 꺼짐 P05
-                ),
-              ],
-            ),
+          ListenableBuilder(
+            // 알림 설정은 NotifyStore 한 벌 (🔔 · 알림 화면과 같은 값, 기기에 저장)
+            listenable: _n,
+            builder: (context, _) => _notifySection(),
           ),
           SectionPanel(
             padding: const EdgeInsets.only(bottom: 6),

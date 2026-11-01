@@ -6,6 +6,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
+import '../channels.dart' show defaultMyChannels;
 import '../models.dart';
 import 'blob_store.dart';
 
@@ -34,6 +35,9 @@ class UserStore extends ChangeNotifier {
   final Map<String, String> bbxManualMap = {};
   final Set<int> guideManualLit = {};
   final List<String> recentViewed = [];
+
+  /// 내 채널 (채널 바 · 알림 범위). 처음 설치하면 건담 · 베이블레이드 · 포켓몬
+  final List<String> myChannels = [...defaultMyChannels];
 
   /// 바뀔 때마다 +1 (Marks 가 다시 그릴지 판단)
   int revision = 0;
@@ -78,6 +82,10 @@ class UserStore extends ChangeNotifier {
     recentViewed
       ..clear()
       ..addAll(_list(local['recent_viewed']).whereType<String>());
+    // 키가 없으면(옛 파일) 처음 값. 빈 목록은 "채널 없음"으로 그대로 둔다.
+    myChannels
+      ..clear()
+      ..addAll(local['my_channels'] is List ? _list(local['my_channels']).whereType<String>() : defaultMyChannels);
   }
 
   Map<String, Object?> toJson() => {
@@ -90,6 +98,7 @@ class UserStore extends ChangeNotifier {
       'bbx_manual_map': bbxManualMap,
       'guide_manual_lit': guideManualLit.toList(),
       'recent_viewed': recentViewed,
+      'my_channels': myChannels,
     },
   };
 
@@ -173,6 +182,14 @@ class UserStore extends ChangeNotifier {
     _changed();
   }
 
+  void setMyChannels(List<String> ids) {
+    if (listEquals(ids, myChannels)) return;
+    myChannels
+      ..clear()
+      ..addAll(ids);
+    _changed();
+  }
+
   void setBbxPart(String partId, bool have) {
     if (have ? bbxOwnedParts.add(partId) : bbxOwnedParts.remove(partId)) _changed();
   }
@@ -200,6 +217,11 @@ class UserStore extends ChangeNotifier {
     guideManualLit.addAll(p.guideManualLit);
     for (final id in p.recentViewed.reversed) {
       if (!recentViewed.contains(id)) recentViewed.insert(0, id);
+    }
+    if (p.myChannels case final ch? when ch.isNotEmpty) {
+      myChannels
+        ..clear()
+        ..addAll(ch);
     }
     _changed();
   }
@@ -241,6 +263,9 @@ class ImportPreview {
   final Map<String, String> bbxManualMap = {};
   final Set<int> guideManualLit = {};
   final List<String> recentViewed = [];
+
+  /// Hobby Atlas 자신의 백업에만 있다 (옛 Gunpula 에는 채널이 없음)
+  List<String>? myChannels;
   int owned = 0, wanted = 0, deleted = 0, unknown = 0;
 
   /// 다른 멤버(공유 공간) 버킷 — 가져오지 않고 숫자만 알려 준다
@@ -334,6 +359,7 @@ class ImportPreview {
     p.bbxManualMap.addAll({for (final e in _map(local['bbx_manual_map']).entries) e.key: '${e.value}'});
     p.guideManualLit.addAll(_list(local['guide_manual_lit']).map((v) => v is num ? v.toInt() : int.tryParse('$v')).nonNulls);
     p.recentViewed.addAll(_list(local['recent_viewed']).whereType<String>());
+    if (local['my_channels'] is List) p.myChannels = _list(local['my_channels']).whereType<String>().toList();
     return p;
   }
 }

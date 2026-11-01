@@ -8,8 +8,8 @@
 // │ S-4  │ 가운데 카메라 버튼              │ 찍어서 찾기 (사진 · 바코드 · 앨범)     │ P07           │
 // │ S-5  │ NavigationRail (가로 폰: 높이 <520)    │ 측면 탭 (아바타 / 탭 4개 / 🔔 ⚙)          │ 적응형 · P04  │
 // │ S-6  │ IndexedStack                    │ 탭 상태 유지                           │ P03           │
-// │ S-7  │ 내 채널 목록(상태)              │ 네 화면이 같이 쓰는 내 IP 채널         │ P04           │
-// │ S-9  │ 오른쪽 위 🔔 (새 알림 점)         │ 알림 열기                              │ P01           │
+// │ S-7  │ 내 채널 목록(UserStore 에 저장)    │ 네 화면이 같이 쓰는 내 IP 채널         │ P04           │
+// │ S-9  │ 오른쪽 위 🔔 (안 읽은 수)          │ 알림 열기 · 휴대폰 알림 누르면 이동     │ P01           │
 // │ S-10 │ 오른쪽 위 ⚙                     │ 설정 열기 (K)                          │ P04 · P06     │
 // │ S-11 │ Drawer (아바타 · 홈 가장자리 밀기)     │ 친구 서랍 (M)                          │ P07           │
 // │ S-13 │ AnimatedAlign(heightFactor) 아바타 줄 │ 아래로 스크롤하면 위 줄도 접힘          │ P08           │
@@ -21,16 +21,22 @@
 // 현행 앱 문제: 위 5개 IP + 아래 5개 화면 + 도감 안 탭 → v2는 아래 탭 하나 + 화면 안 채널 바 하나.
 import 'dart:ui' show DisplayFeatureType, ImageFilter;
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
 
 import '../api.dart';
+import '../data/user_store.dart';
 import '../detail_pane.dart';
 import '../channels.dart';
+import '../marks.dart';
+import '../notifications/local_notifier.dart';
+import '../notifications/notify_store.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'a_home_screen.dart';
 import 'b_search_screen.dart';
+import 'd_kit_detail_screen.dart';
 import 'e_camera_screen.dart';
 import 'f_collection_screen.dart';
 import 'h_calendar_screen.dart';
@@ -44,9 +50,12 @@ import 'n_notifications_screen.dart';
 const twoPaneBreakpoint = 700.0;
 
 class AppShell extends StatefulWidget {
-  const AppShell({super.key, this.loaders = const Loaders()});
+  const AppShell({super.key, this.loaders = const Loaders(), this.notify});
 
   final Loaders loaders;
+
+  /// 알림 한 벌 (테스트는 NotifyStore.memory())
+  final NotifyStore? notify;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -68,9 +77,12 @@ class _AppShellState extends State<AppShell> {
 
   /// 홈 검색 알약 → 검색 탭 검색창에 커서
   int _searchFocusTick = 0;
-  List<String> _myChannels = [...defaultMyChannels]; // S-7 P04
+  List<String> _myChannels = [...defaultMyChannels]; // S-7 P04 — 실제 값은 UserStore(기기 저장)에서
 
   final _scaffold = GlobalKey<ScaffoldState>();
+
+  NotifyStore get _notify => widget.notify ?? NotifyStore.instance;
+  UserStore? _me;
 
   /// 탭 묶음 (화면 모양이 바뀌어도 유지)
   final _bodyKey = GlobalKey();
@@ -80,7 +92,70 @@ class _AppShellState extends State<AppShell> {
   int _jumpTick = 0;
 
   void _setChannels(List<String> ids) {
-    setState(() => _myChannels = ids); // STATE: 내 채널 → 네 화면의 채널 바와 목록
+    setState(() => _myChannels = [...ids]); // STATE: 내 채널 → 네 화면의 채널 바와 목록
+    _me?.setMyChannels(ids); // 기기에 저장 (다음 실행 · 새 데이터를 받아 셸을 다시 만들 때도 그대로)
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    LocalNotifier.taps.addListener(_onNotificationTap);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _onNotificationTap(); // 앱이 꺼져 있을 때 알림을 눌러 켰으면
+      _askNotifyOnce();
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 내 채널은 내 기록(UserStore)에 저장된다 — 처음 읽기가 끝나면 · 다른 곳에서 바뀌면 따라간다
+    final me = Marks.read(context).store;
+    if (!identical(me, _me)) {
+      _me?.removeListener(_onUserStore);
+      _me = me..addListener(_onUserStore);
+      _myChannels = [...me.myChannels];
+    }
+  }
+
+  @override
+  void dispose() {
+    LocalNotifier.taps.removeListener(_onNotificationTap);
+    _me?.removeListener(_onUserStore);
+    super.dispose();
+  }
+
+  void _onUserStore() {
+    final ids = _me!.myChannels;
+    if (!listEquals(ids, _myChannels)) setState(() => _myChannels = [...ids]); // STATE: 저장된 내 채널 → 채널 바
+  }
+
+  /// 휴대폰 알림을 눌렀을 때: `kit:<id>` → 상품 상세, 그 밖에는 알림 화면
+  Future<void> _onNotificationTap() async {
+    final payload = LocalNotifier.taps.value;
+    if (payload == null || !mounted) return;
+    LocalNotifier.taps.value = null;
+    final kitId = payload.startsWith('kit:') ? payload.substring(4) : '';
+    if (kitId.isNotEmpty) {
+      _notify.markKitRead(kitId);
+      try {
+        final kits = await widget.loaders.kitsByIds([kitId]);
+        if (!mounted) return;
+        if (kits.isNotEmpty) {
+          openKitDetail(context, kits.first, loaders: widget.loaders);
+          return;
+        }
+      } on ApiException catch (e) {
+        if (mounted) showToast(context, e.message);
+      }
+    }
+    if (mounted) openNotifications(context, myChannels: _myChannels, loaders: widget.loaders, notify: _notify);
+  }
+
+  /// 처음 실행 때 한 번: 알림 권한(안드로이드 13+) → 허용하면 삼성 배터리 안내
+  Future<void> _askNotifyOnce() async {
+    final ok = await _notify.askPermissionOnce();
+    if (ok && mounted && !_notify.config.hintShown) await showBatteryHint(context, _notify);
   }
 
   /// 검색 탭으로 + 검색창 커서 (홈 검색창 · 카메라 결과의 "이름으로 검색")
@@ -142,11 +217,19 @@ class _AppShellState extends State<AppShell> {
     final bell = IconButton(
       // S-9 알림 (N)
       tooltip: '알림',
-      onPressed: () => openNotifications(context, myChannels: _myChannels, loaders: widget.loaders), // N
-      icon: const Badge(
-        smallSize: 7,
-        backgroundColor: Gp.accent, // 새 알림 있음 = 브랜드 색 점
-        child: Icon(Icons.notifications_none, color: Gp.ink),
+      onPressed: () =>
+          openNotifications(context, myChannels: _myChannels, loaders: widget.loaders, notify: _notify), // N
+      icon: ListenableBuilder(
+        listenable: _notify,
+        builder: (context, _) {
+          final unread = _notify.unreadCount(_myChannels);
+          return Badge(
+            isLabelVisible: unread > 0,
+            backgroundColor: Gp.accent, // 안 읽은 알림 수 = 브랜드 색
+            label: Text(unread > 99 ? '99+' : '$unread'),
+            child: const Icon(Icons.notifications_none, color: Gp.ink),
+          );
+        },
       ),
     );
     final gear = IconButton(

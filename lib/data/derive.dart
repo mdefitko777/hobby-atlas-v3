@@ -1,6 +1,8 @@
 // 카탈로그 + 내 기록 → 화면 모델 (도감 · 세계관 · 베이블레이드 · 공식 예고 · 알림 · 내 정보).
 // 숫자(모은 칸 · 진행도)는 db.json 처럼 미리 적힌 값이 아니라 매번 내 기록에서 센다.
 import '../models.dart';
+import '../notifications/notify_models.dart';
+import '../notifications/notify_store.dart';
 import 'catalog.dart';
 import 'gunpula.dart';
 import 'user_store.dart';
@@ -301,37 +303,29 @@ Future<List<Announcement>> deriveAnnouncements(List<String> channelIds) async {
   ];
 }
 
-// ── 알림: update-feed-lite 의 새로 수록된 상품 ─────────────────────────────────
+// ── 알림: 알림함 (lib/notifications) ──────────────────────────────────────────
+/// 알림 화면: 알림함(lib/notifications — 앱을 열 때 · 12시간마다 update-feed-lite 를 걸러 넣은 줄), 새것부터.
+/// 사진은 카탈로그에서 (아직 받는 중이면 빈 사진). 좋아요 · PB 예약 줄은 franchiseId 를 비워 채널과 상관없이 보이게.
 Future<List<AppNotice>> deriveNotifications() async {
-  await _cat.ensureLoaded();
-  final out = <AppNotice>[];
-  for (final e in _list(_map(await _cat.aux('update-feed-lite.json'))['entries'])) {
-    final entry = _map(e);
-    final at = DateTime.tryParse(_str(entry['date']));
-    if (at == null) continue;
-    for (final it in _list(entry['added'])) {
-      final m = _map(it);
-      final id = _str(m['kit_id']);
-      final kit = _cat.byId[id];
-      if (kit == null) continue;
-      out.add(
-        AppNotice(
-          id: 'feed-${entry['date']}-$id',
-          type: kit.pb ? NoticeType.reserve : NoticeType.release,
-          title: kit.name,
-          body: [if (kit.pb) '프리미엄 반다이', '새로 수록', kit.series].where((s) => s.isNotEmpty).join(' · '),
-          image: kit.image,
-          at: at,
-          read: at.isBefore(DateTime.now().subtract(const Duration(days: 3))),
-          franchiseId: kit.franchiseId,
-          kitId: id,
-        ),
-      );
-      if (out.length >= 150) return out;
-    }
-  }
-  return out;
+  final store = NotifyStore.instance;
+  await store.load();
+  return [for (final r in store.state.inbox) noticeOf(r, _cat.byId[r.kitId])];
 }
+
+/// 알림함 한 줄 → 화면 모델
+AppNotice noticeOf(NoticeRecord r, Kit? kit) => AppNotice(
+  id: r.id,
+  type: r.isPbWindow || (r.pb && r.kind == 'added')
+      ? NoticeType.reserve
+      : (r.reasons.contains('price') ? NoticeType.price : NoticeType.release),
+  title: kit?.name ?? r.title,
+  body: r.body,
+  image: kit?.image ?? '',
+  at: r.at.toLocal(),
+  read: r.seen,
+  franchiseId: r.wanted ? '' : r.franchise,
+  kitId: r.kitId,
+);
 
 // ── 내 정보 (계정 연결 전: 기기 기록만) ───────────────────────────────────────
 Future<Profile> deriveProfile() async {

@@ -12,13 +12,16 @@ import 'data/catalog.dart';
 import 'data/user_store.dart';
 import 'detail_pane.dart';
 import 'marks.dart';
+import 'notifications/notify_store.dart';
 import 'screens/s_app_shell.dart';
 import 'theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  UserStore.instance.load(); // 내 기록 (기기)
+  final meLoaded = UserStore.instance.load(); // 내 기록 (기기)
   Catalog.instance.ensureLoaded().ignore(); // 캐시 → 뒤에서 새 데이터 확인
+  // 새 소식 알림: 알림함 읽기 · 휴대폰 알림 준비 · 12시간 확인 등록 · 앱을 열 때 · 돌아올 때 확인
+  NotifyStore.instance.start(me: UserStore.instance, meLoaded: meLoaded).ignore();
   runApp(const HobbyAtlasApp());
 }
 

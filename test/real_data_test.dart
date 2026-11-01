@@ -10,6 +10,8 @@ import 'package:hobby_atlas/data/derive.dart';
 import 'package:hobby_atlas/data/gunpula.dart';
 import 'package:hobby_atlas/data/user_store.dart';
 import 'package:hobby_atlas/models.dart';
+import 'package:hobby_atlas/notifications/feed_rules.dart';
+import 'package:hobby_atlas/notifications/notify_models.dart';
 
 const dataDir = String.fromEnvironment('GUNPULA_DATA');
 
@@ -86,6 +88,25 @@ void main() {
     expect(anns, isNotEmpty);
     expect(anns.first.title, isNotEmpty);
     expect(anns.where((a) => a.hero).length, lessThanOrEqualTo(6));
-    expect(await deriveNotifications(), isNotEmpty);
+  }, skip: skip);
+
+  test('알림: 실제 update-feed-lite 30일 → 기본 규칙 · 처음 실행', () {
+    final entries = parseFeed(jsonDecode(File('$dataDir/update-feed-lite.json').readAsStringSync()));
+    expect(entries.length, greaterThan(10));
+    final plan = planCheck(
+      config: NotifyConfig(channels: const ['gundam', 'beyblade', 'pokemon']),
+      state: NotifyState(),
+      entries: entries,
+      manifestSig: 'x',
+      now: DateTime.parse('${entries.first.date}T12:00:00'),
+    );
+    expect(plan.records, isNotEmpty);
+    expect(plan.records.every((r) => r.seen), isTrue);
+    // 알림함 줄 → 화면: 카탈로그에 있는 상품이면 사진이 붙는다
+    final notices = [for (final r in plan.records) noticeOf(r, Catalog.instance.byId[r.kitId])];
+    expect(notices.where((n) => n.image.isNotEmpty).length, greaterThan(notices.length ~/ 2));
+    // ignore: avoid_print
+    print('알림 첫 실행 ${plan.records.length}줄 (${entries.first.date} 기준 7일): '
+        '${plan.records.map((r) => r.franchise).toSet().join(',')}');
   }, skip: skip);
 }
