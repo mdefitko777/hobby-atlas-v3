@@ -2,7 +2,7 @@
 //
 // ┌──────── 디자인 가이드 대응표: S 앱 셸 ───────────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                  │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
-// │ S-1  │ RingAvatar (색 고리, 채널 바 위)       │ 친구 서랍 열기 → 서랍 머리에서 내 정보    │ P04 · P06     │
+// │ S-1  │ MyAvatar (색 고리 + 사진, 채널 바 위)  │ 친구 서랍 열기 → 서랍 머리에서 내 정보    │ P04 · P06     │
 // │ S-2  │ BackdropFilter 바닥 탭 바       │ 반투명 하단 탭 바 (양옆 여백 없음)      │ P08           │
 // │ S-3  │ 하단 탭 4개 (폰 · 반반 화면 왼쪽)      │ 홈 · 검색 · 캘린더 · 컬렉션              │ P06 · P04     │
 // │ S-4  │ 가운데 카메라 버튼              │ 찍어서 찾기 (사진 · 바코드 · 앨범)     │ P07           │
@@ -48,6 +48,7 @@ import 'j_announcement_screen.dart';
 import 'k_settings_screen.dart';
 import 'm_friends_drawer.dart';
 import 'n_notifications_screen.dart';
+import 'u_social.dart' show MyAvatar;
 
 /// 넓은 화면 기준 (Material 3 window size class: expanded ≥ 840dp)
 /// 이만큼 넓으면(폴드 펼침 · 태블릿 · 넓은 창) 반반 화면: 왼쪽 = 폰 화면 그대로, 오른쪽 = 자세히 칸
@@ -226,8 +227,9 @@ class _AppShellState extends State<AppShell> {
     final twoPane = !shortLandscape && size.width >= twoPaneBreakpoint;
     final account = AccountScope.of(context); // 이름 첫 글자 · 친구 요청 수
     // S-1 P04 아바타 → 친구 서랍(M). 서랍 머리의 아바타를 한 번 더 누르면 내 정보(I)
-    final avatar = RingAvatar(
-      text: account.signedIn ? account.initial : 'A',
+    final avatar = MyAvatar(
+      // 아바타 사진(I-3)이 있으면 사진, 없으면 첫 글자
+      fallback: 'A',
       size: 34,
       ringWidth: 2,
       tooltip: '친구 · 내 정보',

@@ -4,12 +4,14 @@
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
 // │ L-1  │ 밑줄 탭 3개 + 개수                   │ 친구의 좋아요 · 구매함 · 도감            │ P06 · P04     │
 // │ L-2  │ ThumbRow + TagPill                  │ 겹침 표시: "나도 있음" · "내 좋아요"      │ P01 · P09     │
-// │ L-3  │ 작품 줄 + 친구/나 진행 막대 두 줄      │ 도감 비교 (친구 n · 나 n)               │ P01           │
+// │ L-3  │ 작품 줄 + 친구/나 진행 막대 두 줄 · 📷 n │ 도감 비교 (친구 n · 나 n · 친구 사진 n)   │ P01           │
 // │ L-4  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 빈 목록             │ P01 · P09     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 친구 프로필 숫자 → 쌓기. 상품 줄 → D 상품 상세(쌓기).
 // 쓰임: 선물 고르기(친구 좋아요) · 겹쳐 사지 않기(친구 구매함에 "내 좋아요" 표시) · 도감 비교.
 // v3: 친구의 좋아요 · 구매함 id 는 Gunpula v3 get_friend_collection (I 화면이 받아서 넘겨 줌), 도감 칸은 그 구매함으로 센다.
+//     친구 사진 수 = 친구가 보이기로 둔 사진(get_friend_wall)의 상품을 같은 도감 셈(friendGuide)에 넣은 것.
+//     "손으로 켜기"(guide_manual_lit)는 서버에 없어 친구 쪽 비교에는 들어가지 않는다 (산 상품 기준).
 import 'package:flutter/cupertino.dart' show CupertinoPageRoute;
 import 'package:flutter/material.dart';
 
@@ -27,22 +29,26 @@ void openFriendCollection(
   Member friend,
   CollectionJump tab, {
   Loaders loaders = const Loaders(),
+  List<String> photoKitIds = const [],
 }) {
   Navigator.of(context).push(
     CupertinoPageRoute<void>(
-      builder: (_) => FriendCollectionScreen(friend: friend, initial: tab, loaders: loaders),
+      builder: (_) => FriendCollectionScreen(friend: friend, initial: tab, loaders: loaders, photoKitIds: photoKitIds),
     ),
   );
 }
 
 class _FriendData {
-  const _FriendData(this.liked, this.owned, this.mine, this.works);
+  const _FriendData(this.liked, this.owned, this.mine, this.works, this.photosByWork);
   final List<Kit> liked;
   final List<Kit> owned;
 
   /// 내 컬렉션 (겹침 표시용)
   final List<Kit> mine;
   final List<GuideWork> works;
+
+  /// 작품 id → 친구 사진 수 (사진에 이은 상품 기준)
+  final Map<String, int> photosByWork;
 }
 
 class FriendCollectionScreen extends StatefulWidget {
@@ -51,10 +57,14 @@ class FriendCollectionScreen extends StatefulWidget {
     required this.friend,
     this.initial = CollectionJump.liked,
     this.loaders = const Loaders(),
+    this.photoKitIds = const [],
   });
   final Member friend;
   final CollectionJump initial;
   final Loaders loaders;
+
+  /// 친구가 보이기로 둔 사진 (한 장에 하나, 상품을 안 이었으면 '')
+  final List<String> photoKitIds;
 
   @override
   State<FriendCollectionScreen> createState() => _FriendCollectionScreenState();
@@ -73,7 +83,19 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
       widget.loaders.collection(),
       widget.loaders.guideWorks(),
     ]);
-    return _FriendData(r[0] as List<Kit>, r[1] as List<Kit>, r[2] as List<Kit>, r[3] as List<GuideWork>);
+    var byWork = const <String, int>{};
+    final linked = [
+      for (final id in widget.photoKitIds)
+        if (id.isNotEmpty) id,
+    ];
+    if (linked.isNotEmpty) {
+      try {
+        byWork = await widget.loaders.friendGuide(linked).timeout(const Duration(seconds: 8));
+      } on Object {
+        // 도감 데이터가 없으면 작품별 사진 수 없이
+      }
+    }
+    return _FriendData(r[0] as List<Kit>, r[1] as List<Kit>, r[2] as List<Kit>, r[3] as List<GuideWork>, byWork);
   }
 
   @override
@@ -117,7 +139,7 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
                 child: switch (_tab) {
                   CollectionJump.liked => _kits(d.liked, d.mine, liked: true),
                   CollectionJump.owned => _kits(d.owned, d.mine, liked: false),
-                  CollectionJump.guide => _guide(d.works),
+                  CollectionJump.guide => _guide(d.works, d.photosByWork),
                 },
               ),
             ],
@@ -162,9 +184,9 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
     );
   }
 
-  Widget _guide(List<GuideWork> works) {
+  Widget _guide(List<GuideWork> works, Map<String, int> photos) {
     final f = widget.friend;
-    final shown = works.where((w) => (f.guide[w.id] ?? 0) > 0).toList()
+    final shown = works.where((w) => (f.guide[w.id] ?? 0) > 0 || (photos[w.id] ?? 0) > 0).toList()
       ..sort((a, b) => (f.guide[b.id] ?? 0).compareTo(f.guide[a.id] ?? 0));
     if (shown.isEmpty) return EmptyView(message: '${f.name}의 도감이 아직 비어 있어요');
     Widget bar(String who, int n, int total, {bool accent = false}) => Row(
@@ -201,6 +223,21 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
                 style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
               ),
             ),
+            if (widget.photoKitIds.isNotEmpty)
+              Tooltip(
+                // 친구가 보이기로 둔 사진
+                key: const ValueKey('friend-photo-count'),
+                message: '사진',
+                child: Row(
+                  children: [
+                    const Icon(Icons.photo_library_outlined, size: Gp.iS, color: Gp.muted),
+                    Text(
+                      ' ${widget.photoKitIds.length}',
+                      style: const TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+              ),
           ],
         ),
         const SizedBox(height: 10),
@@ -225,7 +262,21 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(w.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(w.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                          ),
+                          if ((photos[w.id] ?? 0) > 0) ...[
+                            const Icon(Icons.photo_camera_outlined, size: 14, color: Gp.muted),
+                            Text(
+                              ' ${photos[w.id]}',
+                              key: ValueKey('work-photos-${w.id}'),
+                              style: const TextStyle(fontSize: Gp.t11, color: Gp.muted),
+                            ),
+                          ],
+                        ],
+                      ),
                       const SizedBox(height: 6),
                       bar(f.name.characters.take(2).toString(), f.guide[w.id] ?? 0, w.total, accent: true),
                       const SizedBox(height: 4),

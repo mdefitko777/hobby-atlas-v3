@@ -869,6 +869,7 @@ class RingAvatar extends StatelessWidget {
     this.ringWidth = 2.5,
     this.onTap,
     this.tooltip = '',
+    this.photo,
   });
   final String text;
   final double size;
@@ -878,12 +879,17 @@ class RingAvatar extends StatelessWidget {
   final VoidCallback? onTap;
   final String tooltip;
 
+  /// 아바타 사진 (없으면 [text] 첫 글자)
+  final Widget? photo;
+
   @override
   Widget build(BuildContext context) {
-    final label = Text(
-      text,
-      style: TextStyle(fontSize: size * 0.4, fontWeight: FontWeight.w700, color: Gp.ink),
-    );
+    final Widget label = photo == null
+        ? Text(
+            text,
+            style: TextStyle(fontSize: size * 0.4, fontWeight: FontWeight.w700, color: Gp.ink),
+          )
+        : ClipOval(child: SizedBox.square(dimension: size, child: photo));
     final face = onTap == null
         ? Container(
             width: size,

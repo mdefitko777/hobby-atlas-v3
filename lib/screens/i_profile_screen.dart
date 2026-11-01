@@ -2,30 +2,34 @@
 // 같은 화면을 친구 보기로도 쓴다: 친구 이름을 누르면 그 친구의 숫자 · 사진 벽 · 태그 (편집 없음, 친구 끊기)
 // v3: 이름 · @아이디 · 친구는 Gunpula 계정(v3 get_me), 숫자는 내 기록(Marks), 태그는 preferences.tags,
 //     사진 벽은 내 사진(기기) → 구매함 상품 사진. 친구 사진은 Storage(docs/supabase-v3-photos.sql) — 없으면 친구 구매함 사진.
+//     아바타 · 배경 · 사진 공개 범위 · 공유 공간은 u_social.dart (서버 = docs/supabase-v3-social.sql, 없으면 기기에만).
 // 숫자 · 아이콘은 My Page(A-21)와 같은 모양: ♡ | 리본, 이번 달 | 총 지출을 떠 있는 흰 묶음 두 개에.
 //
 // ┌──────── 디자인 가이드 대응표: I 내 정보 ───────────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
-// │ I-1  │ 색 고리 큰 아바타 · 이름 · Lv · @아이디 │ 내 프로필 (계정 이름 · 레벨 · 아이디)     │ P04           │
+// │ I-1  │ 배경 사진 위 색 고리 큰 아바타(사진) · 이름 · Lv · @아이디 │ 내 프로필 (U-1 · U-3)  │ P04 · P02  │
 // │ I-2  │ TagPill 줄                          │ 내 취향 태그 (친구에게도 보임)            │ P06           │
-// │ I-3  │ ✎ 아이콘 → 바텀 시트(액션 목록)       │ 이름 · 아이디 · 태그 바꾸기               │ P03 · P07     │
+// │ I-3  │ ✎ 아이콘 → 바텀 시트(액션 목록)       │ 아바타 · 배경 · 이름 · 아이디 · 태그 바꾸기 │ P03 · P07     │
 // │ I-4  │ 떠 있는 숫자 묶음 2개 (아이콘 + 숫자)  │ ♡ · 리본 → 컬렉션 / 이번 달 · 총 지출     │ P01 · P07     │
 // │ I-5  │ 친구 줄: 👥 n · 추가 · 요청 아이콘     │ 친구 추가 (아이디로) · 받은 요청 · 내 아이디 복사 │ P07 · P08 │
+// │ I-5b │ WorkspaceMembers (U-6, 있을 때만)    │ 공유 공간 이름 · 멤버 · 역할 (읽기만)       │ P06 · P08     │
 // │ I-6  │ PhotoWall 3열 (T-1)                 │ 사진 벽: 내 사진 → 구매함 상품 사진         │ P02 · P06     │
 // │ I-7  │ 사진 칸 → T 사진 보기                │ 친구에게 보이기 · 워터마크 저장            │ P05 · P10     │
-// │ I-9  │ 안내 카드 + 버튼                     │ 로그인하기 · 아이디 정하기                │ P09 · P10     │
-// │ I-11 │ 친구 숫자 → L 친구 컬렉션            │ 친구의 좋아요 · 구매함 · 도감 비교          │ P07           │
+// │ I-9  │ 👥/🔒 아이콘 → 바텀 시트(U-5)         │ 사진 공개 범위 (전체 끄기 · 친구별 숨기기)  │ P05 · P07     │
+// │ I-13 │ 안내 카드 + 버튼                     │ 로그인하기 · 아이디 정하기                │ P09 · P10     │
+// │ I-11 │ 친구 숫자 → L 친구 컬렉션            │ 친구의 좋아요 · 구매함 · 도감 비교(+사진 수) │ P07           │
 // │ I-12 │ OutlinedButton → 확인 대화상자        │ 친구 끊기                              │ P05           │
 // │ I-8  │ LoadingView / ErrorView             │ 불러오는 중 · 오류                      │ P01 · P09     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 친구 서랍(M) 머리 아바타 → 쌓기(push, 오른쪽에서 · 넓은 화면은 오른쪽 칸). 숫자 → 닫고 컬렉션 탭(옆으로).
-//       친구 → 쌓기. 사진 → 쌓기(T). 편집 · 태그 · 사진 넣기 → 덮기(바텀 시트).
+//       친구 → 쌓기. 사진 → 쌓기(T). 편집 · 태그 · 사진 넣기 · 아바타 · 배경 · 공개 범위 → 덮기(바텀 시트).
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 
 import '../api.dart';
 import '../channels.dart';
 import '../clock.dart';
+import '../data/social_local.dart' show ProfileImageKind;
 import '../detail_pane.dart';
 import '../level.dart';
 import '../marks.dart';
@@ -40,6 +44,7 @@ import 'l_friend_collection_screen.dart';
 import 'p_sign_in_screen.dart';
 import 'q_friend_sheets.dart';
 import 't_photo_screen.dart';
+import 'u_social.dart';
 
 void openProfile(
   BuildContext context, {
@@ -161,6 +166,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       real ? account.photos.friendWall(f.handle, force: true) : Future.value(const FriendWall()),
     ]);
     final m = results[0] as Member;
+    if (real) await account.profileImages.cacheFriendAvatars(); // I-1 친구 아바타 (사진 벽의 avatar_path)
     var owned = const <Kit>[];
     try {
       owned = await widget.loaders.kitsByIds(m.ownedIds.take(_wallKits).toList());
@@ -193,6 +199,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              row(Icons.account_circle_outlined, '아바타', () => editProfileImage(context, ProfileImageKind.avatar)),
+              row(Icons.wallpaper_outlined, '배경', () => editProfileImage(context, ProfileImageKind.cover)),
               row(Icons.edit_outlined, '이름', () {
                 if (ensureSignedIn(context)) askDisplayName(context);
               }),
@@ -318,7 +326,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _Header(
           name: name,
           subtitle: handle.isNotEmpty ? '@$handle' : (signedIn ? '아이디 없음' : '로그인 전'),
-          avatarText: name.characters.isEmpty ? '나' : name.characters.first,
+          avatar: MyAvatar(fallback: name.characters.isEmpty ? '나' : name.characters.first, size: 76, ringWidth: 3),
+          cover: ProfileCover(file: store.social.image(ProfileImageKind.cover)?.file ?? ''),
           level: level,
           onLevel: jump == null ? null : () => jump(CollectionJump.guide),
           tags: _myTags(store.profileTags, account),
@@ -326,7 +335,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         if (!signedIn)
           _Hint(
-            // I-9 P09
+            // I-13 P09
             icon: Icons.cloud_outlined,
             text: '로그인 전이에요',
             action: '로그인',
@@ -363,6 +372,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
         PhotoWall(
           // I-6 · I-7
           warn: signedIn && photos.any((ph) => ph.shared) ? photoWarn(account.photos) : '',
+          extra: signedIn
+              ? IconButton(
+                  // I-9 공개 범위
+                  key: const ValueKey('photo-privacy'),
+                  tooltip: '공개 범위',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => showPhotoPrivacy(context),
+                  icon: Icon(privacyIcon(store.social), size: Gp.iM, color: Gp.muted),
+                )
+              : null,
           onAdd: () => addMyPhoto(context),
           tiles: [
             for (final ph in photos) MyPhotoTile(ph),
@@ -370,6 +389,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         ),
         if (signedIn) _friendsPanel(account),
+        if (signedIn && account.sync.workspace != null)
+          SectionPanel(
+            // I-5b 공유 공간 (읽기만)
+            padding: const EdgeInsets.only(bottom: 6),
+            child: WorkspaceMembers(workspace: account.sync.workspace!),
+          ),
       ],
     );
   }
@@ -442,7 +467,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final m = d.member;
     final account = AccountScope.of(context);
     final real = account.signedIn && account.friends.friends.any((x) => x.handle == m.handle);
-    void open(CollectionJump j) => openFriendCollection(context, m, j, loaders: widget.loaders); // I-11
+    // I-11 · L-3 도감 비교에 친구 사진 수도
+    void open(CollectionJump j) => openFriendCollection(
+      context,
+      m,
+      j,
+      loaders: widget.loaders,
+      photoKitIds: [for (final ph in d.wall.photos) ph.kitId],
+    );
     final withPhoto = {for (final ph in d.wall.photos) ph.kitId};
     return ListView(
       padding: const EdgeInsets.only(bottom: 40),
@@ -450,7 +482,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _Header(
           name: m.name,
           subtitle: '@${m.handle}',
-          avatarText: m.name.characters.isEmpty ? '?' : m.name.characters.first,
+          avatar: FriendAvatar(handle: m.handle, name: m.name, size: 76, ring: true),
+          cover: ProfileCover(path: d.wall.coverPath),
           level: guideLevel(m.lit, 0, owned: m.owned),
           onLevel: () => open(CollectionJump.guide),
           tags: d.wall.tags,
@@ -500,7 +533,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
-/// I-9 안내 카드 (로그인 · 아이디)
+/// I-13 안내 카드 (로그인 · 아이디)
 class _Hint extends StatelessWidget {
   const _Hint({required this.icon, required this.text, required this.action, required this.onTap});
   final IconData icon;
@@ -531,7 +564,8 @@ class _Header extends StatelessWidget {
   const _Header({
     required this.name,
     required this.subtitle,
-    required this.avatarText,
+    required this.avatar,
+    required this.cover,
     required this.level,
     required this.tags,
     this.onLevel,
@@ -541,7 +575,12 @@ class _Header extends StatelessWidget {
 
   /// @아이디 (없으면 안내 글)
   final String subtitle;
-  final String avatarText;
+
+  /// I-1 색 고리 큰 아바타 (사진 · 첫 글자)
+  final Widget avatar;
+
+  /// 배경 사진 (70 높이 띠)
+  final Widget cover;
   final int level;
   final List<String> tags;
 
@@ -553,7 +592,6 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final avatar = RingAvatar(text: avatarText, size: 76, ringWidth: 3);
     final chip = LevelChip(level: level);
     return ColoredBox(
       color: Gp.panel,
@@ -561,7 +599,7 @@ class _Header extends StatelessWidget {
         children: [
           Column(
             children: [
-              Container(height: 70, color: Gp.soft), // 배경(커버)
+              cover, // 배경(커버)
               const SizedBox(height: 56), // 아바타가 겹쳐 앉는 자리
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),

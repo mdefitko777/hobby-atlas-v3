@@ -12,6 +12,7 @@ import 'package:hobby_atlas/screens/k_settings_screen.dart';
 import 'package:hobby_atlas/screens/m_friends_drawer.dart';
 import 'package:hobby_atlas/screens/n_notifications_screen.dart';
 import 'package:hobby_atlas/screens/p_sign_in_screen.dart';
+import 'package:hobby_atlas/screens/u_social.dart';
 import 'package:hobby_atlas/sync/account.dart';
 import 'package:hobby_atlas/theme.dart';
 
@@ -148,7 +149,10 @@ void main() {
     expect(find.text('@bbang'), findsOneWidget);
     expect(find.text('친구 요청 1건'), findsOneWidget);
     expect(find.text('동생'), findsOneWidget);
-    expect(find.text('@dongsaeng · 좋아요 1 · 구매함 1'), findsOneWidget); // get_friend_collection 숫자
+    // 상태 한 줄 = 가장 최근 일 (구매함 b, 2/2) — get_friend_collection
+    final status = tester.widget<FriendStatusLine>(find.byType(FriendStatusLine));
+    expect((status.event?.kind, status.event?.kitId), ('owned', 'b'));
+    expect(status.fallback, '@dongsaeng · 좋아요 1 · 구매함 1');
     expect(server.count('gunpula_v3_get_friend_collection'), 1);
     // 받은 요청 시트 → 수락
     await tester.tap(find.text('친구 요청 1건'));
