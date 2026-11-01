@@ -5,6 +5,7 @@
 //   · 공유되는 것 = 구매함 · 좋아요(내 버킷) — 바꾸면 sharedRevision +1, cloudDirty = true
 //   · 이 기기에만 = 베이 부품 · 베이 연결 · 베이 조합 · 덱 · 도감 손으로 켜기 · 메자스타 · 프렌다 태그 · 최근 본 것 · 내 사진 목록 · 취향 태그 (payload 에 넣지 않음)
 //     (내 사진 중 친구에게 보이기를 켠 것은 lib/sync/photo_share.dart 가 Storage 에, 태그는 v3 preferences.tags 에 따로 올린다)
+//     최근 검색어 · 검색 횟수 · 컬렉션 휴지통도 이 기기에만
 import 'dart:async';
 import 'dart:convert';
 
@@ -65,6 +66,7 @@ class UserStore extends ChangeNotifier {
 
   /// 3on3 덱 — comboIds 는 늘 3칸, 빈 칸은 ''. 기기에만
   final List<Deck> bbxDecks = [];
+
   /// 가진 메자스타 태그 · 프렌다 픽 (Gunpula atlas 의 인쇄 id `mz-intl:1-1-001@KR` · 픽 id `frienda:1-1-001`). 기기에만
   final Set<String> tagOwned = {};
 
@@ -79,6 +81,17 @@ class UserStore extends ChangeNotifier {
 
   /// 내 취향 태그 (내 정보 머리) — 로그인하면 v3 preferences.tags 에도
   final List<String> profileTags = [];
+  /// 최근 검색어 (새것부터, 같은 말은 한 번, [maxRecentSearches] 개까지). 기기에만
+  final List<String> recentSearches = [];
+  static const maxRecentSearches = 20;
+
+  /// 검색어 → 검색한 횟수 (검색 화면 "자주 찾은"). 기기에만, [maxSearchCounts] 개까지
+  final Map<String, int> searchCounts = {};
+  static const maxSearchCounts = 100;
+
+  /// 컬렉션 휴지통: kit_id → (어느 탭에서 지웠나 owned · wanted, 지운 시각 UTC ISO). [trashDays] 일 지나면 버린다. 기기에만
+  final Map<String, ({String from, String at})> trash = {};
+  static const trashDays = 30;
 
   /// 바뀔 때마다 +1 (Marks 가 다시 그릴지 판단)
   int revision = 0;
@@ -151,7 +164,28 @@ class UserStore extends ChangeNotifier {
     profileTags
       ..clear()
       ..addAll(jList(local['profile_tags']).whereType<String>());
+    recentSearches
+      ..clear()
+      ..addAll(jList(local['recent_searches']).whereType<String>().take(maxRecentSearches));
+    searchCounts
+      ..clear()
+      ..addAll(_countsFrom(local['search_counts']));
+    trash
+      ..clear()
+      ..addAll(_trashFrom(local['trash']));
+    _purgeTrash(DateTime.now());
   }
+
+  static Map<String, int> _countsFrom(Object? raw) => {
+    for (final e in jMap(raw).entries)
+      if (e.value is num) e.key: (e.value! as num).toInt(),
+  };
+
+  static Map<String, ({String from, String at})> _trashFrom(Object? raw) => {
+    for (final e in jMap(raw).entries)
+      if (jMap(e.value) case final m when jStr(m['at']).isNotEmpty && (m['from'] == 'owned' || m['from'] == 'wanted'))
+        e.key: (from: jStr(m['from']), at: jStr(m['at'])),
+  };
 
   Map<String, Object?> toJson() => {
     'schema': 1,
@@ -172,6 +206,11 @@ class UserStore extends ChangeNotifier {
       'special_friends': specialFriends.toList(),
       'photos': [for (final p in _photos) p.toJson()],
       'profile_tags': profileTags,
+      'recent_searches': recentSearches,
+      'search_counts': searchCounts,
+      'trash': {
+        for (final e in trash.entries) e.key: {'from': e.value.from, 'at': e.value.at},
+      },
     },
   };
 
@@ -221,10 +260,21 @@ class UserStore extends ChangeNotifier {
   /// 구매가를 안 적은 상품의 값 (Catalog 가 정가 × 환율로 채운다)
   int? Function(String id)? listPrice;
 
-  int _paid(String id, Map<String, Object?> e) => switch (e['purchase_price']) {
-    final num p => p.toInt(),
-    _ => listPrice?.call(id) ?? 0,
+  /// 구매가(한 개 값) × 수량
+  int _paid(String id, Map<String, Object?> e) =>
+      switch (e['purchase_price']) {
+        final num p => p.toInt(),
+        _ => listPrice?.call(id) ?? 0,
+      } *
+      _qty(e);
+
+  static int _qty(Map<String, Object?>? e) => switch (e?['quantity']) {
+    final num q => q.toInt().clamp(1, 99),
+    _ => 1,
   };
+
+  /// 수량 1–99 (기록이 없으면 1) — 좋아요 = 갖고 싶은 수, 구매함 = 가진 수
+  int quantityOf(String kitId) => _qty(_items[kitId]);
 
   /// 구매함 지출 합 (원) — 적어 둔 구매가, 없으면 정가 × 환율
   int get spendKrw => _items.entries.fold(0, (s, e) => e.value['status'] == 'owned' ? s + _paid(e.key, e.value) : s);
@@ -285,6 +335,133 @@ class UserStore extends ChangeNotifier {
     put('note', note);
     _items[kitId] = next;
     _changed(shared: true);
+  }
+
+  /// 수량만 바꾼다 (구매가 · 보관 장소 · 메모는 그대로 — setDetails 는 주지 않은 값을 지운다)
+  void setQuantity(String kitId, int quantity) {
+    final old = _items[kitId];
+    final q = quantity.clamp(1, 99);
+    if (old == null || _qty(old) == q) return;
+    _items[kitId] = {...old, 'quantity': q, 'updated_at': _now(), 'updated_by': member};
+    _changed(shared: true);
+  }
+
+  /// 내 구매가(한 개 값)만 바꾼다. null = 지움 (보관 장소 · 메모는 그대로)
+  void setPurchasePrice(String kitId, int? price) {
+    final old = _items[kitId];
+    if (old == null) return;
+    final next = {...old, 'updated_at': _now(), 'updated_by': member};
+    price == null ? next.remove('purchase_price') : next['purchase_price'] = price;
+    _items[kitId] = next;
+    _changed(shared: true);
+  }
+
+  // ── 최근 본 · 최근 검색 · 휴지통 (기기에만) ──
+  /// 최근 본 기록 비우기 — 되돌리기용으로 지우기 전 목록을 돌려준다
+  List<String> clearRecentViewed() {
+    final before = [...recentViewed];
+    if (before.isEmpty) return before;
+    recentViewed.clear();
+    _changed();
+    return before;
+  }
+
+  void restoreRecentViewed(List<String> ids) {
+    recentViewed
+      ..clear()
+      ..addAll(ids);
+    _changed();
+  }
+
+  /// 검색어를 남긴다: 최근 검색 맨 앞(같은 말은 옮김) + 횟수 +1
+  void addRecentSearch(String query) {
+    final q = query.trim();
+    if (q.isEmpty) return;
+    recentSearches
+      ..remove(q)
+      ..insert(0, q);
+    if (recentSearches.length > maxRecentSearches) recentSearches.removeRange(maxRecentSearches, recentSearches.length);
+    searchCounts[q] = (searchCounts[q] ?? 0) + 1;
+    if (searchCounts.length > maxSearchCounts) {
+      // 가장 적게 찾은 것부터 버린다 (방금 찾은 것은 빼고)
+      final low = (searchCounts.entries.where((e) => e.key != q).toList()..sort((a, b) => a.value.compareTo(b.value)))
+          .first
+          .key;
+      searchCounts.remove(low);
+    }
+    _changed();
+  }
+
+  /// 최근 검색에서 하나 지우기 — 되돌리기용으로 있던 자리를 돌려준다 (없었으면 -1)
+  int removeRecentSearch(String query) {
+    final i = recentSearches.indexOf(query);
+    if (i < 0) return i;
+    recentSearches.removeAt(i);
+    _changed();
+    return i;
+  }
+
+  /// 되돌리기: 지운 검색어를 [index] 자리에
+  void insertRecentSearch(int index, String query) {
+    if (recentSearches.contains(query)) return;
+    recentSearches.insert(index.clamp(0, recentSearches.length), query);
+    _changed();
+  }
+
+  /// 최근 검색 전체 지우기 (횟수 = "자주 찾은" 도 같이). 되돌리기용으로 지우기 전 값을 돌려준다
+  ({List<String> recent, Map<String, int> counts}) clearRecentSearches() {
+    final before = (recent: [...recentSearches], counts: {...searchCounts});
+    recentSearches.clear();
+    searchCounts.clear();
+    _changed();
+    return before;
+  }
+
+  void restoreRecentSearches(({List<String> recent, Map<String, int> counts}) before) {
+    recentSearches
+      ..clear()
+      ..addAll(before.recent.take(maxRecentSearches));
+    searchCounts
+      ..clear()
+      ..addAll(before.counts);
+    _changed();
+  }
+
+  /// 자주 찾은 검색어 — 두 번 이상 찾은 것, 많이 찾은 것부터
+  List<MapEntry<String, int>> frequentSearches({int limit = 8}) =>
+      (searchCounts.entries.where((e) => e.value >= 2).toList()..sort((a, b) => b.value.compareTo(a.value)))
+          .take(limit)
+          .toList();
+
+  /// 컬렉션에서 지운 상품을 휴지통에 ([owned] = 구매함 탭에서 지웠나)
+  void trashAdd(Iterable<String> kitIds, {required bool owned, DateTime? now}) {
+    final at = (now ?? DateTime.now()).toUtc().toIso8601String();
+    var any = false;
+    for (final id in kitIds) {
+      trash[id] = (from: owned ? 'owned' : 'wanted', at: at);
+      any = true;
+    }
+    if (any) _changed();
+  }
+
+  void trashRemove(Iterable<String> kitIds) {
+    var any = false;
+    for (final id in kitIds) {
+      if (trash.remove(id) != null) any = true;
+    }
+    if (any) _changed();
+  }
+
+  /// [trashDays] 일 지난 것을 버린다 (읽을 때 · 휴지통을 열 때)
+  void purgeTrash(DateTime now) {
+    if (_purgeTrash(now)) _changed();
+  }
+
+  bool _purgeTrash(DateTime now) {
+    final cutoff = now.toUtc().subtract(const Duration(days: trashDays));
+    final before = trash.length;
+    trash.removeWhere((_, v) => DateTime.tryParse(v.at)?.isBefore(cutoff) ?? true);
+    return trash.length != before;
   }
 
   void markViewed(String kitId) {
@@ -465,6 +642,17 @@ class UserStore extends ChangeNotifier {
     bbxManualMap.addAll(p.bbxManualMap);
     guideManualLit.addAll(p.guideManualLit);
     tagOwned.addAll(p.tagOwned);
+    for (final q in p.recentSearches.reversed) {
+      if (!recentSearches.contains(q)) recentSearches.insert(0, q);
+    }
+    if (recentSearches.length > maxRecentSearches) recentSearches.removeRange(maxRecentSearches, recentSearches.length);
+    for (final e in p.searchCounts.entries) {
+      if ((searchCounts[e.key] ?? 0) < e.value) searchCounts[e.key] = e.value;
+    }
+    for (final e in p.trash.entries) {
+      trash.putIfAbsent(e.key, () => e.value);
+    }
+    _purgeTrash(DateTime.now());
     for (final id in p.recentViewed.reversed) {
       if (!recentViewed.contains(id)) recentViewed.insert(0, id);
     }
@@ -567,8 +755,14 @@ class ImportPreview {
   /// Hobby Atlas 자신의 백업에만 있다 (베이 조합 · 덱)
   final List<Combo> bbxCombos = [];
   final List<Deck> bbxDecks = [];
+
   /// 메자스타 · 프렌다 가진 태그 (Hobby Atlas 백업에만)
   final Set<String> tagOwned = {};
+
+  /// 최근 검색어 · 검색 횟수 · 컬렉션 휴지통 (Hobby Atlas 백업에만)
+  final List<String> recentSearches = [];
+  final Map<String, int> searchCounts = {};
+  final Map<String, ({String from, String at})> trash = {};
 
   /// Hobby Atlas 자신의 백업에만 있다 (옛 Gunpula 에는 채널이 없음)
   List<String>? myChannels;
@@ -585,7 +779,9 @@ class ImportPreview {
       recentViewed.isEmpty &&
       bbxCombos.isEmpty &&
       bbxDecks.isEmpty &&
-      tagOwned.isEmpty;
+      tagOwned.isEmpty &&
+      recentSearches.isEmpty &&
+      trash.isEmpty;
 
   static ImportPreview parse(String text, bool Function(String kitId) knownKit) {
     final p = ImportPreview._();
@@ -682,6 +878,9 @@ class ImportPreview {
     p.bbxCombos.addAll(jList(local['bbx_combos']).map(Combo.fromJson).nonNulls);
     p.bbxDecks.addAll(jList(local['bbx_decks']).map(Deck.fromJson).nonNulls);
     p.tagOwned.addAll(jList(local['tag_owned']).whereType<String>());
+    p.recentSearches.addAll(jList(local['recent_searches']).whereType<String>());
+    p.searchCounts.addAll(UserStore._countsFrom(local['search_counts']));
+    p.trash.addAll(UserStore._trashFrom(local['trash']));
     if (local['my_channels'] is List) p.myChannels = jList(local['my_channels']).whereType<String>().toList();
     return p;
   }

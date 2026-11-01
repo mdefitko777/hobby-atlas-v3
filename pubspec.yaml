@@ -52,6 +52,8 @@ dependencies:
   webview_flutter_android: ^4.14.1
   # 사진 벽: 내 사진을 카메라 · 갤러리에서 (줄여서 기기에 저장 → 친구 공개는 Supabase Storage)
   image_picker: ^1.2.4
+  # 바코드 찾기 (화면 E): 기기 안 ML Kit 로 상자 뒷면 JAN 읽기 — 서버 · 인터넷 필요 없음
+  mobile_scanner: ^7.4.3
 dev_dependencies:
   flutter_test:
     sdk: flutter
