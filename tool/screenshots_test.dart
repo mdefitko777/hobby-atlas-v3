@@ -209,9 +209,13 @@ void main() {
     await _save(t, '17_settings');
   });
 
-  testWidgets('카메라 결과', (t) async {
-    await _open(t, phone, CameraResultScreen(scene: photoScene, loaders: fakeLoaders, onGoSearch: () {}));
-    await _save(t, '18_camera_result');
+  testWidgets('바코드 찍기', (t) async {
+    await _open(
+      t,
+      phone,
+      BarcodeScanScreen(loaders: fakeLoaders, onGoSearch: () {}, preview: (_, _) => const ColoredBox(color: Colors.black)),
+    );
+    await _save(t, '18_barcode_scan');
   });
 
   testWidgets('가로 폰', (t) async {

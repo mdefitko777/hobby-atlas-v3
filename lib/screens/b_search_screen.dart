@@ -4,23 +4,27 @@
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
 // │ B-1  │ ChannelHeader                      │ 검색 범위 = 내 채널 (C-0 공용)          │ P04 · P06     │
 // │ B-2  │ GpSearchBar (지우기 + 카메라)       │ 검색창(홈과 같은 모양)                 │ P07 · P04     │
-// │ B-3  │ Wrap(InputChip ×) — 검색창을 누르면   │ 최근 검색어 (하나씩 · 전체 지우기)      │ P06 · P03     │
-// │ B-4  │ 2열 번호 목록                       │ 인기 검색어 (1–3위 브랜드 색)           │ P06           │
-// │ B-5  │ 예시 문장 칩                        │ AI에게 설명해서 찾기 (미리 쓴 가짜 응답) │ P10 · P07     │
-// │ B-6  │ 가로 카드 + 일치도 %                │ AI 추천 후보                           │ P01 · P09     │
+// │ B-3  │ Wrap(InputChip ×) — 검색창을 누르면   │ 최근 검색어 (기기 저장 · 20개 · 되돌리기) │ P06 · P03     │
+// │ B-4  │ 2열 목록 (×횟수) · 새 상품 줄         │ 자주 찾은 (내 검색 횟수) · 새로 들어온    │ P06 · P01     │
+// │ B-5  │ 예시 문장 칩                        │ 설명으로 찾기 (낱말 표 · AI 아님)        │ P10 · P07     │
+// │ B-6  │ ThumbRow + 일치도 %                 │ 설명과 겹친 상품 (맞은 낱말 = 이유)      │ P01 · P09     │
 // │ B-7  │ SectionListView (O 전체 목록 재사용) │ 검색 결과 · 필터 · 정렬 · 격자/목록      │ P08 · 적응형 │
 // │ B-9  │ 검색어 · 포커스 없을 때 같은 목록      │ 처음 화면 = 전체 상품 (내 채널 상품 전부)  │ P07 · P06     │
 // │ B-8  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 결과 없음          │ P01 · P09     │
 // │ B-10 │ TagSearchSection (R 화면 파일)        │ 메자스타 · 프렌다 태그 · 게임 이름 찾기   │ P07 · P06     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
-// 가짜 검색: GET /kits 로 받은 목록 안에서만 거른다(setState). 실제 검색 엔진 · AI 호출 없음.
+// 검색은 기기 안: 받아 둔 Gunpula 목록에서 거른다. 설명으로 찾기 = lib/sentence_search.dart (낱말 맞추기, 서버 · AI 없음).
+// 서버가 없어 "인기 검색어" 순위는 만들지 않는다 → 내 검색 횟수(자주 찾은)와 이번 주 새 상품으로.
 // 현행 앱 문제: 정확한 이름을 모르면 못 찾음 · 필터 입구가 여러 개 → v2는 검색창 하나 + 말로 찾기.
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../data/user_store.dart';
 import '../filter_sheet.dart';
 import '../channels.dart';
+import '../marks.dart';
 import '../models.dart';
+import '../sentence_search.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'c_channel_screen.dart';
@@ -28,26 +32,21 @@ import 'd_kit_detail_screen.dart';
 import 'o_see_all_screen.dart';
 import 'r_mezastar_screen.dart' show TagSearchSection;
 
-/// 처음 보이는 최근 검색어 (가짜 기록 — 영구 저장 금지라 상수)
-const initialRecentQueries = ['스트라이크 프리덤', 'RG 윙', '이브이', 'BX-01'];
+/// B-5 설명으로 찾기 예시 (실제 데이터에서 후보가 나오는 문장)
+const sentenceExamples = ['샤아 전용 자쿠 HG', '수성의 마녀 에어리얼 HG', '이브이 인형', '드래곤 블레이드 베이'];
 
-/// 인기 검색어 (가짜 순위)
-const popularQueries = ['에어리얼', 'RG 윙 건담 제로', '발바토스', '피카츄', 'MGEX', '레전드 건담', 'Hi-ν', '드랜 소드', '세이버', '나인볼'];
-
-/// AI 가짜 응답: (트리거 낱말들, 예시 문장, 후보[(키트 id, 일치도, 이유)])
-const aiAnswers = <(List<String>, String, List<(String, int, String)>)>[
-  (
-    ['날개'],
-    '파란 날개 달린 SEED 건담',
-    [('gu02', 94, '푸른 날개 8장 · SEED · 흰색/파랑'), ('gu06', 88, '같은 계열 기체의 SD 버전'), ('gu12', 61, 'SEED 주인공 기체 · 날개 없음')],
-  ),
-  (['잠', '자고'], '자고 있는 피카츄 피규어', [('po22', 96, '「잠자는 피카츄」 이름 일치'), ('po23', 64, '피카츄 · 봉제인형')]),
-  (
-    ['드래곤', '용'],
-    '용 모양 블레이드 베이',
-    [('be43', 90, '드랜(드래곤) 소드 · BX-00'), ('be48', 85, '드랜 소드 메탈 코트'), ('be47', 72, '코발트 드라군 · 용 모양 블레이드')],
-  ),
-];
+/// "새로 들어온" = 가장 늦게 들어온 날부터 7일 안 (새것부터, [limit] 개)
+List<Kit> newThisWeek(List<Kit> kits, {int limit = 8}) {
+  final seen = [
+    for (final k in kits)
+      if (k.firstSeen.length >= 10) k,
+  ]..sort((a, b) => b.firstSeen.compareTo(a.firstSeen));
+  if (seen.isEmpty) return const [];
+  final top = DateTime.tryParse(seen.first.firstSeen.substring(0, 10));
+  if (top == null) return seen.take(limit).toList();
+  final since = top.subtract(const Duration(days: 6)).toIso8601String().substring(0, 10);
+  return seen.where((k) => k.firstSeen.compareTo(since) >= 0).take(limit).toList();
+}
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({
@@ -79,8 +78,18 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
   final _controller = TextEditingController();
   final _focus = FocusNode();
   String _query = '';
-  final List<String> _recent = [...initialRecentQueries];
   late Future<List<Kit>> _future;
+
+  /// 설명으로 찾기 결과 (같은 검색어 · 같은 목록이면 다시 세지 않는다 — 8,800개 × 낱말)
+  (String, List<Kit>, List<SentenceHit>)? _sentence;
+
+  List<SentenceHit> _sentenceHits(List<Kit> kits) {
+    final memo = _sentence;
+    if (memo != null && memo.$1 == _query && identical(memo.$2, kits)) return memo.$3;
+    final hits = sentenceSearch(_query, kits);
+    _sentence = (_query, kits, hits);
+    return hits;
+  }
 
   @override
   List<String> get myChannels => widget.myChannels;
@@ -126,14 +135,28 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
     setState(() => _query = q.trim()); // STATE: 검색어 → 결과 격자 · AI 후보
   }
 
+  /// 검색어를 남긴다 (최근 검색 맨 앞 + 횟수, 기기에 저장)
   void _submit(String q) {
     final t = q.trim();
     if (t.isEmpty) return;
-    setState(() {
-      _recent
-        ..remove(t)
-        ..insert(0, t); // STATE: 검색어 → 최근 검색 맨 앞
-    });
+    Marks.read(context).store.addRecentSearch(t); // STATE: 검색어 → 최근 검색 · 자주 찾은 (UserStore → 다시 그림)
+  }
+
+  /// 칩 · 줄을 눌러 검색 = 검색창에 넣고 남기기
+  void _search(String q) {
+    _setQuery(q);
+    _submit(q);
+  }
+
+  void _removeRecent(UserStore me, String q) {
+    final i = me.removeRecentSearch(q);
+    if (i < 0) return;
+    showToast(context, '「$q」을(를) 지웠어요', onUndo: () => me.insertRecentSearch(i, q));
+  }
+
+  void _clearRecent(UserStore me) {
+    final before = me.clearRecentSearches();
+    showToast(context, '검색 기록을 지웠어요', onUndo: () => me.restoreRecentSearches(before));
   }
 
   @override
@@ -192,7 +215,7 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
                 return ErrorView(message: '${snap.error}', onRetry: () => setState(reloadScope)); // B-8 P09
               }
               // B-9 검색어가 없으면: 검색창을 누른 동안 = 최근 · 인기 · AI, 아니면 = 전체 상품
-              return _query.isEmpty && _focus.hasFocus ? _idle() : _results(snap.data!);
+              return _query.isEmpty && _focus.hasFocus ? _idle(snap.data!) : _results(snap.data!);
             },
           ),
         ),
@@ -200,133 +223,110 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
     );
   }
 
-  /// 검색어가 없을 때: 최근 검색 · 인기 검색어 · AI로 찾기
-  Widget _idle() {
+  /// 검색어가 없을 때: 최근 검색 · 자주 찾은 · 새로 들어온 · 설명으로 찾기
+  Widget _idle(List<Kit> kits) {
     // 이 판을 눌러도 "검색창 밖을 누름"으로 치지 않게 — 아니면 포커스가 먼저 풀려 판이 사라지고 누른 칩이 안 먹는다
-    return TextFieldTapRegion(child: _idleList());
+    return TextFieldTapRegion(child: _idleList(kits));
   }
 
-  Widget _idleList() {
+  Widget _chip(String label, {IconData? icon, VoidCallback? onDeleted, required VoidCallback onTap}) => InputChip(
+    avatar: icon == null ? null : Icon(icon, size: Gp.iS, color: Gp.accent),
+    label: Text(label),
+    onPressed: onTap,
+    onDeleted: onDeleted,
+    deleteIcon: const Icon(Icons.close, size: Gp.iS),
+    backgroundColor: Gp.panel,
+    side: const BorderSide(color: Gp.line),
+    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(Gp.rSmall))),
+    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    visualDensity: VisualDensity.compact,
+  );
+
+  Widget _idleList(List<Kit> kits) {
+    final me = Marks.of(context).store; // 최근 검색 · 횟수가 바뀌면 다시 그림
+    final recent = me.recentSearches;
+    final frequent = me.frequentSearches();
+    final half = (frequent.length / 2).ceil();
+    final fresh = newThisWeek(kits);
+    Widget wrap(List<Widget> children) => Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Wrap(spacing: 8, runSpacing: 8, children: children),
+    );
+    Widget freqCol(Iterable<MapEntry<String, int>> part) => Expanded(
+      child: Column(
+        children: [
+          for (final e in part)
+            InkWell(
+              onTap: () => _search(e.key),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 9),
+                child: Row(
+                  children: [
+                    Expanded(child: Text(e.key, maxLines: 1, overflow: TextOverflow.ellipsis)),
+                    Text(
+                      '×${e.value}', // 내가 찾은 횟수 (순위 아님)
+                      style: const TextStyle(fontSize: Gp.t12, color: Gp.faint),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
     return ListView(
       padding: EdgeInsets.only(bottom: navClearance(context)),
       children: [
-        if (_recent.isNotEmpty) ...[
+        if (recent.isNotEmpty) ...[
           SectionHeader(
             '최근 검색',
             padding: const EdgeInsets.fromLTRB(16, 16, 4, 10),
-            trailing: TextButton(
-              onPressed: () => setState(_recent.clear), // STATE: 최근 검색 → 비움
-              child: const Text(
-                '전체 삭제',
-                style: TextStyle(color: Gp.muted, fontSize: Gp.t12),
-              ),
+            trailing: IconButton(
+              tooltip: '전체 삭제',
+              visualDensity: VisualDensity.compact,
+              onPressed: () => _clearRecent(me),
+              icon: const Icon(Icons.delete_sweep_outlined, size: Gp.iM, color: Gp.muted),
             ),
           ),
+          wrap([
+            for (final q in recent) _chip(q, onTap: () => _search(q), onDeleted: () => _removeRecent(me, q)), // B-3 P03
+          ]),
+        ],
+        if (frequent.isNotEmpty) ...[
+          const SectionHeader('자주 찾은', padding: EdgeInsets.fromLTRB(16, 24, 12, 10)), // B-4 내 검색 횟수
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final q in _recent)
-                  InputChip(
-                    // B-3 P03
-                    label: Text(q),
-                    onPressed: () => _setQuery(q),
-                    onDeleted: () => setState(() => _recent.remove(q)),
-                    deleteIcon: const Icon(Icons.close, size: Gp.iS),
-                    backgroundColor: Gp.panel,
-                    side: const BorderSide(color: Gp.line),
-                    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(Gp.rSmall))),
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    visualDensity: VisualDensity.compact,
-                  ),
-              ],
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [freqCol(frequent.take(half)), const SizedBox(width: 16), freqCol(frequent.skip(half))],
             ),
           ),
         ],
-        const SectionHeader('인기 검색어', padding: EdgeInsets.fromLTRB(16, 24, 12, 10)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: LayoutBuilder(
-            builder: (context, box) {
-              final half = (popularQueries.length / 2).ceil();
-              Widget col(int from, int to) => Expanded(
-                child: Column(
-                  children: [
-                    for (var i = from; i < to; i++)
-                      InkWell(
-                        onTap: () => _setQuery(popularQueries[i]),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 9),
-                          child: Row(
-                            children: [
-                              SizedBox(
-                                width: 24,
-                                child: Text(
-                                  '${i + 1}',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    color: i < 3 ? Gp.accent : Gp.faint, // B-4 브랜드 포인트 색
-                                  ),
-                                ),
-                              ),
-                              Expanded(child: Text(popularQueries[i], maxLines: 1, overflow: TextOverflow.ellipsis)),
-                            ],
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              );
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [col(0, half), const SizedBox(width: 16), col(half, popularQueries.length)],
-              );
-            },
-          ),
-        ),
-        const SectionHeader('AI에게 설명해서 찾기', padding: EdgeInsets.fromLTRB(16, 24, 12, 10)),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-          child: Text(
-            '정확한 이름이 기억나지 않으면 생김새나 작품을 문장으로 적어 보세요.', // B-5 P10
-            style: TextStyle(color: Gp.muted.withValues(alpha: 0.9), fontSize: Gp.t12),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final (_, example, _) in aiAnswers)
-                ActionChip(
-                  avatar: const Icon(Icons.auto_awesome, size: Gp.iS, color: Gp.accent),
-                  label: Text(example),
-                  onPressed: () => _setQuery(example),
-                  backgroundColor: Gp.panel,
-                  side: const BorderSide(color: Gp.line),
-                  shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(Gp.rSmall))),
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-            ],
-          ),
-        ),
+        if (fresh.isNotEmpty) ...[
+          const SectionHeader('새로 들어온', subtitle: '이번 주', padding: EdgeInsets.fromLTRB(16, 24, 12, 4)), // B-4
+          for (final k in fresh)
+            ThumbRow(
+              image: k.image,
+              title: k.name,
+              size: 44,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+              subtitle: joinDot([channelOf(k.franchiseId).label, k.line]),
+              onTap: () => openKitDetail(context, k, loaders: widget.loaders, list: fresh),
+            ),
+        ],
+        const SectionHeader('설명으로 찾기', padding: EdgeInsets.fromLTRB(16, 24, 12, 10)), // B-5 P10
+        wrap([
+          for (final example in sentenceExamples)
+            _chip(example, icon: Icons.manage_search, onTap: () => _search(example)),
+        ]),
       ],
     );
   }
 
-  /// 검색어가 있을 때: AI 후보(있으면) + 결과 격자
+  /// 검색어가 있을 때: 설명과 겹친 상품(낱말이 둘 이상이면) + 결과 격자
   Widget _results(List<Kit> kits) {
     final results = kits.where((k) => kitMatches(k, _query)).toList(); // 검색어가 없으면(둘러보기) 전부
-    final byId = {for (final k in kits) k.id: k};
-    final ai = aiAnswers.where((a) => a.$1.any(_query.contains)).firstOrNull;
-    final candidates = [
-      if (ai != null)
-        for (final (id, score, why) in ai.$3)
-          if (byId[id] case final k?) (k, score, why),
-    ];
+    final candidates = _query.isEmpty ? const <SentenceHit>[] : _sentenceHits(kits);
 
     // B-10 메자스타 · 프렌다 태그 (포켓몬 · 전체 채널에서), 게임 이름이면 도감 입구
     final tags = TagSearchSection(query: _query, tags: channel == allChannelId || channel == 'pokemon');
@@ -361,9 +361,10 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
         children: [
           tags,
           if (candidates.isNotEmpty)
-            _AiCandidates(
-              items: candidates,
-              onTap: (k) => openKitDetail(context, k, loaders: widget.loaders),
+            SentenceCandidates(
+              hits: candidates,
+              onTap: (k) =>
+                  openKitDetail(context, k, loaders: widget.loaders, list: [for (final h in candidates) h.kit]),
             ), // B-6
         ],
       ),
@@ -378,17 +379,23 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
   }
 }
 
-/// B-6 AI 추천 후보 — 미리 쓴 가짜 응답
-class _AiCandidates extends StatelessWidget {
-  const _AiCandidates({required this.items, required this.onTap});
-  final List<(Kit, int, String)> items;
+/// B-6 설명과 겹친 상품 — 맞은 낱말 / 전체 낱말 = 일치도, 맞은 낱말 = 이유 (사진 찾기 화면도 같이 쓴다)
+class SentenceCandidates extends StatelessWidget {
+  const SentenceCandidates({
+    super.key,
+    required this.hits,
+    required this.onTap,
+    this.margin = const EdgeInsets.fromLTRB(16, 10, 16, 0),
+  });
+  final List<SentenceHit> hits;
   final ValueChanged<Kit> onTap;
+  final EdgeInsets margin;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+      margin: margin,
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
       decoration: BoxDecoration(
         color: Gp.panel,
         borderRadius: BorderRadius.circular(Gp.rLarge),
@@ -399,28 +406,22 @@ class _AiCandidates extends StatelessWidget {
         children: [
           const Row(
             children: [
-              Icon(Icons.auto_awesome, size: Gp.iM, color: Gp.accent),
+              Icon(Icons.manage_search, size: Gp.iM, color: Gp.accent),
               SizedBox(width: 6),
-              Text('AI 추천 후보', style: TextStyle(fontWeight: FontWeight.w700)),
-              Spacer(),
-              Text(
-                '설명과 닮은 순서',
-                style: TextStyle(color: Gp.faint, fontSize: Gp.t12),
-              ),
+              Text('설명과 겹친 상품', style: TextStyle(fontWeight: FontWeight.w700)),
             ],
           ),
-          const SizedBox(height: 12),
-          for (final (k, score, why) in items)
+          const SizedBox(height: 6),
+          for (final h in hits)
             ThumbRow(
-              // 카메라 결과의 다른 후보와 같은 줄
-              image: k.image,
-              title: k.name,
-              subtitle: why,
+              image: h.kit.image,
+              title: h.kit.name,
+              subtitle: h.reason, // 맞은 낱말
               padding: const EdgeInsets.symmetric(vertical: 6),
-              onTap: () => onTap(k),
+              onTap: () => onTap(h.kit),
               trailing: Text(
-                '$score%', // 일치도 P01
-                style: TextStyle(fontWeight: FontWeight.w700, color: score >= 85 ? Gp.accent : Gp.muted),
+                '${h.score}%', // 일치도 P01
+                style: TextStyle(fontWeight: FontWeight.w700, color: h.score >= 85 ? Gp.accent : Gp.muted),
               ),
             ),
         ],

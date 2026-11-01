@@ -41,6 +41,12 @@ Future<List<Kit>> fetchCollection() => _guard(() async {
   return [for (final id in ids) ?Catalog.instance.byId[id]];
 });
 
+/// 찍어서 찾기 (바코드): JAN · EAN 이 같은 상품 (Gunpula 에 바코드가 있는 상품은 약 40%)
+Future<List<Kit>> fetchKitsByJan(String code) => _guard(() async {
+  await Catalog.instance.ensureLoaded();
+  return kitsWithBarcode(Catalog.instance.kits, code);
+});
+
 /// 도감 대화상자의 대응 모델
 Future<List<Kit>> fetchKitsByIds(List<String> ids) => _guard(() async {
   if (ids.isEmpty) return const <Kit>[];
@@ -96,6 +102,7 @@ class Loaders {
     this.notifications = fetchNotifications,
     this.friendGuide = fetchFriendGuide,
     this.guideChapters = fetchGuideChapters,
+    this.kitsByJan = fetchKitsByJan,
   });
 
   final Future<List<Kit>> Function(List<String> channelIds) kits;
@@ -113,4 +120,7 @@ class Loaders {
 
   /// 건담 작품 안 화수 · 장 (없으면 빈 목록)
   final Future<List<GuideChapter>> Function(String workId) guideChapters;
+
+  /// 바코드(JAN · EAN · UPC) → 그 상품들
+  final Future<List<Kit>> Function(String code) kitsByJan;
 }

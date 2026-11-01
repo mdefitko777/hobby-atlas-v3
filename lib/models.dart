@@ -761,6 +761,28 @@ bool kitMatches(Kit k, String query) {
   return [k.name, k.nameJa, k.series, k.line, k.type, ...k.keywords].any((f) => f.toLowerCase().contains(q));
 }
 
+/// 바코드 읽은 값 → 숫자 13자리 비교용 (UPC-A 12자리는 앞에 0, EAN-8 은 그대로). 숫자가 아니면 빈 글자
+String normalizeBarcode(String raw) {
+  final d = raw.replaceAll(RegExp(r'\D'), '');
+  if (d.length == 12) return '0$d';
+  return d.length == 8 || d.length == 13 ? d : '';
+}
+
+/// 이 바코드의 상품 (Kit.jan, 없으면 이름 · 키워드 한 줄에 그 숫자가 있는 것)
+List<Kit> kitsWithBarcode(Iterable<Kit> kits, String raw) {
+  final code = normalizeBarcode(raw);
+  if (code.isEmpty) return const [];
+  final exact = [
+    for (final k in kits)
+      if (k.jan == code) k,
+  ];
+  if (exact.isNotEmpty) return exact;
+  return [
+    for (final k in kits)
+      if (k.blob.contains(code) || k.keywords.contains(code)) k,
+  ];
+}
+
 /// 작품 묶음 이름 (홈 전체 목록 거르기). 베이블레이드는 작품이 하나라 series(한정 · UX…) 대신 이름 하나로
 String kitWork(Kit k) => k.franchiseId == 'beyblade' ? 'BEYBLADE X' : k.series;
 
