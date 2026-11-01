@@ -106,7 +106,8 @@ class DeviceStateSync extends ChangeNotifier {
 
   void _onStore() {
     // 장부가 있거나 로그인했을 때만 적는다 (로그인을 안 하는 사람의 저장 파일을 키우지 않게)
-    if (!auth.signedIn && store.deviceSync.isEmpty) return;
+    // 서버에 함수가 없으면 적지도 않는다 (다음 로그인 때 다시 물어본다)
+    if ((!auth.signedIn && store.deviceSync.isEmpty) || phase == DeviceSyncPhase.missing) return;
     _debounceTimer?.cancel();
     _debounceTimer = Timer(debounce, () {
       if (_running) {
@@ -114,7 +115,7 @@ class DeviceStateSync extends ChangeNotifier {
         return;
       }
       final changed = _stampLocal();
-      if (changed && auth.signedIn && phase != DeviceSyncPhase.missing) syncNow(reason: 'edit').ignore();
+      if (changed && auth.signedIn) syncNow(reason: 'edit').ignore();
     });
   }
 
