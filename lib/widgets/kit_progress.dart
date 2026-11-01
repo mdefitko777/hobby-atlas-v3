@@ -12,6 +12,7 @@ import '../models.dart';
 import '../theme.dart';
 import 'buttons.dart';
 import 'feedback.dart';
+import 'help.dart';
 import 'icons.dart';
 import 'sections.dart';
 import 'sheets.dart';
@@ -53,6 +54,15 @@ class BuildStageIcon extends StatelessWidget {
     ),
   );
 }
+
+/// ? 도움말 줄 — 조립 단계 · 도색 · 예약 · 도착 · 재판매 (컬렉션 · 상세가 같이 쓴다)
+List<HelpItem> kitProgressHelp({bool restock = false}) => [
+  for (final s in BuildStage.values) HelpItem(buildStageIcon(s), s.label, color: buildStageColor(s)),
+  const HelpItem(paintIcon, '도색함', color: Gp.star),
+  const HelpItem(preorderIcon, '예약', color: Gp.reserve),
+  const HelpItem(arrivedIcon, '도착했어요 → 구매함으로', color: Gp.reserve),
+  if (restock) const HelpItem(restockIcon, '재판매 소식', color: Gp.resale),
+];
 
 /// 한 번 눌러 다음 단계 (미조립 → 조립 중 → 완성 → 미조립) + 토스트 되돌리기
 void cycleBuild(BuildContext context, String kitId) {

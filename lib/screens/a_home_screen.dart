@@ -600,5 +600,6 @@ const homeHelp = <HelpItem>[
   HelpItem(Icons.tune, '필터'),
   HelpItem(Icons.newspaper_outlined, '전체 소식'),
   HelpItem(Icons.person_outline, 'My Page (내 것 · ★ 친구)'),
+  HelpItem(Icons.ios_share, '공유 카드 (My Page 숫자 줄 끝)'),
   HelpItem(Icons.grid_view_outlined, '격자 · 목록 (전체 보기 안)'),
 ];

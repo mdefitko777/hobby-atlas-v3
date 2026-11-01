@@ -5,6 +5,7 @@
 // │ L-1  │ 밑줄 탭 3개 + 개수                   │ 친구의 좋아요 · 구매함 · 도감            │ P06 · P04     │
 // │ L-2  │ ThumbRow + TagPill                  │ 겹침 표시: "나도 있음" · "내 좋아요"      │ P01 · P09     │
 // │ L-3  │ 작품 줄 + 친구/나 진행 막대 두 줄 · 📷 n │ 도감 비교 (친구 n · 나 n · 친구 사진 n)   │ P01           │
+// │ L-6  │ AppBar 오른쪽 ? (HelpButton)       │ 겹침 꼬리표 뜻 (긴 안내 줄 대신)          │ P10           │
 // │ L-4  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 빈 목록             │ P01 · P09     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 친구 프로필 숫자 → 쌓기. 상품 줄 → D 상품 상세(쌓기).
@@ -103,10 +104,11 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
     final f = widget.friend;
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          '${f.name}의 컬렉션',
-          style: const TextStyle(fontSize: Gp.t19, fontWeight: FontWeight.w600),
-        ),
+        title: Text('${f.name}의 컬렉션'),
+        actions: const [
+          HelpButton(title: '친구 컬렉션', items: friendCollectionHelp), // L-6
+          SizedBox(width: 6),
+        ],
       ),
       body: FutureBuilder<_FriendData>(
         future: _future,
@@ -160,13 +162,7 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
     return ListView(
       padding: const EdgeInsets.only(bottom: 32),
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-          child: Text(
-            liked ? '선물 고를 때 참고하세요 · 겹치는 상품엔 표시가 있어요' : '이미 가진 상품이에요 · 내가 좋아요한 상품과 겹치면 표시돼요',
-            style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
-          ),
-        ),
+        const SizedBox(height: 4), // 꼬리표 뜻은 ? 에 (긴 안내 줄 대신)
         for (final k in kits)
           ThumbRow(
             // L-2
@@ -291,3 +287,10 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
     );
   }
 }
+
+/// L-6 ? 도움말 — 줄 앞 꼬리표 (겹침 표시)
+const friendCollectionHelp = <HelpItem>[
+  HelpItem.widget(TagPill('나도 있음'), '나도 가진 상품'),
+  HelpItem.widget(TagPill('내 좋아요'), '내가 좋아요한 상품 (선물 참고)'),
+  HelpItem.widget(TagPill('내 좋아요', strong: true), '친구가 이미 산 내 좋아요 — 겹쳐 사기 주의'),
+];

@@ -8,6 +8,7 @@
 // │ N-4  │ 줄 누르기 → 읽음 + 이동               │ 상품 상세 · 공고 · 친구 프로필 · 친구 요청 │ P07          │
 // │ N-5  │ Dismissible → 토스트(되돌리기)        │ 밀어서 지우기                           │ P03 · P05     │
 // │ N-6  │ AppBar: 모두 읽음 · ⚙                │ 한 번에 읽음 · 알림 설정(K)              │ P07           │
+// │ N-10 │ AppBar 오른쪽 ? (HelpButton)       │ 알림 종류 아이콘 · 밀어서 지우기 · ⚙      │ P10           │
 // │ N-9  │ RefreshIndicator                   │ 당겨서 새 소식 확인                      │ P10           │
 // │ N-7  │ 바텀 시트: 수락 · 거절                │ 친구 요청 응답 (Gunpula v3 respond_friend) │ P05        │
 // │ N-8  │ 친구 줄 (사진 = 상품)                │ 내 좋아요를 친구가 이미 가짐 → 상품 상세   │ P01 · P09     │
@@ -22,7 +23,6 @@ import '../api.dart';
 import '../data/catalog.dart';
 import '../data/user_store.dart';
 import '../detail_pane.dart';
-import '../channels.dart';
 import '../logic/friends.dart';
 import '../models.dart';
 import '../sync/account.dart';
@@ -65,7 +65,24 @@ extension on NoticeType {
     NoticeType.friend => Icons.people_outline,
     NoticeType.request => Icons.person_add_alt_1_outlined,
   };
+
+  /// ? 도움말 한 줄
+  String get helpLabel => switch (this) {
+    NoticeType.release => '발매 (내 채널 · 좋아요한 상품)',
+    NoticeType.reserve => 'PB 예약 시작',
+    NoticeType.price => '시세 변화',
+    NoticeType.announce => '공식 예고 · 공지',
+    NoticeType.friend => '친구 소식',
+    NoticeType.request => '친구 요청',
+  };
 }
+
+/// N-10 ? 도움말 — 사진 귀퉁이 아이콘 · 밀기 · ⚙ (화면 위 긴 안내 대신)
+final notificationsHelp = <HelpItem>[
+  for (final t in NoticeType.values) HelpItem(t.icon, t.helpLabel),
+  const HelpItem(Icons.swipe_left_outlined, '왼쪽으로 밀면 지우기'),
+  const HelpItem(Icons.settings_outlined, '알림 설정 (내 채널 소식만 · 알림 규칙)'),
+];
 
 /// "3시간 전" · "어제" · "10.16"
 String noticeTime(DateTime at) => timeAgo(at, now: noticeNow);
@@ -311,10 +328,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         final list = _tab == _Tab.all ? scoped : scoped.where((n) => n.type.tab == _tab).toList();
         return Scaffold(
           appBar: AppBar(
-            title: const Text(
-              '알림',
-              style: TextStyle(fontSize: Gp.t19, fontWeight: FontWeight.w600),
-            ),
+            title: const Text('알림'),
             actions: [
               TextButton(
                 onPressed: list.any((n) => !_isRead(n)) ? () => _readAll(list) : null, // N-6
@@ -325,6 +339,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 onPressed: () => openSettings(context),
                 icon: const Icon(Icons.settings_outlined),
               ),
+              HelpButton(title: '알림', items: notificationsHelp), // N-10
+              const SizedBox(width: 6),
             ],
           ),
           body: switch (snap) {
@@ -396,8 +412,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     for (final n in list) {
       (groups[n.id.startsWith('req-') ? '친구 요청' : _groupOf(n.at)] ??= []).add(n);
     }
-    final channels = widget.myChannels.map((id) => channelOf(id).label).join(' · ');
-    final scope = _store.config.onlyMine ? '내 채널($channels)' : '모든 채널';
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.only(bottom: 32),
@@ -405,7 +419,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
           child: Text(
-            '$scope 소식 · 좋아요한 상품 · 왼쪽으로 밀면 지워요\n${_store.statusLine}',
+            _store.statusLine, // 언제 확인했는지만 — 범위 · 밀기는 ? 에
             style: const TextStyle(fontSize: Gp.t12, color: Gp.faint),
           ),
         ),

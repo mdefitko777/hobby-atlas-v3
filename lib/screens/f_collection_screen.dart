@@ -726,6 +726,8 @@ List<HelpItem> collectionHelp() => [
     '골라서 지우기',
   ),
   const HelpItem(Icons.build_outlined, '베이 조합 만들기 (베이 도감)'),
+  const HelpItem.group('구매함 · 예약 (누르면 다음 단계 · 길게 = 도색)'),
+  ...kitProgressHelp(),
   const HelpItem.group('도감 칸'),
   ...tierHelpItems(),
 ];

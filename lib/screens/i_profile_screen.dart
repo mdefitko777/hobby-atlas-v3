@@ -276,12 +276,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final friend = widget.friend;
     return Scaffold(
       appBar: AppBar(
-        title: friend == null
-            ? const Text(
-                '내 정보',
-                style: TextStyle(fontSize: Gp.t19, fontWeight: FontWeight.w600),
-              )
-            : null,
+        title: friend == null ? const Text('내 정보') : null,
         actions: [
           if (friend == null)
             IconButton(
@@ -774,9 +769,11 @@ class _TagSheetState extends State<_TagSheet> {
 
 /// I-14 ? 도움말 — 내 정보
 const profileHelp = <HelpItem>[
+  HelpItem(Icons.ios_share, '공유 카드 (그림으로 공유 · 저장)'),
   HelpItem(Icons.edit_outlined, '프로필 편집 (아바타 · 배경 · 이름 · 아이디 · 태그)'),
   HelpItem.widget(LikedIcon(size: Gp.iL), '좋아요 수 → 컬렉션'),
   HelpItem.widget(OwnedIcon(size: Gp.iL), '구매함 수 → 컬렉션'),
+  HelpItem(Icons.inventory_2_outlined, '미조립 수 → 구매함'),
   HelpItem(Icons.calendar_month_outlined, '이번 달 지출'),
   HelpItem(Icons.account_balance_wallet_outlined, '총 지출'),
   HelpItem(Icons.person_add_alt_1_outlined, '아이디로 친구 추가'),

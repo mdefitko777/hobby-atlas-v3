@@ -316,12 +316,12 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
                   ),
                 ),
               ),
-              const Positioned(
+              Positioned(
                 top: 0,
                 right: 0,
                 child: SafeArea(
                   child: Padding(
-                    padding: EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(12),
                     child: HelpButton(title: '상품 상세', items: detailHelp, raised: true), // D-15
                   ),
                 ),
@@ -1003,7 +1003,7 @@ class _FriendsWithKit extends StatelessWidget {
 }
 
 /// D-15 ? 도움말
-const detailHelp = <HelpItem>[
+final detailHelp = <HelpItem>[
   HelpItem(Icons.favorite_border, '좋아요 (갖고 싶은 것)'),
   HelpItem(Icons.bookmark_add_outlined, '구매함 (가진 것)', color: Gp.own),
   HelpItem(Icons.add, '수량 (좋아요 = 갖고 싶은 수 · 구매함 = 가진 수)'),
@@ -1011,4 +1011,6 @@ const detailHelp = <HelpItem>[
   HelpItem(Icons.north_east, '공식 상품 페이지'),
   HelpItem(Icons.assignment_outlined, '공식 정보 전체'),
   HelpItem(Icons.flag_outlined, '정보 오류 제보'),
+  HelpItem(Icons.add_a_photo_outlined, '내 사진 넣기 (구매함)'),
+  ...kitProgressHelp(restock: true),
 ];
