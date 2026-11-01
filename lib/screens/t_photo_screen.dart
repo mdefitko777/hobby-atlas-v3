@@ -49,43 +49,54 @@ Future<Uint8List?> _pickWithImagePicker(ImageSource source) async {
 /// 워터마크 글자 (아이디가 없으면 앱 이름만)
 String markFor(String handle) => handle.isEmpty ? 'HA' : watermarkText(handle);
 
-/// T-2 내 사진 넣기: 카메라 · 갤러리 → 기기에 저장 → 목록 맨 앞. 고르지 않으면 null
-Future<MyPhoto?> addMyPhoto(BuildContext context, {String kitId = '', String unitId = ''}) async {
-  final source = await showModalBottomSheet<ImageSource>(
-    context: context,
-    builder: (sheet) => SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-        child: Row(
-          children: [
-            for (final (src, icon, label) in const [
-              (ImageSource.camera, Icons.photo_camera_outlined, '카메라'),
-              (ImageSource.gallery, Icons.photo_library_outlined, '갤러리'),
-            ]) ...[
-              if (src == ImageSource.gallery) const SizedBox(width: 10),
-              Expanded(
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(Gp.radius),
-                  onTap: () => Navigator.pop(sheet, src),
-                  child: Ink(
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    decoration: Gp.raised(),
-                    child: Column(
-                      children: [
-                        Icon(icon, size: Gp.iL, color: Gp.ink),
-                        const SizedBox(height: 6),
-                        Text(label, style: const TextStyle(fontSize: Gp.t12)),
-                      ],
-                    ),
+/// 사진 고르는 곳 (T-2 · I-3 아바타 · 배경). [remove] = 지우기 칸도 (I-3, 이미 사진이 있을 때)
+enum PhotoChoice { camera, gallery, remove }
+
+Future<PhotoChoice?> askPhotoSource(BuildContext context, {bool remove = false}) => showModalBottomSheet<PhotoChoice>(
+  context: context,
+  builder: (sheet) => SafeArea(
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+      child: Row(
+        children: [
+          for (final (c, icon, label) in [
+            (PhotoChoice.camera, Icons.photo_camera_outlined, '카메라'),
+            (PhotoChoice.gallery, Icons.photo_library_outlined, '갤러리'),
+            if (remove) (PhotoChoice.remove, Icons.delete_outline, '지우기'),
+          ]) ...[
+            if (c != PhotoChoice.camera) const SizedBox(width: 10),
+            Expanded(
+              child: InkWell(
+                borderRadius: BorderRadius.circular(Gp.radius),
+                onTap: () => Navigator.pop(sheet, c),
+                child: Ink(
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  decoration: Gp.raised(),
+                  child: Column(
+                    children: [
+                      Icon(icon, size: Gp.iL, color: c == PhotoChoice.remove ? Gp.danger : Gp.ink),
+                      const SizedBox(height: 6),
+                      Text(label, style: const TextStyle(fontSize: Gp.t12)),
+                    ],
                   ),
                 ),
               ),
-            ],
+            ),
           ],
-        ),
+        ],
       ),
     ),
-  );
+  ),
+);
+
+/// T-2 내 사진 넣기: 카메라 · 갤러리 → 기기에 저장 → 목록 맨 앞. 고르지 않으면 null
+Future<MyPhoto?> addMyPhoto(BuildContext context, {String kitId = '', String unitId = ''}) async {
+  final choice = await askPhotoSource(context);
+  final source = switch (choice) {
+    PhotoChoice.camera => ImageSource.camera,
+    PhotoChoice.gallery => ImageSource.gallery,
+    _ => null,
+  };
   if (source == null || !context.mounted) return null;
   final Uint8List? bytes;
   try {
@@ -115,8 +126,11 @@ Future<void> deleteMyPhoto(BuildContext context, MyPhoto p) async {
 
 /// T-1 사진 벽 — 흰 띠 + 머리 아이콘(글자 제목 없음) + 3열 격자
 class PhotoWall extends StatelessWidget {
-  const PhotoWall({super.key, required this.tiles, this.warn = '', this.onAdd});
+  const PhotoWall({super.key, required this.tiles, this.warn = '', this.onAdd, this.extra});
   final List<Widget> tiles;
+
+  /// 머리 오른쪽, + 앞에 (I-9 공개 범위 아이콘)
+  final Widget? extra;
 
   /// T-7 비어 있지 않으면 ⚠ + 이 글을 툴팁으로
   final String warn;
@@ -144,6 +158,7 @@ class PhotoWall extends StatelessWidget {
                 ),
               ],
               const Spacer(),
+              ?extra,
               if (onAdd != null)
                 IconButton(
                   tooltip: '사진 넣기',

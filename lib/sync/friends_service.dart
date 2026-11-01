@@ -50,7 +50,14 @@ class MeState {
   final Map<String, Object?> preferences;
 
   /// 내 취향 태그 (preferences.tags) — 없으면 null (아직 안 정함)
-  List<String>? get tags => preferences['tags'] is List ? jList(preferences['tags']).whereType<String>().toList() : null;
+  List<String>? get tags =>
+      preferences['tags'] is List ? jList(preferences['tags']).whereType<String>().toList() : null;
+
+  /// 아바타 · 배경 Storage 경로 (preferences.avatar · cover, docs/supabase-v3-social.sql) — 없으면 ''
+  String imagePath(String kind) => jStr(preferences[kind]);
+
+  /// 그 사진을 고른 시각 (preferences 의 `<kind>_at`)
+  String imageAt(String kind) => jStr(preferences['${kind}_at']);
 
   /// v3 내 행의 리비전 (save_state 의 p_base_revision)
   final int revision;
@@ -76,6 +83,13 @@ class MeState {
       outgoing: people('outgoing_requests'),
     );
   }
+}
+
+/// 알 수도 있는 친구 (gunpula_v3_suggest_friends) — 친구의 친구 + 함께 아는 친구 수
+class FriendSuggestion {
+  const FriendSuggestion(this.profile, this.mutual);
+  final PublicProfile profile;
+  final int mutual;
 }
 
 /// search_user 결과. relation: self · friends · outgoing · incoming · none
@@ -141,6 +155,12 @@ class FriendsService extends ChangeNotifier {
   /// 친구 컬렉션 (handle → 마지막으로 받은 것)
   final Map<String, FriendCollection> collections = {};
 
+  /// 알 수도 있는 친구 (마지막으로 받은 것)
+  List<FriendSuggestion> suggestions = const [];
+
+  /// 서버에 suggest_friends 가 없음 (docs/supabase-v3-social.sql 을 안 돌림) → 칸을 숨긴다
+  bool suggestionsMissing = false;
+
   List<PublicProfile> get friends => me?.friends ?? const [];
   List<PublicProfile> get incoming => me?.incoming ?? const [];
   List<PublicProfile> get outgoing => me?.outgoing ?? const [];
@@ -160,6 +180,8 @@ class FriendsService extends ChangeNotifier {
     me = null;
     collections.clear();
     unavailable = false;
+    suggestions = const [];
+    suggestionsMissing = false;
     notifyListeners();
   }
 
@@ -195,10 +217,39 @@ class FriendsService extends ChangeNotifier {
   }
 
   /// 취향 태그 — preferences 의 다른 값은 그대로 두고 tags 만 바꾼다 (update_profile 은 preferences 를 통째로 바꾼다)
-  Future<void> setTags(List<String> tags) =>
-      _act('gunpula_v3_update_profile', {
-        'p_preferences': {...?me?.preferences, 'tags': tags},
-      });
+  Future<void> setTags(List<String> tags) => _act('gunpula_v3_update_profile', {
+    'p_preferences': {...?me?.preferences, 'tags': tags},
+  });
+
+  /// 아바타 · 배경 경로 — preferences 의 다른 값은 그대로 ([path] '' = 지움)
+  Future<void> setProfileImage(String kind, String path, String at) => _act('gunpula_v3_update_profile', {
+    'p_preferences': {...?me?.preferences, kind: path, '${kind}_at': path.isEmpty ? '' : at},
+  });
+
+  /// 알 수도 있는 친구 — 실패해도 던지지 않는다 (함수가 없으면 [suggestionsMissing])
+  Future<void> loadSuggestions() async {
+    try {
+      final raw = await _rpc()('gunpula_v3_suggest_friends', {'p_limit': 20});
+      final known = {
+        ...friends.map((f) => f.handle),
+        ...incoming.map((f) => f.handle),
+        ...outgoing.map((f) => f.handle),
+      };
+      suggestions = [
+        for (final x in jList(raw))
+          if (PublicProfile.parse(x) case final p? when p.handle.isNotEmpty && !known.contains(p.handle))
+            FriendSuggestion(p, jInt(jMap(x)['mutual'])),
+      ];
+      suggestionsMissing = false;
+    } on RpcException catch (e) {
+      if (!e.isMissingFunction) return;
+      suggestionsMissing = true;
+      suggestions = const [];
+    } on OfflineException {
+      return; // 받아 둔 것 그대로
+    }
+    notifyListeners();
+  }
 
   /// 아이디로 찾기 (정확히 같은 아이디만) — 없으면 null
   Future<FriendSearch?> search(String handle) async {

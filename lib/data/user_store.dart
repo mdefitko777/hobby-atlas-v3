@@ -17,6 +17,7 @@ import '../models.dart';
 import '../sync/collection_merge.dart' show collectionStatuses, normalizeCollectionEntry;
 import 'blob_store.dart';
 import 'photo_files.dart';
+import 'social_local.dart';
 import '../json_util.dart';
 
 class UserStore extends ChangeNotifier {
@@ -75,6 +76,9 @@ class UserStore extends ChangeNotifier {
 
   /// 특별 관심 친구 (@아이디) — My Page ★ 에 이 사람들 소식만. 기기에만
   final Set<String> specialFriends = {};
+
+  /// 친구 쪽 기기 기록 (아바타 · 배경 · 사진 공개 범위 · 알 수도 있는 친구 닫음 · 서랍 본 시각) — lib/data/social_local.dart
+  late final SocialLocal social = SocialLocal(_changed);
 
   /// 내 사진 (사진 벽 · 도감 칸 · 상품 상세). 지운 것도 서버에서 내릴 때까지 [MyPhoto.deleted] 로 남는다
   final List<MyPhoto> _photos = [];
@@ -158,6 +162,7 @@ class UserStore extends ChangeNotifier {
     specialFriends
       ..clear()
       ..addAll(jList(local['special_friends']).whereType<String>());
+    social.load(local);
     _photos
       ..clear()
       ..addAll(jList(local['photos']).map(MyPhoto.fromJson).nonNulls);
@@ -204,6 +209,7 @@ class UserStore extends ChangeNotifier {
       'tag_owned': tagOwned.toList(),
       'my_channels': myChannels,
       'special_friends': specialFriends.toList(),
+      ...social.toJson(),
       'photos': [for (final p in _photos) p.toJson()],
       'profile_tags': profileTags,
       'recent_searches': recentSearches,

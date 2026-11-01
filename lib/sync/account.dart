@@ -7,6 +7,7 @@ import 'package:flutter/widgets.dart';
 import '../data/user_store.dart';
 import 'friends_service.dart';
 import 'photo_share.dart';
+import 'profile_images.dart';
 import 'rpc.dart';
 import 'sync_service.dart';
 
@@ -32,16 +33,38 @@ class Account extends ChangeNotifier {
       clock: clock,
     );
     photos = PhotoShareService(rpc: () => _rpc, storage: storage, auth: auth, store: this.store);
+    profileImages = ProfileImageService(
+      storage: storage,
+      auth: auth,
+      store: this.store,
+      friends: friends,
+      photos: photos,
+      clock: clock,
+    );
     auth.addListener(notifyListeners);
     friends.addListener(notifyListeners);
     sync.addListener(notifyListeners);
     photos.addListener(notifyListeners);
+    profileImages.addListener(notifyListeners);
     auth.addListener(_photosOnSignIn);
+    friends.addListener(_onMe);
   }
 
-  /// 로그인하면 못 올린 사진을 올린다 (로그아웃 동안 친구에게 보이기로 둔 것)
+  /// 로그인하면 못 올린 사진을 올린다 (로그아웃 동안 친구에게 보이기로 둔 것) · 못 보낸 공개 범위도
   void _photosOnSignIn() {
-    if (auth.signedIn) photos.sync().ignore();
+    if (!auth.signedIn) return;
+    photos.sync().ignore();
+    photos.pushPrivacy().ignore();
+  }
+
+  MeState? _lastMe;
+
+  /// 내 프로필(get_me)을 새로 받을 때마다 아바타 · 배경을 맞춘다 (할 일이 없으면 서버를 부르지 않는다)
+  void _onMe() {
+    final me = friends.me;
+    if (me == null || identical(me, _lastMe)) return;
+    _lastMe = me;
+    profileImages.sync().ignore();
   }
 
   /// 백엔드 없음 (테스트 · 설정 파일 없음) — 늘 로그아웃
@@ -56,8 +79,11 @@ class Account extends ChangeNotifier {
   late final FriendsService friends;
   late final SyncService sync;
 
-  /// 사진 공유 (친구에게 보이기 → Storage) · 친구 사진 벽
+  /// 사진 공유 (친구에게 보이기 → Storage) · 친구 사진 벽 · 공개 범위
   late final PhotoShareService photos;
+
+  /// 아바타 · 배경 사진 (내 것 · 친구 것 기기 캐시)
+  late final ProfileImageService profileImages;
 
   /// 로그인 · 기록 변경을 듣기 시작 (한 번)
   void start() => sync.start();
@@ -111,6 +137,9 @@ class Account extends ChangeNotifier {
     friends.removeListener(notifyListeners);
     sync.removeListener(notifyListeners);
     photos.removeListener(notifyListeners);
+    friends.removeListener(_onMe);
+    profileImages.removeListener(notifyListeners);
+    profileImages.dispose();
     photos.dispose();
     sync.dispose();
     friends.dispose();

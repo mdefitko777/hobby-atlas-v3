@@ -10,7 +10,7 @@
   - `kits.json` · `search-index.json` 은 받지 않는다 (split 과 같은 내용이고 너무 크다).
 - 계정 · 공유는 Gunpula 의 Supabase 프로젝트를 같이 쓴다 (`docs/supabase-setup-v2.sql` · `-v3.sql`, 이메일 6자리 코드 로그인). 옛 앱과 같은 계정이라 **로그인만 하면 옛 컬렉션이 온다**.
   - 코드: `lib/sync/` — `collection_merge.dart`(옛 `collection-store.js` 를 그대로 옮김, `test/collection_merge_js_test.dart` 가 JS 결과와 비교), `sync_service.dart`, `friends_service.dart`, `account.dart`(AccountScope), `supabase_backend.dart`(supabase_flutter 를 부르는 유일한 파일).
-  - 친구 = v3 (`@아이디` 로 찾기 → 요청 → 수락, 서로의 컬렉션 읽기만). v2 초대 코드는 쓰지 않는다.
+  - 친구 = v3 (`@아이디` 로 찾기 → 요청 → 수락, 서로의 컬렉션 읽기만). v2 초대 코드는 쓰지 않는다 (공유 공간은 v2 get_state 의 멤버 · 역할을 **읽기만** — 만들기 · 초대 코드는 서버 함수가 없어 없음, 공유 공간이 없는 계정은 탭 · 칸 숨김).
 
 ## 데이터 약속 (옛 앱과 함께 쓰는 동안)
 - 키는 Gunpula 의 `kit_id` · gget `unit_id` · phstudy `part_id` 그대로. 가짜 id(gu01 …)를 새로 만들지 않는다.
@@ -31,8 +31,14 @@
 
 ## 작업 방식
 - 상태: 앱 전체 한 벌은 위쪽 Host(InheritedWidget) + 저장소 객체(ChangeNotifier), 화면 안 표시는 `setState`. 내 기록 = `MarksHost`/`UserStore`, 계정 · 동기화 · 친구 = `AccountScope`/`Account`.
-- 사진 벽(내 정보 · 친구 보기): 내 사진은 기기(앱 문서 폴더 `photos/`, 목록은 `UserStore` local_state `photos`), 친구에게 보이기를 켠 것만 Supabase Storage `photos` 버킷 `<user_id>/<photo_id>.jpg` 로 (`lib/sync/photo_share.dart`). 서버 SQL = `docs/supabase-v3-photos.sql` — 안 돌렸으면 사진은 기기에만 · ⚠ 하나. 취향 태그 = v3 `preferences.tags` (+ 기기 `profile_tags`).
-- 알 수도 있는 친구 · 공유 공간 탭은 서버가 없어 화면에서 뺐다.
+- 사진 벽(내 정보 · 친구 보기): 내 사진은 기기(앱 문서 폴더 `photos/`, 목록은 `UserStore` local_state `photos`), 친구에게 보이기를 켠 것만 Supabase Storage `photos` 버킷 `<user_id>/<photo_id>.jpg` 로 (`lib/sync/photo_share.dart`). 취향 태그 = v3 `preferences.tags` (+ 기기 `profile_tags`).
+- 친구 쪽 2차(`lib/sync/profile_images.dart` · `lib/data/social_local.dart` · 화면 조각 `lib/screens/u_social.dart`):
+  - 아바타 · 배경 = 기기 파일 먼저 → Storage `<user_id>/profile/avatar.jpg` · `cover.jpg`, 경로는 v3 `preferences.avatar` · `cover` (+ `_at` 고른 시각, update_profile 은 preferences 를 통째로 바꾸므로 합쳐서 보낸다). `users.avatar` 열(옛 앱 data URL)은 건드리지 않는다. 친구 아바타는 사진 벽의 `avatar_path` 를 기기에 받아 둔다. 못 받으면 첫 글자.
+  - 사진 공개 범위(전체 끄기 · 친구별 숨기기) = 서버 표 `gunpula_v3_photo_privacy` · `gunpula_v3_photo_hidden` 이 get_friend_wall 과 Storage 읽기 정책에서 지킨다. 그 SQL 이 없으면: 전체 끄기는 앱이 올린 사진을 내려서 지키고, 친구별 숨기기는 지킬 수 없어 시트에 ⚠.
+  - 알 수도 있는 친구 = `gunpula_v3_suggest_friends`(친구의 친구 + 함께 아는 친구 수), 없으면 칸 숨김. × 는 기기에만.
+  - 기기 키(local_state): `profile_images` · `photo_privacy` · `dismissed_suggestions` · `friends_seen_at`(서랍 "새 사진 n") · `friend_avatars`. 다른 계정으로 로그인하면 비운다.
+- 서버 SQL 순서 (Supabase SQL Editor): Gunpula `supabase-setup-v3.sql` · `supabase-v3-fix-grants.sql` → 이 저장소 `docs/supabase-v3-photos.sql` → `docs/supabase-v3-social.sql`. photos SQL 을 다시 돌렸으면 social SQL 도 다시 (Storage 읽기 정책을 social 이 바꿔 쓴다). 안 돌린 것이 있어도 앱은 기기에만 두고 ⚠ / 칸 숨김으로 버틴다.
+- 친구 쪽 도감 비교(L-3)는 산 상품 기준 + 친구 사진 수. "손으로 켜기"는 서버에 없어 친구 쪽엔 안 들어간다.
 - 무거운 JSON(kits-gundam 9 MB)은 `Isolate.run` 으로 푼다.
 - 확인: 경로에 한글이 있어 `flutter analyze` 가 멈춘다 → `dart analyze lib test tool` 0 issues + `flutter test`.
 - 커밋은 `v3: …` 로 시작하고, 단계마다 commit + push (origin = hobby-atlas-v3).

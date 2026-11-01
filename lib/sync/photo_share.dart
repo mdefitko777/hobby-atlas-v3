@@ -1,6 +1,9 @@
 // 사진 공유 — 친구에게 보이기를 켠 내 사진을 Supabase Storage(photos 버킷)에 올리고, 친구의 사진 벽을 받는다.
 // 서버: docs/supabase-v3-photos.sql (버킷 + Storage RLS + gunpula_v3_put_photo · delete_photo · get_friend_wall).
 // 그 SQL 을 아직 안 돌린 프로젝트면 [PhotoShareService.missing] — 사진은 기기에만 두고 화면에 ⚠ 하나만 보인다.
+// 공개 범위(사진 공개 끄기 · 친구별 숨기기)는 docs/supabase-v3-social.sql 의 gunpula_v3_set_photo_privacy 로 보낸다.
+// 그 함수가 없으면 [privacyMissing]: 사진 공개를 끈 동안은 올린 사진을 Storage 에서 내려서 지키고(다시 켜면 올림),
+// 친구별 숨기기는 서버가 없어 지킬 수 없으므로 ⚠ 를 띄운다.
 // Storage 를 부르는 진짜 코드는 supabase_backend.dart (SupabasePhotoStorage), 테스트는 가짜(test/support/fake_backend.dart).
 library;
 
@@ -94,12 +97,30 @@ class FriendPhoto {
 
 /// 친구 사진 벽 + 취향 태그. [missing] = 서버에 사진 공유가 아직 없음 (그러면 친구의 구매함 사진으로 채운다)
 class FriendWall {
-  const FriendWall({this.photos = const [], this.tags = const [], this.missing = false, this.offline = false});
+  const FriendWall({
+    this.photos = const [],
+    this.tags = const [],
+    this.missing = false,
+    this.offline = false,
+    this.avatarPath = '',
+    this.avatarAt = '',
+    this.coverPath = '',
+    this.coverAt = '',
+  });
   final List<FriendPhoto> photos;
   final List<String> tags;
   final bool missing;
   final bool offline;
+
+  /// 친구의 아바타 · 배경 Storage 경로 (docs/supabase-v3-social.sql 의 get_friend_wall 만 준다) — 없으면 ''
+  final String avatarPath;
+  final String avatarAt;
+  final String coverPath;
+  final String coverAt;
 }
+
+/// 공개 범위 서버 상태
+enum PrivacyState { unknown, synced, missing, offline, error }
 
 enum PhotoShareState { idle, syncing, missing, offline, error }
 
@@ -128,6 +149,12 @@ class PhotoShareService extends ChangeNotifier {
 
   /// 화면에 ⚠ 를 띄울지 (올리지 못한 사진이 있을 때만)
   bool get warn => state == PhotoShareState.missing || state == PhotoShareState.error;
+
+  /// 공개 범위를 서버가 지키는지 (unknown = 아직 안 물어봄)
+  PrivacyState privacy = PrivacyState.unknown;
+
+  /// 서버에 공개 범위 함수가 없음 → 사진 공개 끄기는 앱이 내려서 지키고, 친구별 숨기기는 ⚠
+  bool get privacyMissing => privacy == PrivacyState.missing;
 
   final Map<String, FriendWall> walls = {};
   final Map<String, Uint8List> _images = {};
@@ -214,11 +241,88 @@ class PhotoShareService extends ChangeNotifier {
     }
   }
 
+  /// 서버가 공개 범위를 모르는데 사진 공개를 껐다 → 올리지 않고 올린 것도 내린다
+  bool get _heldBack => privacyMissing && !store.social.photosPublic;
+
   /// 같은 계정에 아직 안 올라감 (워터마크 · 상품을 바꾸면 uploadedTo 를 비워 다시 올린다)
-  bool _needsUpload(MyPhoto p, String uid) => p.shared && !p.deleted && p.uploadedTo != uid;
+  bool _needsUpload(MyPhoto p, String uid) => p.shared && !p.deleted && p.uploadedTo != uid && !_heldBack;
 
   /// 이 계정에 올라가 있는데 숨겼거나 지웠다
-  bool _needsRemove(MyPhoto p, String uid) => p.uploadedTo == uid && (!p.shared || p.deleted);
+  bool _needsRemove(MyPhoto p, String uid) => p.uploadedTo == uid && (!p.shared || p.deleted || _heldBack);
+
+  // ── I-9 공개 범위 ──
+
+  /// 공개 범위 바꾸기 — 기기에 두고 서버로 보낸다 (못 보내면 다음에 다시)
+  Future<void> setPrivacy({required bool public, required Set<String> hidden}) async {
+    store.social.setPrivacy(public: public, hidden: hidden);
+    await pushPrivacy();
+  }
+
+  /// 기기에서 바꾼 공개 범위를 서버로 (바꾼 게 없으면 아무것도 안 한다)
+  Future<void> pushPrivacy() async {
+    final s = store.social;
+    if (!auth.signedIn || !s.privacyDirty) return;
+    try {
+      final r = await _rpc()('gunpula_v3_set_photo_privacy', {
+        'p_public': s.photosPublic,
+        'p_hidden': s.hiddenFrom.toList(),
+      });
+      _applyPrivacy(r, keepLocal: true);
+    } on RpcException catch (e) {
+      _setPrivacy(e.isMissingFunction ? PrivacyState.missing : PrivacyState.error);
+    } on OfflineException {
+      _setPrivacy(PrivacyState.offline);
+    }
+    if (privacyMissing) sync().ignore(); // 사진 공개를 껐으면 올린 사진을 내린다
+  }
+
+  /// 서버의 공개 범위 받기 (기기에서 바꾼 게 남아 있으면 그걸 먼저 보낸다)
+  Future<void> pullPrivacy() async {
+    if (!auth.signedIn) return;
+    if (store.social.privacyDirty) return pushPrivacy();
+    try {
+      _applyPrivacy(await _rpc()('gunpula_v3_get_photo_privacy'), keepLocal: false);
+    } on RpcException catch (e) {
+      _setPrivacy(e.isMissingFunction ? PrivacyState.missing : PrivacyState.error);
+    } on OfflineException {
+      _setPrivacy(PrivacyState.offline);
+    }
+  }
+
+  void _applyPrivacy(Object? raw, {required bool keepLocal}) {
+    final m = jMap(raw);
+    final s = store.social;
+    if (keepLocal) {
+      s.setPrivacy(public: s.photosPublic, hidden: {...s.hiddenFrom}, dirty: false);
+    } else {
+      s.setPrivacy(public: m['public'] != false, hidden: jList(m['hidden']).whereType<String>().toSet(), dirty: false);
+    }
+    _setPrivacy(PrivacyState.synced);
+  }
+
+  void _setPrivacy(PrivacyState p) {
+    if (privacy == p) return;
+    privacy = p;
+    notifyListeners();
+  }
+
+  /// 친구 여럿의 사진 벽을 한 번에 (친구 서랍 "새 사진" · 상태 줄 · 아바타) — 실패한 친구는 건너뛴다
+  Future<void> loadAllWalls(Iterable<String> handles, {bool force = true}) async {
+    for (final h in handles) {
+      if (h.isEmpty) continue;
+      await friendWall(h, force: force);
+    }
+    notifyListeners();
+  }
+
+  /// Storage 파일 받기 (메모리에 남겨 둔다) — 친구 배경 · 아바타
+  Future<Uint8List> image(String path) async {
+    final hit = _images[path];
+    if (hit != null) return hit;
+    final b = await storage.download(path);
+    _images[path] = b;
+    return b;
+  }
 
   /// 친구의 사진 벽 — 실패해도 던지지 않는다 (빈 벽 + missing/offline)
   Future<FriendWall> friendWall(String handle, {bool force = false}) async {
@@ -231,6 +335,10 @@ class PhotoShareService extends ChangeNotifier {
       wall = FriendWall(
         photos: [for (final x in jList(m['photos'])) ?FriendPhoto.parse(x, h)],
         tags: jList(m['tags']).whereType<String>().toList(),
+        avatarPath: jStr(m['avatar_path']),
+        avatarAt: jStr(m['avatar_at']),
+        coverPath: jStr(m['cover_path']),
+        coverAt: jStr(m['cover_at']),
       );
     } on RpcException catch (e) {
       wall = FriendWall(missing: e.isMissingFunction);
@@ -242,17 +350,12 @@ class PhotoShareService extends ChangeNotifier {
   }
 
   /// 친구 사진 받기 (메모리에 남겨 둔다)
-  Future<Uint8List> friendImage(FriendPhoto p) async {
-    final hit = _images[p.path];
-    if (hit != null) return hit;
-    final b = await storage.download(p.path);
-    _images[p.path] = b;
-    return b;
-  }
+  Future<Uint8List> friendImage(FriendPhoto p) => image(p.path);
 
   void clear() {
     walls.clear();
     _images.clear();
+    privacy = PrivacyState.unknown;
   }
 
   @override

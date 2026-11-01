@@ -117,6 +117,15 @@ class FakeServer implements RpcClient {
   final Map<String, List<Map<String, Object?>>> friendPhotos = {};
   final Map<String, List<String>> friendTags = {};
 
+  /// 친구 @아이디 → 그 친구의 preferences (avatar · avatar_at · cover · cover_at, docs/supabase-v3-social.sql)
+  final Map<String, Map<String, Object?>> friendPrefs = {};
+
+  /// 공개 범위 (docs/supabase-v3-social.sql): 주인 @아이디 → (사진 공개, 못 보는 @아이디). 없으면 공개 · 숨김 없음
+  final Map<String, ({bool public, Set<String> hidden})> privacyOf = {};
+
+  /// 다른 사람들끼리의 친구 관계 (알 수도 있는 친구 = 친구의 친구): @아이디 → 그 사람의 친구 @아이디
+  final Map<String, Set<String>> friendsOf = {};
+
   // 친구
   final Map<String, ({String name, Map<String, Object?> collection})> users = {};
   final Set<String> friends = {};
@@ -143,6 +152,25 @@ class FakeServer implements RpcClient {
     'incoming_requests': [for (final h in incoming) _profile(h)],
     'outgoing_requests': [for (final h in outgoing) _profile(h)],
   };
+
+  Map<String, Object?> _privacy(String owner) => {
+    'public': privacyOf[owner]?.public ?? true,
+    'hidden': [...?privacyOf[owner]?.hidden],
+  };
+
+  /// SQL gunpula_v3_photos_visible 과 같은 규칙: [viewer] 가 [owner] 의 사진 벽을 볼 수 있나 (친구인지는 부르는 쪽이 본다)
+  bool photosVisible({required String owner, required String viewer}) {
+    if (owner == viewer) return true;
+    final pv = privacyOf[owner];
+    return pv == null || (pv.public && !pv.hidden.contains(viewer));
+  }
+
+  /// SQL gunpula_v3_can_read_photo_object 와 같은 규칙 (친구 사이라고 보고): 프로필 사진은 늘, 나머지는 공개 범위대로
+  bool canReadObject({required String owner, required String viewer, required String path}) =>
+      path.split('/').elementAtOrNull(1) == 'profile' || photosVisible(owner: owner, viewer: viewer);
+
+  /// 친구 [viewer] 가 get_friend_wall('나') 를 불렀을 때 받을 내 사진 id (서버 쪽 흉내)
+  List<String> myWallAs(String viewer) => photosVisible(owner: handle ?? '', viewer: viewer) ? [...myPhotos.keys] : [];
 
   Map<String, Object?>? _state() => v2Payload == null
       ? null
@@ -214,7 +242,40 @@ class FakeServer implements RpcClient {
         final h = '${p['p_handle']}';
         if (!users.containsKey(h)) throw const RpcException('22023', 'gunpula user not found');
         if (!friends.contains(h)) throw const RpcException('42501', 'gunpula not friends');
-        return roundTrip({..._profile(h), 'photos': friendPhotos[h] ?? const [], 'tags': friendTags[h] ?? const []});
+        final prefs = friendPrefs[h] ?? const {};
+        return roundTrip({
+          ..._profile(h),
+          'photos': photosVisible(owner: h, viewer: handle ?? '') ? friendPhotos[h] ?? const [] : const [],
+          'tags': friendTags[h] ?? const [],
+          // social SQL 이 없으면(missing 에 'social' 이 있으면) 옛 get_friend_wall 처럼 경로를 주지 않는다
+          if (!missing.contains('social')) ...{
+            'avatar_path': prefs['avatar'] ?? '',
+            'avatar_at': prefs['avatar_at'] ?? '',
+            'cover_path': prefs['cover'] ?? '',
+            'cover_at': prefs['cover_at'] ?? '',
+          },
+        });
+      case 'gunpula_v3_get_photo_privacy':
+        return roundTrip(_privacy(handle ?? ''));
+      case 'gunpula_v3_set_photo_privacy':
+        privacyOf[handle ?? ''] = (
+          public: p['p_public'] != false,
+          hidden: {for (final x in (p['p_hidden'] as List? ?? const [])) '$x'},
+        );
+        return roundTrip(_privacy(handle ?? ''));
+      case 'gunpula_v3_suggest_friends':
+        final me = handle ?? '';
+        final mutual = <String, int>{};
+        for (final f in friends) {
+          for (final g in friendsOf[f] ?? const <String>{}) {
+            if (g == me || friends.contains(g) || incoming.contains(g) || outgoing.contains(g)) continue;
+            mutual[g] = (mutual[g] ?? 0) + 1;
+          }
+        }
+        final order = mutual.keys.toList()..sort((a, b) => mutual[b]!.compareTo(mutual[a]!));
+        return roundTrip([
+          for (final h in order) {..._profile(h), 'mutual': mutual[h]},
+        ]);
       case 'gunpula_v3_search_user':
         final h = '${p['p_handle']}';
         if (h == handle) return {..._profile(h), 'name': displayName.isEmpty ? h : displayName, 'relation': 'self'};
