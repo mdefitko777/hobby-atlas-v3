@@ -3,9 +3,9 @@
 // 지운 것도 'deleted' 로 남겨 둔다 (나중에 동기화할 때 "지웠다"가 이기도록).
 // 로그인하면 lib/sync/sync_service.dart 가 이 기록을 옛 앱과 같은 Supabase payload 에 합쳐 올린다:
 //   · 공유되는 것 = 구매함 · 좋아요(내 버킷) — 바꾸면 sharedRevision +1, cloudDirty = true
-//   · 이 기기에만 = 베이 부품 · 베이 연결 · 베이 조합 · 덱 · 도감 손으로 켜기 · 메자스타 · 프렌다 태그 · 최근 본 것 · 내 사진 목록 · 취향 태그 (payload 에 넣지 않음)
+//   · payload 에 넣지 않음 = 베이 부품 · 베이 연결 · 베이 조합 · 덱 · 도감 손으로 켜기 · 메자스타 · 프렌다 태그 · 최근 본 것 · 내 사진 목록 · 취향 태그
 //     (내 사진 중 친구에게 보이기를 켠 것은 lib/sync/photo_share.dart 가 Storage 에, 태그는 v3 preferences.tags 에 따로 올린다)
-//     최근 검색어 · 검색 횟수 · 컬렉션 휴지통도 이 기기에만
+//     최근 검색어 · 검색 횟수 · 컬렉션 휴지통도 payload 밖
 //   · 로그인하면 이 기기 기록 중 계정에 딸린 것(베이 · 도감 손으로 켜기 · 태그 · 채널 · 특별 관심 · 휴지통 …)은
 //     lib/sync/device_state_sync.dart 가 payload 와 따로 된 서버 행(gunpula_v3_device_state)에 맞춘다.
 //     어느 local_state 키를 맞출지는 lib/sync/device_state.dart 의 deviceSections. 그 장부(항목별 시각 · 지움 표시)는 [deviceSync]

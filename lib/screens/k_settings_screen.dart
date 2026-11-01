@@ -247,6 +247,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _accountPanel(Account a) {
     final sync = a.sync;
     final busy = sync.phase == SyncPhase.syncing;
+    final syncLine = [sync.statusLine, if (a.deviceState.statusLine.isNotEmpty) a.deviceState.statusLine].join('\n');
     return SectionPanel(
       padding: const EdgeInsets.only(bottom: 6),
       child: Column(
@@ -277,12 +278,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _ => Icons.cloud_done_outlined,
               }, color: sync.phase == SyncPhase.error ? Gp.danger : null),
               title: Text(a.email.isEmpty ? '로그인됨' : a.email),
-              subtitle: Text(sync.statusLine),
-              isThreeLine: sync.statusLine.contains('\n'),
+              subtitle: Text(syncLine),
+              isThreeLine: syncLine.contains('\n'),
               trailing: busy
                   ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                   : TextButton(
-                      onPressed: () => sync.syncNow(reason: 'manual'),
+                      onPressed: () {
+                        sync.syncNow(reason: 'manual');
+                        a.deviceState.syncNow().ignore(); // 베이 · 도감 손으로 켜기 등 기기 기록 · 내 사진 목록도
+                        a.photoRestore.restore().ignore();
+                      },
                       child: const Text('지금 동기화'),
                     ),
             ),
