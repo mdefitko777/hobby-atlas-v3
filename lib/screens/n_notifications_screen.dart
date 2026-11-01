@@ -10,6 +10,7 @@
 // │ N-6  │ AppBar: 모두 읽음 · ⚙                │ 한 번에 읽음 · 알림 설정(K)              │ P07           │
 // │ N-9  │ RefreshIndicator                   │ 당겨서 새 소식 확인                      │ P10           │
 // │ N-7  │ 바텀 시트: 수락 · 거절                │ 친구 요청 응답 (Gunpula v3 respond_friend) │ P05        │
+// │ N-8  │ 친구 줄 (사진 = 상품)                │ 내 좋아요를 친구가 이미 가짐 → 상품 상세   │ P01 · P09     │
 // │ N-8  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 알림 없음           │ P01 · P09     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 🔔 → 쌓기(push, 오른쪽에서). 줄 → 각 화면 쌓기. 요청 → 덮기(바텀 시트).
@@ -18,6 +19,9 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../data/catalog.dart';
+import '../data/friend_overlap.dart';
+import '../data/user_store.dart';
 import '../detail_pane.dart';
 import '../channels.dart';
 import '../models.dart';
@@ -102,7 +106,32 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     _store.addListener(_onStore);
     // 열 때 받은 친구 요청을 한 번 새로 (실패해도 받아 둔 것으로 보여 준다)
     final a = AccountScope.read(context);
-    if (a.signedIn) a.friends.refresh().then((_) {}, onError: (Object _) {});
+    if (a.signedIn) {
+      // 친구 컬렉션도 받아 "친구가 이미 갖고 있어요" 줄을 만든다 (N-8)
+      a.friends.refresh().then((_) => Future.wait([
+            for (final f in a.friends.friends) a.friends.collection(f.handle).then((_) {}, onError: (Object _) {}),
+          ]), onError: (Object _) {});
+    }
+  }
+
+  /// N-8 내가 좋아요한 상품을 친구가 이미 갖고 있다 → 겹쳐 사지 않게 · 같이 보기 (id `own-<아이디>-<kit_id>`)
+  List<AppNotice> _overlaps(Account account) {
+    if (!account.signedIn) return const [];
+    final byId = Catalog.instance.byId;
+    return [
+      for (final o in likedOwnedByFriends(account.friends.collections, UserStore.instance.idsWith(const {CollectStatus.wanted}).toSet()))
+        if (byId[o.kitId] case final k?)
+          AppNotice(
+            id: 'own-${o.handle}-${o.kitId}',
+            type: NoticeType.friend,
+            title: k.name,
+            body: '${o.name.isEmpty ? '@${o.handle}' : o.name}님이 이미 갖고 있어요',
+            image: k.image,
+            at: noticeNow,
+            read: false,
+            kitId: k.id,
+          ),
+    ];
   }
 
   @override
@@ -267,7 +296,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final requests = _requests(AccountScope.of(context)); // 요청이 바뀌면 다시 그림
+    final account = AccountScope.of(context);
+    final requests = [..._requests(account), ..._overlaps(account)]; // 요청 · 친구 컬렉션이 바뀌면 다시 그림
     return FutureBuilder<List<AppNotice>>(
       future: _future,
       builder: (context, snap) {

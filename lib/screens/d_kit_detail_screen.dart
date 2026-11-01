@@ -9,6 +9,7 @@
 // │ D-5b │ 정가 아래 시세 한 줄 → 바텀 시트      │ 정가 ↔ 국내 시세 (시세는 이 한 곳에만)   │ P01 · P08     │
 // │ D-5c │ 구매함일 때 "내 구매가" 줄 → 입력 시트 │ 내가 낸 돈 기록 (한 개 값 · 동기화)      │ P01 · P03     │
 // │ D-5d │ KitPhotoStrip (T-8)                │ 구매함이면 이 상품의 내 사진 + 넣기       │ P07           │
+// │ D-5e │ 리본 · ♡ 아이콘 + @아이디              │ 이 상품을 가진 · 좋아요한 친구 (선물 · 겹침) │ P01 · P07   │
 // │ D-6  │ 하단 고정 바: ♡ 좋아요 · 리본 구매함   │ 좋아요 · 구매함 (따로 켜고 끔, 앱 전체 한 벌) │ P03 · P04 │
 // │ D-7  │ − n + (1–99)                       │ 수량: 좋아요 = 갖고 싶은 수 · 구매함 = 가진 수 │ P03 · P01 │
 // │ D-8  │ 가로 스크롤 요약 줄 → 바텀 시트       │ 공식 정보 (요약 → 전체 표)              │ P08 · P06     │
@@ -32,6 +33,8 @@ import '../marks.dart';
 import '../detail_pane.dart';
 import '../channels.dart';
 import '../data/catalog.dart';
+import '../data/friend_overlap.dart';
+import '../sync/account.dart';
 import '../data/user_store.dart';
 import '../models.dart';
 import '../report.dart';
@@ -442,6 +445,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
               const SizedBox(height: 8),
               KitPhotoStrip(kitId: widget.kit.id), // D-5d 내 사진 (사진 벽에도)
             ],
+            _FriendsWithKit(kitId: widget.kit.id), // D-5e 이 상품을 가진 · 좋아요한 친구
           ],
         ),
       ),
@@ -878,6 +882,47 @@ class _BottomActions extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// D-5e 이 상품을 가진 · 좋아요한 친구 (받아 둔 친구 컬렉션에서, 없으면 아무것도 안 보인다)
+class _FriendsWithKit extends StatelessWidget {
+  const _FriendsWithKit({required this.kitId});
+  final String kitId;
+
+  @override
+  Widget build(BuildContext context) {
+    final a = AccountScope.of(context);
+    if (!a.signedIn) return const SizedBox.shrink();
+    final f = friendsWithKit(a.friends.collections, kitId);
+    if (f.owned.isEmpty && f.liked.isEmpty) return const SizedBox.shrink();
+    Widget line(Widget icon, List<String> who) => Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(
+        children: [
+          icon,
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              who.map((h) => '@$h').join(' · '),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+            ),
+          ),
+        ],
+      ),
+    );
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (f.owned.isNotEmpty) Tooltip(message: '갖고 있는 친구', child: line(const OwnedIcon(size: Gp.iS, filled: true), f.owned)),
+          if (f.liked.isNotEmpty) Tooltip(message: '좋아요한 친구', child: line(const LikedIcon(size: Gp.iS, filled: true), f.liked)),
+        ],
       ),
     );
   }
