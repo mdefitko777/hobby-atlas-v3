@@ -111,7 +111,7 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
   void initState() {
     super.initState();
     reloadScope();
-    // 검색창을 누르면(포커스) 최근 · 인기 · AI 판, 벗어나면 다시 전체 상품
+    // 검색창을 누르면(포커스) 최근 · 자주 찾은 · 설명으로 찾기 판, 벗어나면 다시 전체 상품
     _focus.addListener(() => setState(() {})); // STATE: 포커스 → 보여 줄 판
   }
 
@@ -132,7 +132,7 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
   void _setQuery(String q) {
     _controller.text = q;
     _controller.selection = TextSelection.collapsed(offset: q.length);
-    setState(() => _query = q.trim()); // STATE: 검색어 → 결과 격자 · AI 후보
+    setState(() => _query = q.trim()); // STATE: 검색어 → 결과 격자 · 설명 후보
   }
 
   /// 검색어를 남긴다 (최근 검색 맨 앞 + 횟수, 기기에 저장)
@@ -214,7 +214,7 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
               if (snap.hasError) {
                 return ErrorView(message: '${snap.error}', onRetry: () => setState(reloadScope)); // B-8 P09
               }
-              // B-9 검색어가 없으면: 검색창을 누른 동안 = 최근 · 인기 · AI, 아니면 = 전체 상품
+              // B-9 검색어가 없으면: 검색창을 누른 동안 = 최근 · 자주 찾은 · 설명으로 찾기, 아니면 = 전체 상품
               return _query.isEmpty && _focus.hasFocus ? _idle(snap.data!) : _results(snap.data!);
             },
           ),
@@ -349,7 +349,7 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
       );
     }
 
-    // B-7 홈 전체 목록과 같은 목록 (필터 · 정렬 · 격자/목록), AI 후보는 맨 위 머리
+    // B-7 홈 전체 목록과 같은 목록 (필터 · 정렬 · 격자/목록), 설명 후보는 맨 위 머리
     return SectionListView(
       key: const ValueKey('search'),
       tools: _tools,
