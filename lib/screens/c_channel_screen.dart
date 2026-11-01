@@ -261,7 +261,7 @@ class _ChannelManagerScreenState extends State<ChannelManagerScreen> {
               ),
               const SizedBox(height: 12),
               const Text(
-                '회색 글자 채널은 아직 수록된 상품이 없어요. 추가하면 새 상품이 들어올 때 홈에 먼저 보여요.', // C-6 P10
+                '회색 = 아직 상품 없음 · 추가해 두면 새 상품이 홈에 먼저 떠요', // C-6 P10
                 style: TextStyle(color: Gp.muted, fontSize: Gp.t12),
               ),
             ],

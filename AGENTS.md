@@ -29,6 +29,17 @@
 - 로그인 세션(refresh token)은 `flutter_secure_storage` 에만. 로그 · `user.json` · 백업 파일 · 커밋에 남기지 않는다 (supabase `debug: false`).
 - 서명 키(keystore)와 비밀번호는 저장소 밖, GitHub Actions secrets 에만 둔다.
 
+## 폴더 (층 나누기)
+위층은 아래층만 부른다: 화면 → 공용 조각 → 규칙 → 데이터.
+- `lib/data/` 데이터 — 받기 · 캐시 · 파싱 · 저장만. `catalog`(Gunpula Pages) · `gunpula` · `gundam_atlas` · `tag_atlas` · `blob_store` · `photo_files` · `social_local`.
+  - `user_store.dart` = 내 기록 핵심(기록 · 저장 · 동기화) + part `user_store/` (atlas_local · history · trash · profile_local · import). 저장 파일 모양은 `test/user_store_golden_test.dart` 골든이 지킨다.
+  - `derive.dart` = 카탈로그 + 내 기록 → 화면 모델, part `derive/` (guide · bbx · worlds · announcements · notifications · profile).
+- `lib/logic/` 규칙 — 순수 Dart (위젯 없음): kit_filter · guide_filter · kit_rules(찾기 · 바코드 · 다가오는 날짜) · collection_rules · spend · level_math · friends · announcement_match · sentence_search · bbx_builder · market. 엔진은 `lib/bbx/` · 알림 규칙은 `lib/notifications/` 그대로.
+- `lib/api.dart` `Loaders` = 화면이 데이터를 받는 입구 (테스트는 가짜 함수). 앱 전체 상태는 `MarksHost`/`UserStore` · `AccountScope` · `NotifyScope`.
+- `lib/widgets/` 공용 조각 — 화면은 묶음 `lib/widgets.dart` 하나만 import. 아래 시트는 `showGpSheet` 로 열고, 고르는 시트는 `GpPickSheet`(제목 · 초기화 · "n개 보기"), 도감 칸은 `TierCell`, 찾기 + 필터 짝은 `KitFind`. 그림 경로(인터넷 · 앱 안 · `local:` 내 사진)는 `images.dart` 한 곳.
+- `lib/screens/` 화면 — 맨 위 화면은 글자 머리(a_ … u_) + 파일 맨 위 디자인 가이드 대응표(`tool/make_guide.py` 가 읽는다). 큰 화면은 하위 폴더로: `guide/`(G 도감, 대응표는 `g_guide_view.dart`) · `bbx_builder/`(T 의 part 파일). 화면 안에 JSON 파싱 · HTTP · BlobStore 를 두지 않는다.
+- 크기 · 색은 `lib/theme.dart` `Gp` 토큰만: 글자 t11–t24, 아이콘 iXS 12 · iS 16 · iM 20 · iL 24 · iXL 40, 모서리 rSmall · radius · rLarge, 옆 여백 gutter. 따로 둔 값: 상세 빈 칸 그림 72 · 진행 막대 캡슐 99 · 색 막대 2 · 견본 색 3.
+
 ## 작업 방식
 - 상태: 앱 전체 한 벌은 위쪽 Host(InheritedWidget) + 저장소 객체(ChangeNotifier), 화면 안 표시는 `setState`. 내 기록 = `MarksHost`/`UserStore`, 계정 · 동기화 · 친구 = `AccountScope`/`Account`.
 - 사진 벽(내 정보 · 친구 보기): 내 사진은 기기(앱 문서 폴더 `photos/`, 목록은 `UserStore` local_state `photos`), 친구에게 보이기를 켠 것만 Supabase Storage `photos` 버킷 `<user_id>/<photo_id>.jpg` 로 (`lib/sync/photo_share.dart`). 취향 태그 = v3 `preferences.tags` (+ 기기 `profile_tags`).

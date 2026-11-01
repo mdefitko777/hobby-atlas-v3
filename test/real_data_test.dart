@@ -11,11 +11,12 @@ import 'package:hobby_atlas/data/gundam_atlas.dart';
 import 'package:hobby_atlas/data/gunpula.dart';
 import 'package:hobby_atlas/json_util.dart';
 import 'package:hobby_atlas/data/user_store.dart';
+import 'package:hobby_atlas/logic/kit_rules.dart';
 import 'package:hobby_atlas/models.dart';
 import 'package:hobby_atlas/notifications/feed_rules.dart';
 import 'package:hobby_atlas/notifications/notify_models.dart';
 import 'package:hobby_atlas/screens/b_search_screen.dart' show sentenceExamples;
-import 'package:hobby_atlas/sentence_search.dart';
+import 'package:hobby_atlas/logic/sentence_search.dart';
 
 const dataDir = String.fromEnvironment('GUNPULA_DATA');
 

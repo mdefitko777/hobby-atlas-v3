@@ -23,7 +23,6 @@ import 'package:flutter/material.dart';
 import '../data/catalog.dart';
 import '../data/user_store.dart';
 import '../detail_pane.dart';
-import '../level.dart' show CellTier, tierFrame;
 import '../sync/account.dart';
 import '../sync/sync_service.dart';
 import '../notifications/local_notifier.dart';
@@ -125,8 +124,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // ── 옛 Gunpula 에서 가져오기 ──
   Future<void> _import() async {
-    final how = await showModalBottomSheet<String>(
-      context: context,
+    final how = await showGpSheet<String>(
+      context,
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -296,15 +295,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   /// 내 기록을 파일로 (토큰 · 비밀값은 원래 없음)
   Future<void> _export() async {
-    final now = DateTime.now();
-    final day = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-    final json = const JsonEncoder.withIndent(
-      ' ',
-    ).convert({'exported_at': now.toUtc().toIso8601String(), 'app': 'hobby-atlas-v3', ...UserStore.instance.toJson()});
+    final backup = UserStore.instance.backupFile(DateTime.now());
     try {
       final uri = await FilePicker.saveFile(
-        fileName: 'hobby-atlas-backup-$day.json',
-        bytes: Uint8List.fromList(utf8.encode(json)),
+        fileName: backup.fileName,
+        bytes: Uint8List.fromList(utf8.encode(backup.text)),
         mimeType: 'application/json',
       );
       if (mounted && uri != null) showToast(context, '백업을 저장했어요');
@@ -478,7 +473,7 @@ class HelpScreen extends StatelessWidget {
             Center(
               child: Icon(icon, size: Gp.iM, color: t == CellTier.none ? Gp.faint : Gp.ink),
             ),
-            radius: 10,
+            radius: Gp.rSmall,
           ),
         ),
         const SizedBox(height: 6),
@@ -526,7 +521,7 @@ class HelpScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: Gp.gutter),
                   child: Wrap(
                     spacing: 16,
                     runSpacing: 8,

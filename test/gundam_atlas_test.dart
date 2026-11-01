@@ -7,7 +7,7 @@ import 'package:hobby_atlas/data/derive.dart';
 import 'package:hobby_atlas/data/gundam_atlas.dart';
 import 'package:hobby_atlas/data/gunpula.dart';
 import 'package:hobby_atlas/data/user_store.dart';
-import 'package:hobby_atlas/filter_sheet.dart';
+import 'package:hobby_atlas/widgets.dart';
 import 'package:hobby_atlas/models.dart';
 
 import 'support/atlas_fixture.dart';

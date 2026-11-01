@@ -73,9 +73,9 @@ Future<bool> reportDataIssue(
   String barcode = '',
   ReportKind kind = ReportKind.wrongInfo,
 }) async {
-  final picked = await showModalBottomSheet<(String, String)>(
-    context: context,
-    isScrollControlled: true,
+  final picked = await showGpSheet<(String, String)>(
+    context,
+    tall: true,
     builder: (_) => _ReportSheet(kind: kind, subject: kit?.name ?? (unitName.isNotEmpty ? unitName : barcode)),
   );
   if (picked == null || !context.mounted) return false;

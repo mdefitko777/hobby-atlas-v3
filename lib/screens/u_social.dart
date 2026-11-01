@@ -26,48 +26,13 @@ import '../clock.dart';
 import '../data/catalog.dart';
 import '../data/photo_files.dart';
 import '../data/social_local.dart';
+import '../logic/friends.dart';
 import '../sync/account.dart';
 import '../sync/friends_service.dart';
-import '../sync/photo_share.dart';
 import '../sync/sync_service.dart' show Workspace;
 import '../theme.dart';
 import '../widgets.dart';
 import 't_photo_screen.dart' show PhotoChoice, askPhotoSource, photoPicker;
-
-/// 기기 사진 파일을 동그라미에 — 파일이 없으면 [fallback]
-class _FilePhoto extends StatefulWidget {
-  const _FilePhoto({super.key, required this.file, required this.fallback});
-  final String file;
-  final Widget fallback;
-
-  @override
-  State<_FilePhoto> createState() => _FilePhotoState();
-}
-
-class _FilePhotoState extends State<_FilePhoto> {
-  late Future<ImageProvider?> _img = PhotoFiles.instance.provider(widget.file);
-
-  @override
-  void didUpdateWidget(_FilePhoto old) {
-    super.didUpdateWidget(old);
-    if (old.file != widget.file) _img = PhotoFiles.instance.provider(widget.file);
-  }
-
-  @override
-  Widget build(BuildContext context) => FutureBuilder<ImageProvider?>(
-    future: _img,
-    builder: (context, snap) => switch (snap.data) {
-      final img? => Image(
-        image: img,
-        fit: BoxFit.cover,
-        gaplessPlayback: true,
-        errorBuilder: (_, _, _) => widget.fallback,
-      ),
-      _ when snap.connectionState != ConnectionState.done => const ColoredBox(color: Gp.soft),
-      _ => widget.fallback,
-    },
-  );
-}
 
 Widget _initial(String text, double size) => ColoredBox(
   color: Gp.panel,
@@ -104,7 +69,7 @@ class MyAvatar extends StatelessWidget {
           tooltip: tooltip,
           photo: img == null
               ? null
-              : _FilePhoto(key: ValueKey('avatar-file-${img.file}'), file: img.file, fallback: _initial(text, size)),
+              : LocalPhotoImage(img.file, key: ValueKey('avatar-file-${img.file}'), fallback: _initial(text, size)),
         );
       },
     );
@@ -137,7 +102,7 @@ class FriendAvatar extends StatelessWidget {
             ringWidth: 3,
             photo: file == null
                 ? null
-                : _FilePhoto(key: ValueKey('friend-avatar-$handle'), file: file, fallback: _initial(text, size)),
+                : LocalPhotoImage(file, key: ValueKey('friend-avatar-$handle'), fallback: _initial(text, size)),
           );
         }
         if (file == null) return CircleThumb(image: '', label: label, size: size);
@@ -150,9 +115,9 @@ class FriendAvatar extends StatelessWidget {
             color: Gp.soft,
             border: Border.all(color: Gp.line),
           ),
-          child: _FilePhoto(
+          child: LocalPhotoImage(
+            file,
             key: ValueKey('friend-avatar-$handle'),
-            file: file,
             fallback: CircleThumb(image: '', label: label, size: size),
           ),
         );
@@ -246,7 +211,7 @@ IconData privacyIcon(SocialLocal s) =>
 /// U-5 사진 공개 범위 (I-9) — 스위치 하나 + 친구 체크 목록 (체크 = 내 사진을 볼 수 있음)
 Future<void> showPhotoPrivacy(BuildContext context) {
   AccountScope.read(context).photos.pullPrivacy().ignore(); // 다른 기기에서 바꾼 것 · 서버가 지키는지
-  return showModalBottomSheet<void>(context: context, isScrollControlled: true, builder: (_) => const _PrivacySheet());
+  return showGpSheet<void>(context, tall: true, builder: (_) => const _PrivacySheet());
 }
 
 class _PrivacySheet extends StatelessWidget {
@@ -451,7 +416,7 @@ class SuggestionsPanel extends StatelessWidget {
                         key: ValueKey('suggest-dismiss-${s.profile.handle}'),
                         tooltip: '닫기',
                         onPressed: () => account.store.social.dismissSuggestion(s.profile.handle), // 기기에만
-                        icon: const Icon(Icons.close, size: 18, color: Gp.faint),
+                        icon: const Icon(Icons.close, size: Gp.iM, color: Gp.faint),
                       ),
                     ],
                   ),
@@ -462,41 +427,6 @@ class SuggestionsPanel extends StatelessWidget {
       },
     );
   }
-}
-
-/// 친구의 가장 최근 일 — 구매함 · 좋아요에 담은 것 또는 보이기로 둔 사진
-class FriendEvent {
-  const FriendEvent(this.kind, this.kitId, this.at);
-
-  /// 'owned' · 'wanted' · 'photo'
-  final String kind;
-  final String kitId;
-  final DateTime at;
-}
-
-FriendEvent? latestFriendEvent(FriendCollection? c, FriendWall? w) {
-  FriendEvent? best;
-  void consider(FriendEvent e) {
-    if (best == null || e.at.isAfter(best!.at)) best = e;
-  }
-
-  for (final e in c?.items.entries ?? const <MapEntry<String, Map<String, Object?>>>[]) {
-    final st = '${e.value['status'] ?? ''}';
-    final at = DateTime.tryParse('${e.value['updated_at'] ?? ''}');
-    if (at != null && (st == 'owned' || st == 'wanted')) consider(FriendEvent(st, e.key, at));
-  }
-  for (final p in w?.photos ?? const <FriendPhoto>[]) {
-    final at = DateTime.tryParse(p.createdAt);
-    if (at != null) consider(FriendEvent('photo', p.kitId, at));
-  }
-  return best;
-}
-
-/// [sinceIso] 뒤에 올라온 친구 사진 수 (처음 여는 것이면 0)
-int newPhotoCount(FriendWall? w, String sinceIso) {
-  final since = DateTime.tryParse(sinceIso);
-  if (since == null || w == null) return 0;
-  return w.photos.where((p) => DateTime.tryParse(p.createdAt)?.isAfter(since) ?? false).length;
 }
 
 /// U-8 친구 상태 한 줄 (M-7) — 아이콘 + 상품 이름 + 언제. 일이 없으면 [fallback]
@@ -514,9 +444,9 @@ class FriendStatusLine extends StatelessWidget {
     return Row(
       children: [
         switch (e.kind) {
-          'owned' => const OwnedIcon(size: 12),
-          'wanted' => const LikedIcon(size: 12),
-          _ => const Icon(Icons.photo_camera_outlined, size: 13, color: Gp.muted),
+          'owned' => const OwnedIcon(size: Gp.iXS),
+          'wanted' => const LikedIcon(size: Gp.iXS),
+          _ => const Icon(Icons.photo_camera_outlined, size: Gp.iXS, color: Gp.muted),
         },
         const SizedBox(width: 4),
         if (name.isNotEmpty)

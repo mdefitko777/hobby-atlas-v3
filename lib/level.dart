@@ -1,11 +1,11 @@
 // 수집 레벨 한 벌 — 왼쪽 위 아바타 옆 Lv · 레벨 시트 · 도감 화면이 같은 막대 · 같은 ? 를 쓴다.
-// 경험치: 구매 10 · 도감 새 칸 5 · 사진 인증 3 · 좋아요 0 (models.dart collectorXp)
+// 경험치: 구매 10 · 도감 새 칸 5 · 사진 인증 3 · 좋아요 0 (lib/logic/level_math.dart collectorXp)
 import 'package:flutter/material.dart';
 
 import 'api.dart';
 import 'data/user_store.dart';
+import 'logic/level_math.dart';
 import 'marks.dart';
-import 'models.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
@@ -41,36 +41,6 @@ class LevelChip extends StatelessWidget {
     );
   }
 }
-
-/// 도감 칸 단계 — 흑백 · 컬러(좋아요) · 초록 테두리(구매) · 도는 고리(사진 인증)
-enum CellTier { none, liked, owned, photo }
-
-/// 단계별 칸 틀 (도감 칸 · ? 견본 공통)
-Widget tierFrame(CellTier tier, Widget child, {double radius = 12}) {
-  final photo = tier == CellTier.photo;
-  final inner = Container(
-    decoration: BoxDecoration(
-      color: Gp.panel,
-      borderRadius: BorderRadius.circular(photo ? radius - 2 : radius),
-      border: switch (tier) {
-        CellTier.photo => null,
-        CellTier.owned => Border.all(color: Gp.own, width: 2.2), // 가진 것 = 민트
-        _ => Border.all(color: Gp.line),
-      },
-    ),
-    clipBehavior: Clip.antiAlias,
-    child: child,
-  );
-  return photo ? AccentRing(radius: radius, spin: true, child: inner) : inner;
-}
-
-/// 칸 안 그림: 내 사진이면 꽉 채우고, 아니면 공식 그림 (없음 = 흑백)
-Widget cellImage(CellTier tier, String image, String? photo) => tier == CellTier.photo && photo != null
-    ? AppImage(photo)
-    : Padding(
-        padding: const EdgeInsets.all(6),
-        child: AppImage(image, fit: BoxFit.contain, grayscale: tier == CellTier.none),
-      );
 
 /// 레벨 시트의 한 칸 (도감 작품 · 세대 · 라인)
 typedef LitSeries = ({String title, String image, int owned, int total});
@@ -158,8 +128,7 @@ class LevelHelpButton extends StatelessWidget {
   Widget build(BuildContext context) => IconButton(
     tooltip: '레벨 · 도감',
     visualDensity: VisualDensity.compact,
-    onPressed: () =>
-        showModalBottomSheet<void>(context: context, showDragHandle: true, builder: (_) => const _LevelHelp()),
+    onPressed: () => showGpSheet<void>(context, builder: (_) => const _LevelHelp()),
     icon: const Icon(Icons.help_outline, size: Gp.iM, color: Gp.muted),
   );
 }
@@ -187,7 +156,7 @@ class _LevelHelp extends StatelessWidget {
         ],
       ),
     );
-    Widget tier(CellTier t) => tierFrame(t, cellImage(t, _sample, null), radius: 9);
+    Widget tier(CellTier t) => tierFrame(t, cellImage(t, _sample, null), radius: Gp.rSmall);
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
@@ -254,68 +223,65 @@ class _LevelButtonState extends State<LevelButton> {
 }
 
 /// 레벨 시트 — 막대 + 켜진 도감 (작품 그림 · 모은 칸 / 전체)
-Future<void> showLevelSheet(BuildContext context, Loaders loaders) => showModalBottomSheet<void>(
-  context: context,
-  isScrollControlled: true,
-  builder: (_) => FractionallySizedBox(
-    heightFactor: 0.6,
-    child: FutureBuilder<LevelData>(
-      future: loadLevel(loaders),
-      builder: (context, snap) {
-        final d = snap.data;
-        if (d == null) return const LoadingView();
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            LevelBar(xp: d.xp, padding: const EdgeInsets.fromLTRB(16, 0, 8, 8)),
-            const Divider(height: 1),
-            Expanded(
-              child: d.series.isEmpty
-                  ? const Center(child: Icon(Icons.grid_view_rounded, size: 40, color: Gp.line))
-                  : GridView.builder(
-                      padding: const EdgeInsets.all(16),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        mainAxisSpacing: 14,
-                        crossAxisSpacing: 10,
-                        childAspectRatio: 0.82,
-                      ),
-                      itemCount: d.series.length,
-                      itemBuilder: (context, i) {
-                        final s = d.series[i];
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                              child: tierFrame(
-                                CellTier.owned,
-                                Padding(
-                                  padding: const EdgeInsets.all(6),
-                                  child: AppImage(s.image, fit: BoxFit.contain),
-                                ),
-                                radius: 10,
-                              ),
-                            ),
-                            const SizedBox(height: 5),
-                            Text(
-                              s.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: Gp.t12),
-                            ),
-                            Text(
-                              '${s.owned} / ${s.total}',
-                              style: const TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w700, color: Gp.own),
-                            ),
-                          ],
-                        );
-                      },
+Future<void> showLevelSheet(BuildContext context, Loaders loaders) => showGpSheet<void>(
+  context,
+  heightFactor: gpSheetHeight,
+  builder: (_) => FutureBuilder<LevelData>(
+    future: loadLevel(loaders),
+    builder: (context, snap) {
+      final d = snap.data;
+      if (d == null) return const LoadingView();
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          LevelBar(xp: d.xp, padding: const EdgeInsets.fromLTRB(16, 0, 8, 8)),
+          const Divider(height: 1),
+          Expanded(
+            child: d.series.isEmpty
+                ? const Center(child: Icon(Icons.grid_view_rounded, size: Gp.iXL, color: Gp.line))
+                : GridView.builder(
+                    padding: const EdgeInsets.all(16),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      mainAxisSpacing: 14,
+                      crossAxisSpacing: 10,
+                      childAspectRatio: 0.82,
                     ),
-            ),
-          ],
-        );
-      },
-    ),
+                    itemCount: d.series.length,
+                    itemBuilder: (context, i) {
+                      final s = d.series[i];
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            child: tierFrame(
+                              CellTier.owned,
+                              Padding(
+                                padding: const EdgeInsets.all(6),
+                                child: AppImage(s.image, fit: BoxFit.contain),
+                              ),
+                              radius: Gp.radius,
+                            ),
+                          ),
+                          const SizedBox(height: 5),
+                          Text(
+                            s.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: Gp.t12),
+                          ),
+                          Text(
+                            '${s.owned} / ${s.total}',
+                            style: const TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w700, color: Gp.own),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+          ),
+        ],
+      );
+    },
   ),
 );
 

@@ -4,6 +4,7 @@ import 'data/bbx_builder_data.dart';
 import 'data/catalog.dart';
 import 'data/derive.dart';
 import 'data/user_store.dart';
+import 'logic/kit_rules.dart';
 import 'models.dart';
 
 /// 화면에 그대로 보여 줄 수 있는 오류 문장

@@ -268,7 +268,7 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
                             child: Text(w.name, style: const TextStyle(fontWeight: FontWeight.w600)),
                           ),
                           if ((photos[w.id] ?? 0) > 0) ...[
-                            const Icon(Icons.photo_camera_outlined, size: 14, color: Gp.muted),
+                            const Icon(Icons.photo_camera_outlined, size: Gp.iXS, color: Gp.muted),
                             Text(
                               ' ${photos[w.id]}',
                               key: ValueKey('work-photos-${w.id}'),

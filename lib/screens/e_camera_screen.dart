@@ -16,6 +16,7 @@
 // 전환: 앱 셸 카메라 버튼 → 추가 시트 → 바코드: E 카메라(아래에서 올라옴) → 찾으면 D 상세로 바꿔 쌓기.
 //       사진 · 앨범: 휴대폰 카메라 / 사진 고르기 → E-8 사진으로 찾기(쌓기) → D 상세(쌓기).
 // 사진으로 상품을 알아보는 AI 는 없다 (서버 · 유료 API 가 필요) — 가짜 후보를 만들지 않고 이름 · 설명 검색으로 이어 준다.
+import '../logic/kit_rules.dart';
 import 'dart:async';
 import 'dart:typed_data';
 
@@ -30,7 +31,7 @@ import '../data/photo_files.dart';
 import '../marks.dart';
 import '../models.dart';
 import '../report.dart';
-import '../sentence_search.dart';
+import '../logic/sentence_search.dart';
 import '../sync/account.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -590,7 +591,7 @@ class _PhotoFindScreenState extends State<PhotoFindScreen> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: Gp.gutter),
                 child: TextField(
                   textInputAction: TextInputAction.search,
                   decoration: const InputDecoration(
@@ -646,7 +647,7 @@ class _DimOutside extends CustomPainter {
   void paint(Canvas canvas, Size s) {
     final hole = RRect.fromRectAndRadius(
       Rect.fromCenter(center: s.center(Offset.zero), width: w, height: h),
-      const Radius.circular(18),
+      const Radius.circular(Gp.rLarge),
     );
     final path = Path()
       ..fillType = PathFillType.evenOdd

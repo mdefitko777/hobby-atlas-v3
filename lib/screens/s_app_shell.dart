@@ -182,9 +182,9 @@ class _AppShellState extends State<AppShell> {
   });
 
   void _openAdd() {
-    showModalBottomSheet<void>(
+    showGpSheet<void>(
       // S-4 P07
-      context: context,
+      context,
       builder: (sheet) => AddSheet(
         onPick: (pick) {
           Navigator.pop(sheet);

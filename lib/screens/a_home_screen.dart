@@ -15,6 +15,7 @@
 // 전환: A-2 → 검색 탭(옆으로). › → 같은 탭 안에서 O 전체 목록(위쪽 머리 · 검색창은 그대로, 뒤로 = 홈). 상품 카드 → D 상품 상세(쌓기). 배너 · 예고 카드 → J 공식 예고 상세(쌓기).
 // 줄 안에는 날짜·가격을 쓰지 않는다 — 궁금하면 눌러서 상세에서 본다 (P08).
 // 현행 앱 문제: 홈 = 버전 번호·총 개수·IP 입구 카드 → v2 홈 = "내 채널의 새 소식"만.
+import '../logic/kit_rules.dart';
 import 'dart:async' show Timer;
 
 import 'package:flutter/material.dart';
@@ -24,7 +25,6 @@ import '../channels.dart';
 import '../clock.dart';
 import '../data/catalog.dart';
 import '../data/user_store.dart';
-import '../filter_sheet.dart';
 import '../marks.dart';
 import '../models.dart';
 import '../theme.dart';
@@ -123,13 +123,11 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
   bool _mine = false;
 
   /// My Page 안에서 찾기 · 필터 (좋아요 · 구매함에서만)
-  String _mineQuery = '';
-  KitFilter _mineFilter = KitFilter();
+  final _mineFind = KitFind();
 
   void _setMine(bool v) => setState(() {
     _mine = v; // STATE: 전체 소식 ↔ My Page (찾기 · 필터는 비운다)
-    _mineQuery = '';
-    _mineFilter = KitFilter();
+    _mineFind.clear();
   });
 
   Future<void> _openMineFilter() async {
@@ -138,9 +136,8 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
     final pool = [
       for (final id in me.idsWith(const {CollectStatus.wanted, CollectStatus.owned})) ?cat.byId[id],
     ];
-    _mineFilter.statusOf = Marks.read(context).statusOf;
-    final picked = await showFilterSheet(context, kits: pool, initial: _mineFilter);
-    if (picked != null) setState(() => _mineFilter = picked); // STATE: 필터 → My Page 목록
+    final picked = await pickKitFilter(context, pool: pool, current: _mineFind.filter);
+    if (picked != null) setState(() => _mineFind.filter = picked); // STATE: 필터 → My Page 목록
   }
 
   /// 전체 목록일 때 검색창 = 그 목록 안에서만 찾기 (O-7)
@@ -167,8 +164,7 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
   });
 
   Future<void> _openHomeFilter(List<Kit> pool) async {
-    _homeFilter.statusOf = Marks.read(context).statusOf;
-    final picked = await showFilterSheet(context, kits: pool, initial: _homeFilter);
+    final picked = await pickKitFilter(context, pool: pool, current: _homeFilter);
     if (picked != null) setState(() => _homeFilter = picked); // STATE: 필터 → 홈 가로 줄
   }
 
@@ -296,8 +292,8 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
         // A-25 My Page 안에서 찾기 + 필터
         key: const ValueKey('mine-find'),
         hint: '내 것에서 찾기',
-        onQuery: (q) => setState(() => _mineQuery = q),
-        filterCount: _mineFilter.count,
+        onQuery: (q) => setState(() => _mineFind.query = q),
+        filterCount: _mineFind.filter.count,
         onFilter: _openMineFilter,
         tools: [mineToggle],
       );
@@ -399,8 +395,8 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
               // A-20~25
               loaders: widget.loaders,
               onJump: widget.onJump,
-              query: _mineQuery,
-              filter: _mineFilter,
+              query: _mineFind.query,
+              filter: _mineFind.filter,
             ),
           if (!_mine && heroes.isNotEmpty)
             _HeroBanner(
@@ -569,7 +565,7 @@ class _HorizontalRow extends StatelessWidget {
       height: width / aspect + 32,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: Gp.gutter),
         itemCount: row.items.length,
         separatorBuilder: (_, _) => const SizedBox(width: 10),
         itemBuilder: (context, i) {
