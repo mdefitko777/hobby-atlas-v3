@@ -8,6 +8,7 @@
 // │ E-4  │ 틀 안 "찾는 중…"                     │ 읽은 바코드로 상품 찾는 중               │ P01           │
 // │ E-5  │ image_picker (카메라 · 갤러리)        │ 사진 찍기 · 앨범에서 고르기              │ P07           │
 // │ E-6  │ 바코드 결과: 상세 / 여러 개면 목록    │ 바코드 = JAN 이 같은 상품               │ P01 · P10     │
+// │ E-6b │ 겹침 시트 (warnIfCollected)          │ 이미 갖고 있어요 ×n (조립 상태) · 예약 · 좋아요 │ P05 · P01 │
 // │ E-7  │ 모르는 바코드 패널 (제보 · 다시 · 검색) │ 이 바코드의 상품이 아직 없어요          │ P09 · P03     │
 // │ E-8  │ 사진 + "이름으로 찾기" + 결과 줄       │ 사진 인식 없음 → 이름 · 설명으로 찾기     │ P09 · P10     │
 // │ E-9  │ 줄 오른쪽 📎 / 리본+                  │ 구매함 상품에 사진 붙이기 (내 사진 · 사진 벽) │ P07 · P03 │
@@ -152,6 +153,14 @@ class _BarcodeScanScreenState extends State<BarcodeScanScreen> {
       return;
     }
     if (!mounted) return;
+    // E-6b 이미 가진 · 예약 · 좋아요한 상품이면 열기 전에 알림 (닫으면 다시 찍기)
+    final open = await warnIfCollected(context, kits);
+    if (!mounted) return;
+    if (!open) {
+      setState(() => _looking = false);
+      unawaited(_camera?.start());
+      return;
+    }
     final nav = Navigator.of(context);
     if (kits.length == 1) {
       nav.pushReplacement(

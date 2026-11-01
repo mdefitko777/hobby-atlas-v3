@@ -54,6 +54,8 @@ dependencies:
   image_picker: ^1.2.4
   # 바코드 찾기 (화면 E): 기기 안 ML Kit 로 상자 뒷면 JAN 읽기 — 서버 · 인터넷 필요 없음
   mobile_scanner: ^7.4.3
+  # 공유 카드 (화면 V): 내 컬렉션 · 도감 진행 그림(PNG)을 안드로이드 공유 창으로
+  share_plus: ^13.3.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -37,6 +37,12 @@ abstract final class Gp {
   /// 특별 관심 ★
   static const star = Color(0xFFBA7517);
 
+  /// 예약(좋아요와 구매함 사이) — 예약 꼬리표 · 달력 도착 점
+  static const reserve = Color(0xFF7F77DD);
+
+  /// 재판매(再販) — 상세 꼬리표 · 달력 점
+  static const resale = Color(0xFFD9822B);
+
   /// 레벨 색 — 10레벨마다: 회색 · 초록 · 파랑 · 보라 · 금색 · 빨강(50+)
   static const levelTiers = [
     Color(0xFF888780),

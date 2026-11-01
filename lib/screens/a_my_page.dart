@@ -2,7 +2,8 @@
 //
 // ┌──────── 디자인 가이드 대응표: A 홈 › My Page ──────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
-// │ A-21 │ _Stats (아이콘 4칸)                 │ 좋아요 수 · 구매함 수 · 이번 달 지출 · 총 지출 │ P01 · P07 │
+// │ A-21 │ _Stats (아이콘 5칸 + 공유)           │ 좋아요 · 구매함 · 미조립(쌓인 것) · 이번 달 지출 · 총 지출 │ P01 · P07 │
+// │ A-21b│ 숫자 줄 끝 공유 아이콘 → V 공유 카드  │ 내 컬렉션 카드 (그림으로 공유 · 저장)      │ P07 · P10     │
 // │ A-22 │ _LikedSoon                         │ 좋아요 중 날짜가 다가오는 것 (PB 마감 · 발매) │ P01     │
 // │ A-23 │ _OwnedRow                          │ 최근 산 것 (가로 줄)                     │ P08           │
 // │ A-24 │ _SpecialFeed                       │ 특별 관심 친구가 최근 담은 것            │ P01           │
@@ -14,6 +15,7 @@ import '../api.dart';
 import '../clock.dart';
 import '../data/catalog.dart';
 import '../data/user_store.dart';
+import '../logic/build_status.dart';
 import '../logic/kit_rules.dart';
 import '../marks.dart';
 import '../models.dart';
@@ -22,6 +24,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'd_kit_detail_screen.dart';
 import 'f_collection_screen.dart' show CollectionJump;
+import 'v_share_sheet.dart' show openCollectionShare;
 
 class MyPageView extends StatefulWidget {
   const MyPageView({super.key, required this.loaders, this.onJump, this.query = '', this.filter});
@@ -64,6 +67,8 @@ class _MyPageViewState extends State<MyPageView> {
           child: _Stats(
             liked: liked.length,
             owned: owned.length,
+            backlog: backlogCount(owned.map((k) => k.id), me.stageOf),
+            onShare: () => openCollectionShare(context, loaders: widget.loaders),
             month: me.spendInMonth(appNow()),
             total: me.spendKrw,
             onJump: widget.onJump,
@@ -125,11 +130,20 @@ class _Section extends StatelessWidget {
   }
 }
 
-/// A-21 숫자 4칸 — 아이콘 + 숫자 (좋아요 · 구매함은 누르면 그 목록)
+/// A-21 숫자 5칸 — 아이콘 + 숫자 (좋아요 · 구매함 · 미조립은 누르면 그 목록) + 끝에 공유
 class _Stats extends StatelessWidget {
-  const _Stats({required this.liked, required this.owned, required this.month, required this.total, this.onJump});
-  final int liked, owned, month, total;
+  const _Stats({
+    required this.liked,
+    required this.owned,
+    required this.backlog,
+    required this.month,
+    required this.total,
+    this.onJump,
+    this.onShare,
+  });
+  final int liked, owned, backlog, month, total;
   final ValueChanged<CollectionJump>? onJump;
+  final VoidCallback? onShare;
 
   @override
   Widget build(BuildContext context) {
@@ -157,13 +171,21 @@ class _Stats extends StatelessWidget {
     );
     // 뜻이 같은 둘을 한 칸에: 수집(♡ | 리본) · 돈(이번 달 | 총)
     // 검색창과 같은 떠 있는 재질 (흰→옅은 회색 · 부드러운 그림자)
-    Widget group(Widget a, Widget b) => Expanded(
+    Widget group(Widget a, Widget b, [Widget? c, int flex = 1]) => Expanded(
+      flex: flex,
       child: DecoratedBox(
         decoration: Gp.raised(radius: Gp.radius),
         child: Material(
           type: MaterialType.transparency,
           child: IntrinsicHeight(
-            child: Row(children: [a, const VerticalDivider(width: 1, indent: 10, endIndent: 10), b]),
+            child: Row(
+              children: [
+                a,
+                const VerticalDivider(width: 1, indent: 10, endIndent: 10),
+                b,
+                if (c != null) ...[const VerticalDivider(width: 1, indent: 10, endIndent: 10), c],
+              ],
+            ),
           ),
         ),
       ),
@@ -173,6 +195,13 @@ class _Stats extends StatelessWidget {
         group(
           cell(const LikedIcon(), '$liked', '좋아요', onTap: () => onJump?.call(CollectionJump.liked)),
           cell(const OwnedIcon(), '$owned', '구매함', onTap: () => onJump?.call(CollectionJump.owned)),
+          cell(
+            const Icon(Icons.inventory_2_outlined, size: Gp.iS, color: Gp.muted),
+            '$backlog',
+            '미조립',
+            onTap: () => onJump?.call(CollectionJump.backlog),
+          ),
+          3,
         ),
         const SizedBox(width: 8),
         group(
@@ -182,7 +211,18 @@ class _Stats extends StatelessWidget {
             wonShort(total),
             '총 지출',
           ),
+          null,
+          2,
         ),
+        if (onShare != null)
+          IconButton(
+            // A-21b
+            key: const ValueKey('mypage-share'),
+            tooltip: '공유 카드',
+            visualDensity: VisualDensity.compact,
+            onPressed: onShare,
+            icon: const Icon(Icons.ios_share, size: Gp.iM, color: Gp.muted),
+          ),
       ],
     );
   }

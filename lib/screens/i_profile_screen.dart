@@ -10,7 +10,8 @@
 // │ I-1  │ 배경 사진 위 색 고리 큰 아바타(사진) · 이름 · Lv · @아이디 │ 내 프로필 (U-1 · U-3)  │ P04 · P02  │
 // │ I-2  │ TagPill 줄                          │ 내 취향 태그 (친구에게도 보임)            │ P06           │
 // │ I-3  │ ✎ 아이콘 → 바텀 시트(액션 목록)       │ 아바타 · 배경 · 이름 · 아이디 · 태그 바꾸기 │ P03 · P07     │
-// │ I-4  │ 떠 있는 숫자 묶음 2개 (아이콘 + 숫자)  │ ♡ · 리본 → 컬렉션 / 이번 달 · 총 지출     │ P01 · P07     │
+// │ I-4  │ 떠 있는 숫자 묶음 2개 (아이콘 + 숫자)  │ ♡ · 리본 · 미조립 → 컬렉션 / 이번 달 · 총 지출 │ P01 · P07   │
+// │ I-14 │ 머리 공유 아이콘 → V 공유 카드        │ 내 컬렉션 카드 (그림으로 공유 · 저장)      │ P07 · P10     │
 // │ I-5  │ 친구 줄: 👥 n · 추가 · 요청 아이콘     │ 친구 추가 (아이디로) · 받은 요청 · 내 아이디 복사 │ P07 · P08 │
 // │ I-5b │ WorkspaceMembers (U-6, 있을 때만)    │ 공유 공간 이름 · 멤버 · 역할 (읽기만)       │ P06 · P08     │
 // │ I-6  │ PhotoWall 3열 (T-1)                 │ 사진 벽: 내 사진 → 구매함 상품 사진         │ P02 · P06     │
@@ -32,6 +33,7 @@ import '../clock.dart';
 import '../data/social_local.dart' show ProfileImageKind;
 import '../detail_pane.dart';
 import '../level.dart';
+import '../logic/build_status.dart';
 import '../logic/level_math.dart';
 import '../marks.dart';
 import '../models.dart';
@@ -46,6 +48,7 @@ import 'p_sign_in_screen.dart';
 import 'q_friend_sheets.dart';
 import 't_photo_screen.dart';
 import 'u_social.dart';
+import 'v_share_sheet.dart' show openCollectionShare;
 
 void openProfile(
   BuildContext context, {
@@ -278,6 +281,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 style: TextStyle(fontSize: Gp.t19, fontWeight: FontWeight.w600),
               )
             : null,
+        actions: friend == null
+            ? [
+                IconButton(
+                  // I-14 공유 카드
+                  key: const ValueKey('profile-share'),
+                  tooltip: '공유 카드',
+                  onPressed: () => openCollectionShare(context, loaders: widget.loaders),
+                  icon: const Icon(Icons.ios_share, size: Gp.iL),
+                ),
+                const SizedBox(width: 4),
+              ]
+            : null,
       ),
       body: FutureBuilder<_ProfileData>(
         future: _future,
@@ -350,6 +365,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             [
               _Cell(const LikedIcon(), '$liked', '좋아요', jump == null ? null : () => jump(CollectionJump.liked)),
               _Cell(const OwnedIcon(), '$owned', '구매함', jump == null ? null : () => jump(CollectionJump.owned)),
+              _Cell(
+                const Icon(Icons.inventory_2_outlined, size: Gp.iS, color: Gp.muted),
+                '${backlogCount([for (final k in mine)
+                  if (marks.owned(k)) k.id], store.stageOf)}',
+                '미조립',
+                jump == null ? null : () => jump(CollectionJump.backlog),
+              ),
             ],
             [
               _Cell(
@@ -690,6 +712,7 @@ class _Stats extends StatelessWidget {
       ),
     );
     Widget group(List<_Cell> cells) => Expanded(
+      flex: cells.length, // 칸 너비가 묶음마다 같게
       child: DecoratedBox(
         decoration: Gp.raised(radius: Gp.radius),
         child: Material(
