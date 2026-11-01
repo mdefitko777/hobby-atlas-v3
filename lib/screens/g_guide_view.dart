@@ -31,7 +31,6 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../detail_pane.dart';
 import '../report.dart';
-import '../filter_sheet.dart';
 import '../level.dart';
 import '../marks.dart';
 import '../channels.dart';

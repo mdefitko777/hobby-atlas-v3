@@ -25,7 +25,6 @@ import '../api.dart';
 import '../bbx/bbx.dart';
 import '../data/bbx_builder_data.dart';
 import '../data/user_store.dart';
-import '../filter_sheet.dart' show SquareSegments;
 import '../marks.dart';
 import '../theme.dart';
 import '../widgets.dart';

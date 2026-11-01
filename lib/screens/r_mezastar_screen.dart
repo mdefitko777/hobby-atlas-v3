@@ -19,7 +19,6 @@ import 'package:flutter/material.dart';
 
 import '../data/tag_atlas.dart';
 import '../detail_pane.dart';
-import '../filter_sheet.dart';
 import '../level.dart';
 import '../marks.dart';
 import '../theme.dart';

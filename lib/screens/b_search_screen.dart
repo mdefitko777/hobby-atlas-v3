@@ -20,7 +20,6 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../data/user_store.dart';
-import '../filter_sheet.dart';
 import '../channels.dart';
 import '../marks.dart';
 import '../models.dart';

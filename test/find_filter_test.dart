@@ -5,12 +5,11 @@ import 'package:hobby_atlas/api.dart';
 import 'package:hobby_atlas/clock.dart';
 import 'package:hobby_atlas/data/user_store.dart';
 import 'package:hobby_atlas/detail_pane.dart';
-import 'package:hobby_atlas/filter_sheet.dart';
+import 'package:hobby_atlas/widgets.dart';
 import 'package:hobby_atlas/marks.dart';
 import 'package:hobby_atlas/models.dart';
 import 'package:hobby_atlas/screens/a_home_screen.dart';
 import 'package:hobby_atlas/screens/f_collection_screen.dart';
-import 'package:hobby_atlas/widgets.dart';
 import 'package:hobby_atlas/screens/h_calendar_screen.dart';
 import 'package:hobby_atlas/theme.dart';
 

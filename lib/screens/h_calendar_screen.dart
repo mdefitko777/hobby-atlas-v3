@@ -21,7 +21,6 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../channels.dart';
 import '../data/user_store.dart';
-import '../filter_sheet.dart';
 import '../marks.dart';
 import '../models.dart';
 import '../theme.dart';

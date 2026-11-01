@@ -25,7 +25,6 @@ import '../marks.dart';
 import '../channels.dart';
 import '../data/catalog.dart';
 import '../data/user_store.dart';
-import '../filter_sheet.dart';
 import '../models.dart';
 import '../theme.dart';
 import '../widgets.dart';

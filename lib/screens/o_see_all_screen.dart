@@ -26,7 +26,6 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'd_kit_detail_screen.dart';
 import 'j_announcement_screen.dart';
-import '../filter_sheet.dart';
 
 /// 홈에서 펼칠 수 있는 목록
 enum HomeSection { recent, month, announcements, viewed }
