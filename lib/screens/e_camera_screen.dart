@@ -25,6 +25,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../api.dart';
 import '../channels.dart';
+import '../logic/kit_rules.dart';
 import '../models.dart';
 import '../report.dart';
 import '../theme.dart';
@@ -460,7 +461,7 @@ class _DimOutside extends CustomPainter {
   void paint(Canvas canvas, Size s) {
     final hole = RRect.fromRectAndRadius(
       Rect.fromCenter(center: s.center(Offset.zero), width: w, height: h),
-      const Radius.circular(18),
+      const Radius.circular(Gp.rLarge),
     );
     final path = Path()
       ..fillType = PathFillType.evenOdd

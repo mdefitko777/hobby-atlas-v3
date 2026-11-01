@@ -23,14 +23,15 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../channels.dart';
 import '../data/photo_files.dart';
+import '../logic/kit_rules.dart' show kitMatches;
 import '../logic/ocr_lookup.dart';
+import '../logic/sentence_search.dart';
 import '../logic/url_lookup.dart';
 import '../marks.dart';
 import '../models.dart';
 import '../ocr/ocr_catalog.dart';
 import '../ocr/text_reader.dart';
 import '../report.dart';
-import '../sentence_search.dart';
 import '../share/share_intake.dart';
 import '../sync/account.dart';
 import '../theme.dart';
@@ -284,7 +285,7 @@ class _PhotoFindScreenState extends State<PhotoFindScreen> {
     };
     if (text.isEmpty) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      padding: const EdgeInsets.fromLTRB(Gp.gutter, 0, Gp.gutter, 8),
       child: Row(
         children: [
           if (icon == null)
@@ -355,7 +356,7 @@ class _PhotoFindScreenState extends State<PhotoFindScreen> {
             children: [
               if (widget.photo case final photo?)
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                  padding: const EdgeInsets.fromLTRB(Gp.gutter, 4, Gp.gutter, 8),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(Gp.rLarge),
                     child: ColoredBox(
@@ -373,7 +374,7 @@ class _PhotoFindScreenState extends State<PhotoFindScreen> {
               if (_tokens.isNotEmpty)
                 Padding(
                   // E-12 읽은 글자 조각
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+                  padding: const EdgeInsets.fromLTRB(Gp.gutter, 0, Gp.gutter, 4),
                   child: Wrap(
                     spacing: 6,
                     runSpacing: 6,
@@ -396,7 +397,7 @@ class _PhotoFindScreenState extends State<PhotoFindScreen> {
                 ErrorView(message: '${snap.error}', onRetry: () => setState(() => _future = _load()))
               else ...[
                 if (candKits.isNotEmpty) ...[
-                  SectionHeader('후보', subtitle: '${candKits.length}개', padding: const EdgeInsets.fromLTRB(16, 14, 12, 4)),
+                  SectionHeader('후보', subtitle: '${candKits.length}개', padding: const EdgeInsets.fromLTRB(Gp.gutter, 14, 12, 4)),
                   for (final h in urlHits) _row(h.kit, candKits, tag: '100%', strong: true, reason: h.how), // E-13
                   for (final c in cands)
                     _row(c.kit, candKits, tag: '${c.score}%', strong: c.exact || c.score >= 85, reason: c.reason),
@@ -409,7 +410,7 @@ class _PhotoFindScreenState extends State<PhotoFindScreen> {
                   )
                 else if (candKits.isEmpty && _tokens.isNotEmpty && _read == _Read.done)
                   const Padding(
-                    padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+                    padding: EdgeInsets.fromLTRB(Gp.gutter, 8, Gp.gutter, 0),
                     child: Row(
                       children: [
                         Icon(Icons.search_off, size: Gp.iS, color: Gp.faint),
@@ -420,7 +421,7 @@ class _PhotoFindScreenState extends State<PhotoFindScreen> {
                   ),
                 Padding(
                   // E-8 이름으로 찾기
-                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+                  padding: const EdgeInsets.fromLTRB(Gp.gutter, 14, Gp.gutter, 0),
                   child: TextField(
                     controller: _search,
                     textInputAction: TextInputAction.search,
@@ -439,7 +440,7 @@ class _PhotoFindScreenState extends State<PhotoFindScreen> {
                     onTap: (k) => openKitDetail(context, k, loaders: widget.loaders),
                   ),
                 if (_query.isEmpty && byName.isNotEmpty)
-                  SectionHeader('구매함', subtitle: '${owned.length}개', padding: const EdgeInsets.fromLTRB(16, 18, 12, 4)),
+                  SectionHeader('구매함', subtitle: '${owned.length}개', padding: const EdgeInsets.fromLTRB(Gp.gutter, 18, 12, 4)),
                 for (final k in byName) _row(k, byName),
                 if (_query.isNotEmpty && byName.isEmpty && hits.isEmpty)
                   EmptyView(
@@ -467,7 +468,7 @@ class _SharedTextBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+    margin: const EdgeInsets.fromLTRB(Gp.gutter, 4, Gp.gutter, 10),
     padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
     decoration: BoxDecoration(color: Gp.soft, borderRadius: BorderRadius.circular(Gp.radius)),
     child: Row(

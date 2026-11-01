@@ -20,10 +20,10 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../data/catalog.dart';
-import '../data/friend_overlap.dart';
 import '../data/user_store.dart';
 import '../detail_pane.dart';
 import '../channels.dart';
+import '../logic/friends.dart';
 import '../models.dart';
 import '../sync/account.dart';
 import '../sync/friends_service.dart' show FriendsFailure;
@@ -108,9 +108,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final a = AccountScope.read(context);
     if (a.signedIn) {
       // 친구 컬렉션도 받아 "친구가 이미 갖고 있어요" 줄을 만든다 (N-8)
-      a.friends.refresh().then((_) => Future.wait([
-            for (final f in a.friends.friends) a.friends.collection(f.handle).then((_) {}, onError: (Object _) {}),
-          ]), onError: (Object _) {});
+      a.friends.refresh().then(
+        (_) => Future.wait([
+          for (final f in a.friends.friends) a.friends.collection(f.handle).then((_) {}, onError: (Object _) {}),
+        ]),
+        onError: (Object _) {},
+      );
     }
   }
 
@@ -119,7 +122,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (!account.signedIn) return const [];
     final byId = Catalog.instance.byId;
     return [
-      for (final o in likedOwnedByFriends(account.friends.collections, UserStore.instance.idsWith(const {CollectStatus.wanted}).toSet()))
+      for (final o in likedOwnedByFriends(
+        account.friends.collections,
+        UserStore.instance.idsWith(const {CollectStatus.wanted}).toSet(),
+      ))
         if (byId[o.kitId] case final k?)
           AppNotice(
             id: 'own-${o.handle}-${o.kitId}',
@@ -254,8 +260,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   /// N-7 친구 요청 응답
   void _answerRequest(AppNotice n) {
-    showModalBottomSheet<void>(
-      context: context,
+    showGpSheet<void>(
+      context,
       builder: (sheet) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -380,7 +386,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               // N-8 P09
               icon: Icons.notifications_none,
               message: '새 알림이 없어요',
-              detail: '알림 규칙(PB · SEED/00 · BBX …)에 맞는 내 채널 새 상품, 좋아요한 상품의 변화와 PB 예약 기간이 여기에 모여요\n${_store.statusLine}',
+              detail: '내 채널 새 상품 · 좋아요한 상품 변화 · PB 예약이 여기에 모여요\n${_store.statusLine}',
             ),
           ),
         ),
@@ -446,9 +452,7 @@ class _NoticeRow extends StatelessWidget {
     final person = n.type == NoticeType.request || (n.type == NoticeType.friend && n.image.isEmpty);
     final thumb = SizedBox.square(
       dimension: 52,
-      child: person
-          ? CircleThumb(image: '', label: n.title.characters.first, size: 52)
-          : PhotoThumb(n.image, radius: 10),
+      child: person ? CircleThumb(image: '', label: n.title.characters.first, size: 52) : PhotoThumb(n.image),
     );
     return InkWell(
       onTap: onTap,
@@ -473,7 +477,7 @@ class _NoticeRow extends StatelessWidget {
                       color: Gp.panel,
                       border: Border.all(color: Gp.line),
                     ),
-                    child: Icon(n.type.icon, size: 13, color: Gp.ink),
+                    child: Icon(n.type.icon, size: Gp.iXS, color: Gp.ink),
                   ),
                 ),
               ],

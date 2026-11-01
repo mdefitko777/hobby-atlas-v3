@@ -1,0 +1,179 @@
+{
+  "schema": 1,
+  "member": "냥이",
+  "collection": {
+    "items": {
+      "hg-001": {
+        "status": "owned",
+        "updated_at": "2026-10-01T00:00:00.000Z",
+        "updated_by": "냥이",
+        "quantity": 2,
+        "note": "메모",
+        "storage": "선반",
+        "purchase_price": 2500
+      },
+      "hg-002": {
+        "status": "wanted",
+        "updated_at": "2026-10-02T00:00:00.000Z",
+        "updated_by": "냥이",
+        "quantity": 1
+      },
+      "hg-003": {
+        "status": "deleted",
+        "updated_at": "2026-10-03T00:00:00.000Z",
+        "updated_by": "x",
+        "quantity": 1
+      }
+    }
+  },
+  "payload_extra": {
+    "overrides": {
+      "hg-001": {
+        "name": "이름"
+      }
+    },
+    "unknown_key": [
+      1,
+      2,
+      3
+    ]
+  },
+  "collection_extra": {
+    "member_note": "keep",
+    "custom_items": {
+      "private-1": {
+        "name": "비공개"
+      }
+    }
+  },
+  "sync": {
+    "dirty": true,
+    "extras_dirty": true,
+    "account": "user-123"
+  },
+  "local_state": {
+    "bbx_owned_parts": [
+      "p1",
+      "p2"
+    ],
+    "bbx_manual_map": {
+      "kit-a": "BX-01",
+      "kit-b": "7"
+    },
+    "guide_manual_lit": [
+      11,
+      12
+    ],
+    "recent_viewed": [
+      "hg-001",
+      "hg-002"
+    ],
+    "bbx_combos": [
+      {
+        "id": "c1",
+        "arch": "standard",
+        "parts": {
+          "blade": "b1",
+          "ratchet": "r1",
+          "bit": "f1"
+        },
+        "nickname": "내 드랜",
+        "favorite": true,
+        "rating": 4,
+        "tags": [
+          "공격"
+        ],
+        "notes": "메모",
+        "source": "custom",
+        "created_at": "2026-09-01T00:00:00.000Z",
+        "updated_at": "2026-09-02T00:00:00.000Z"
+      }
+    ],
+    "bbx_decks": [
+      {
+        "id": "d1",
+        "name": "덱",
+        "rules_profile": "wbo",
+        "combo_ids": [
+          "c1",
+          "",
+          ""
+        ]
+      }
+    ],
+    "tag_owned": [
+      "mz-intl:1-1-001@KR",
+      "frienda:1-1-001"
+    ],
+    "my_channels": [
+      "gundam",
+      "pokemon"
+    ],
+    "special_friends": [
+      "@bro"
+    ],
+    "profile_images": {
+      "avatar": {
+        "file": "a1.jpg",
+        "at": "2026-10-01T00:00:00.000Z",
+        "uploaded_to": "user-123"
+      }
+    },
+    "photo_privacy": {
+      "public": false,
+      "hidden_from": [
+        "@aunt"
+      ],
+      "dirty": true
+    },
+    "dismissed_suggestions": [
+      "@x"
+    ],
+    "friends_seen_at": "2026-10-20T00:00:00.000Z",
+    "friend_avatars": {
+      "@bro": "f1.jpg"
+    },
+    "photos": [
+      {
+        "id": "p1",
+        "file": "p1.jpg",
+        "created_at": "2026-10-05T00:00:00.000Z",
+        "kit_id": "hg-001",
+        "unit_id": "42",
+        "shared": false,
+        "watermark": false,
+        "uploaded_to": "user-123",
+        "deleted": true
+      },
+      {
+        "id": "p2",
+        "file": "p2.jpg",
+        "created_at": "2026-10-06T00:00:00.000Z",
+        "shared": true,
+        "watermark": true
+      }
+    ],
+    "profile_tags": [
+      "HG",
+      "포켓몬"
+    ],
+    "recent_searches": [
+      "엑시아",
+      "드랜"
+    ],
+    "search_counts": {
+      "엑시아": 3,
+      "드랜": 1
+    },
+    "trash": {
+      "hg-004": {
+        "from": "owned",
+        "at": "2099-01-01T00:00:00.000Z"
+      },
+      "hg-005": {
+        "from": "wanted",
+        "at": "2099-01-02T00:00:00.000Z"
+      }
+    }
+  }
+}

@@ -21,9 +21,10 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../clock.dart';
 import '../data/user_store.dart';
+import '../logic/friends.dart';
+import '../logic/level_math.dart';
 import '../models.dart';
 import '../sync/account.dart';
-import '../sync/friends_service.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'p_sign_in_screen.dart';
@@ -46,19 +47,6 @@ class FriendsDrawer extends StatefulWidget {
   @override
   State<FriendsDrawer> createState() => _FriendsDrawerState();
 }
-
-/// 계정 친구 → 화면 모델 (숫자는 받아 둔 컬렉션에서)
-Member friendMemberOf(PublicProfile f, FriendCollection? c) => Member(
-  name: f.name,
-  handle: f.handle,
-  role: '친구',
-  self: false,
-  liked: c?.likedIds.length ?? 0,
-  lit: 0,
-  owned: c?.ownedIds.length ?? 0,
-  likedIds: c?.likedIds ?? const [],
-  ownedIds: c?.ownedIds ?? const [],
-);
 
 class _FriendsDrawerState extends State<FriendsDrawer> {
   late Future<(Profile, int)> _future = _load();

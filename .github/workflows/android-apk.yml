@@ -71,6 +71,7 @@ jobs:
           cp build/app/outputs/flutter-apk/app-release.apk hobby-atlas.apk
 
       - name: version.json (앱 업데이트 확인용)
+        if: github.ref == 'refs/heads/main' # 시험 빌드(다른 가지 · 수동 실행)는 릴리스를 건드리지 않는다
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -95,6 +96,7 @@ jobs:
           path: hobby-atlas.apk
 
       - name: 릴리스 apk-latest 에 올리기
+        if: github.ref == 'refs/heads/main' # main 만 사람들 폰에 간다. 다른 가지는 빌드 확인 + artifact 만
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

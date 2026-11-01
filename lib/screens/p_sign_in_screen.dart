@@ -96,8 +96,7 @@ class _SignInScreenState extends State<SignInScreen> {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
         children: [
           const Text(
-            '옛 Gunpula 앱과 같은 메일로 로그인하면 구매함 · 좋아요가 그대로 와요. '
-            '두 앱 어디서 바꿔도 15초쯤 안에 서로 맞춰져요.',
+            '옛 Gunpula 앱과 같은 메일이면 구매함 · 좋아요가 그대로 와요 · 두 앱이 15초쯤 안에 맞춰져요',
             style: TextStyle(color: Gp.muted, height: 1.45),
           ),
           const SizedBox(height: 18),
@@ -158,8 +157,7 @@ class _SignInScreenState extends State<SignInScreen> {
             ),
           const SizedBox(height: 24),
           const Text(
-            '메일이 안 오면: 스팸함을 보거나 1분쯤 뒤에 다시 받아 주세요. '
-            '처음 쓰는 메일이면 계정이 새로 만들어져요 (동생 · 친구는 각자 메일로).',
+            '메일이 안 오면 스팸함 · 1분 뒤 다시 · 처음 쓰는 메일은 새 계정 (동생 · 친구는 각자 메일)',
             style: TextStyle(fontSize: Gp.t12, color: Gp.faint, height: 1.45),
           ),
         ],

@@ -32,6 +32,7 @@ import '../clock.dart';
 import '../data/social_local.dart' show ProfileImageKind;
 import '../detail_pane.dart';
 import '../level.dart';
+import '../logic/level_math.dart';
 import '../marks.dart';
 import '../models.dart';
 import '../sync/account.dart';
@@ -183,9 +184,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   /// I-3 이름 · 아이디 · 태그
   void _editProfile() {
-    showModalBottomSheet<void>(
+    showGpSheet<void>(
       // I-3 덮기
-      context: context,
+      context,
       builder: (sheet) {
         Widget row(IconData icon, String label, VoidCallback onTap) => ListTile(
           leading: Icon(icon, size: Gp.iM),
@@ -220,9 +221,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _editTags() async {
     final store = Marks.read(context).store;
     final account = AccountScope.read(context);
-    final next = await showModalBottomSheet<List<String>>(
-      context: context,
-      isScrollControlled: true,
+    final next = await showGpSheet<List<String>>(
+      context,
+      tall: true,
       builder: (_) => _TagSheet(initial: _myTags(store.profileTags, account)),
     );
     if (next == null || !mounted) return;
@@ -342,12 +343,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onTap: () => openSignIn(context),
           )
         else if (account.handle.isEmpty && !account.friends.unavailable)
-          _Hint(
-            icon: Icons.alternate_email,
-            text: '아이디가 없어요',
-            action: '아이디 정하기',
-            onTap: () => askHandle(context),
-          ),
+          _Hint(icon: Icons.alternate_email, text: '아이디가 없어요', action: '아이디 정하기', onTap: () => askHandle(context)),
         _Stats(
           // I-4 My Page 와 같은 두 묶음
           groups: [
@@ -383,10 +379,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 )
               : null,
           onAdd: () => addMyPhoto(context),
-          tiles: [
-            for (final ph in photos) MyPhotoTile(ph),
-            for (final k in ownedKits.take(_wallKits)) KitPhotoTile(k),
-          ],
+          tiles: [for (final ph in photos) MyPhotoTile(ph), for (final k in ownedKits.take(_wallKits)) KitPhotoTile(k)],
         ),
         if (signedIn) _friendsPanel(account),
         if (signedIn && account.sync.workspace != null)
@@ -602,7 +595,7 @@ class _Header extends StatelessWidget {
               cover, // 배경(커버)
               const SizedBox(height: 56), // 아바타가 겹쳐 앉는 자리
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: Gp.gutter),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -629,7 +622,7 @@ class _Header extends StatelessWidget {
               if (tags.isNotEmpty) ...[
                 const SizedBox(height: 10),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: Gp.gutter),
                   child: Wrap(
                     spacing: 6,
                     runSpacing: 6,
@@ -799,7 +792,7 @@ class _TagSheetState extends State<_TagSheet> {
                       children: [
                         Text(t, style: const TextStyle(fontSize: Gp.t12)),
                         const SizedBox(width: 2),
-                        const Icon(Icons.close, size: 14, color: Gp.faint),
+                        const Icon(Icons.close, size: Gp.iXS, color: Gp.faint),
                       ],
                     ),
                   ),

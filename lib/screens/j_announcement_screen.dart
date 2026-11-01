@@ -22,14 +22,12 @@ import 'package:webview_flutter_android/webview_flutter_android.dart' show Andro
 import '../api.dart';
 import '../detail_pane.dart';
 import '../channels.dart';
+import '../logic/announcement_match.dart';
 import '../models.dart';
 import '../notifications/notify_store.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'd_kit_detail_screen.dart';
-
-/// 예고가 지나가는 단계 (db.json announcements.status 와 같은 글자)
-const announcementStages = ['공식 발표', '상품화 확정', '예약 시작', '발매'];
 
 /// [list] 를 주면 그 목록 안에서 좌우로 밀어 이전 · 다음 예고 (홈 배너 · 예고 목록 …)
 void openAnnouncement(
@@ -194,7 +192,7 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
           ? '이 예고 알림을 껐어요'
           : store.config.enabled
           ? '다음 단계가 되면 알려 드릴게요'
-          : '다음 단계가 되면 알림함에 넣어 둘게요 · 휴대폰 알림은 설정에서 켜요',
+          : '다음 단계가 되면 알림함에 · 휴대폰 알림은 설정에서',
       onUndo: () => set(before),
     );
   }
@@ -247,76 +245,72 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
   void _showAbout(BuildContext context) {
     final a = widget.item;
     final stage = announcementStages.indexOf(a.status).clamp(0, announcementStages.length - 1);
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Gp.panel,
-      builder: (sheet) => FractionallySizedBox(
-        heightFactor: 0.62,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(0, 20, 0, 24),
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
+    showGpSheet<void>(
+      context,
+      heightFactor: gpSheetHeight,
+      builder: (sheet) => ListView(
+        padding: const EdgeInsets.fromLTRB(0, 20, 0, 24),
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: Gp.gutter),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  a.title,
+                  style: const TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w600, height: 1.4),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  joinDot([channelOf(a.franchiseId).label, dateDot(a.date), a.source]),
+                  style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                ),
+                const SizedBox(height: 20),
+                _StageLine(current: stage),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          FutureBuilder<List<Kit>>(
+            future: _related,
+            builder: (context, snap) {
+              if (snap.connectionState != ConnectionState.done) {
+                return const SizedBox(height: 120, child: LoadingView());
+              }
+              final kits = snap.data ?? const <Kit>[];
+              if (kits.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text(
+                    '이어진 상품 아직 없음 · 상품화되면 여기에', // P09
+                    style: TextStyle(color: Gp.muted, fontSize: Gp.t12),
+                  ),
+                );
+              }
+              return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    a.title,
-                    style: const TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w600, height: 1.4),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    joinDot([channelOf(a.franchiseId).label, dateDot(a.date), a.source]),
-                    style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
-                  ),
-                  const SizedBox(height: 20),
-                  _StageLine(current: stage),
+                  SectionHeader('이 예고의 상품', subtitle: '${kits.length}개'), // P06
+                  _tiles(sheet, kits),
                 ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            FutureBuilder<List<Kit>>(
-              future: _related,
-              builder: (context, snap) {
-                if (snap.connectionState != ConnectionState.done) {
-                  return const SizedBox(height: 120, child: LoadingView());
-                }
-                final kits = snap.data ?? const <Kit>[];
-                if (kits.isEmpty) {
-                  return const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Text(
-                      '제목에서 상품을 찾지 못했어요 · 상품화되면 여기에 보여요', // P09
-                      style: TextStyle(color: Gp.muted, fontSize: Gp.t12),
-                    ),
-                  );
-                }
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SectionHeader('이 예고의 상품', subtitle: '${kits.length}개'), // P06
-                    _tiles(sheet, kits),
-                  ],
-                );
-              },
-            ),
-            FutureBuilder<({String label, List<Kit> kits})>(
-              future: _sameIp, // J-7
-              builder: (context, snap) {
-                final ip = snap.data;
-                if (ip == null || ip.kits.isEmpty) return const SizedBox.shrink();
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SectionHeader('같은 IP의 새 상품', subtitle: ip.label), // P06
-                    _tiles(sheet, ip.kits),
-                  ],
-                );
-              },
-            ),
-          ],
-        ),
+              );
+            },
+          ),
+          FutureBuilder<({String label, List<Kit> kits})>(
+            future: _sameIp, // J-7
+            builder: (context, snap) {
+              final ip = snap.data;
+              if (ip == null || ip.kits.isEmpty) return const SizedBox.shrink();
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SectionHeader('같은 IP의 새 상품', subtitle: ip.label), // P06
+                  _tiles(sheet, ip.kits),
+                ],
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -326,7 +320,7 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
     height: 148 + 32,
     child: ListView.separated(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: Gp.gutter),
       itemCount: kits.length,
       separatorBuilder: (_, _) => const SizedBox(width: 12),
       itemBuilder: (context, i) => ProductTile(
@@ -487,7 +481,7 @@ class _Summary extends StatelessWidget {
             children: [
               if (failed) ...[
                 const Text(
-                  '이 페이지는 앱 안에서 열 수 없어요 · 아래 ↗ 로 브라우저에서 볼 수 있어요',
+                  '앱 안에서 열 수 없는 페이지 · 아래 ↗ 로 브라우저에서',
                   style: TextStyle(fontSize: Gp.t12, color: Gp.danger),
                 ),
                 const SizedBox(height: 12),
@@ -510,27 +504,6 @@ class _Summary extends StatelessWidget {
     );
   }
 }
-
-/// 제목의 「」 안 이름으로 상품 찾기 — 『』(작품 이름)는 쓰지 않는다. 띄어쓰기 · 전각 · 기호는 무시.
-/// 「ブラックナイトスコードカルラ」 → 'METAL ROBOT魂 ＜SIDE MS＞ ブラックナイトスコード カルラ'
-List<Kit> matchAnnouncementKits(String title, List<Kit> kits) {
-  final names = {
-    for (final m in RegExp('「([^」]+)」').allMatches(title))
-      if (foldName(m.group(1)!) case final n when n.length >= 3) n,
-  };
-  if (names.isEmpty) return const [];
-  return [
-    for (final k in kits)
-      if ([foldName(k.nameJa), foldName(k.name)] case final own when names.any((n) => own.any((o) => o.contains(n)))) k,
-  ]..sort((a, b) => b.date.compareTo(a.date));
-}
-
-final _nameNoise = RegExp(r'[\s\-_/・·.,:;!?！？()（）\[\]［］<>＜＞〈〉【】"“”＇’~〜]');
-
-/// 이름 비교용: 전각 영숫자 → 반각, 소문자, 띄어쓰기 · 기호 빼기 (장음 ー 는 남긴다)
-String foldName(String s) => String.fromCharCodes([
-  for (final c in s.runes) c >= 0xFF01 && c <= 0xFF5E ? c - 0xFEE0 : c, // ＡＢＣ１２３ → ABC123
-]).toLowerCase().replaceAll(_nameNoise, '');
 
 /// J-4 단계 진행 줄 — 지난 단계 · 지금(브랜드 색) · 남은 단계(회색)
 class _StageLine extends StatelessWidget {
@@ -590,33 +563,4 @@ class _StageLine extends StatelessWidget {
       ],
     );
   }
-}
-
-/// J-7 같은 IP의 새 상품 — 제목으로 찾은 상품([matches])의 작품(series_key · 작품 이름) 상품 중 발매일 새것(예정 포함)부터.
-/// 찾은 상품이 없으면 채널 전체([all]). 이미 위에 보인 상품은 뺀다. 발매일 없는 상품은 뒤로.
-({String label, List<Kit> kits}) sameIpKits(
-  List<Kit> matches,
-  List<Kit> all, {
-  String channelLabel = '',
-  int max = 12,
-}) {
-  String? key;
-  var label = channelLabel;
-  if (matches.isNotEmpty) {
-    final count = <String, int>{};
-    for (final k in matches) {
-      final s = k.seriesKey.isNotEmpty ? k.seriesKey : k.series;
-      if (s.isNotEmpty) count[s] = (count[s] ?? 0) + 1;
-    }
-    if (count.isNotEmpty) {
-      key = (count.entries.toList()..sort((a, b) => b.value.compareTo(a.value))).first.key;
-      label = matches.firstWhere((k) => k.seriesKey == key || k.series == key).series;
-    }
-  }
-  final shown = {for (final k in matches) k.id};
-  final pool = [
-    for (final k in all)
-      if (!shown.contains(k.id) && (key == null || k.seriesKey == key || (k.seriesKey.isEmpty && k.series == key))) k,
-  ]..sort((a, b) => b.date.compareTo(a.date));
-  return (label: label, kits: pool.take(max).toList());
 }

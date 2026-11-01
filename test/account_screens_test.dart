@@ -18,19 +18,7 @@ import 'package:hobby_atlas/theme.dart';
 
 import 'support/fake_backend.dart';
 
-const _profile = Profile(
-  name: '나',
-  handle: '',
-  avatarText: '나',
-  tags: [],
-  spendKrw: 0,
-  workspace: '',
-  inviteCode: '',
-  members: [],
-  showcase: [],
-  friends: [],
-  suggested: [],
-);
+const _profile = Profile(name: '나', handle: '', avatarText: '나', tags: [], spendKrw: 0, workspace: '', friends: []);
 
 final _loaders = Loaders(
   kits: (_) async => const [],

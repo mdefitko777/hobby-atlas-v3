@@ -5,6 +5,7 @@
 //   4) 없으면 프리미엄 반다이 item-<번호> → 그 번호가 든 상품 id · 출처 주소
 // Flutter 를 쓰지 않는다 (단위 테스트 · compute 안 매핑 함수도 isListingUrl 을 부른다).
 import '../models.dart';
+import 'kit_rules.dart' show kitsWithBarcode;
 
 /// 글 안의 주소 (http · https)
 final _urlRe = RegExp(r'https?://[^\s<>"「」『』（）()]+', caseSensitive: false);

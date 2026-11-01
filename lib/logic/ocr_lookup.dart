@@ -11,7 +11,8 @@
 // Flutter 를 쓰지 않는다 (단위 테스트). 상품 쪽 글자는 OcrIndex 가 한 번만 만든다 (약 1만 개).
 import '../json_util.dart';
 import '../models.dart';
-import '../sentence_search.dart' show ConceptField, sentenceConcepts;
+import 'kit_rules.dart' show kitsWithBarcode;
+import 'sentence_search.dart' show ConceptField, sentenceConcepts;
 import 'url_lookup.dart' show validEan;
 
 enum OcrKind { jan, grade, scale, model, bbx, word }

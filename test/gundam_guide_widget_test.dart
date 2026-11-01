@@ -6,12 +6,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hobby_atlas/api.dart';
 import 'package:hobby_atlas/data/user_store.dart';
 import 'package:hobby_atlas/detail_pane.dart';
-import 'package:hobby_atlas/filter_sheet.dart';
+import 'package:hobby_atlas/widgets.dart';
 import 'package:hobby_atlas/marks.dart';
 import 'package:hobby_atlas/models.dart';
 import 'package:hobby_atlas/screens/g_guide_view.dart';
 import 'package:hobby_atlas/theme.dart';
-import 'package:hobby_atlas/widgets.dart';
 
 import 'support/atlas_fixture.dart';
 

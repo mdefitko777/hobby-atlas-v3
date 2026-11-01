@@ -10,6 +10,7 @@ import 'package:hobby_atlas/data/photo_files.dart';
 import 'package:hobby_atlas/data/social_local.dart';
 import 'package:hobby_atlas/data/user_store.dart';
 import 'package:hobby_atlas/detail_pane.dart';
+import 'package:hobby_atlas/logic/friends.dart';
 import 'package:hobby_atlas/marks.dart';
 import 'package:hobby_atlas/models.dart';
 import 'package:hobby_atlas/screens/f_collection_screen.dart' show CollectionJump;
@@ -26,19 +27,7 @@ import 'package:hobby_atlas/theme.dart';
 
 import 'support/fake_backend.dart';
 
-const _profile = Profile(
-  name: '나',
-  handle: '',
-  avatarText: '나',
-  tags: [],
-  spendKrw: 0,
-  workspace: '',
-  inviteCode: '',
-  members: [],
-  showcase: [],
-  friends: [],
-  suggested: [],
-);
+const _profile = Profile(name: '나', handle: '', avatarText: '나', tags: [], spendKrw: 0, workspace: '', friends: []);
 
 const _work = GuideWork(id: 'w1', section: '우주세기', name: '기동전사 건담', image: '', total: 10, owned: 1);
 

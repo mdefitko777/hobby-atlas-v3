@@ -1,5 +1,7 @@
 // db.json 레코드 → Dart 객체. 모양이 맞지 않는 레코드는 null로 버린다(화면이 죽지 않게).
 // db.json 최상위 키: kits · worlds · guideWorks · guideUnits · bbxTops · bbxParts · announcements · profile
+import 'json_util.dart';
+
 enum CollectStatus { owned, wanted, none }
 
 CollectStatus parseCollectStatus(Object? v) => switch (v) {
@@ -8,7 +10,6 @@ CollectStatus parseCollectStatus(Object? v) => switch (v) {
   _ => CollectStatus.none,
 };
 
-String _s(Map<String, Object?> j, String k) => j[k] is String ? j[k]! as String : '';
 int _i(Map<String, Object?> j, String k) => j[k] is num ? (j[k]! as num).toInt() : 0;
 int? _iOrNull(Map<String, Object?> j, String k) => j[k] is num ? (j[k]! as num).toInt() : null;
 bool _b(Map<String, Object?> j, String k) => j[k] == true;
@@ -137,21 +138,21 @@ class Kit {
   /// lib/data/gunpula.dart mapKitsJob 의 결과 → Kit.
   /// [recentSince] 이후에 처음 들어온 상품 = 최근 추가, [monthPrefix]('yyyy-mm')에 발매 = 이번 달
   static Kit fromSlim(Map<String, Object?> j, {required String recentSince, required String monthPrefix}) {
-    final firstSeen = _s(j, 'firstSeen');
-    final date = _s(j, 'date');
+    final firstSeen = jStr(j['firstSeen']);
+    final date = jStr(j['date']);
     return Kit(
-      id: _s(j, 'id'),
-      franchiseId: _s(j, 'franchiseId'),
-      name: _s(j, 'name'),
-      nameJa: _s(j, 'nameJa'),
-      series: _s(j, 'series'),
-      line: _s(j, 'line'),
-      type: _s(j, 'type'),
-      scale: _s(j, 'scale'),
-      universe: _s(j, 'universe'),
+      id: jStr(j['id']),
+      franchiseId: jStr(j['franchiseId']),
+      name: jStr(j['name']),
+      nameJa: jStr(j['nameJa']),
+      series: jStr(j['series']),
+      line: jStr(j['line']),
+      type: jStr(j['type']),
+      scale: jStr(j['scale']),
+      universe: jStr(j['universe']),
       date: date,
       priceJpy: _iOrNull(j, 'priceJpy'),
-      image: _s(j, 'image'),
+      image: jStr(j['image']),
       gallery: _strs(j['gallery']),
       limited: _b(j, 'limited'),
       pb: _b(j, 'pb'),
@@ -161,16 +162,16 @@ class Kit {
       month: date.startsWith(monthPrefix),
       market: null,
       keywords: _strs(j['keywords']),
-      seriesKey: _s(j, 'seriesKey'),
+      seriesKey: jStr(j['seriesKey']),
       priceKrw: _iOrNull(j, 'priceKrw'),
-      pbOpens: _s(j, 'pbOpens'),
-      pbCloses: _s(j, 'pbCloses'),
-      officialUrl: _s(j, 'officialUrl'),
-      jan: _s(j, 'jan'),
+      pbOpens: jStr(j['pbOpens']),
+      pbCloses: jStr(j['pbCloses']),
+      officialUrl: jStr(j['officialUrl']),
+      jan: jStr(j['jan']),
       brands: _strs(j['brands']),
       firstSeen: firstSeen,
-      blob: _s(j, 'blob'),
-      goodsKind: _s(j, 'goodsKind'),
+      blob: jStr(j['blob']),
+      goodsKind: jStr(j['goodsKind']),
       sourceUrls: _strs(j['sourceUrls']),
     );
   }
@@ -181,17 +182,17 @@ class Kit {
     if (id is! String) return null;
     return Kit(
       id: id,
-      franchiseId: _s(json, 'franchiseId'),
-      name: _s(json, 'name'),
-      nameJa: _s(json, 'nameJa'),
-      series: _s(json, 'series'),
-      line: _s(json, 'line'),
-      type: _s(json, 'type'),
-      scale: _s(json, 'scale'),
-      universe: _s(json, 'universe'),
-      date: _s(json, 'date'),
+      franchiseId: jStr(json['franchiseId']),
+      name: jStr(json['name']),
+      nameJa: jStr(json['nameJa']),
+      series: jStr(json['series']),
+      line: jStr(json['line']),
+      type: jStr(json['type']),
+      scale: jStr(json['scale']),
+      universe: jStr(json['universe']),
+      date: jStr(json['date']),
       priceJpy: _iOrNull(json, 'priceJpy'),
-      image: _s(json, 'image'),
+      image: jStr(json['image']),
       gallery: _strs(json['gallery']),
       limited: _b(json, 'limited'),
       pb: _b(json, 'pb'),
@@ -236,10 +237,10 @@ class World {
     if (id is! String) return null;
     return World(
       id: id,
-      franchiseId: _s(json, 'franchiseId'),
-      label: _s(json, 'label'),
-      subtitle: _s(json, 'subtitle'),
-      image: _s(json, 'image'),
+      franchiseId: jStr(json['franchiseId']),
+      label: jStr(json['label']),
+      subtitle: jStr(json['subtitle']),
+      image: jStr(json['image']),
       total: _i(json, 'total'),
       owned: _i(json, 'owned'),
       kitIds: _strs(json['kitIds']),
@@ -302,12 +303,12 @@ class GuideWork {
     if (id is! String) return null;
     return GuideWork(
       id: id,
-      section: _s(json, 'section'),
-      name: _s(json, 'name'),
-      image: _s(json, 'image'),
+      section: jStr(json['section']),
+      name: jStr(json['name']),
+      image: jStr(json['image']),
       total: _i(json, 'total'),
       owned: _i(json, 'owned'),
-      keywords: _s(json, 'keywords'),
+      keywords: jStr(json['keywords']),
       liked: _i(json, 'liked'),
       grades: _strs(json['grades']),
       kits: _i(json, 'kits'),
@@ -372,13 +373,13 @@ class GuideUnit {
     if (id is! String) return null;
     return GuideUnit(
       id: id,
-      workId: _s(json, 'workId'),
-      name: _s(json, 'name'),
-      nameEn: _s(json, 'nameEn'),
-      image: _s(json, 'image'),
+      workId: jStr(json['workId']),
+      name: jStr(json['name']),
+      nameEn: jStr(json['nameEn']),
+      image: jStr(json['image']),
       status: parseCollectStatus(json['status']),
       kitIds: _strs(json['kitIds']),
-      type: _s(json, 'type'),
+      type: jStr(json['type']),
     );
   }
 }
@@ -425,11 +426,11 @@ class BbxPart {
     final raw = json['stats'];
     return BbxPart(
       id: id,
-      typeLabel: _s(json, 'typeLabel'),
-      name: _s(json, 'name'),
-      image: _s(json, 'image'),
+      typeLabel: jStr(json['typeLabel']),
+      name: jStr(json['name']),
+      image: jStr(json['image']),
       have: _b(json, 'have'),
-      topId: _s(json, 'topId'),
+      topId: jStr(json['topId']),
       stats: raw is Map<String, Object?>
           ? {
               for (final e in raw.entries)
@@ -469,9 +470,9 @@ class BbxTop {
     final parts = json['parts'];
     return BbxTop(
       id: id,
-      line: _s(json, 'line'),
-      name: _s(json, 'name'),
-      image: _s(json, 'image'),
+      line: jStr(json['line']),
+      name: jStr(json['name']),
+      image: jStr(json['image']),
       owned: _i(json, 'owned'),
       total: _i(json, 'total'),
       parts: parts is List ? parts.map(BbxPart.fromJson).nonNulls.toList() : const [],
@@ -518,18 +519,18 @@ class Announcement {
     if (id is! String) return null;
     return Announcement(
       id: id,
-      franchiseId: _s(json, 'franchiseId'),
-      title: _s(json, 'title'),
-      status: _s(json, 'status'),
-      date: _s(json, 'date'),
-      source: _s(json, 'source'),
-      image: _s(json, 'image'),
+      franchiseId: jStr(json['franchiseId']),
+      title: jStr(json['title']),
+      status: jStr(json['status']),
+      date: jStr(json['date']),
+      source: jStr(json['source']),
+      image: jStr(json['image']),
       hero: _b(json, 'hero'),
     );
   }
 }
 
-/// 내 정보 (가짜 계정 — 실제 로그인 없음)
+/// 내 정보 — 이름 · 아이디 · 친구는 계정에서, 숫자는 기기 기록에서 (lib/data/derive/profile.dart)
 class Profile {
   const Profile({
     required this.name,
@@ -538,11 +539,7 @@ class Profile {
     required this.tags,
     required this.spendKrw,
     required this.workspace,
-    required this.inviteCode,
-    required this.members,
-    required this.showcase,
     required this.friends,
-    required this.suggested,
   });
 
   final String name;
@@ -551,65 +548,23 @@ class Profile {
   final List<String> tags;
   final int spendKrw;
   final String workspace;
-  final String inviteCode;
-  final List<Member> members;
-
-  /// 사진 벽 (나 + 친구). [ShowcasePhoto.owner] = 올린 사람 아이디
-  final List<ShowcasePhoto> showcase;
 
   /// 친구 목록 (친구 서랍 · 친구 프로필)
   final List<Member> friends;
 
-  /// 내 게시물 (= 내 사진 인증 수)
-  List<ShowcasePhoto> get myPosts => [
-    for (final s in showcase)
-      if (s.owner == handle) s,
-  ];
-
-  /// 공유 공간 멤버 → 친구 목록의 자세한 정보(좋아요 · 구매함 id 등)
-  Member friendOf(Member m) => friends.where((f) => f.handle == m.handle).firstOrNull ?? m;
-
-  /// 알 수도 있는 친구 (이름, 아이디, 함께 아는 친구 수)
-  final List<({String name, String handle, int mutual})> suggested;
-
   static Profile? fromJson(Object? json) {
     if (json is! Map<String, Object?>) return null;
-    final members = json['members'];
-    final showcase = json['showcase'];
     final friends = json['friends'];
-    final suggested = json['suggested'];
     return Profile(
-      name: _s(json, 'name'),
-      handle: _s(json, 'handle'),
-      avatarText: _s(json, 'avatarText'),
+      name: jStr(json['name']),
+      handle: jStr(json['handle']),
+      avatarText: jStr(json['avatarText']),
       tags: _strs(json['tags']),
       spendKrw: _i(json, 'spendKrw'),
-      workspace: _s(json, 'workspace'),
-      inviteCode: _s(json, 'inviteCode'),
-      members: [
-        if (members is List)
-          for (final m in members.whereType<Map<String, Object?>>()) Member.fromJson(m),
-      ],
+      workspace: jStr(json['workspace']),
       friends: [
         if (friends is List)
           for (final m in friends.whereType<Map<String, Object?>>()) Member.fromJson(m),
-      ],
-      suggested: [
-        if (suggested is List)
-          for (final m in suggested.whereType<Map<String, Object?>>())
-            (name: _s(m, 'name'), handle: _s(m, 'handle'), mutual: _i(m, 'mutual')),
-      ],
-      showcase: [
-        if (showcase is List)
-          for (final m in showcase.whereType<Map<String, Object?>>())
-            ShowcasePhoto(
-              id: _s(m, 'id'),
-              owner: _s(m, 'owner'),
-              image: _s(m, 'image'),
-              unit: _s(m, 'unit'),
-              work: _s(m, 'work'),
-              watermark: _b(m, 'watermark'),
-            ),
       ],
     );
   }
@@ -636,15 +591,15 @@ class Member {
   factory Member.fromJson(Map<String, Object?> m) {
     final guide = m['guide'];
     return Member(
-      name: _s(m, 'name'),
-      handle: _s(m, 'handle'),
-      role: _s(m, 'role'),
+      name: jStr(m['name']),
+      handle: jStr(m['handle']),
+      role: jStr(m['role']),
       self: _b(m, 'self'),
       liked: _i(m, 'liked'),
       lit: _i(m, 'lit'),
       owned: _i(m, 'owned'),
       verified: _i(m, 'verified'),
-      status: _s(m, 'status'),
+      status: jStr(m['status']),
       group: m['group'] is String ? m['group']! as String : 'friend',
       likedIds: _strs(m['likedIds']),
       ownedIds: _strs(m['ownedIds']),
@@ -677,27 +632,6 @@ class Member {
 
   /// 작품 id → 이 친구가 모은 칸 수
   final Map<String, int> guide;
-}
-
-/// 사진 벽 한 장 — 도감에서 인증한 기체와 이어져 있다
-class ShowcasePhoto {
-  const ShowcasePhoto({
-    required this.id,
-    required this.owner,
-    required this.image,
-    required this.unit,
-    required this.work,
-    required this.watermark,
-  });
-
-  final String id;
-  final String owner;
-  final String image;
-  final String unit;
-  final String work;
-
-  /// 다른 사람이 저장할 때 오른쪽 아래 "HA · @아이디" 를 넣을지
-  final bool watermark;
 }
 
 /// 알림 종류 — 탭 묶음: 상품(발매 · 예약 · 시세) · 예고 · 친구(활동 · 요청)
@@ -738,80 +672,21 @@ class AppNotice {
   static AppNotice? fromJson(Object? json) {
     if (json is! Map<String, Object?>) return null;
     final id = json['id'];
-    final at = DateTime.tryParse(_s(json, 'at'));
+    final at = DateTime.tryParse(jStr(json['at']));
     final type = NoticeType.values.where((t) => t.name == json['type']).firstOrNull;
     if (id is! String || at == null || type == null) return null;
     return AppNotice(
       id: id,
       type: type,
-      title: _s(json, 'title'),
-      body: _s(json, 'body'),
-      image: _s(json, 'image'),
+      title: jStr(json['title']),
+      body: jStr(json['body']),
+      image: jStr(json['image']),
       at: at,
       read: _b(json, 'read'),
-      franchiseId: _s(json, 'franchiseId'),
-      kitId: _s(json, 'kitId'),
-      annId: _s(json, 'annId'),
-      friend: _s(json, 'friend'),
+      franchiseId: jStr(json['franchiseId']),
+      kitId: jStr(json['kitId']),
+      annId: jStr(json['annId']),
+      friend: jStr(json['friend']),
     );
   }
 }
-
-/// 검색어가 이름 · 일본어 이름 · 작품 · 라인 · 종류에 들어 있는지 (검색 탭 · 홈 전체 목록 공통)
-bool kitMatches(Kit k, String query) {
-  final q = query.trim().toLowerCase();
-  if (q.isEmpty) return true;
-  // 실제 데이터: 미리 만든 소문자 한 줄에서 (8,800개를 글자마다 다시 소문자로 바꾸지 않게)
-  if (k.blob.isNotEmpty) return q.split(RegExp(r'\s+')).every(k.blob.contains);
-  // keywords: 한글 줄임말(수성 · 철혈 …) · 다른 표기로도 찾히게
-  return [k.name, k.nameJa, k.series, k.line, k.type, ...k.keywords].any((f) => f.toLowerCase().contains(q));
-}
-
-/// 바코드 읽은 값 → 숫자 13자리 비교용 (UPC-A 12자리는 앞에 0, EAN-8 은 그대로). 숫자가 아니면 빈 글자
-String normalizeBarcode(String raw) {
-  final d = raw.replaceAll(RegExp(r'\D'), '');
-  if (d.length == 12) return '0$d';
-  return d.length == 8 || d.length == 13 ? d : '';
-}
-
-/// 이 바코드의 상품 (Kit.jan, 없으면 이름 · 키워드 한 줄에 그 숫자가 있는 것)
-List<Kit> kitsWithBarcode(Iterable<Kit> kits, String raw) {
-  final code = normalizeBarcode(raw);
-  if (code.isEmpty) return const [];
-  final exact = [
-    for (final k in kits)
-      if (k.jan == code) k,
-  ];
-  if (exact.isNotEmpty) return exact;
-  return [
-    for (final k in kits)
-      if (k.blob.contains(code) || k.keywords.contains(code)) k,
-  ];
-}
-
-/// 작품 묶음 이름 (홈 전체 목록 거르기). 베이블레이드는 작품이 하나라 series(한정 · UX…) 대신 이름 하나로
-String kitWork(Kit k) => k.franchiseId == 'beyblade' ? 'BEYBLADE X' : k.series;
-
-/// 작품 도감 전체의 점등 칸 수
-int litCount(Iterable<GuideWork> works) => works.fold(0, (s, w) => s + w.owned);
-
-/// 수집 경험치 — 구매 10 · 도감 새 칸 5 · 사진 인증 3 · 좋아요 0 (lib/level.dart ? 에 같은 표)
-int collectorXp({int owned = 0, int lit = 0, int verified = 0, int liked = 0}) => owned * 10 + lit * 5 + verified * 3;
-
-/// 경험치 → 레벨 · 이번 레벨에서 모은 양 · 다음 레벨까지 필요한 양 (레벨 n 에서 n+1 까지 50 + 10·(n-1))
-({int level, int into, int need}) levelOf(int xp) {
-  var level = 1, rest = xp, need = 50;
-  while (rest >= need) {
-    rest -= need;
-    level++;
-    need = 50 + 10 * (level - 1);
-  }
-  return (level: level, into: rest, need: need);
-}
-
-/// 수집 레벨 (My Page · 도감 · 내 정보 · 친구 서랍 공통)
-int guideLevel(int lit, int verified, {int owned = 0, int liked = 0}) =>
-    levelOf(collectorXp(owned: owned, lit: lit, verified: verified, liked: liked)).level;
-
-/// 워터마크 글자: 앱 이름 줄임(GP) + 올린 사람 아이디
-String watermarkText(String handle) => 'HA · @$handle';

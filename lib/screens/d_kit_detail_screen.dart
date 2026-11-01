@@ -29,11 +29,12 @@ import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:url_launcher/url_launcher.dart';
 
 import '../api.dart';
+import '../logic/friends.dart';
+import '../logic/market.dart';
 import '../marks.dart';
 import '../detail_pane.dart';
 import '../channels.dart';
 import '../data/catalog.dart';
-import '../data/friend_overlap.dart';
 import '../sync/account.dart';
 import '../data/user_store.dart';
 import '../models.dart';
@@ -87,19 +88,6 @@ class _KitPagerState extends State<KitPager> {
 /// 넓은 화면 기준 (사진 왼쪽 · 정보 오른쪽)
 const detailWideBreakpoint = 720.0;
 
-/// 시세를 찾아볼 국내 플랫폼 → 상품명으로 검색한 페이지를 브라우저로 연다
-const marketPlatforms = ['네이버쇼핑', '번개장터', '중고나라'];
-
-String marketSearchUrl(String platform, String query) {
-  final q = Uri.encodeComponent(query);
-  return switch (platform) {
-    '네이버쇼핑' => 'https://search.shopping.naver.com/search/all?query=$q',
-    '번개장터' => 'https://m.bunjang.co.kr/search/products?q=$q',
-    '중고나라' => 'https://web.joongna.com/search/$q',
-    _ => 'https://www.google.com/search?q=$q',
-  };
-}
-
 class KitDetailScreen extends StatefulWidget {
   const KitDetailScreen({super.key, required this.kit, this.loaders = const Loaders()});
 
@@ -134,8 +122,8 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
 
   /// D-9 국내 시세 자세히 (바텀 시트) — 시세는 이 한 곳에서만 보여 준다
   void _openMarket() {
-    showModalBottomSheet<void>(
-      context: context,
+    showGpSheet<void>(
+      context,
       builder: (_) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -155,9 +143,9 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
   /// D-5c 내 구매가 입력 (바텀 시트 + 숫자 칸)
   void _editPaid() {
     final ctrl = TextEditingController(text: _paid?.toString() ?? '');
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
+    showGpSheet<void>(
+      context,
+      tall: true,
       builder: (sheet) => Padding(
         padding: EdgeInsets.fromLTRB(16, 0, 16, MediaQuery.viewInsetsOf(sheet).bottom + 16),
         child: Column(
@@ -244,10 +232,10 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
   ].where((e) => e.$2.isNotEmpty).toList();
 
   void _openSpecs() {
-    showModalBottomSheet<void>(
+    showGpSheet<void>(
       // D-8 덮기
-      context: context,
-      isScrollControlled: true,
+      context,
+      tall: true,
       builder: (context) => _SpecSheet(specs: _specs),
     );
   }
@@ -480,7 +468,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
                   height: 148 + 32,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: Gp.gutter),
                     itemCount: rest.length,
                     separatorBuilder: (_, _) => const SizedBox(width: 12),
                     itemBuilder: (context, i) => ProductTile(
@@ -742,7 +730,7 @@ class _MarketCard extends StatelessWidget {
                             style: const TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w500),
                           ),
                           const SizedBox(width: 2),
-                          const Icon(Icons.north_east, size: 12, color: Gp.muted),
+                          const Icon(Icons.north_east, size: Gp.iXS, color: Gp.muted),
                         ],
                       ),
                     ),
@@ -920,8 +908,16 @@ class _FriendsWithKit extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (f.owned.isNotEmpty) Tooltip(message: '갖고 있는 친구', child: line(const OwnedIcon(size: Gp.iS, filled: true), f.owned)),
-          if (f.liked.isNotEmpty) Tooltip(message: '좋아요한 친구', child: line(const LikedIcon(size: Gp.iS, filled: true), f.liked)),
+          if (f.owned.isNotEmpty)
+            Tooltip(
+              message: '갖고 있는 친구',
+              child: line(const OwnedIcon(size: Gp.iS, filled: true), f.owned),
+            ),
+          if (f.liked.isNotEmpty)
+            Tooltip(
+              message: '좋아요한 친구',
+              child: line(const LikedIcon(size: Gp.iS, filled: true), f.liked),
+            ),
         ],
       ),
     );

@@ -1,6 +1,7 @@
 // Gunpula 상품 카탈로그 — 기기 캐시를 먼저 보여 주고, 뒤에서 GitHub Pages 의 새 데이터를 받는다.
 //   1) split/manifest.json (176 B) 의 updated_at · total 이 같으면 아무것도 받지 않는다
 //   2) 다르면 보조 파일(auxFiles) → split/kits-<채널>.json 5개를 받아 compute() 에서 가벼운 모양으로 바꿔 저장
+import '../format.dart';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -49,7 +50,7 @@ class Catalog extends ChangeNotifier {
   String recentUntil = '';
 
   /// 데이터 기준일 (manifest updated_at)
-  String get updatedAt => manifest['updated_at'] is String ? manifest['updated_at']! as String : '';
+  String get updatedAt => jStr(manifest['updated_at']);
 
   Future<void>? _loading;
   bool _refreshing = false;
@@ -210,7 +211,7 @@ class Catalog extends ChangeNotifier {
         ? ''
         : DateTime.parse(latest).subtract(const Duration(days: 2)).toIso8601String().substring(0, 10);
     final now = DateTime.now();
-    final monthPrefix = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+    final monthPrefix = monthKey(now);
     final list = [for (final s in _slim) Kit.fromSlim(s, recentSince: recentSince, monthPrefix: monthPrefix)]
       // 발매일 새것부터, 발매일 없는 것은 뒤로
       ..sort((a, b) {

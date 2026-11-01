@@ -36,7 +36,10 @@ final channelCovers = <String, String>{};
 const defaultMyChannels = ['gundam', 'beyblade', 'pokemon'];
 
 Channel channelOf(String id) {
-  final c = allChannels.firstWhere((c) => c.id == id, orElse: () => Channel(id: id, label: id, hasData: false));
+  final c = allChannels.firstWhere(
+    (c) => c.id == id,
+    orElse: () => Channel(id: id, label: id, hasData: false),
+  );
   final cover = channelCovers[id];
   return cover == null || cover.isEmpty ? c : Channel(id: c.id, label: c.label, image: cover, hasData: c.hasData);
 }

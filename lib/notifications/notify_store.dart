@@ -1,6 +1,7 @@
 // 알림 — 앱 전체가 함께 보는 한 벌: 🔔 안 읽은 수 · 알림 화면(읽음 · 지움) · 설정 스위치 · 새 소식 확인.
 // 저장: notify_config.json(설정 + 확인할 대상) · notify_state.json(알림함). 모양은 notify_models.dart.
 // 확인은 lib/background/catalog_check_worker.dart 의 runCatalogCheck — 앱을 열 때 · 돌아올 때(20분에 한 번) + 12시간마다 백그라운드.
+import '../format.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -183,16 +184,14 @@ class NotifyStore extends ChangeNotifier {
     final at = DateTime.tryParse(state.lastCheckAt)?.toLocal();
     if (at == null) return '아직 확인하지 않았어요';
     if (state.lastError.isNotEmpty) return state.lastError;
-    String two(int n) => n.toString().padLeft(2, '0');
-    return '${at.month}.${two(at.day)} ${two(at.hour)}:${two(at.minute)} 확인';
+    return '${shortDateTime(at)} 확인';
   }
 
   /// "마지막 확인 11.01 13:20 · 피드 2026-10-23 · 새 알림 2" (+ 요약 피드만 읽었으면 그렇다고)
   String get statusLine {
     final at = DateTime.tryParse(state.lastCheckAt)?.toLocal();
     if (at == null) return '아직 확인하지 않았어요';
-    String two(int n) => n.toString().padLeft(2, '0');
-    final t = '${at.month}.${two(at.day)} ${two(at.hour)}:${two(at.minute)}';
+    final t = shortDateTime(at);
     if (state.lastError.isNotEmpty) return '마지막 확인 $t · ${state.lastError}';
     final src = switch (state.lastSource) {
       'lite' => ' · 요약 피드(날짜마다 20개까지)',
