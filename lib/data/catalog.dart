@@ -21,7 +21,7 @@ class Catalog extends ChangeNotifier {
   static const _metaKey = 'catalog_meta.json';
 
   /// 상품 매핑 규칙(lib/data/gunpula.dart)을 바꾸면 +1 → 기기 캐시를 버리고 다시 받아 정리한다
-  static const mapVersion = 2;
+  static const mapVersion = 3;
 
   CatalogPhase phase = CatalogPhase.empty;
   String error = '';

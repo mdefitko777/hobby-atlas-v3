@@ -110,6 +110,26 @@ const _cardWords = ['カードダス', 'ウエハース', 'カードゲーム', 
 const _capsuleWords = ['ガシャポン', 'ガチャ', 'カプセル', '가샤폰', '캡슐'];
 bool _hasAny(String name, List<String> words) => words.any(name.contains);
 
+/// 굿즈 세부 종류 (Gunpula 레코드 goods_kind) → 한국어
+const goodsKindLabels = {
+  'ticket': '티켓 · 이벤트',
+  'apparel': '의류',
+  'household': '생활용품',
+  'stationery': '문구',
+  'acrylic': '아크릴',
+  'accessory': '액세서리',
+  'media_video': '블루레이 · DVD',
+  'media_audio': '음반',
+  'book': '책 · 화보',
+  'pamphlet': '팸플릿',
+  'food': '식품',
+  'video_game': '게임',
+  'board_game': '보드게임',
+  'card_game': '카드 게임',
+  'hobby_supply': '공구 · 재료',
+  'other': '기타',
+};
+
 /// 상품 유형. [name] 은 일본어 이름 + 한국어 이름 (카드 · 가샤폰 낱말을 찾는다)
 String typeLabel(String code, String category, [String name = '']) {
   // 가샤폰 = 캡슐 장난감만, 카드팩 · 웨하스 = 카드, 나머지 굿즈 (상품 이름이 묶음 코드보다 정확하다)
@@ -225,7 +245,10 @@ List<Map<String, Object?>> mapKitsJob(Map<String, String> msg) {
     final nameJa = pickName(names, const ['ja', 'en', 'ko']);
     final seriesLabel = pickName(labels);
     final line = lineLabel(code, subline, id);
-    final type = typeLabel(code, grades[code] ?? '', '${_str(names['ja'])} ${_str(names['ko'])}');
+    final goodsKind = _str(r['goods_kind']);
+    final type = goodsKind.isEmpty
+        ? typeLabel(code, grades[code] ?? '', '${_str(names['ja'])} ${_str(names['ko'])}')
+        : (goodsKind == 'card_game' ? '카드' : '굿즈');
     final keywords = <String>{
       _str(names['en']),
       _str(names['zh']),
@@ -263,6 +286,8 @@ List<Map<String, Object?>> mapKitsJob(Map<String, String> msg) {
       'pbOpens': _str(pbInfo['order_opens_at']).split('T').first,
       'pbCloses': _str(pbInfo['order_closes_at']).split('T').first,
       'officialUrl': sourceUrls.isEmpty ? '' : sourceUrls.first,
+      // 굿즈 세부 종류 (티켓 · 의류 · 블루레이 …) — 데이터에 있으면 유형은 굿즈(카드 게임은 카드)
+      'goodsKind': goodsKindLabels[_str(r['goods_kind'])] ?? '',
       'jan': jan,
       'brands': brands,
       'firstSeen': _str(firstSeen[id]),

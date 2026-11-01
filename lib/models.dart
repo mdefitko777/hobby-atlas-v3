@@ -65,6 +65,7 @@ class Kit {
     this.brands = const [],
     this.firstSeen = '',
     this.blob = '',
+    this.goodsKind = '',
   });
 
   final String id;
@@ -125,6 +126,9 @@ class Kit {
   /// 검색용 소문자 한 줄 (이름 4개 언어 · 작품 · 라인 · JAN …)
   final String blob;
 
+  /// 굿즈 세부 종류 (티켓 · 의류 · 블루레이 …, 한국어). 굿즈가 아니면 빈 글자
+  final String goodsKind;
+
   /// lib/data/gunpula.dart mapKitsJob 의 결과 → Kit.
   /// [recentSince] 이후에 처음 들어온 상품 = 최근 추가, [monthPrefix]('yyyy-mm')에 발매 = 이번 달
   static Kit fromSlim(Map<String, Object?> j, {required String recentSince, required String monthPrefix}) {
@@ -161,6 +165,7 @@ class Kit {
       brands: _strs(j['brands']),
       firstSeen: firstSeen,
       blob: _s(j, 'blob'),
+      goodsKind: _s(j, 'goodsKind'),
     );
   }
 

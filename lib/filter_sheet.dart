@@ -65,17 +65,22 @@ class KitFilter {
     Set<String>? works,
     Set<String>? types,
     Set<String>? lines,
+    Set<String>? goodsKinds,
     this.mine = MineState.any,
     this.release = ReleaseState.any,
     this.sale = SaleState.any,
     this.price = PriceBand.any,
   }) : works = works ?? {},
        types = types ?? {},
-       lines = lines ?? {};
+       lines = lines ?? {},
+       goodsKinds = goodsKinds ?? {};
 
   final Set<String> works;
   final Set<String> types;
   final Set<String> lines;
+
+  /// 굿즈 세부 종류 (굿즈를 고르면 보인다)
+  final Set<String> goodsKinds;
   MineState mine;
   ReleaseState release;
   SaleState sale;
@@ -88,6 +93,7 @@ class KitFilter {
     works: {...works},
     types: {...types},
     lines: {...lines},
+    goodsKinds: {...goodsKinds},
     mine: mine,
     release: release,
     sale: sale,
@@ -98,6 +104,7 @@ class KitFilter {
       works.length +
       types.length +
       lines.length +
+      goodsKinds.length +
       (mine == MineState.any ? 0 : 1) +
       (release == ReleaseState.any ? 0 : 1) +
       (sale == SaleState.any ? 0 : 1) +
@@ -107,6 +114,7 @@ class KitFilter {
     if (works.isNotEmpty && !works.contains(kitWork(k))) return false;
     if (types.isNotEmpty && !types.contains(k.type)) return false;
     if (lines.isNotEmpty && !lines.contains(k.line)) return false;
+    if (goodsKinds.isNotEmpty && !goodsKinds.contains(k.goodsKind)) return false;
     if (!price.hit(k.priceJpy)) return false;
     final st = statusOf?.call(k) ?? k.status;
     final today = _today();
@@ -139,6 +147,7 @@ class KitFilter {
     ...works,
     ...types,
     ...lines,
+    ...goodsKinds,
     if (price != PriceBand.any) price.label,
   ];
 }
@@ -206,6 +215,7 @@ class _FilterSheetState extends State<FilterSheet> {
                 TextButton(
                   onPressed: () => setState(() {
                     _draft
+                      ..goodsKinds.clear()
                       ..works.clear()
                       ..types.clear()
                       ..lines.clear()
@@ -258,6 +268,21 @@ class _FilterSheetState extends State<FilterSheet> {
                     ..add(v)),
                   onToggle: (v) => _toggle(_draft.types, v),
                 ),
+                // 굿즈를 고르면 세부 종류 (티켓 · 의류 · 블루레이 …)
+                if (_draft.types.contains('굿즈') && kits.any((k) => k.goodsKind.isNotEmpty)) ...[
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(2, 10, 0, 2),
+                    child: Text('굿즈 종류', style: TextStyle(fontSize: Gp.t12, color: Gp.muted)),
+                  ),
+                  _CheckGrid(
+                    values: valueCounts(kits.map((k) => k.goodsKind)).map((e) => e.$1).toList(),
+                    selected: _draft.goodsKinds,
+                    countOf: (v) => _with((f) => f.goodsKinds
+                      ..clear()
+                      ..add(v)),
+                    onToggle: (v) => _toggle(_draft.goodsKinds, v),
+                  ),
+                ],
                 const Divider(height: 20),
                 _ExpandRow(
                   title: '라인',
