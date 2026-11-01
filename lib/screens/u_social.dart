@@ -34,41 +34,6 @@ import '../theme.dart';
 import '../widgets.dart';
 import 't_photo_screen.dart' show PhotoChoice, askPhotoSource, photoPicker;
 
-/// 기기 사진 파일을 동그라미에 — 파일이 없으면 [fallback]
-class _FilePhoto extends StatefulWidget {
-  const _FilePhoto({super.key, required this.file, required this.fallback});
-  final String file;
-  final Widget fallback;
-
-  @override
-  State<_FilePhoto> createState() => _FilePhotoState();
-}
-
-class _FilePhotoState extends State<_FilePhoto> {
-  late Future<ImageProvider?> _img = PhotoFiles.instance.provider(widget.file);
-
-  @override
-  void didUpdateWidget(_FilePhoto old) {
-    super.didUpdateWidget(old);
-    if (old.file != widget.file) _img = PhotoFiles.instance.provider(widget.file);
-  }
-
-  @override
-  Widget build(BuildContext context) => FutureBuilder<ImageProvider?>(
-    future: _img,
-    builder: (context, snap) => switch (snap.data) {
-      final img? => Image(
-        image: img,
-        fit: BoxFit.cover,
-        gaplessPlayback: true,
-        errorBuilder: (_, _, _) => widget.fallback,
-      ),
-      _ when snap.connectionState != ConnectionState.done => const ColoredBox(color: Gp.soft),
-      _ => widget.fallback,
-    },
-  );
-}
-
 Widget _initial(String text, double size) => ColoredBox(
   color: Gp.panel,
   child: Center(
@@ -104,7 +69,7 @@ class MyAvatar extends StatelessWidget {
           tooltip: tooltip,
           photo: img == null
               ? null
-              : _FilePhoto(key: ValueKey('avatar-file-${img.file}'), file: img.file, fallback: _initial(text, size)),
+              : LocalPhotoImage(img.file, key: ValueKey('avatar-file-${img.file}'), fallback: _initial(text, size)),
         );
       },
     );
@@ -137,7 +102,7 @@ class FriendAvatar extends StatelessWidget {
             ringWidth: 3,
             photo: file == null
                 ? null
-                : _FilePhoto(key: ValueKey('friend-avatar-$handle'), file: file, fallback: _initial(text, size)),
+                : LocalPhotoImage(file, key: ValueKey('friend-avatar-$handle'), fallback: _initial(text, size)),
           );
         }
         if (file == null) return CircleThumb(image: '', label: label, size: size);
@@ -150,9 +115,9 @@ class FriendAvatar extends StatelessWidget {
             color: Gp.soft,
             border: Border.all(color: Gp.line),
           ),
-          child: _FilePhoto(
+          child: LocalPhotoImage(
+            file,
             key: ValueKey('friend-avatar-$handle'),
-            file: file,
             fallback: CircleThumb(image: '', label: label, size: size),
           ),
         );

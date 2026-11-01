@@ -67,11 +67,13 @@ class AppImage extends StatelessWidget {
 /// AppImage 경로 앞에 붙이면 내 사진 파일 (도감 칸 등 그림 경로 하나만 받는 곳)
 const localPhotoPrefix = 'local:';
 
-/// 내 사진 (기기 파일 — lib/data/photo_files.dart). 못 읽으면 회색 칸
+/// 내 사진 (기기 파일 — lib/data/photo_files.dart). 못 읽으면 회색 칸, [fallback] 을 주면 파일이 없거나 깨졌을 때 그것
+/// (아바타 · 배경 · 친구 아바타는 첫 글자)
 class LocalPhotoImage extends StatefulWidget {
-  const LocalPhotoImage(this.file, {super.key, this.fit = BoxFit.cover});
+  const LocalPhotoImage(this.file, {super.key, this.fit = BoxFit.cover, this.fallback});
   final String file;
   final BoxFit fit;
+  final Widget? fallback;
 
   @override
   State<LocalPhotoImage> createState() => _LocalPhotoImageState();
@@ -94,8 +96,9 @@ class _LocalPhotoImageState extends State<LocalPhotoImage> {
         image: img,
         fit: widget.fit,
         gaplessPlayback: true,
-        errorBuilder: (_, _, _) => const _Placeholder(''),
+        errorBuilder: (_, _, _) => widget.fallback ?? const _Placeholder(''),
       ),
+      _ when widget.fallback != null && snap.connectionState == ConnectionState.done => widget.fallback!,
       _ => const ColoredBox(color: Gp.soft),
     },
   );
