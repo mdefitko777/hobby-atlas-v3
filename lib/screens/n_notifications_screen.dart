@@ -100,7 +100,8 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  NotifyStore get _store => widget.notify ?? NotifyScope.read(context);
+  /// 처음 쓸 때(initState) 한 번 찾아 둔다 — dispose 에서 위쪽 위젯을 찾으면 안 된다
+  late final NotifyStore _store = widget.notify ?? NotifyScope.read(context);
   late Future<List<AppNotice>> _future = widget.loaders.notifications(); // STATE: 알림함
   late int _rev = _store.inboxRevision;
   _Tab _tab = _Tab.all;

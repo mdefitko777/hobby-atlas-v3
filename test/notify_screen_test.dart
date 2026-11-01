@@ -175,4 +175,30 @@ void main() {
     expect(bellCount('2'), findsNothing);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('NotifyScope: 화면은 위쪽 한 벌을 쓰고, 닫힐 때(dispose) 위쪽을 다시 찾지 않는다', (tester) async {
+    final store = NotifyStore.memory(records: records);
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      NotifyScope(
+        store: store,
+        child: MaterialApp(
+          theme: buildGpTheme(),
+          builder: (context, child) => MarksHost(store: UserStore.memory(), child: PaneHost(child: child!)),
+          home: NotificationsScreen(myChannels: mine, loaders: loadersFor(store)), // notify 를 넘기지 않는다
+        ),
+      ),
+    );
+    for (var i = 0; i < 4; i++) {
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+    await tester.tap(find.text('모두 읽음'));
+    await tester.pump();
+    expect(store.unreadCount(mine), 0); // 위쪽 한 벌에 적혔다
+    await tester.pump(const Duration(seconds: 5)); // 토스트가 닫힐 때까지
+    await tester.pumpWidget(const SizedBox()); // 화면이 닫힌다 → dispose
+    expect(tester.takeException(), isNull);
+  });
 }

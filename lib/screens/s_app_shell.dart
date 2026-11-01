@@ -81,7 +81,7 @@ class _AppShellState extends State<AppShell> {
 
   final _scaffold = GlobalKey<ScaffoldState>();
 
-  NotifyStore get _notify => widget.notify ?? NotifyScope.read(context);
+  late final NotifyStore _notify = widget.notify ?? NotifyScope.read(context);
   UserStore? _me;
 
   /// 탭 묶음 (화면 모양이 바뀌어도 유지)
