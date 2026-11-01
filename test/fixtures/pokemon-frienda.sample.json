@@ -1,0 +1,812 @@
+{
+ "schema": 1,
+ "updated_at": "2026-11-01T07:38:49.542Z",
+ "game": "frienda",
+ "edition": {
+  "id": "frienda",
+  "names": {
+   "ja": "ポケモンフレンダ",
+   "en": "Pokémon Frienda",
+   "ko": "포켓몬 프렌다"
+  },
+  "region": "JP",
+  "started": "2024-07-11",
+  "collectible": {
+   "ja": "フレンダピック",
+   "en": "Frienda Pick"
+  }
+ },
+ "latest": {
+  "set": "frienda:xt2",
+  "names": {
+   "ja": "エクストレジャー2だん",
+   "en": "Ex Treasure Set 2",
+   "ko": "엑스트레저 2탄"
+  },
+  "release_date": "2026-09-17",
+  "end_date": "2026-11-25",
+  "next_set_expected": "2026-11-26"
+ },
+ "sets": [
+  {
+   "id": "frienda:1",
+   "ordinal": 1,
+   "kind": "main",
+   "series": "base",
+   "series_no": 1,
+   "code": "1-1",
+   "names": {
+    "ja": "1だん",
+    "en": "Set 1",
+    "ko": "1탄"
+   },
+   "release_date": "2024-07-11",
+   "date_src": "official-page-asset-date",
+   "end_date": "2024-09-11",
+   "end_src": "next-set-start",
+   "url": "https://pokemonfrienda.com/new/1.html",
+   "counts": {
+    "total": 70,
+    "by_kind": {
+     "standard": 70
+    },
+    "by_rarity": {
+     "super_treasure": 10,
+     "treasure": 15,
+     "normal": 45
+    },
+    "by_mechanic": {
+     "tera": 3
+    }
+   }
+  },
+  {
+   "id": "frienda:xt2",
+   "ordinal": 12,
+   "kind": "main",
+   "series": "ex_treasure",
+   "series_no": 2,
+   "code": "3-2",
+   "names": {
+    "ja": "エクストレジャー2だん",
+    "en": "Ex Treasure Set 2",
+    "ko": "엑스트레저 2탄"
+   },
+   "release_date": "2026-09-17",
+   "date_src": "official-page-asset-date",
+   "end_date": "2026-11-25",
+   "end_src": "official-text",
+   "url": "https://pokemonfrienda.com/new/xt2.html",
+   "pamphlet": "https://pokemonfrienda.com/assets/pdf/PMFR_BOOK_XT2.pdf",
+   "counts": {
+    "total": 80,
+    "by_kind": {
+     "standard": 70,
+     "parallel": 4,
+     "shiny": 6
+    },
+    "by_rarity": {
+     "super_treasure": 10,
+     "treasure": 15,
+     "normal": 53
+    },
+    "by_mechanic": {
+     "zmove": 1
+    }
+   }
+  },
+  {
+   "id": "frienda:special",
+   "ordinal": 103,
+   "kind": "special",
+   "names": {
+    "ja": "スペシャルフレンダピック",
+    "en": "Special Frienda Picks (promos)",
+    "ko": "스페셜 프렌다 픽 (프로모)"
+   },
+   "url": "https://pokemonfrienda.com/new/special/",
+   "counts": {
+    "total": 130,
+    "by_kind": {
+     "special": 130
+    },
+    "by_mechanic": {
+     "mega": 2
+    }
+   },
+   "campaigns": [
+    {
+     "id": "e2406282",
+     "title": "JR東日本 ポケモンスタンプラリー2024",
+     "start_date": "2024-07-12",
+     "end_date": "2024-09-01",
+     "ended": true,
+     "url": "https://pokemonfrienda.com/event/e2406282/",
+     "picks": [
+      {
+       "ja": "ニャローテ",
+       "kind_ja": "スペシャルフレンダピック",
+       "dex": 907,
+       "names": {
+        "en": "Floragato",
+        "ko": "나로테",
+        "zh_hant": "蒂蕾喵"
+       }
+      }
+     ]
+    },
+    {
+     "id": "e240802",
+     "title": "ハッピーセット®ポケモンフレンダを買って マクドナルドオリジナル スペシャルフレンダピックをゲット！",
+     "start_date": "2024-08-17",
+     "ended": true,
+     "url": "https://pokemonfrienda.com/event/e240802/",
+     "picks": [
+      {
+       "ja": "オーガポン",
+       "kind_ja": "スペシャルフレンダピック",
+       "dex": 1017,
+       "names": {
+        "en": "Ogerpon",
+        "ko": "오거폰",
+        "zh_hant": "厄鬼椪"
+       }
+      },
+      {
+       "ja": "ピカチュウ",
+       "kind_ja": "スペシャルフレンダピック",
+       "dex": 25,
+       "names": {
+        "en": "Pikachu",
+        "ko": "피카츄",
+        "zh_hant": "皮卡丘"
+       }
+      },
+      {
+       "ja": "マスカーニャ",
+       "kind_ja": "スペシャルフレンダピック",
+       "dex": 908,
+       "names": {
+        "en": "Meowscarada",
+        "ko": "마스카나",
+        "zh_hant": "魔幻假面喵"
+       }
+      },
+      {
+       "ja": "ラウドボーン",
+       "kind_ja": "スペシャルフレンダピック",
+       "dex": 911,
+       "names": {
+        "en": "Skeledirge",
+        "ko": "라우드본",
+        "zh_hant": "骨紋巨聲鱷"
+       }
+      },
+      {
+       "ja": "ウェーニバル",
+       "kind_ja": "スペシャルフレンダピック",
+       "dex": 914,
+       "names": {
+        "en": "Quaquaval",
+        "ko": "웨이니발",
+        "zh_hant": "狂歡浪舞鴨"
+       }
+      },
+      {
+       "ja": "ウインディ",
+       "kind_ja": "スペシャルフレンダピック",
+       "dex": 59,
+       "names": {
+        "en": "Arcanine",
+        "ko": "윈디",
+        "zh_hant": "風速狗"
+       }
+      }
+     ]
+    },
+    {
+     "id": "e240906",
+     "title": "ポケモンフレンダTV番組プレゼント！ 番組をみて、クイズにこたえて、 スーパートレジャーピックをゲット！",
+     "start_date": "2024-09-06",
+     "end_date": "2024-09-22",
+     "ended": true,
+     "url": "https://pokemonfrienda.com/event/e240906/",
+     "picks": [
+      {
+       "ja": "ミライドン",
+       "kind_ja": "スーパートレジャーピック",
+       "dex": 1008,
+       "names": {
+        "en": "Miraidon",
+        "ko": "미라이돈",
+        "zh_hant": "密勒頓"
+       }
+      },
+      {
+       "ja": "ルカリオ",
+       "kind_ja": "スーパートレジャーピック",
+       "dex": 448,
+       "names": {
+        "en": "Lucario",
+        "ko": "루카리오",
+        "zh_hant": "路卡利歐"
+       }
+      },
+      {
+       "ja": "コライドン",
+       "kind_ja": "スーパートレジャーピック",
+       "dex": 1007,
+       "names": {
+        "en": "Koraidon",
+        "ko": "코라이돈",
+        "zh_hant": "故勒頓"
+       }
+      }
+     ]
+    },
+    {
+     "id": "e240905",
+     "title": "ポケどこ連動 スペシャルフレンダピック「デカヌチャン」が お店でもらえる！",
+     "start_date": "2024-09-15",
+     "ended": true,
+     "url": "https://pokemonfrienda.com/event/e240905/",
+     "picks": [
+      {
+       "ja": "デカヌチャン",
+       "kind_ja": "スペシャルフレンダピック",
+       "dex": 959,
+       "names": {
+        "en": "Tinkaton",
+        "ko": "두드리짱",
+        "zh_hant": "巨鍛匠"
+       }
+      }
+     ]
+    },
+    {
+     "id": "e2411191",
+     "title": "セブン‐イレブン オリジナルスペシャルフレンダピックをプレゼント！",
+     "start_date": "2024-11-19",
+     "date_src": "event-id",
+     "ended": true,
+     "url": "https://pokemonfrienda.com/event/e2411191/",
+     "picks": [
+      {
+       "ja": "ホウオウ",
+       "kind_ja": "スペシャルフレンダピック",
+       "dex": 250,
+       "names": {
+        "en": "Ho-Oh",
+        "ko": "칠색조",
+        "zh_hant": "鳳王"
+       }
+      },
+      {
+       "ja": "ルギア",
+       "kind_ja": "スペシャルフレンダピック",
+       "dex": 249,
+       "names": {
+        "en": "Lugia",
+        "ko": "루기아",
+        "zh_hant": "洛奇亞"
+       }
+      }
+     ]
+    },
+    {
+     "id": "e241107",
+     "title": "アニポケ連動 スペシャルフレンダピック「キャプテンピカチュウ」をゲットしよう！",
+     "start_date": "2024-11-23",
+     "ended": true,
+     "url": "https://pokemonfrienda.com/event/e241107/",
+     "picks": [
+      {
+       "ja": "キャプテンピカチュウ",
+       "kind_ja": "スペシャルフレンダピック",
+       "dex": 25,
+       "variant": "キャプテン",
+       "names": {
+        "en": "Captain Pikachu",
+        "ko": "캡틴 피카츄",
+        "zh_hant": "隊長皮卡丘"
+       }
+      }
+     ]
+    },
+    {
+     "id": "e250123",
+     "title": "アニポケ連動 スペシャルフレンダピック「パゴゴ（リコのテラパゴス）」をゲットしよう！",
+     "start_date": "2025-02-08",
+     "ended": true,
+     "url": "https://pokemonfrienda.com/event/e250123/",
+     "picks": [
+      {
+       "ja": "パゴゴ(リコのテラパゴス)",
+       "kind_ja": "スペシャルフレンダピック",
+       "dex": 1024,
+       "variant": "パゴゴ リコのテラパゴス",
+       "names": {
+        "en": "Terapagos",
+        "ko": "테라파고스",
+        "zh_hant": "太樂巴戈斯"
+       }
+      }
+     ]
+    },
+    {
+     "id": "e250207",
+     "title": "ハッピーセット®ポケモンフレンダを買って マクドナルドオリジナル スペシャルフレンダピックをゲット！",
+     "start_date": "2025-02-14",
+     "end_date": "2025-02-27",
+     "ended": true,
+     "url": "https://pokemonfrienda.com/event/e250207/",
+     "picks": [
+      {
+       "ja": "ピカチュウ",
+       "kind_ja": "スペシャルフレンダピック",
+       "dex": 25,
+       "names": {
+        "en": "Pikachu",
+        "ko": "피카츄",
+        "zh_hant": "皮卡丘"
+       }
+      },
+      {
+       "ja": "レックウザ",
+       "kind_ja": "スペシャルフレンダピック",
+       "dex": 384,
+       "names": {
+        "en": "Rayquaza",
+        "ko": "레쿠쟈",
+        "zh_hant": "烈空坐"
+       }
+      },
+      {
+       "ja": "オーガポン",
+       "kind_ja": "スペシャルフレンダピック",
+       "dex": 1017,
+       "names": {
+        "en": "Ogerpon",
+        "ko": "오거폰",
+        "zh_hant": "厄鬼椪"
+       }
+      },
+      {
+       "ja": "レシラム",
+       "kind_ja": "スペシャルフレンダピック",
+       "dex": 643,
+       "names": {
+        "en": "Reshiram",
+        "ko": "레시라무",
+        "zh_hant": "萊希拉姆"
+       }
+      },
+      {
+       "ja": "ゼクロム",
+       "kind_ja": "スペシャルフレンダピック",
+       "dex": 644,
+       "names": {
+        "en": "Zekrom",
+        "ko": "제크로무",
+        "zh_hant": "捷克羅姆"
+       }
+      },
+      {
+       "ja": "キュレム",
+       "kind_ja": "スペシャルフレンダピック",
+       "dex": 646,
+       "names": {
+        "en": "Kyurem",
+        "ko": "큐레무",
+        "zh_hant": "酋雷姆"
+       }
+      }
+     ]
+    },
+    {
+     "id": "e250417",
+     "title": "キラキラ光るトレジャーピック「ケルディオ（かくごのすがた）」をゲットしよう！",
+     "start_date": "2025-05-03",
+     "ended": true,
+     "url": "https://pokemonfrienda.com/event/e250417/",
+     "picks": [
+      {
+       "ja": "ケルディオ(かくごのすがた)",
+       "kind_ja": "トレジャーピック",
+       "dex": 647,
+       "form": "resolute",
+       "names": {
+        "en": "Resolute Keldeo",
+        "ko": "케르디오 (각오의 모습)",
+        "zh_hant": "凱路迪歐 (覺悟的樣子)"
+       }
+      }
+     ]
+    },
+    {
+     "id": "e2507aeon1",
+     "title": "対象のイオンモール・THE OUTLETSでもらおう！ スペシャルタッグわざピック「ピカチュウ＆ミュウツー」",
+     "start_date": "2025-07-18",
+     "end_date": "2025-07-27",
+     "ended": true,
+     "url": "https://pokemonfrienda.com/event/e2507aeon1/",
+     "picks": [
+      {
+       "ja": "ピカチュウ&ミュウツー",
+       "kind_ja": "スペシャルタッグわざピック",
+       "dex": 25,
+       "partners": [
+        150
+       ],
+       "mechanic": "tag",
+       "names": {
+        "en": "Pikachu",
+        "ko": "피카츄",
+        "zh_hant": "皮卡丘"
+       }
+      }
+     ]
+    },
+    {
+     "id": "e2507251",
+     "title": "サーティワンオリジナル スペシャルタッグわざピックをプレゼント！",
+     "start_date": "2025-08-01",
+     "end_date": "2025-09-03",
+     "ended": true,
+     "url": "https://pokemonfrienda.com/event/e2507251/",
+     "picks": [
+      {
+       "ja": "ピカチュウ&デカヌチャン",
+       "kind_ja": "スペシャルタッグわざピック",
+       "dex": 25,
+       "partners": [
+        959
+       ],
+       "mechanic": "tag",
+       "names": {
+        "en": "Pikachu",
+        "ko": "피카츄",
+        "zh_hant": "皮卡丘"
+       }
+      },
+      {
+       "ja": "イッカネズミ&パモ",
+       "kind_ja": "スペシャルタッグわざピック",
+       "dex": 925,
+       "partners": [
+        921
+       ],
+       "mechanic": "tag",
+       "names": {
+        "en": "Maushold",
+        "ko": "파밀리쥐",
+        "zh_hant": "一家鼠"
+       }
+      }
+     ]
+    },
+    {
+     "id": "e250919pd1",
+     "title": "「ポケモンとどこいく！？」とベストタッグ！ スペシャルメガシンカピック「メガヤミラミ」をゲットしよう！",
+     "start_date": "2025-09-21",
+     "ended": true,
+     "url": "https://pokemonfrienda.com/event/e250919pd1/",
+     "picks": [
+      {
+       "ja": "メガヤミラミ",
+       "kind_ja": "スペシャルメガシンカピック",
+       "dex": 302,
+       "form": "mega",
+       "mechanic": "mega",
+       "names": {
+        "en": "Mega Sableye",
+        "ko": "메가깜까미",
+        "zh_hant": "超級勾魂眼"
+       }
+      }
+     ]
+    },
+    {
+     "id": "e251121",
+     "title": "おみせでもらえる！ スペシャルメガシンカピック「メガリザードンY」をゲットしよう！",
+     "start_date": "2025-11-29",
+     "ended": true,
+     "url": "https://pokemonfrienda.com/event/e251121/",
+     "picks": [
+      {
+       "ja": "メガリザードンY",
+       "kind_ja": "スペシャルメガシンカピック",
+       "dex": 6,
+       "form": "mega-y",
+       "mechanic": "mega",
+       "names": {
+        "en": "Mega Charizard Y",
+        "ko": "메가리자몽Y",
+        "zh_hant": "超級噴火龍Ｙ"
+       }
+      }
+     ]
+    },
+    {
+     "id": "e2512fm",
+     "title": "ファミリーマートでスペシャルメガシンカピックをゲット！",
+     "start_date": "2025-12-16",
+     "ended": true,
+     "url": "https://pokemonfrienda.com/event/e2512fm/",
+     "picks": [
+      {
+       "ja": "メガボーマンダ",
+       "kind_ja": "スペシャルメガシンカピック",
+       "dex": 373,
+       "form": "mega",
+       "mechanic": "mega",
+       "names": {
+        "en": "Mega Salamence",
+        "ko": "메가보만다",
+        "zh_hant": "超級暴飛龍"
+       }
+      },
+      {
+       "ja": "メガメタグロス",
+       "kind_ja": "スペシャルメガシンカピック",
+       "dex": 376,
+       "form": "mega",
+       "mechanic": "mega",
+       "names": {
+        "en": "Mega Metagross",
+        "ko": "메가메타그로스",
+        "zh_hant": "超級巨金怪"
+       }
+      }
+     ]
+    },
+    {
+     "id": "e260129",
+     "title": "おみせでもらえる！ スペシャルメガシンカピック「メガカイリュー」をゲットしよう！",
+     "start_date": "2026-02-07",
+     "ended": true,
+     "url": "https://pokemonfrienda.com/event/e260129/",
+     "picks": [
+      {
+       "ja": "メガカイリュー",
+       "kind_ja": "スペシャルメガシンカピック",
+       "dex": 149,
+       "form": "mega",
+       "mechanic": "mega",
+       "names": {
+        "en": "Mega Dragonite",
+        "ko": "망나뇽",
+        "zh_hant": "快龍"
+       }
+      }
+     ]
+    },
+    {
+     "id": "e2604172",
+     "title": "ガストのお店でベストタッグわざピック「リザードン」をゲットしよう！",
+     "start_date": "2026-04-23",
+     "end_date": "2026-06-17",
+     "ended": true,
+     "url": "https://pokemonfrienda.com/event/e2604172/",
+     "picks": [
+      {
+       "ja": "リザードン",
+       "kind_ja": "ベストタッグわざピック",
+       "dex": 6,
+       "mechanic": "tag",
+       "names": {
+        "en": "Charizard",
+        "ko": "리자몽",
+        "zh_hant": "噴火龍"
+       }
+      }
+     ]
+    },
+    {
+     "id": "e2604171",
+     "title": "アニポケメガ連動！おみせでもらえる！ スペシャルトレジャーピック アメジオの「白いジガルデ」をゲットしよう！",
+     "start_date": "2026-05-02",
+     "ended": true,
+     "url": "https://pokemonfrienda.com/event/e2604171/",
+     "picks": [
+      {
+       "ja": "白いジガルデ",
+       "kind_ja": "スペシャルトレジャーピック",
+       "dex": 718,
+       "variant": "白い",
+       "names": {
+        "en": "White Zygarde",
+        "ko": "하얀 지가르데",
+        "zh_hant": "白色基格爾德"
+       }
+      }
+     ]
+    },
+    {
+     "id": "e2608fm",
+     "title": "ファミリーマートでスペシャルフレンダピックをゲット！",
+     "start_date": "2026-08-11",
+     "ended": true,
+     "url": "https://pokemonfrienda.com/event/e2608fm/",
+     "picks": [
+      {
+       "ja": "メガレックウザ",
+       "kind_ja": "スペシャルフレンダピック",
+       "dex": 384,
+       "form": "mega",
+       "mechanic": "mega",
+       "names": {
+        "en": "Mega Rayquaza",
+        "ko": "메가레쿠쟈",
+        "zh_hant": "超級烈空坐"
+       }
+      },
+      {
+       "ja": "ピカチュウ&ゼラオラ",
+       "kind_ja": "スペシャルフレンダピック",
+       "dex": 25,
+       "partners": [
+        807
+       ],
+       "mechanic": "tag",
+       "names": {
+        "en": "Pikachu",
+        "ko": "피카츄",
+        "zh_hant": "皮卡丘"
+       }
+      }
+     ]
+    },
+    {
+     "id": "e260831",
+     "title": "おみせでもらおう！ ポケるんTVスペシャルベストタッグわざピック「カイリュー」",
+     "start_date": "2026-09-19",
+     "url": "https://pokemonfrienda.com/event/e260831/",
+     "picks": [
+      {
+       "ja": "カイリュー",
+       "kind_ja": "スペシャルベストタッグわざピック",
+       "dex": 149,
+       "mechanic": "tag",
+       "names": {
+        "en": "Dragonite",
+        "ko": "망나뇽",
+        "zh_hant": "快龍"
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "picks": [
+  {
+   "id": "frienda:1-1-001",
+   "set": "frienda:1",
+   "no": "1-1-001",
+   "kind": "standard",
+   "rarity": "super_treasure",
+   "grade": 5,
+   "dex": 1007,
+   "types": [
+    "Fighting",
+    "Dragon"
+   ],
+   "names": {
+    "ja": "コライドン",
+    "en": "Koraidon",
+    "ko": "코라이돈",
+    "zh_hant": "故勒頓"
+   },
+   "orientation": "horizontal",
+   "kira": true,
+   "url": "https://pokemonfrienda.com/new/1.html#friendapick"
+  },
+  {
+   "id": "frienda:1-1-002",
+   "set": "frienda:1",
+   "no": "1-1-002",
+   "kind": "standard",
+   "rarity": "super_treasure",
+   "grade": 5,
+   "dex": 1008,
+   "types": [
+    "Electric",
+    "Dragon"
+   ],
+   "names": {
+    "ja": "ミライドン",
+    "en": "Miraidon",
+    "ko": "미라이돈",
+    "zh_hant": "密勒頓"
+   },
+   "orientation": "horizontal",
+   "kira": true,
+   "url": "https://pokemonfrienda.com/new/1.html#friendapick"
+  },
+  {
+   "id": "frienda:1-1-003",
+   "set": "frienda:1",
+   "no": "1-1-003",
+   "kind": "standard",
+   "rarity": "super_treasure",
+   "grade": 5,
+   "dex": 1017,
+   "types": [
+    "Grass"
+   ],
+   "names": {
+    "ja": "オーガポン",
+    "en": "Ogerpon",
+    "ko": "오거폰",
+    "zh_hant": "厄鬼椪"
+   },
+   "orientation": "horizontal",
+   "kira": true,
+   "url": "https://pokemonfrienda.com/new/1.html#friendapick"
+  },
+  {
+   "id": "frienda:3-2-001",
+   "set": "frienda:xt2",
+   "no": "3-2-001",
+   "kind": "standard",
+   "rarity": "super_treasure",
+   "grade": 5,
+   "dex": 493,
+   "types": [
+    "Normal"
+   ],
+   "names": {
+    "ja": "アルセウス",
+    "en": "Arceus",
+    "ko": "아르세우스",
+    "zh_hant": "阿爾宙斯"
+   },
+   "orientation": "horizontal",
+   "kira": true,
+   "url": "https://pokemonfrienda.com/new/xt2.html#friendapick"
+  },
+  {
+   "id": "frienda:3-2-002",
+   "set": "frienda:xt2",
+   "no": "3-2-002",
+   "kind": "standard",
+   "rarity": "super_treasure",
+   "grade": 5,
+   "dex": 483,
+   "types": [
+    "Steel",
+    "Dragon"
+   ],
+   "names": {
+    "ja": "ディアルガ",
+    "en": "Dialga",
+    "ko": "디아루가",
+    "zh_hant": "帝牙盧卡"
+   },
+   "orientation": "horizontal",
+   "kira": true,
+   "url": "https://pokemonfrienda.com/new/xt2.html#friendapick"
+  },
+  {
+   "id": "frienda:P-130",
+   "set": "frienda:special",
+   "no": "P",
+   "kind": "special",
+   "dex": 149,
+   "types": [
+    "Dragon",
+    "Flying"
+   ],
+   "names": {
+    "ja": "カイリュー",
+    "en": "Dragonite",
+    "ko": "망나뇽",
+    "zh_hant": "快龍"
+   },
+   "orientation": "horizontal",
+   "new": true,
+   "url": "https://pokemonfrienda.com/new/special/"
+  }
+ ]
+}

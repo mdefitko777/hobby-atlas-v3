@@ -17,9 +17,12 @@ class BlobStore {
     return d;
   }
 
+  /// 키 → 파일 이름. `aux_atlas/mezastar-jp.json` 처럼 `/` 가 든 키도 한 폴더 안 파일 하나로 (하위 폴더를 만들지 않는다)
+  static String _name(String key) => key.replaceAll(RegExp(r'[/\\]'), '~');
+
   static Future<String?> read(String key) async {
     try {
-      final f = File('${(await _root()).path}/$key');
+      final f = File('${(await _root()).path}/${_name(key)}');
       return f.existsSync() ? await f.readAsString() : null;
     } on Exception {
       return null;
@@ -34,11 +37,12 @@ class BlobStore {
   /// 다 쓴 뒤에 이름을 바꿔서, 쓰다가 앱이 꺼져도 예전 파일이 남는다.
   static Future<bool> write(String key, String value) async {
     File? tmp;
+    final name = _name(key);
     try {
       final root = await _root();
-      tmp = File('${root.path}/$key.$_tag-${_seq++}.tmp');
+      tmp = File('${root.path}/$name.$_tag-${_seq++}.tmp');
       await tmp.writeAsString(value, flush: true);
-      await tmp.rename('${root.path}/$key');
+      await tmp.rename('${root.path}/$name');
       return true;
     } on Exception {
       try {
@@ -52,7 +56,7 @@ class BlobStore {
 
   static Future<void> delete(String key) async {
     try {
-      final f = File('${(await _root()).path}/$key');
+      final f = File('${(await _root()).path}/${_name(key)}');
       if (f.existsSync()) await f.delete();
     } on Exception {
       // 없으면 그만
@@ -71,7 +75,7 @@ class BlobStore {
   }) async {
     File? lock;
     try {
-      final f = File('${(await _root()).path}/$key.lock');
+      final f = File('${(await _root()).path}/${_name(key)}.lock');
       final until = DateTime.now().add(wait);
       while (true) {
         try {

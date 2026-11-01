@@ -13,6 +13,7 @@
 // │ G-5c │ 바텀 시트(카메라 · 최근 사진) → 확인  │ 이 기체가 찍힌 사진이어야 켜짐 (가짜 판정) │ P05 · P09   │
 // │ G-6  │ 베이 칸 + n/3 · 부품 시트            │ 베이블레이드 X 도감 (부품 3개)          │ P01           │
 // │ G-7  │ 세대 · 작품 카드 + 진행 막대          │ 포켓몬 세대 · Fate 작품 · AC 세대       │ P01           │
+// │ G-7b │ TagGameCards (포켓몬 세대 위)         │ MEZASTAR · Frienda 태그 도감 입구 (R)   │ P06           │
 // │ G-8  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 정리 안 된 작품     │ P01 · P09     │
 // │ G-9  │ FindBar (컬렉션 · 작품 도감 위)       │ 도감에서 찾기 + 필터(전체 · 켜진 것 · 아직) │ P04 · P07   │
 // └──────────────────────────────────────────────────────────────────────────────────┘
@@ -31,6 +32,7 @@ import '../widgets.dart';
 import 'c_channel_screen.dart';
 import 'd_kit_detail_screen.dart';
 import 'e_camera_screen.dart' show albumScenes;
+import 'r_mezastar_screen.dart' show TagGameCards;
 
 class GuideView extends StatelessWidget {
   const GuideView({
@@ -1101,6 +1103,7 @@ class _WorldGuideState extends State<_WorldGuide> {
           builder: (context, box) => ListView(
             padding: EdgeInsets.only(bottom: navClearance(context)),
             children: [
+              if (pokemon) const TagGameCards(), // G-7b → R 태그 도감
               SectionHeader(
                 pokemon ? '세대' : (widget.channel == 'fate' ? '작품' : '게임 세대'),
                 subtitle:

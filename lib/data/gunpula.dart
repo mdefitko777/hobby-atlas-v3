@@ -25,6 +25,10 @@ const auxFiles = [
   'kit-aliases.json',
   // 엔 → 원 (구매가를 안 적은 상품은 정가 × 환율로 지출에 넣는다)
   'exchange-rates.json',
+  // 포켓몬 메자스타 (한국 · 홍콩 · 대만 / 일본) · 프렌다 태그 도감 (lib/data/tag_atlas.dart)
+  'atlas/mezastar-intl.json',
+  'atlas/mezastar-jp.json',
+  'atlas/pokemon-frienda.json',
 ];
 
 /// `./assets/…` · `../app/assets/…` 처럼 Gunpula 웹앱 기준 상대 경로 → 전체 주소
