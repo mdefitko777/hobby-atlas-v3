@@ -424,7 +424,7 @@ class _SectionListViewState extends State<SectionListView> {
                               const SizedBox(height: 8),
                               Row(
                                 children: [
-                                  TagPill(a.status, strong: a.status == '예약 시작'),
+                                  SoftTag(a.status, color: stageColor(a.status)),
                                   const SizedBox(width: 6),
                                   Expanded(
                                     child: Text(

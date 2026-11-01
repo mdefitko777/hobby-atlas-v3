@@ -1336,18 +1336,33 @@ class DateTag extends StatelessWidget {
   final bool urgent;
 
   @override
-  Widget build(BuildContext context) {
-    final c = urgent ? Gp.danger : Gp.accent;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(color: c.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(Gp.rSmall)),
-      child: Text(
-        text,
-        style: TextStyle(fontSize: Gp.t11, fontWeight: FontWeight.w700, color: c),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => SoftTag(text, color: urgent ? Gp.danger : Gp.accent);
 }
+
+/// 연한 색 꼬리표 하나 (네모 · 색 글자 + 같은 색 10% 바탕) — 날짜 · 예고 단계 · 상태 공통
+class SoftTag extends StatelessWidget {
+  const SoftTag(this.text, {super.key, this.color = Gp.accent});
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+    decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(Gp.rSmall)),
+    child: Text(
+      text,
+      style: TextStyle(fontSize: Gp.t11, fontWeight: FontWeight.w700, color: color),
+    ),
+  );
+}
+
+/// 공식 예고 단계 색: 공식 발표 회색 · 상품화 확정 파랑 · 예약 시작 민트(지금 살 수 있음) · 발매 검정
+Color stageColor(String status) => switch (status) {
+  '상품화 확정' => Gp.accent,
+  '예약 시작' => Gp.own,
+  '발매' => Gp.ink,
+  _ => Gp.muted,
+};
 
 /// 주 버튼 (화면에 하나) — 브랜드 그라데이션 파랑→민트 + 부드러운 그림자. 누를 수 없으면 회색
 class GradientButton extends StatelessWidget {

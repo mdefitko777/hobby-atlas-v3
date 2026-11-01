@@ -3,7 +3,7 @@
 // ┌──────── 디자인 가이드 대응표: J 공식 예고 상세 ────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
 // │ J-1  │ 16:9 사진(화면 끝까지) + 뒤로        │ 공식 홍보 이미지                        │ P02 · P03     │
-// │ J-2  │ TagPill(단계) · IP · 날짜 · 출처     │ 예고 요약                              │ P01 · P02     │
+// │ J-2  │ SoftTag(단계 색) · IP · 날짜 · 출처     │ 예고 요약                              │ P01 · P02     │
 // │ J-3  │ 4단계 진행 줄 (현재 = 브랜드 색)      │ 공식 발표 → 상품화 확정 → 예약 시작 → 발매 │ P01 · P06 │
 // │ J-4  │ TogglePill(알림 받기) + 토스트       │ 다음 단계가 되면 알림 (가짜)            │ P03 · P07     │
 // │ J-5  │ 공식으로 가기 ↗                        │ 출처 (반다이 공식)                      │ P10           │
@@ -73,7 +73,7 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
                   children: [
                     Row(
                       children: [
-                        TagPill(a.status, strong: true), // J-2 P01
+                        SoftTag(a.status, color: stageColor(a.status)), // J-2 P01
                         const SizedBox(width: 8),
                         Text(
                           channelOf(a.franchiseId).label,

@@ -446,14 +446,7 @@ class _HeroBannerState extends State<_HeroBanner> {
                                 padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
                                 child: Row(
                                   children: [
-                                    Text(
-                                      a.status, // A-4 P01
-                                      style: const TextStyle(
-                                        fontSize: Gp.t11,
-                                        color: Gp.accent,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
+                                    SoftTag(a.status, color: stageColor(a.status)), // A-4 P01 단계 = 다른 꼬리표와 같은 모양
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
