@@ -4,8 +4,11 @@ library;
 
 import 'package:flutter/widgets.dart';
 
+import '../data/photo_files.dart';
 import '../data/user_store.dart';
+import 'device_state_sync.dart';
 import 'friends_service.dart';
+import 'photo_restore.dart';
 import 'photo_share.dart';
 import 'profile_images.dart';
 import 'rpc.dart';
@@ -33,6 +36,17 @@ class Account extends ChangeNotifier {
       clock: clock,
     );
     photos = PhotoShareService(rpc: () => _rpc, storage: storage, auth: auth, store: this.store);
+    deviceState = DeviceStateSync(
+      auth: auth,
+      rpc: () => _rpc,
+      store: this.store,
+      clock: clock,
+      before: () => sync.idle,
+      accountSwitched: () => sync.accountSwitched,
+    );
+    photoRestore = PhotoRestoreService(rpc: () => _rpc, storage: storage, auth: auth, store: this.store);
+    PhotoFiles.fetchMissing = photoRestore.fetch; // 되찾은 사진 파일은 처음 볼 때 받는다
+    sync.onResume = _onResume;
     profileImages = ProfileImageService(
       storage: storage,
       auth: auth,
@@ -44,17 +58,33 @@ class Account extends ChangeNotifier {
     auth.addListener(notifyListeners);
     friends.addListener(notifyListeners);
     sync.addListener(notifyListeners);
+    deviceState.addListener(notifyListeners);
     photos.addListener(notifyListeners);
     profileImages.addListener(notifyListeners);
     auth.addListener(_photosOnSignIn);
     friends.addListener(_onMe);
   }
 
-  /// 로그인하면 못 올린 사진을 올린다 (로그아웃 동안 친구에게 보이기로 둔 것) · 못 보낸 공개 범위도
+  /// 로그인하면 못 올린 사진을 올린다 (로그아웃 동안 친구에게 보이기로 둔 것) · 못 보낸 공개 범위도 ·
+  /// 다시 설치한 기기면 서버의 내 사진을 되찾는다
   void _photosOnSignIn() {
-    if (!auth.signedIn) return;
+    if (!auth.signedIn) {
+      _restoredFor = '';
+      return;
+    }
     photos.sync().ignore();
     photos.pushPrivacy().ignore();
+    if (_restoredFor == auth.userId) return; // 토큰을 새로 받을 때마다가 아니라 로그인마다 한 번
+    _restoredFor = auth.userId;
+    photoRestore.restore().ignore();
+  }
+
+  String _restoredFor = '';
+
+  /// 앱으로 돌아왔다 → 기기 기록 · 사진 목록도 맞춘다
+  void _onResume() {
+    deviceState.onResume();
+    photoRestore.restore().ignore();
   }
 
   MeState? _lastMe;
@@ -85,8 +115,17 @@ class Account extends ChangeNotifier {
   /// 아바타 · 배경 사진 (내 것 · 친구 것 기기 캐시)
   late final ProfileImageService profileImages;
 
+  /// 기기에만 있던 기록(베이 · 도감 손으로 켜기 · 태그 · 채널 …)을 계정에 (docs/supabase-v3-sync.sql)
+  late final DeviceStateSync deviceState;
+
+  /// 다시 설치 · 다른 기기 → 서버의 내 사진을 목록에 되찾기
+  late final PhotoRestoreService photoRestore;
+
   /// 로그인 · 기록 변경을 듣기 시작 (한 번)
-  void start() => sync.start();
+  void start() {
+    sync.start();
+    deviceState.start();
+  }
 
   bool get available => auth.available;
   bool get ready => auth.ready;
@@ -136,11 +175,15 @@ class Account extends ChangeNotifier {
     auth.removeListener(_photosOnSignIn);
     friends.removeListener(notifyListeners);
     sync.removeListener(notifyListeners);
+    deviceState.removeListener(notifyListeners);
     photos.removeListener(notifyListeners);
     friends.removeListener(_onMe);
     profileImages.removeListener(notifyListeners);
     profileImages.dispose();
     photos.dispose();
+    deviceState.dispose();
+    if (PhotoFiles.fetchMissing == photoRestore.fetch) PhotoFiles.fetchMissing = null;
+    sync.onResume = null;
     sync.dispose();
     friends.dispose();
     super.dispose();

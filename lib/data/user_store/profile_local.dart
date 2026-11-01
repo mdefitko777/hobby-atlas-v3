@@ -54,6 +54,18 @@ mixin _ProfileLocal on ChangeNotifier {
     }
   }
 
+  /// 서버 목록에서 되찾은 사진 넣기 (이미 있는 id 는 건너뜀) — 찍은 시각 순서 자리에
+  void addRestoredPhotos(Iterable<MyPhoto> list) {
+    var any = false;
+    for (final p in list) {
+      if (_photos.any((x) => x.id == p.id)) continue;
+      final i = _photos.indexWhere((x) => x.createdAt.compareTo(p.createdAt) < 0);
+      i < 0 ? _photos.add(p) : _photos.insert(i, p);
+      any = true;
+    }
+    if (any) _changed();
+  }
+
   /// 서버에서 내렸다 → 목록에서 뺀다
   void purgePhoto(String id) {
     final before = _photos.length;

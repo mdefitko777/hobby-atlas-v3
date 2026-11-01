@@ -6,6 +6,9 @@
 //   · 이 기기에만 = 베이 부품 · 베이 연결 · 베이 조합 · 덱 · 도감 손으로 켜기 · 메자스타 · 프렌다 태그 · 최근 본 것 · 내 사진 목록 · 취향 태그 (payload 에 넣지 않음)
 //     (내 사진 중 친구에게 보이기를 켠 것은 lib/sync/photo_share.dart 가 Storage 에, 태그는 v3 preferences.tags 에 따로 올린다)
 //     최근 검색어 · 검색 횟수 · 컬렉션 휴지통도 이 기기에만
+//   · 로그인하면 이 기기 기록 중 계정에 딸린 것(베이 · 도감 손으로 켜기 · 태그 · 채널 · 특별 관심 · 휴지통 …)은
+//     lib/sync/device_state_sync.dart 가 payload 와 따로 된 서버 행(gunpula_v3_device_state)에 맞춘다.
+//     어느 local_state 키를 맞출지는 lib/sync/device_state.dart 의 deviceSections. 그 장부(항목별 시각 · 지움 표시)는 [deviceSync]
 // 나눈 곳 (같은 라이브러리의 part): user_store/atlas_local · history · trash · profile_local · import
 library;
 
@@ -67,6 +70,10 @@ class UserStore extends ChangeNotifier with _AtlasLocal, _History, _ProfileLocal
   /// 다른 계정으로 로그인하면 앞 계정의 기록을 새 계정에 올리지 않도록 동기화가 본다.
   String syncedAccount = '';
 
+  /// 기기 기록 동기화 장부 (lib/sync/device_state_sync.dart 만 읽고 쓴다):
+  /// {account, revision, dirty, sections: {local_state 키: {항목: {t, v?, d?}}}} — 비어 있으면 저장 파일에 안 쓴다
+  Map<String, Object?> deviceSync = {};
+
   /// 내 채널 (채널 바 · 알림 범위). 처음 설치하면 건담 · 베이블레이드 · 포켓몬
   final List<String> myChannels = [...defaultMyChannels];
 
@@ -114,6 +121,7 @@ class UserStore extends ChangeNotifier with _AtlasLocal, _History, _ProfileLocal
     cloudDirty = sync['dirty'] == true;
     extrasDirty = sync['extras_dirty'] == true;
     syncedAccount = jStr(sync['account']);
+    deviceSync = Map.of(jMap(j['device_sync']));
     final local = jMap(j['local_state']);
     bbxOwnedParts
       ..clear()
@@ -169,6 +177,7 @@ class UserStore extends ChangeNotifier with _AtlasLocal, _History, _ProfileLocal
     'payload_extra': payloadExtra,
     'collection_extra': collectionExtra,
     'sync': {'dirty': cloudDirty, 'extras_dirty': extrasDirty, 'account': syncedAccount},
+    if (deviceSync.isNotEmpty) 'device_sync': deviceSync,
     'local_state': {
       'bbx_owned_parts': bbxOwnedParts.toList(),
       'bbx_manual_map': bbxManualMap,
@@ -434,6 +443,29 @@ class UserStore extends ChangeNotifier with _AtlasLocal, _History, _ProfileLocal
     extrasDirty = false;
     revision++; // sharedRevision 은 그대로 — "내가 바꾼 것"이 아니라 다시 올리지 않는다
     notifyListeners();
+    _persistSoon();
+  }
+
+  // ── 기기 기록 동기화 (lib/sync/device_state_sync.dart 만 부른다) ──
+  /// 지금 local_state 를 JSON 그대로 (복사본 — 고쳐도 기기 기록은 그대로)
+  Map<String, Object?> localStateJson() =>
+      jMap(jsonDecode(jsonEncode(toJson()['local_state'])));
+
+  /// 서버와 합친 local_state 키 몇 개를 바꿔 끼운다 — 저장 파일을 읽을 때와 같은 길(_fromJson)로 읽어 모양이 늘 같다.
+  /// 내가 바꾼 것으로 세지 않는다 (구매함 · 좋아요 동기화는 그대로)
+  void applyLocalState(Map<String, Object?> sections) {
+    if (sections.isEmpty) return;
+    final j = jMap(jsonDecode(jsonEncode(toJson())));
+    j['local_state'] = {...jMap(j['local_state']), ...sections};
+    _fromJson(j);
+    revision++;
+    notifyListeners();
+    _persistSoon();
+  }
+
+  /// 장부 바꾸기 (화면은 다시 그리지 않는다)
+  void setDeviceSync(Map<String, Object?> v) {
+    deviceSync = v;
     _persistSoon();
   }
 
