@@ -181,19 +181,23 @@ class UserStore extends ChangeNotifier {
   int get ownedCount => idsWith(const {CollectStatus.owned}).length;
   int get wantedCount => idsWith(const {CollectStatus.wanted}).length;
 
-  /// 구매함에 적어 둔 산 값의 합 (원)
-  int get spendKrw => _items.values.fold(0, (s, e) {
-    final p = e['purchase_price'];
-    return e['status'] == 'owned' && p is num ? s + p.toInt() : s;
-  });
+  /// 구매가를 안 적은 상품의 값 (Catalog 가 정가 × 환율로 채운다)
+  int? Function(String id)? listPrice;
+
+  int _paid(String id, Map<String, Object?> e) => switch (e['purchase_price']) {
+    final num p => p.toInt(),
+    _ => listPrice?.call(id) ?? 0,
+  };
+
+  /// 구매함 지출 합 (원) — 적어 둔 구매가, 없으면 정가 × 환율
+  int get spendKrw => _items.entries.fold(0, (s, e) => e.value['status'] == 'owned' ? s + _paid(e.key, e.value) : s);
 
   /// 이번 달 지출 — 산 날짜를 따로 적지 않아, 구매함 기록을 마지막으로 바꾼 달로 센다
   int spendInMonth(DateTime now) {
     final prefix = '${now.year}-${now.month.toString().padLeft(2, '0')}';
-    return _items.values.fold(0, (s, e) {
-      final p = e['purchase_price'];
-      final at = DateTime.tryParse(jStr(e['updated_at']))?.toLocal().toIso8601String() ?? '';
-      return e['status'] == 'owned' && p is num && at.startsWith(prefix) ? s + p.toInt() : s;
+    return _items.entries.fold(0, (s, e) {
+      final at = DateTime.tryParse(jStr(e.value['updated_at']))?.toLocal().toIso8601String() ?? '';
+      return e.value['status'] == 'owned' && at.startsWith(prefix) ? s + _paid(e.key, e.value) : s;
     });
   }
 

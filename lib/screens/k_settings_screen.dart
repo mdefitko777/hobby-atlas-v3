@@ -371,8 +371,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             activeThumbColor: Gp.accent,
             onChanged: _n.setOnlyMine, // STATE: 채널 범위 (저장)
           ),
-          chips('관심 항목', notifyInterestRules), // K-5
-          chips('채널 전체', notifyWorldRules),
+          // K-5 어떤 새 상품이 나오면 알릴지 (켠 것만)
+          chips('이런 새 상품이 나오면 알림', notifyInterestRules),
+          chips('이 채널 새 상품은 전부 알림', notifyWorldRules),
           ListTile(
             // K-6
             leading: const Icon(Icons.history),

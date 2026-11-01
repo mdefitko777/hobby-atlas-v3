@@ -533,42 +533,46 @@ class _ExpandRow extends StatelessWidget {
   }
 }
 
-// ── 목록 안에서 찾기 + 필터 (My Page · 컬렉션 · 도감 · 캘린더 공용) ─────────────────────────
+// ── 검색창 줄 (홈 · 검색 · 캘린더 · 컬렉션 · My Page 공용) ─────────────────────────────
+// 모든 탭이 같은 줄: [검색창][필터][보기 A][보기 B] — 검색창 높이 · 길이, 아이콘 크기 · 자리가 같다
 
-/// 필터 버튼 — 보기 전환(ViewIconToggle)과 같은 크기의 떠 있는 칸, 고른 조건 수를 배지로
+/// 필터 아이콘 — 고른 조건이 있으면 브랜드 색 + 개수 배지. [onTap] 이 null 이면 옅게(그 목록엔 필터 없음)
 class FilterButton extends StatelessWidget {
   const FilterButton({super.key, required this.count, required this.onTap});
   final int count;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) => Tooltip(
-    message: '필터',
-    child: DecoratedBox(
-      decoration: Gp.raised(radius: Gp.radius),
-      child: Material(
-        type: MaterialType.transparency,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(Gp.radius),
-          onTap: onTap,
-          child: SizedBox.square(
-            dimension: 44,
-            child: Center(
-              child: Badge(
-                isLabelVisible: count > 0,
-                backgroundColor: Gp.accent,
-                label: Text('$count'),
-                child: Icon(Icons.tune, size: Gp.iM, color: count > 0 ? Gp.accent : Gp.ink),
-              ),
-            ),
-          ),
-        ),
-      ),
+  Widget build(BuildContext context) => ToolIcon(
+    icon: Icons.tune,
+    tip: '필터',
+    onTap: onTap,
+    on: onTap != null,
+    color: count > 0 ? Gp.accent : null,
+    badge: count,
+  );
+}
+
+/// 검색창 + 오른쪽 아이콘들 — 바깥 여백 · 간격을 한 곳에서
+class ToolRow extends StatelessWidget {
+  const ToolRow({super.key, required this.field, this.tools = const []});
+  final Widget field;
+  final List<Widget> tools;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 4, 8, 8),
+    child: Row(
+      children: [
+        Expanded(child: field),
+        const SizedBox(width: 4),
+        ...tools,
+      ],
     ),
   );
 }
 
-/// 검색창(검색 화면과 같은 모양, 카메라 없음) + 필터 버튼 + (있으면) 뒤에 붙는 것 — 한 줄
+/// 이 목록 안에서 찾기(카메라 없는 검색창) + 필터 + [tools] — 글자칸을 스스로 가진다
 class FindBar extends StatefulWidget {
   const FindBar({
     super.key,
@@ -576,17 +580,15 @@ class FindBar extends StatefulWidget {
     required this.onQuery,
     this.filterCount = 0,
     this.onFilter,
-    this.trailing,
-    this.padding = const EdgeInsets.fromLTRB(16, 4, 16, 8),
+    this.tools = const [],
   });
   final String hint;
   final ValueChanged<String> onQuery;
   final int filterCount;
-
-  /// 없으면 필터 버튼을 숨긴다
   final VoidCallback? onFilter;
-  final Widget? trailing;
-  final EdgeInsets padding;
+
+  /// 필터 뒤 (보기 바꾸기 두 칸)
+  final List<Widget> tools;
 
   @override
   State<FindBar> createState() => _FindBarState();
@@ -602,20 +604,12 @@ class _FindBarState extends State<FindBar> {
   }
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: widget.padding,
-    child: Row(
-      children: [
-        Expanded(
-          child: GpSearchBar(controller: _ctrl, hint: widget.hint, onChanged: (v) => widget.onQuery(v.trim())),
-        ),
-        if (widget.onFilter case final f?) ...[
-          const SizedBox(width: 6),
-          FilterButton(count: widget.filterCount, onTap: f),
-        ],
-        if (widget.trailing case final t?) ...[const SizedBox(width: 6), t],
-      ],
-    ),
+  Widget build(BuildContext context) => ToolRow(
+    field: GpSearchBar(controller: _ctrl, hint: widget.hint, onChanged: (v) => widget.onQuery(v.trim())),
+    tools: [
+      FilterButton(count: widget.filterCount, onTap: widget.onFilter),
+      ...widget.tools,
+    ],
   );
 }
 

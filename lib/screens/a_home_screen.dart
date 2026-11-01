@@ -149,10 +149,17 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
   final _searchCtrl = TextEditingController();
   String _query = '';
 
+  /// 전체 목록의 필터 · 격자/목록 (위 검색창 줄 아이콘이 바꾼다)
+  var _listTools = ListTools();
+
+  /// 홈 가로 줄(최근 추가 · 이번 달 · 최근 본) 필터 — 검색창 줄의 필터 아이콘
+  KitFilter _homeFilter = KitFilter();
+
   void _openSection(HomeSection s) => setState(() {
     _section = s; // STATE: › → 홈 아래쪽이 전체 목록으로
     _searchCtrl.clear();
     _query = '';
+    _listTools = ListTools();
   });
 
   void _closeSection() => setState(() {
@@ -160,6 +167,12 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
     _searchCtrl.clear();
     _query = '';
   });
+
+  Future<void> _openHomeFilter(List<Kit> pool) async {
+    _homeFilter.statusOf = Marks.read(context).statusOf;
+    final picked = await showFilterSheet(context, kits: pool, initial: _homeFilter);
+    if (picked != null) setState(() => _homeFilter = picked); // STATE: 필터 → 홈 가로 줄
+  }
 
   @override
   void dispose() {
@@ -240,36 +253,65 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
   }
 
   Widget _body(_HomeData data) {
-    final search = Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-      child: _section == null && _mine
-          ? FindBar(
-              // A-25 My Page 안에서 찾기 + 필터 (컬렉션 · 도감 · 캘린더와 같은 줄)
-              hint: '내 것에서 찾기',
-              padding: EdgeInsets.zero,
-              onQuery: (q) => setState(() => _mineQuery = q),
-              filterCount: _mineFilter.count,
-              onFilter: _openMineFilter,
-              trailing: ViewIconToggle(mine: _mine, onChanged: _setMine),
-            )
-          : _section == null
-          ? Row(
-              children: [
-                Expanded(
-                  child: GpSearchBar(onTap: widget.onOpenSearch, onCamera: widget.onCamera),
-                ), // A-2 P04
-                const SizedBox(width: 6),
-                ViewIconToggle(mine: _mine, onChanged: _setMine), // A-10 전체 소식 · My Page
-              ],
-            )
-          : GpSearchBar(
-              // O-7 이 목록 안에서만
-              controller: _searchCtrl,
-              hint: '${_titleOf(_section!)}에서 찾기',
-              onChanged: (v) => setState(() => _query = v), // STATE: 검색어 → 목록 거르기
-              onCamera: widget.onCamera,
-            ),
-    );
+    final byId = {for (final k in data.kits) k.id: k};
+    _homeFilter.statusOf = Marks.of(context).statusOf;
+    bool home(Kit k) => _homeFilter.matches(k); // A-11 홈 필터
+    final recent = [
+      for (final k in data.kits)
+        if (k.recent && home(k)) k,
+    ];
+    final month = [
+      for (final k in data.kits)
+        if (k.month && home(k)) k,
+    ];
+    final viewed = [
+      for (final id in recentViewedIds)
+        if (byId[id] case final k? when home(k)) k,
+    ];
+    final lists = {HomeSection.recent: recent, HomeSection.month: month, HomeSection.viewed: viewed};
+    // A-2 검색창 줄 — 모든 탭과 같은 줄: [검색창][필터][보기 두 칸]
+    final mineToggle = ViewIconToggle(mine: _mine, onChanged: _setMine); // A-10 전체 소식 · My Page
+    final Widget search;
+    if (_section case final sec?) {
+      search = ToolRow(
+        field: GpSearchBar(
+          // O-7 이 목록 안에서만
+          controller: _searchCtrl,
+          hint: '${_titleOf(sec)}에서 찾기',
+          onChanged: (v) => setState(() => _query = v), // STATE: 검색어 → 목록 거르기
+          onCamera: widget.onCamera,
+        ),
+        tools: [
+          ListToolIcons(
+            tools: _listTools,
+            pool: sec == HomeSection.announcements
+                ? null
+                : [
+                    for (final k in lists[sec] ?? const <Kit>[])
+                      if (kitMatches(k, _query)) k,
+                  ],
+          ),
+        ],
+      );
+    } else if (_mine) {
+      search = FindBar(
+        // A-25 My Page 안에서 찾기 + 필터
+        key: const ValueKey('mine-find'),
+        hint: '내 것에서 찾기',
+        onQuery: (q) => setState(() => _mineQuery = q),
+        filterCount: _mineFilter.count,
+        onFilter: _openMineFilter,
+        tools: [mineToggle],
+      );
+    } else {
+      search = ToolRow(
+        field: GpSearchBar(onTap: widget.onOpenSearch, onCamera: widget.onCamera), // A-2 P04 → 검색 탭
+        tools: [
+          FilterButton(count: _homeFilter.count, onTap: () => _openHomeFilter(data.kits)), // A-11
+          mineToggle,
+        ],
+      );
+    }
     final ids = scopeIds;
     if (data.kits.isEmpty && data.announcements.isEmpty) {
       final noData = ids.isNotEmpty && ids.every((id) => !channelOf(id).hasData);
@@ -293,18 +335,7 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
       );
     }
 
-    final byId = {for (final k in data.kits) k.id: k};
     _Item kitItem(Kit k) => _Item(k.image, k.name, kit: k);
-    final recent = [
-      for (final k in data.kits)
-        if (k.recent) k,
-    ];
-    final month = [
-      for (final k in data.kits)
-        if (k.month) k,
-    ];
-    final viewed = [for (final id in recentViewedIds) ?byId[id]];
-    final lists = {HomeSection.recent: recent, HomeSection.month: month, HomeSection.viewed: viewed};
 
     // O 전체 목록 (홈 위쪽은 그대로, 아래만 바뀜)
     if (_section case final sec?) {
@@ -325,6 +356,7 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
               history: sec == HomeSection.viewed,
               sort: sec == HomeSection.month ? KitSort.release : KitSort.newest,
               query: _query,
+              tools: _listTools,
               onBack: _closeSection,
               loaders: widget.loaders,
             ),

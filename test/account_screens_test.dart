@@ -197,7 +197,7 @@ void main() {
     server.handle = null;
     await loadMe(tester);
     await show(tester, ProfileScreen(loaders: _loaders, onJump: (_) {}));
-    expect(find.text('아이디를 아직 정하지 않았어요'), findsOneWidget);
+    expect(find.text('아이디 없음'), findsOneWidget);
     await tester.tap(find.widgetWithText(FilledButton, '아이디 정하기'));
     await settle(tester);
     await tester.enterText(find.byType(TextField), 'bbang_2');
@@ -225,7 +225,7 @@ void main() {
   testWidgets('로그아웃 상태: 내 정보 · 서랍은 로그인 안내', (tester) async {
     auth.signedIn = false;
     await show(tester, ProfileScreen(loaders: _loaders, onJump: (_) {}));
-    expect(find.text('로그인 전 · 이 기기에만 저장'), findsOneWidget);
+    expect(find.text('로그인 전'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, '로그인'), findsOneWidget);
     expect(server.calls, isEmpty);
   });

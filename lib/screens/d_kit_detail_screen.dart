@@ -29,6 +29,7 @@ import '../api.dart';
 import '../marks.dart';
 import '../detail_pane.dart';
 import '../channels.dart';
+import '../data/catalog.dart';
 import '../data/user_store.dart';
 import '../models.dart';
 import '../theme.dart';
@@ -429,7 +430,12 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          _paid == null ? '아직 안 적었어요' : won(_paid!),
+                          _paid == null
+                              ? switch (Catalog.instance.listPriceKrw(widget.kit.id)) {
+                                  final int w => '안 적음 · 정가로 ≈ ${won(w)}',
+                                  _ => '아직 안 적었어요',
+                                }
+                              : won(_paid!),
                           style: TextStyle(
                             fontSize: Gp.t14,
                             fontWeight: _paid == null ? FontWeight.w400 : FontWeight.w600,

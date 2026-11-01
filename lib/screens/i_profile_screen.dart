@@ -236,7 +236,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       children: [
         _Header(
           name: name,
-          subtitle: handle.isNotEmpty ? '@$handle' : (signedIn ? '아이디를 아직 정하지 않았어요' : '로그인 전 · 이 기기에만 저장'),
+          subtitle: handle.isNotEmpty ? '@$handle' : (signedIn ? '아이디 없음' : '로그인 전'),
           avatarText: name.characters.isEmpty ? '나' : name.characters.first,
           tags: p.tags,
           onEdit: _editProfile,
@@ -245,14 +245,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _Hint(
             // I-2 P09
             icon: Icons.cloud_outlined,
-            text: '로그인하면 옛 Gunpula 앱의 컬렉션이 그대로 오고, 동생 · 친구와 서로의 컬렉션을 볼 수 있어요.',
+            text: '로그인 전이에요',
             action: '로그인',
             onTap: () => openSignIn(context),
           )
         else if (account.handle.isEmpty && !account.friends.unavailable)
           _Hint(
             icon: Icons.alternate_email,
-            text: '친구가 나를 찾을 수 있게 아이디를 정해 주세요.',
+            text: '아이디가 없어요',
             action: '아이디 정하기',
             onTap: () => askHandle(context),
           ),
@@ -279,7 +279,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           SectionHeader(
             '친구',
-            subtitle: f.unavailable ? '서버에 친구 기능이 아직 없어요' : '친구 ${f.friends.length}명 · 목록은 왼쪽 위 아바타(친구 서랍)에서',
+            subtitle: f.unavailable ? '' : '${f.friends.length}명',
           ),
           if (account.handle.isNotEmpty)
             Container(

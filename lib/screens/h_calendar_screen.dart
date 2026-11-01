@@ -300,13 +300,15 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
     onQuery: (q) => setState(() => _query = q), // STATE: 찾기 → 달력 점 · 목록
     filterCount: _filter.count,
     onFilter: () => _openFilter(d),
-    trailing: ViewIconToggle(
-      mine: _mine,
-      onChanged: (v) => setState(() => _mine = v),
-      allIcon: Icons.calendar_month_outlined,
-      allTip: '전체 일정',
-      mineTip: '내 일정',
-    ),
+    tools: [
+      ViewIconToggle(
+        mine: _mine,
+        onChanged: (v) => setState(() => _mine = v),
+        allIcon: Icons.calendar_month_outlined,
+        allTip: '전체 일정',
+        mineTip: '내 일정',
+      ),
+    ],
   );
 
   List<Widget> _list(List<_Event> all) {

@@ -179,7 +179,7 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
                           style: const TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w700),
                         ),
                         Text(
-                          handle.isNotEmpty ? '@$handle' : (signedIn ? '아이디 없음 · 내 정보에서 정하기' : '로그인 전'),
+                          handle.isNotEmpty ? '@$handle' : (signedIn ? '아이디 없음' : '로그인 전'),
                           style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
                         ),
                         const SizedBox(height: 5),
@@ -225,7 +225,7 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
       child: Row(
         children: [
           const Expanded(
-            child: Text('로그인하면 동생 · 친구를 아이디로 추가하고 서로의 컬렉션을 볼 수 있어요', style: TextStyle(fontSize: Gp.t12, height: 1.4)),
+            child: Text('로그인하면 친구를 볼 수 있어요', style: TextStyle(fontSize: Gp.t12, height: 1.4)),
           ),
           const SizedBox(width: 8),
           FilledButton(onPressed: () => openSignIn(context), child: const Text('로그인')),
@@ -255,15 +255,7 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
         children: [
           ListTile(
             leading: const Icon(Icons.person_add_alt_outlined, color: Gp.ink),
-            title: const Text('새 친구'),
-            subtitle: Text(
-              f.unavailable
-                  ? '서버에 친구 기능이 아직 없어요'
-                  : waiting == 0
-                  ? '받은 요청 없음'
-                  : '받은 요청 ${f.incoming.length} · 보낸 요청 ${f.outgoing.length}',
-              style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
-            ),
+            title: Text(waiting == 0 ? '친구 요청' : '친구 요청 ${f.incoming.length} · 보냄 ${f.outgoing.length}'),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -272,17 +264,6 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
               ],
             ),
             onTap: () => showFriendRequests(context),
-          ),
-          const Divider(height: 1, indent: 16, endIndent: 16),
-          ListTile(
-            leading: const Icon(Icons.alternate_email, color: Gp.ink),
-            title: const Text('아이디로 친구 추가'),
-            subtitle: Text(
-              account.handle.isEmpty ? '내 아이디부터 정해요' : '내 아이디 @${account.handle}',
-              style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
-            ),
-            trailing: const Icon(Icons.chevron_right, color: Gp.faint),
-            onTap: () => showAddFriend(context),
           ),
         ],
       ),
@@ -370,7 +351,7 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
             const Padding(
               padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
               child: Text(
-                '아직 친구가 없어요 · 위의 "아이디로 친구 추가"에서 동생 · 친구의 아이디를 넣어 보세요',
+                '아직 친구가 없어요',
                 style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
               ),
             ),

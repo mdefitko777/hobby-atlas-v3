@@ -42,6 +42,57 @@ extension on KitSort {
   };
 }
 
+/// 목록의 필터 · 격자/목록 — 위 검색창 줄의 아이콘(ListToolIcons)이 바꾼다 (홈 전체 목록 · 검색 결과)
+class ListTools extends ChangeNotifier {
+  KitFilter filter = KitFilter();
+  bool grid = true;
+
+  void setFilter(KitFilter f) {
+    filter = f;
+    notifyListeners();
+  }
+
+  void setGrid(bool g) {
+    grid = g;
+    notifyListeners();
+  }
+}
+
+/// 검색창 줄 오른쪽 세 칸: 필터 · 격자 · 목록. [pool] = 필터 시트가 개수를 세는 상품 (null 이면 필터 없음 = 옅게)
+class ListToolIcons extends StatelessWidget {
+  const ListToolIcons({super.key, required this.tools, required this.pool});
+  final ListTools tools;
+  final List<Kit>? pool;
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: tools,
+    builder: (context, _) => Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        FilterButton(
+          count: tools.filter.count,
+          onTap: pool == null
+              ? null
+              : () async {
+                  tools.filter.statusOf = Marks.read(context).statusOf;
+                  final picked = await showFilterSheet(context, kits: pool!, initial: tools.filter);
+                  if (picked != null) tools.setFilter(picked); // STATE: 필터 → 목록
+                },
+        ),
+        ViewIconToggle(
+          mine: !tools.grid,
+          onChanged: (list) => tools.setGrid(!list), // STATE: 보기 방식
+          allIcon: Icons.grid_view_outlined,
+          mineIcon: Icons.view_list_outlined,
+          allTip: '격자로 보기',
+          mineTip: '목록으로 보기',
+        ),
+      ],
+    ),
+  );
+}
+
 class SectionListView extends StatefulWidget {
   const SectionListView({
     super.key,
@@ -54,8 +105,12 @@ class SectionListView extends StatefulWidget {
     this.sort = KitSort.newest,
     this.query = '',
     this.header,
+    this.tools,
     this.loaders = const Loaders(),
   });
+
+  /// 있으면 필터 · 격자/목록은 위 검색창 줄이 바꾼다 (이 목록 머리에서는 숨김)
+  final ListTools? tools;
 
   final String title;
 
@@ -84,9 +139,38 @@ class SectionListView extends StatefulWidget {
 
 class _SectionListViewState extends State<SectionListView> {
   late KitSort _sort = widget.sort;
-  KitFilter _filter = KitFilter();
+  KitFilter _ownFilter = KitFilter();
+  bool _ownGrid = true;
   List<Kit> _cleared = const []; // 최근 본: 지운 기록
-  bool _grid = true;
+
+  // 위 검색창 줄이 갖고 있으면 그쪽 값 (ListTools)
+  KitFilter get _filter => widget.tools?.filter ?? _ownFilter;
+  set _filter(KitFilter f) => widget.tools == null ? _ownFilter = f : widget.tools!.setFilter(f);
+  bool get _grid => widget.tools?.grid ?? _ownGrid;
+  set _grid(bool g) => widget.tools == null ? _ownGrid = g : widget.tools!.setGrid(g);
+
+  void _onTools() => setState(() {});
+
+  @override
+  void initState() {
+    super.initState();
+    widget.tools?.addListener(_onTools);
+  }
+
+  @override
+  void didUpdateWidget(SectionListView old) {
+    super.didUpdateWidget(old);
+    if (old.tools != widget.tools) {
+      old.tools?.removeListener(_onTools);
+      widget.tools?.addListener(_onTools);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.tools?.removeListener(_onTools);
+    super.dispose();
+  }
   String _annStatus = '';
 
   List<Kit> get _kits => [
@@ -182,7 +266,7 @@ class _SectionListViewState extends State<SectionListView> {
               ),
               if (widget.history && _kits.isNotEmpty)
                 TextButton(onPressed: _clearHistory, child: const Text('기록 지우기')), // O-6
-              if (anns == null && _kits.isNotEmpty) ...[
+              if (anns == null && _kits.isNotEmpty && widget.tools == null) ...[
                 IconButton(
                   tooltip: '필터',
                   onPressed: _openFilter,

@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import '../json_util.dart';
 import '../models.dart';
 import 'blob_store.dart';
 import 'gunpula.dart';
@@ -14,7 +15,9 @@ import 'user_store.dart';
 enum CatalogPhase { empty, loading, ready, error }
 
 class Catalog extends ChangeNotifier {
-  Catalog._();
+  Catalog._() {
+    UserStore.instance.listPrice = listPriceKrw; // 구매가를 안 적은 상품 = 정가 × 환율
+  }
   static final instance = Catalog._();
 
   static const _kitsKey = 'catalog_kits.json';
@@ -208,7 +211,28 @@ class Catalog extends ChangeNotifier {
     phase = CatalogPhase.ready;
     error = '';
     _applyAliases().ignore();
+    _loadRates().ignore();
   }
+
+  /// 1엔 = ? 원 (data/exchange-rates.json · Frankfurter, 매일). 못 받았으면 대략값
+  double jpyToKrw = 9.0;
+
+  Future<void> _loadRates() async {
+    final r = jMap(jMap(await aux('exchange-rates.json'))['rates_to_krw'])['JPY'];
+    if (r is num && r > 0) jpyToKrw = r.toDouble();
+  }
+
+  /// 정가를 원으로 (정가가 없으면 null)
+  int? listPriceKrw(String id) => switch (byId[id]?.priceJpy) {
+    final int p => (p * jpyToKrw).round(),
+    _ => null,
+  };
+
+  /// 구매함 한 상품에 쓴 돈 — 적어 둔 구매가, 없으면 정가 × 환율 (estimate = true)
+  ({int? krw, bool estimate}) paidOf(Kit k) => switch (UserStore.instance.entry(k.id)?['purchase_price']) {
+    final num v => (krw: v.toInt(), estimate: false),
+    _ => (krw: k.purchaseKrw ?? listPriceKrw(k.id), estimate: k.purchaseKrw == null),
+  };
 
   /// 합쳐진 kit_id → 남은 kit_id (data/kit-aliases.json). 옛 id 로도 찾히게 하고, 내 기록을 옮긴다
   Map<String, String> aliases = const {};

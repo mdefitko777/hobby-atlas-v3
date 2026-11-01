@@ -1255,13 +1255,46 @@ class _AccentRingState extends State<AccentRing> with SingleTickerProviderStateM
   }
 }
 
-/// 보기 바꾸기 아이콘 두 개 (전체 ↔ 내 것) — 홈 검색창 옆 · 캘린더. 글자 없이 아이콘, 고른 쪽만 연한 파랑 칸
+/// 검색창 옆 아이콘 한 칸 — 모든 탭이 같은 크기 · 테두리 없음 (컬렉션의 목록 · 도감 아이콘과 같은 모양).
+/// 고른 것 = 진한 색, 아닌 것 = 옅은 색. [badge] > 0 이면 숫자 배지
+class ToolIcon extends StatelessWidget {
+  const ToolIcon({super.key, required this.icon, required this.tip, required this.onTap, this.on = true, this.color, this.badge = 0});
+  final IconData icon;
+  final String tip;
+  final VoidCallback? onTap;
+  final bool on;
+  final Color? color;
+  final int badge;
+
+  /// 한 칸 너비 (검색창 길이가 탭마다 같도록 늘 3칸)
+  static const width = 40.0;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: width,
+    height: 48,
+    child: IconButton(
+      tooltip: tip,
+      onPressed: onTap,
+      padding: EdgeInsets.zero,
+      icon: Badge(
+        isLabelVisible: badge > 0,
+        backgroundColor: Gp.accent,
+        label: Text('$badge'),
+        child: Icon(icon, size: Gp.iL, color: color ?? (on ? Gp.ink : Gp.faint)),
+      ),
+    ),
+  );
+}
+
+/// 보기 바꾸기 아이콘 두 칸 (전체 ↔ 내 것 · 목록 ↔ 도감 · 격자 ↔ 목록) — 검색창 옆 오른쪽 끝, 모든 탭 같은 자리
 class ViewIconToggle extends StatelessWidget {
   const ViewIconToggle({
     super.key,
     required this.mine,
     required this.onChanged,
     this.allIcon = Icons.newspaper_outlined,
+    this.mineIcon = Icons.person_outline,
     this.allTip = '전체 소식',
     this.mineTip = 'My Page',
   });
@@ -1269,35 +1302,18 @@ class ViewIconToggle extends StatelessWidget {
   final bool mine;
   final ValueChanged<bool> onChanged;
   final IconData allIcon;
+  final IconData mineIcon;
   final String allTip;
   final String mineTip;
 
   @override
-  Widget build(BuildContext context) {
-    // 고른 쪽 = 검색창과 같은 떠 있는 흰 칸 (높이도 검색창과 같게), 안 고른 쪽 = 아이콘만
-    Widget button(bool v, IconData icon, String tip) => Tooltip(
-      message: tip,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        decoration: v == mine ? Gp.raised(radius: Gp.radius) : const BoxDecoration(),
-        child: Material(
-          type: MaterialType.transparency,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(Gp.radius),
-            onTap: () => onChanged(v),
-            child: SizedBox.square(
-              dimension: 44,
-              child: Icon(icon, size: Gp.iM, color: v == mine ? Gp.accent : Gp.faint),
-            ),
-          ),
-        ),
-      ),
-    );
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [button(false, allIcon, allTip), const SizedBox(width: 2), button(true, Icons.person_outline, mineTip)],
-    );
-  }
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      ToolIcon(icon: allIcon, tip: allTip, on: !mine, onTap: () => onChanged(false)),
+      ToolIcon(icon: mineIcon, tip: mineTip, on: mine, onTap: () => onChanged(true)),
+    ],
+  );
 }
 
 /// 칸보다 작은 사진 — 남는 곳을 흰색 대신 같은 사진을 크게 · 흐리게 · 어둡게 깔고, 위에 사진 전체를 얹는다

@@ -17,6 +17,7 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../filter_sheet.dart';
 import '../channels.dart';
 import '../models.dart';
 import '../theme.dart';
@@ -85,7 +86,15 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
   @override
   void loadScope(List<String> ids) {
     _future = widget.loaders.kits(ids); // STATE: 검색 범위(채널) → GET /kits
+    _all = null;
+    _future.then((k) {
+      if (mounted) setState(() => _all = k); // 필터 시트가 셀 상품
+    }, onError: (Object _) {});
   }
+
+  /// 결과의 필터 · 격자/목록 (검색창 줄 아이콘)
+  final _tools = ListTools();
+  List<Kit>? _all;
 
   @override
   void initState() {
@@ -149,16 +158,26 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
           onSelect: selectChannel,
           onMyChannelsChanged: widget.onMyChannelsChanged,
         ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-          child: GpSearchBar(
-            // B-2 P04
+        ToolRow(
+          // B-2 P04 모든 탭과 같은 줄: [검색창][필터][격자 · 목록]
+          field: GpSearchBar(
             controller: _controller,
             focusNode: _focus,
             onChanged: (q) => setState(() => _query = q.trim()),
             onSubmitted: _submit,
             onCamera: widget.onCamera,
           ),
+          tools: [
+            ListToolIcons(
+              tools: _tools,
+              pool: _all == null
+                  ? null
+                  : [
+                      for (final k in _all!)
+                        if (kitMatches(k, _query)) k,
+                    ],
+            ),
+          ],
         ),
         Expanded(
           child: FutureBuilder<List<Kit>>(
@@ -328,6 +347,7 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
     // B-7 홈 전체 목록과 같은 목록 (필터 · 정렬 · 격자/목록), AI 후보는 맨 위 머리
     return SectionListView(
       key: const ValueKey('search'),
+      tools: _tools,
       title: _query.isEmpty ? '전체 상품' : '검색 결과',
       subtitle: channel == allChannelId ? '' : channelOf(channel).label,
       kits: results,

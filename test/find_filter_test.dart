@@ -7,7 +7,10 @@ import 'package:hobby_atlas/data/user_store.dart';
 import 'package:hobby_atlas/detail_pane.dart';
 import 'package:hobby_atlas/filter_sheet.dart';
 import 'package:hobby_atlas/marks.dart';
+import 'package:hobby_atlas/models.dart';
 import 'package:hobby_atlas/screens/a_home_screen.dart';
+import 'package:hobby_atlas/screens/f_collection_screen.dart';
+import 'package:hobby_atlas/widgets.dart';
 import 'package:hobby_atlas/screens/h_calendar_screen.dart';
 import 'package:hobby_atlas/theme.dart';
 
@@ -97,5 +100,33 @@ void main() {
     expect(LitState.lit.hit(false), isFalse);
     expect(LitState.unlit.hit(false), isTrue);
     expect(LitState.any.hit(false), isTrue);
+  });
+
+  test('구매가를 안 적은 구매함 상품은 정가 × 환율로 지출에 들어간다', () {
+    final me = UserStore.memory()..listPrice = (id) => id == 'a' ? 8500 : null;
+    me.setStatus('a', CollectStatus.owned); // 안 적음 → 정가 8,500원
+    me.setStatus('b', CollectStatus.owned);
+    me.setDetails('b', purchasePrice: 12000); // 적음 → 그 값
+    me.setStatus('c', CollectStatus.owned); // 정가도 없음 → 0
+    expect(me.spendKrw, 20500);
+  });
+
+  testWidgets('검색창 줄: 홈 · 캘린더 · 컬렉션 모두 [검색창][필터][보기 두 칸] — 검색창 폭이 같다', (tester) async {
+    final widths = <double>[];
+    Future<void> measure(Widget screen) async {
+      await _pump(tester, Scaffold(body: screen));
+      final row = find.byType(ToolRow).first;
+      expect(find.descendant(of: row, matching: find.byType(ToolIcon)), findsNWidgets(3));
+      widths.add(tester.getSize(find.descendant(of: row, matching: find.byType(GpSearchBar))).width);
+    }
+
+    await measure(
+      HomeScreen(myChannels: const ['gundam'], onMyChannelsChanged: (_) {}, onOpenSearch: () {}, onCamera: () {}, loaders: fakeLoaders),
+    );
+    await measure(CalendarScreen(myChannels: const ['gundam'], onMyChannelsChanged: (_) {}, loaders: fakeLoaders));
+    await measure(
+      CollectionScreen(myChannels: const ['gundam'], onMyChannelsChanged: (_) {}, onGoSearch: () {}, loaders: fakeLoaders),
+    );
+    expect(widths.toSet(), hasLength(1));
   });
 }
