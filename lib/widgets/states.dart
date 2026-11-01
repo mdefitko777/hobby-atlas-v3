@@ -43,7 +43,7 @@ class ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.cloud_off_outlined, size: 40, color: Gp.ink),
+            const Icon(Icons.cloud_off_outlined, size: Gp.iXL, color: Gp.ink),
             const SizedBox(height: 12),
             Text(
               title,
@@ -95,7 +95,7 @@ class EmptyView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 40, color: Gp.faint),
+            Icon(icon, size: Gp.iXL, color: Gp.faint),
             const SizedBox(height: 12),
             Text(
               message,

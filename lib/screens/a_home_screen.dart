@@ -565,7 +565,7 @@ class _HorizontalRow extends StatelessWidget {
       height: width / aspect + 32,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: Gp.gutter),
         itemCount: row.items.length,
         separatorBuilder: (_, _) => const SizedBox(width: 10),
         itemBuilder: (context, i) {

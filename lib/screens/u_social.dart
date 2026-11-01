@@ -416,7 +416,7 @@ class SuggestionsPanel extends StatelessWidget {
                         key: ValueKey('suggest-dismiss-${s.profile.handle}'),
                         tooltip: '닫기',
                         onPressed: () => account.store.social.dismissSuggestion(s.profile.handle), // 기기에만
-                        icon: const Icon(Icons.close, size: 18, color: Gp.faint),
+                        icon: const Icon(Icons.close, size: Gp.iM, color: Gp.faint),
                       ),
                     ],
                   ),
@@ -444,9 +444,9 @@ class FriendStatusLine extends StatelessWidget {
     return Row(
       children: [
         switch (e.kind) {
-          'owned' => const OwnedIcon(size: 12),
-          'wanted' => const LikedIcon(size: 12),
-          _ => const Icon(Icons.photo_camera_outlined, size: 13, color: Gp.muted),
+          'owned' => const OwnedIcon(size: Gp.iXS),
+          'wanted' => const LikedIcon(size: Gp.iXS),
+          _ => const Icon(Icons.photo_camera_outlined, size: Gp.iXS, color: Gp.muted),
         },
         const SizedBox(width: 4),
         if (name.isNotEmpty)

@@ -77,7 +77,7 @@ class _BbxGuideState extends State<BbxGuide> {
                 padding: const EdgeInsets.fromLTRB(16, 14, 12, 10),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: Gp.gutter),
                 child: GridView.count(
                   crossAxisCount: guideCols(box.maxWidth, 110),
                   shrinkWrap: true,

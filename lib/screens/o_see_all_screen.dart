@@ -512,7 +512,7 @@ class _SectionListViewState extends State<SectionListView> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              AspectRatio(aspectRatio: 16 / 9, child: PhotoThumb(a.image, radius: 12)),
+                              AspectRatio(aspectRatio: 16 / 9, child: PhotoThumb(a.image)),
                               const SizedBox(height: 8),
                               Row(
                                 children: [

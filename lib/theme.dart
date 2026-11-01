@@ -24,10 +24,15 @@ abstract final class Gp {
   static const radius = 12.0; // 카드 · 버튼 · 입력칸 · 사진
   static const rLarge = 18.0; // 큰 면: 시트 · 대화상자 · 달력 판 · 배너 카드
 
-  /// 아이콘 3단계 — 글자 옆 16 · 버튼 20 · 머리줄 24 (큰 빈 화면 그림은 따로)
+  /// 아이콘 단계 — 작은 글자(t11 · t12) 옆 · 사진 위 작은 점 12 · 글자 옆 16 · 버튼 20 · 머리줄 24 · 빈 화면 · 오류 그림 40
+  static const iXS = 12.0;
   static const iS = 16.0;
   static const iM = 20.0;
   static const iL = 24.0;
+  static const iXL = 40.0;
+
+  /// 화면 옆 여백 (목록 · 격자 · 섹션 안쪽)
+  static const gutter = 16.0;
 
   /// 특별 관심 ★
   static const star = Color(0xFFBA7517);

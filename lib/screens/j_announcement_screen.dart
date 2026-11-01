@@ -192,7 +192,7 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
           ? '이 예고 알림을 껐어요'
           : store.config.enabled
           ? '다음 단계가 되면 알려 드릴게요'
-          : '다음 단계가 되면 알림함에 넣어 둘게요 · 휴대폰 알림은 설정에서 켜요',
+          : '다음 단계가 되면 알림함에 · 휴대폰 알림은 설정에서',
       onUndo: () => set(before),
     );
   }
@@ -252,7 +252,7 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
         padding: const EdgeInsets.fromLTRB(0, 20, 0, 24),
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: Gp.gutter),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -282,7 +282,7 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
                 return const Padding(
                   padding: EdgeInsets.all(16),
                   child: Text(
-                    '제목에서 상품을 찾지 못했어요 · 상품화되면 여기에 보여요', // P09
+                    '이어진 상품 아직 없음 · 상품화되면 여기에', // P09
                     style: TextStyle(color: Gp.muted, fontSize: Gp.t12),
                   ),
                 );
@@ -320,7 +320,7 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
     height: 148 + 32,
     child: ListView.separated(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: Gp.gutter),
       itemCount: kits.length,
       separatorBuilder: (_, _) => const SizedBox(width: 12),
       itemBuilder: (context, i) => ProductTile(
@@ -481,7 +481,7 @@ class _Summary extends StatelessWidget {
             children: [
               if (failed) ...[
                 const Text(
-                  '이 페이지는 앱 안에서 열 수 없어요 · 아래 ↗ 로 브라우저에서 볼 수 있어요',
+                  '앱 안에서 열 수 없는 페이지 · 아래 ↗ 로 브라우저에서',
                   style: TextStyle(fontSize: Gp.t12, color: Gp.danger),
                 ),
                 const SizedBox(height: 12),

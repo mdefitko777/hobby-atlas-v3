@@ -605,7 +605,7 @@ class _SetStrip extends StatelessWidget {
       height: 58,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: Gp.gutter),
         children: [tile(null, '전체'), for (final s in sets) tile(s.id, s.name)],
       ),
     );

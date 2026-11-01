@@ -477,7 +477,7 @@ class HelpScreen extends StatelessWidget {
             Center(
               child: Icon(icon, size: Gp.iM, color: t == CellTier.none ? Gp.faint : Gp.ink),
             ),
-            radius: 10,
+            radius: Gp.rSmall,
           ),
         ),
         const SizedBox(height: 6),
@@ -525,7 +525,7 @@ class HelpScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: Gp.gutter),
                   child: Wrap(
                     spacing: 16,
                     runSpacing: 8,

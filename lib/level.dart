@@ -156,7 +156,7 @@ class _LevelHelp extends StatelessWidget {
         ],
       ),
     );
-    Widget tier(CellTier t) => tierFrame(t, cellImage(t, _sample, null), radius: 9);
+    Widget tier(CellTier t) => tierFrame(t, cellImage(t, _sample, null), radius: Gp.rSmall);
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
@@ -238,7 +238,7 @@ Future<void> showLevelSheet(BuildContext context, Loaders loaders) => showGpShee
           const Divider(height: 1),
           Expanded(
             child: d.series.isEmpty
-                ? const Center(child: Icon(Icons.grid_view_rounded, size: 40, color: Gp.line))
+                ? const Center(child: Icon(Icons.grid_view_rounded, size: Gp.iXL, color: Gp.line))
                 : GridView.builder(
                     padding: const EdgeInsets.all(16),
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -260,7 +260,7 @@ Future<void> showLevelSheet(BuildContext context, Loaders loaders) => showGpShee
                                 padding: const EdgeInsets.all(6),
                                 child: AppImage(s.image, fit: BoxFit.contain),
                               ),
-                              radius: 10,
+                              radius: Gp.radius,
                             ),
                           ),
                           const SizedBox(height: 5),

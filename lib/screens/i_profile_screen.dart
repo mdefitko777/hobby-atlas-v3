@@ -595,7 +595,7 @@ class _Header extends StatelessWidget {
               cover, // 배경(커버)
               const SizedBox(height: 56), // 아바타가 겹쳐 앉는 자리
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: Gp.gutter),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -622,7 +622,7 @@ class _Header extends StatelessWidget {
               if (tags.isNotEmpty) ...[
                 const SizedBox(height: 10),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: Gp.gutter),
                   child: Wrap(
                     spacing: 6,
                     runSpacing: 6,
@@ -792,7 +792,7 @@ class _TagSheetState extends State<_TagSheet> {
                       children: [
                         Text(t, style: const TextStyle(fontSize: Gp.t12)),
                         const SizedBox(width: 2),
-                        const Icon(Icons.close, size: 14, color: Gp.faint),
+                        const Icon(Icons.close, size: Gp.iXS, color: Gp.faint),
                       ],
                     ),
                   ),

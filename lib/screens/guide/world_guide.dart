@@ -5,6 +5,7 @@ import '../../api.dart';
 import '../../channels.dart';
 import '../../detail_pane.dart';
 import '../../models.dart';
+import '../../theme.dart';
 import '../../widgets.dart';
 import '../o_see_all_screen.dart' show SectionListView;
 import '../r_mezastar_screen.dart' show TagGameCards;
@@ -76,7 +77,7 @@ class _WorldGuideState extends State<WorldGuide> {
                 padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: Gp.gutter),
                 child: GridView.count(
                   crossAxisCount: guideCols(box.maxWidth, 120),
                   shrinkWrap: true,

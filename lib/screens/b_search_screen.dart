@@ -236,7 +236,7 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
     final half = (frequent.length / 2).ceil();
     final fresh = newThisWeek(kits);
     Widget wrap(List<Widget> children) => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: Gp.gutter),
       child: Wrap(spacing: 8, runSpacing: 8, children: children),
     );
     Widget freqCol(Iterable<MapEntry<String, int>> part) => Expanded(
@@ -282,7 +282,7 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
         if (frequent.isNotEmpty) ...[
           const SectionHeader('자주 찾은', padding: EdgeInsets.fromLTRB(16, 24, 12, 10)), // B-4 내 검색 횟수
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: Gp.gutter),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [freqCol(frequent.take(half)), const SizedBox(width: 16), freqCol(frequent.skip(half))],

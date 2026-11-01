@@ -154,7 +154,7 @@ class ThumbRow extends StatelessWidget {
             if (leading != null) Padding(padding: const EdgeInsets.only(right: 8), child: leading),
             SizedBox.square(
               dimension: size,
-              child: PhotoThumb(image, radius: size > 60 ? 12 : 10),
+              child: PhotoThumb(image),
             ),
             const SizedBox(width: 12),
             Expanded(

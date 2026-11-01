@@ -332,7 +332,7 @@ class _RequestsSheetState extends State<_RequestsSheet> {
     final incoming = friends.incoming;
     final outgoing = friends.outgoing;
     Widget person(PublicProfile p, List<Widget> actions) => ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+      contentPadding: const EdgeInsets.symmetric(horizontal: Gp.gutter),
       leading: CircleThumb(image: '', label: p.name, size: 40),
       title: Text(p.name),
       subtitle: Text(

@@ -386,7 +386,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               // N-8 P09
               icon: Icons.notifications_none,
               message: '새 알림이 없어요',
-              detail: '알림 규칙(PB · SEED/00 · BBX …)에 맞는 내 채널 새 상품, 좋아요한 상품의 변화와 PB 예약 기간이 여기에 모여요\n${_store.statusLine}',
+              detail: '내 채널 새 상품 · 좋아요한 상품 변화 · PB 예약이 여기에 모여요\n${_store.statusLine}',
             ),
           ),
         ),
@@ -452,9 +452,7 @@ class _NoticeRow extends StatelessWidget {
     final person = n.type == NoticeType.request || (n.type == NoticeType.friend && n.image.isEmpty);
     final thumb = SizedBox.square(
       dimension: 52,
-      child: person
-          ? CircleThumb(image: '', label: n.title.characters.first, size: 52)
-          : PhotoThumb(n.image, radius: 10),
+      child: person ? CircleThumb(image: '', label: n.title.characters.first, size: 52) : PhotoThumb(n.image),
     );
     return InkWell(
       onTap: onTap,
@@ -479,7 +477,7 @@ class _NoticeRow extends StatelessWidget {
                       color: Gp.panel,
                       border: Border.all(color: Gp.line),
                     ),
-                    child: Icon(n.type.icon, size: 13, color: Gp.ink),
+                    child: Icon(n.type.icon, size: Gp.iXS, color: Gp.ink),
                   ),
                 ),
               ],

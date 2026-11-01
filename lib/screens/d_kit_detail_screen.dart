@@ -468,7 +468,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
                   height: 148 + 32,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: Gp.gutter),
                     itemCount: rest.length,
                     separatorBuilder: (_, _) => const SizedBox(width: 12),
                     itemBuilder: (context, i) => ProductTile(
@@ -730,7 +730,7 @@ class _MarketCard extends StatelessWidget {
                             style: const TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w500),
                           ),
                           const SizedBox(width: 2),
-                          const Icon(Icons.north_east, size: 12, color: Gp.muted),
+                          const Icon(Icons.north_east, size: Gp.iXS, color: Gp.muted),
                         ],
                       ),
                     ),

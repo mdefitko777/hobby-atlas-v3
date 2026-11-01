@@ -591,7 +591,7 @@ class _PhotoFindScreenState extends State<PhotoFindScreen> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: Gp.gutter),
                 child: TextField(
                   textInputAction: TextInputAction.search,
                   decoration: const InputDecoration(
@@ -647,7 +647,7 @@ class _DimOutside extends CustomPainter {
   void paint(Canvas canvas, Size s) {
     final hole = RRect.fromRectAndRadius(
       Rect.fromCenter(center: s.center(Offset.zero), width: w, height: h),
-      const Radius.circular(18),
+      const Radius.circular(Gp.rLarge),
     );
     final path = Path()
       ..fillType = PathFillType.evenOdd

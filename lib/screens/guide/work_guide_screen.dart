@@ -222,7 +222,7 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
   }
 
   Widget _grid(BoxConstraints box, Marks m, List<GuideUnit> units) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 16),
+    padding: const EdgeInsets.symmetric(horizontal: Gp.gutter),
     child: GridView.count(
       crossAxisCount: guideCols(box.maxWidth, 110),
       shrinkWrap: true,
@@ -512,7 +512,7 @@ class _UnitSheet extends StatelessWidget {
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 12),
                 child: Text(
-                  '대응 상품이 아직 없어요 · 새로 나오면 홈에 먼저 알려 드려요', // P09
+                  '대응 상품 아직 없음 · 나오면 홈에 먼저 떠요', // P09
                   style: TextStyle(color: Gp.muted),
                 ),
               ),

@@ -220,7 +220,7 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('$n개를 ${_ownedTab ? '구매함' : '좋아요'}에서 삭제할까요?'),
-        content: const Text('내 컬렉션에서만 빠져요. 실수로 지웠다면 휴지통(🗑)에서 30일 동안 되살릴 수 있어요.'),
+        content: const Text('내 컬렉션에서만 빠져요 · 🗑 휴지통에서 30일 안에 되살려요'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('취소')),
           FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('삭제')),

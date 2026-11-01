@@ -6,6 +6,7 @@ import '../../detail_pane.dart';
 import '../../level.dart';
 import '../../marks.dart';
 import '../../models.dart';
+import '../../theme.dart';
 import '../../widgets.dart';
 import 'guide_parts.dart';
 import 'work_guide_screen.dart';
@@ -81,7 +82,7 @@ class _GundamGuideState extends State<GundamGuide> {
                   padding: const EdgeInsets.fromLTRB(16, 14, 12, 10),
                 ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: Gp.gutter),
                   child: GridView.count(
                     crossAxisCount: guideCols(box.maxWidth, 120),
                     shrinkWrap: true,

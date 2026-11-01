@@ -10,7 +10,7 @@ import 'rings.dart';
 enum CellTier { none, liked, owned, photo }
 
 /// 단계별 칸 틀 (도감 칸 · ? 견본 공통)
-Widget tierFrame(CellTier tier, Widget child, {double radius = 12}) {
+Widget tierFrame(CellTier tier, Widget child, {double radius = Gp.radius}) {
   final photo = tier == CellTier.photo;
   final inner = Container(
     decoration: BoxDecoration(

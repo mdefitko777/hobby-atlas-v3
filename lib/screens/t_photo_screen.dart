@@ -230,7 +230,7 @@ class MyPhotoTile extends StatelessWidget {
   Widget build(BuildContext context) => _Tile(
     key: ValueKey('my-photo-${photo.id}'),
     onTap: () => openPage(context, PhotoViewScreen(mine: photo.id)),
-    badge: photo.shared ? null : _dot(const Icon(Icons.visibility_off_outlined, size: 12, color: Gp.muted)),
+    badge: photo.shared ? null : _dot(const Icon(Icons.visibility_off_outlined, size: Gp.iXS, color: Gp.muted)),
     child: LocalPhotoImage(photo.file),
   );
 }
@@ -244,7 +244,7 @@ class KitPhotoTile extends StatelessWidget {
   Widget build(BuildContext context) => _Tile(
     key: ValueKey('kit-photo-${kit.id}'),
     onTap: () => openKitDetail(context, kit),
-    badge: _dot(const OwnedIcon(size: 12)),
+    badge: _dot(const OwnedIcon(size: Gp.iXS)),
     child: Padding(
       padding: const EdgeInsets.all(4),
       child: AppImage(kit.image, fit: BoxFit.contain, placeholder: kit.line),

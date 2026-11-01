@@ -158,7 +158,7 @@ class CircleThumb extends StatelessWidget {
 
 /// 둥근 모서리 상품 사진 (회백색 바탕)
 class PhotoThumb extends StatelessWidget {
-  const PhotoThumb(this.image, {super.key, this.radius = 14});
+  const PhotoThumb(this.image, {super.key, this.radius = Gp.radius});
   final String image;
   final double radius;
 
