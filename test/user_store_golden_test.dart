@@ -120,7 +120,8 @@ void _golden(String name, Object? actual) {
   final f = File('test/fixtures/user_store.$name.golden.json');
   final text = '${_pretty(actual)}\n';
   if (_update) f.writeAsStringSync(text);
-  expect(text, f.readAsStringSync(), reason: '$name 모양이 바뀌었다');
+  // git 이 줄 끝을 CRLF 로 바꿔 꺼내도 같게 본다
+  expect(text, f.readAsStringSync().replaceAll('\r\n', '\n'), reason: '$name 모양이 바뀌었다');
 }
 
 void main() {
