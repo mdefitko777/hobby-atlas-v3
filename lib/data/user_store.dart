@@ -3,7 +3,7 @@
 // 지운 것도 'deleted' 로 남겨 둔다 (나중에 동기화할 때 "지웠다"가 이기도록).
 // 로그인하면 lib/sync/sync_service.dart 가 이 기록을 옛 앱과 같은 Supabase payload 에 합쳐 올린다:
 //   · 공유되는 것 = 구매함 · 좋아요(내 버킷) — 바꾸면 sharedRevision +1, cloudDirty = true
-//   · 이 기기에만 = 베이 부품 · 베이 연결 · 베이 조합 · 덱 · 도감 손으로 켜기 · 최근 본 것 (payload 에 넣지 않음)
+//   · 이 기기에만 = 베이 부품 · 베이 연결 · 베이 조합 · 덱 · 도감 손으로 켜기 · 메자스타 · 프렌다 태그 · 최근 본 것 (payload 에 넣지 않음)
 import 'dart:async';
 import 'dart:convert';
 
@@ -63,6 +63,8 @@ class UserStore extends ChangeNotifier {
 
   /// 3on3 덱 — comboIds 는 늘 3칸, 빈 칸은 ''. 기기에만
   final List<Deck> bbxDecks = [];
+  /// 가진 메자스타 태그 · 프렌다 픽 (Gunpula atlas 의 인쇄 id `mz-intl:1-1-001@KR` · 픽 id `frienda:1-1-001`). 기기에만
+  final Set<String> tagOwned = {};
 
   /// 내 채널 (채널 바 · 알림 범위). 처음 설치하면 건담 · 베이블레이드 · 포켓몬
   final List<String> myChannels = [...defaultMyChannels];
@@ -125,6 +127,9 @@ class UserStore extends ChangeNotifier {
     bbxDecks
       ..clear()
       ..addAll(jList(local['bbx_decks']).map(Deck.fromJson).nonNulls.map(_deck3));
+    tagOwned
+      ..clear()
+      ..addAll(jList(local['tag_owned']).whereType<String>());
     // 키가 없으면(옛 파일) 처음 값. 빈 목록은 "채널 없음"으로 그대로 둔다.
     myChannels
       ..clear()
@@ -148,6 +153,7 @@ class UserStore extends ChangeNotifier {
       'recent_viewed': recentViewed,
       'bbx_combos': [for (final c in bbxCombos) c.toJson()],
       'bbx_decks': [for (final d in bbxDecks) d.toJson()],
+      'tag_owned': tagOwned.toList(),
       'my_channels': myChannels,
       'special_friends': specialFriends.toList(),
     },
@@ -289,6 +295,11 @@ class UserStore extends ChangeNotifier {
     if (have ? bbxOwnedParts.add(partId) : bbxOwnedParts.remove(partId)) _changed();
   }
 
+  /// 메자스타 태그 · 프렌다 픽 가짐 표시
+  void setTagOwned(String id, bool have) {
+    if (have ? tagOwned.add(id) : tagOwned.remove(id)) _changed();
+  }
+
   void setManualLit(int unitId, bool lit) {
     if (lit ? guideManualLit.add(unitId) : guideManualLit.remove(unitId)) _changed();
   }
@@ -385,6 +396,7 @@ class UserStore extends ChangeNotifier {
     bbxOwnedParts.addAll(p.bbxOwnedParts);
     bbxManualMap.addAll(p.bbxManualMap);
     guideManualLit.addAll(p.guideManualLit);
+    tagOwned.addAll(p.tagOwned);
     for (final id in p.recentViewed.reversed) {
       if (!recentViewed.contains(id)) recentViewed.insert(0, id);
     }
@@ -487,6 +499,8 @@ class ImportPreview {
   /// Hobby Atlas 자신의 백업에만 있다 (베이 조합 · 덱)
   final List<Combo> bbxCombos = [];
   final List<Deck> bbxDecks = [];
+  /// 메자스타 · 프렌다 가진 태그 (Hobby Atlas 백업에만)
+  final Set<String> tagOwned = {};
 
   /// Hobby Atlas 자신의 백업에만 있다 (옛 Gunpula 에는 채널이 없음)
   List<String>? myChannels;
@@ -502,7 +516,8 @@ class ImportPreview {
       guideManualLit.isEmpty &&
       recentViewed.isEmpty &&
       bbxCombos.isEmpty &&
-      bbxDecks.isEmpty;
+      bbxDecks.isEmpty &&
+      tagOwned.isEmpty;
 
   static ImportPreview parse(String text, bool Function(String kitId) knownKit) {
     final p = ImportPreview._();
@@ -598,6 +613,7 @@ class ImportPreview {
     p.recentViewed.addAll(jList(local['recent_viewed']).whereType<String>());
     p.bbxCombos.addAll(jList(local['bbx_combos']).map(Combo.fromJson).nonNulls);
     p.bbxDecks.addAll(jList(local['bbx_decks']).map(Deck.fromJson).nonNulls);
+    p.tagOwned.addAll(jList(local['tag_owned']).whereType<String>());
     if (local['my_channels'] is List) p.myChannels = jList(local['my_channels']).whereType<String>().toList();
     return p;
   }

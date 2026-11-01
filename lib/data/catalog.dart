@@ -113,7 +113,8 @@ class Catalog extends ChangeNotifier {
       final t = await _get('data/$file');
       if (t != null) v = jsonDecode(t);
     }
-    return _aux[file] = v;
+    if (v != null) _aux[file] = v; // 못 받았으면 기억하지 않는다 (다음에 다시)
+    return v;
   }
 
   /// 새 데이터 확인. [force] = manifest 가 같아도 다시 받기 (설정 › 지금 새로 받기)

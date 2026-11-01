@@ -11,6 +11,7 @@
 // │ B-7  │ SectionListView (O 전체 목록 재사용) │ 검색 결과 · 필터 · 정렬 · 격자/목록      │ P08 · 적응형 │
 // │ B-9  │ 검색어 · 포커스 없을 때 같은 목록      │ 처음 화면 = 전체 상품 (내 채널 상품 전부)  │ P07 · P06     │
 // │ B-8  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 결과 없음          │ P01 · P09     │
+// │ B-10 │ TagSearchSection (R 화면 파일)        │ 메자스타 · 프렌다 태그 · 게임 이름 찾기   │ P07 · P06     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 가짜 검색: GET /kits 로 받은 목록 안에서만 거른다(setState). 실제 검색 엔진 · AI 호출 없음.
 // 현행 앱 문제: 정확한 이름을 모르면 못 찾음 · 필터 입구가 여러 개 → v2는 검색창 하나 + 말로 찾기.
@@ -25,6 +26,7 @@ import '../widgets.dart';
 import 'c_channel_screen.dart';
 import 'd_kit_detail_screen.dart';
 import 'o_see_all_screen.dart';
+import 'r_mezastar_screen.dart' show TagSearchSection;
 
 /// 처음 보이는 최근 검색어 (가짜 기록 — 영구 저장 금지라 상수)
 const initialRecentQueries = ['스트라이크 프리덤', 'RG 윙', '이브이', 'BX-01'];
@@ -326,9 +328,12 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
           if (byId[id] case final k?) (k, score, why),
     ];
 
+    // B-10 메자스타 · 프렌다 태그 (포켓몬 · 전체 채널에서), 게임 이름이면 도감 입구
+    final tags = TagSearchSection(query: _query, tags: channel == allChannelId || channel == 'pokemon');
     if (results.isEmpty && candidates.isEmpty) {
       return ListView(
         children: [
+          tags,
           EmptyView(
             // B-8 P09
             icon: Icons.search_off,
@@ -351,12 +356,17 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
       title: _query.isEmpty ? '전체 상품' : '검색 결과',
       subtitle: channel == allChannelId ? '' : channelOf(channel).label,
       kits: results,
-      header: candidates.isEmpty
-          ? null
-          : _AiCandidates(
+      header: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          tags,
+          if (candidates.isNotEmpty)
+            _AiCandidates(
               items: candidates,
               onTap: (k) => openKitDetail(context, k, loaders: widget.loaders),
             ), // B-6
+        ],
+      ),
       onBack: _query.isEmpty
           ? null // 처음 화면(전체 상품)에는 돌아갈 곳이 없음
           : () {

@@ -1,0 +1,258 @@
+{
+ "schema": 1,
+ "updated_at": "2026-11-01T08:39:32.582Z",
+ "edition": {
+  "id": "mz-jp",
+  "name": {
+   "ja": "ポケモンメザスタ",
+   "en": "Pokémon Mezastar (Japan, 2020-2024)",
+   "ko": "포켓몬 메자스타 (일본판)",
+   "zh_hant": "寶可夢MEZASTAR（日本版）"
+  },
+  "regions": {
+   "JA": {
+    "label": "JA (Japan)",
+    "lang": "ja"
+   }
+  },
+  "id_scheme": "mz-jp:<serial> (1-001, 2-s-NNN, 3-s-NNN, 4-s-NNN, 4-s-NNNG gorgeous, 4-s-UNN ultra beast); mz-jp:<set>-L-<original serial> legacy; mz-jp:P-NNN promos (official image number) or mz-jp:P-<species>-<campaign> (Bulbapedia only). Printing ids: <tag>@JA[:<promo campaign>]",
+  "status": "ended 2024 (replaced by Pokémon Frienda); data frozen"
+ },
+ "sets": [
+  {
+   "id": "mz-jp:base-1",
+   "ordinal": 1,
+   "series": "base",
+   "names": {
+    "ja": "1弾",
+    "en": "Set 1"
+   },
+   "releases": [
+    {
+     "region": "JA",
+     "local_name": "1弾",
+     "date": "2020-09-17",
+     "url": "https://www.takaratomy-arts.co.jp/specials/pokemonmezastar/new/1.html",
+     "wiki": "https://bulbapedia.bulbagarden.net/wiki/Set_1_(Mezastar)"
+    }
+   ],
+   "counts": {
+    "total": 70,
+    "standard": 70,
+    "by_region": {
+     "JA": 70
+    }
+   }
+  },
+  {
+   "id": "mz-jp:gorgeousstar-5",
+   "ordinal": 19,
+   "series": "gorgeousstar",
+   "names": {
+    "ja": "ゴージャススター5弾",
+    "en": "Gorgeous Star Set 5"
+   },
+   "releases": [
+    {
+     "region": "JA",
+     "local_name": "ゴージャススター5弾",
+     "date": "2024-04-18",
+     "url": "https://www.takaratomy-arts.co.jp/specials/pokemonmezastar/new/gs5.html",
+     "wiki": "https://bulbapedia.bulbagarden.net/wiki/Gorgeous_Star_set_5_(Mezastar)"
+    }
+   ],
+   "counts": {
+    "total": 80,
+    "standard": 70,
+    "gorgeous": 10,
+    "by_region": {
+     "JA": 80
+    }
+   }
+  },
+  {
+   "id": "mz-jp:promo",
+   "ordinal": 100,
+   "series": "promo",
+   "names": {
+    "ja": "スペシャルタグ",
+    "en": "Promotional tags"
+   },
+   "releases": [
+    {
+     "region": "JA",
+     "local_name": "スペシャルタグ",
+     "url": "https://www.takaratomy-arts.co.jp/specials/pokemonmezastar/new/special/",
+     "wiki": "https://bulbapedia.bulbagarden.net/wiki/Promotional_tags_(Mezastar)"
+    }
+   ],
+   "counts": {
+    "total": 161,
+    "promo": 161,
+    "by_region": {
+     "JA": 161
+    }
+   }
+  }
+ ],
+ "tags": [
+  {
+   "id": "mz-jp:1-001",
+   "serial": "1-001",
+   "kind": "standard",
+   "grade": 6,
+   "grade_group": "superstar",
+   "dex": 888,
+   "types": [
+    "Fairy",
+    "Steel"
+   ],
+   "names": {
+    "ja": "ザシアン",
+    "en": "Zacian",
+    "ko": "자시안",
+    "zh_hant": "蒼響"
+   },
+   "sets": [
+    "mz-jp:base-1"
+   ],
+   "printings": [
+    {
+     "id": "mz-jp:1-001@JA",
+     "region": "JA",
+     "name": "ザシアン",
+     "img_front": "https://www.takaratomy-arts.co.jp/specials/pokemonmezastar/new/img/1/1-001.png",
+     "img_thumb": "https://www.takaratomy-arts.co.jp/specials/pokemonmezastar/new/img/1/1-001_thumb.png"
+    }
+   ]
+  },
+  {
+   "id": "mz-jp:1-056",
+   "serial": "1-056",
+   "kind": "standard",
+   "grade": 3,
+   "grade_group": "normal",
+   "dex": 25,
+   "types": [
+    "Electric"
+   ],
+   "names": {
+    "ja": "ピカチュウ",
+    "en": "Pikachu",
+    "ko": "피카츄",
+    "zh_hant": "皮卡丘"
+   },
+   "sets": [
+    "mz-jp:base-1"
+   ],
+   "printings": [
+    {
+     "id": "mz-jp:1-056@JA",
+     "region": "JA",
+     "name": "ピカチュウ",
+     "img_front": "https://www.takaratomy-arts.co.jp/specials/pokemonmezastar/new/img/1/1-056.png",
+     "img_thumb": "https://www.takaratomy-arts.co.jp/specials/pokemonmezastar/new/img/1/1-056_thumb.png"
+    },
+    {
+     "id": "mz-jp:1-056@JA:get-in-battle-free-trial-special-edition",
+     "region": "JA",
+     "variant": "Get in Battle Free Trial Special Edition",
+     "name": "ピカチュウ",
+     "src": "bulbapedia"
+    }
+   ]
+  },
+  {
+   "id": "mz-jp:4-5-001",
+   "serial": "4-5-001",
+   "kind": "standard",
+   "grade": 6,
+   "grade_group": "superstar",
+   "dex": 898,
+   "types": [
+    "Psychic",
+    "Ice"
+   ],
+   "names": {
+    "ja": "バドレックス",
+    "en": "Calyrex",
+    "ko": "버드렉스",
+    "zh_hant": "蕾冠王"
+   },
+   "sets": [
+    "mz-jp:gorgeousstar-5"
+   ],
+   "printings": [
+    {
+     "id": "mz-jp:4-5-001@JA",
+     "region": "JA",
+     "name": "バドレックス",
+     "img_front": "https://www.takaratomy-arts.co.jp/specials/pokemonmezastar/new/img/gs5/4-5-001.png",
+     "img_thumb": "https://www.takaratomy-arts.co.jp/specials/pokemonmezastar/new/img/gs5/4-5-001_thumb.png",
+     "kira": true
+    }
+   ]
+  },
+  {
+   "id": "mz-jp:4-5-002",
+   "serial": "4-5-002",
+   "kind": "standard",
+   "grade": 6,
+   "grade_group": "superstar",
+   "dex": 898,
+   "types": [
+    "Psychic",
+    "Ghost"
+   ],
+   "names": {
+    "ja": "バドレックス",
+    "en": "Calyrex",
+    "ko": "버드렉스",
+    "zh_hant": "蕾冠王"
+   },
+   "sets": [
+    "mz-jp:gorgeousstar-5"
+   ],
+   "printings": [
+    {
+     "id": "mz-jp:4-5-002@JA",
+     "region": "JA",
+     "name": "バドレックス",
+     "img_front": "https://www.takaratomy-arts.co.jp/specials/pokemonmezastar/new/img/gs5/4-5-002.png",
+     "img_thumb": "https://www.takaratomy-arts.co.jp/specials/pokemonmezastar/new/img/gs5/4-5-002_thumb.png",
+     "kira": true
+    }
+   ]
+  },
+  {
+   "id": "mz-jp:P-001",
+   "serial": "P",
+   "kind": "promo",
+   "grade_group": "promo",
+   "dex": 812,
+   "types": [
+    "Grass"
+   ],
+   "orientation": "horizontal",
+   "names": {
+    "ja": "ゴリランダー",
+    "en": "Rillaboom",
+    "ko": "고릴타",
+    "zh_hant": "轟擂金剛猩"
+   },
+   "sets": [
+    "mz-jp:promo"
+   ],
+   "promo_campaign": "Star Pokémon Set",
+   "printings": [
+    {
+     "id": "mz-jp:P-001@JA",
+     "region": "JA",
+     "name": "ゴリランダー",
+     "img_front": "https://www.takaratomy-arts.co.jp/specials/pokemonmezastar/new/special/img/p001.png",
+     "img_thumb": "https://www.takaratomy-arts.co.jp/specials/pokemonmezastar/new/special/img/p001_thumb.png"
+    }
+   ]
+  }
+ ]
+}
