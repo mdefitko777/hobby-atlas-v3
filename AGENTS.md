@@ -1,36 +1,28 @@
-# AGENTS.md — GAI3008 중간고사: UI 프로토타입 전용 규칙
+# AGENTS.md — Hobby Atlas v3 (개인용)
 
-## 목적
-이 프로젝트는 실제 앱 v2의 **UI 프로토타입**이다. 보이기는 동작하는 것처럼, 실제 동작은 구현하지 않는다.
-기준 문서: 중간고사 안내문 5장(허용과 감점). 이 파일은 Claude Code · Cursor · Copilot이 함께 읽는다.
+중간고사 제출본은 `mdefitko777/gunpula-flutter` 에 그대로 있다. 이 저장소(`hobby-atlas-v3`, private)는 **내가 실제로 쓰는 앱**이고, 수업 규칙(GET만 · setState만 · 저장 금지 · 패키지 금지)은 적용하지 않는다.
 
-## 반드시 지킬 것 (MUST)
-- 화면 전환은 3방식만 쓴다: 쌓기 `Navigator.push`/`pop` · 옆으로 `TabBar`/`NavigationBar` · 덮기 `showModalBottomSheet`/`showDialog`.
-- 데이터는 (1) 하드코딩 상수 또는 (2) 로컬 json-server(`mock_server/`, `http://localhost:3000` · Android 에뮬레이터 `http://10.0.2.2:3000`)의 **GET**만 쓴다. 요청은 `lib/api.dart`에만 둔다.
-- 화면 안 표시 변화(탭 선택, 펼치기, 가짜 검색 결과)는 `StatefulWidget` + `setState`만 쓴다.
-- GET을 쓰는 화면은 **로딩 / 오류 / 빈 상태** 3가지를 모두 그린다(`FutureBuilder` + `lib/widgets.dart`의 `LoadingView` · `ErrorView` · `EmptyView`).
-- 레이아웃은 `LayoutBuilder` 또는 `MediaQuery.sizeOf`로 **창 너비** 기준 분기한다(기기 종류로 분기하지 않는다, 화면 방향 고정 금지).
-- 위젯·클래스 이름은 기획서의 "비즈니스 명칭"과 맞춘다. 기획서(`docs/디자인가이드.md`)에 없는 화면은 만들지 않는다.
-- 버튼이 실제 동작을 해야 하는 자리(결제, 로그인, 저장)는 **가짜 결과 화면 또는 SnackBar**로만 응답한다.
+## 무엇을 만드나
+- 안드로이드 앱 `com.mdefitko.hobbyatlas`. 옛 Gunpula 앱(`com.mdefitko.gunpula`, Capacitor WebView)을 **대체**한다. 옛 앱과 나란히 설치해 두고, 다 옮긴 뒤에 옛 앱을 지운다.
+- 데이터는 Gunpula 저장소(공개, `C:\Users\Windows11\Documents\Gundam\_upload_repo`)의 GitHub Actions 가 매일 만들고, 앱은 GitHub Pages 에서 읽는다.
+  - 데이터: `https://mdefitko777.github.io/Gunpula/data/…` (먼저 `split/manifest.json` 의 `updated_at`·`total` 로 바뀌었는지 본다. Pages ETag 는 배포마다 바뀌어 쓸모없다)
+  - 이미지: `./assets/…` → `https://mdefitko777.github.io/Gunpula/app/assets/…`
+  - `kits.json` · `search-index.json` 은 받지 않는다 (split 과 같은 내용이고 너무 크다).
+- 계정 · 공유는 Gunpula 의 Supabase 프로젝트를 같이 쓴다 (`docs/supabase-setup-v3.sql`, email OTP).
 
-## 하지 말 것 (MUST NOT) — 구현 시 감점
-- `http.post` / `put` / `patch` / `delete` 호출 금지.
-- 로그인·회원가입·결제·인증 로직 금지 (Firebase Auth 등 포함).
-- `shared_preferences`, `sqflite`, `hive`, 파일 쓰기 등 **영구 저장 금지**.
-- `provider`, `riverpod`, `flutter_bloc`, `get`, `mobx` 등 **상태관리 패키지 추가 금지**.
-- 실제 계산·추천 알고리즘·실시간 처리(WebSocket, Stream 구독) 금지.
-- 외부 유료 API, LLM API 호출, 실제 개인정보 사용 금지. AI 기능은 **미리 쓴 가짜 응답**으로 보여 준다.
-- `pubspec.yaml`에 패키지를 추가하기 전에 반드시 이유를 말하고 사람에게 확인받는다. (지금 추가 패키지는 `http` 하나)
+## 데이터 약속 (옛 앱과 함께 쓰는 동안)
+- 키는 Gunpula 의 `kit_id` · gget `unit_id` · phstudy `part_id` 그대로. 가짜 id(gu01 …)를 새로 만들지 않는다.
+- 수집 기록 모양은 옛 앱 `app/collection-store.js` 와 같다: `{status: owned|wanted|deleted, quantity 1–99, updated_at, updated_by, note?, storage?, purchase_price?}`. 한 상품에 상태는 하나(좋아요 = wanted, 구매함 = owned).
+- 동기화 payload 의 `overrides` · `series_label_overrides` · `appearance` · 다른 멤버 버킷은 읽은 그대로 돌려준다. Hobby Atlas 에만 있는 값은 payload 에 넣지 않는다.
+
+## 비밀
+- 옛 백업 JSON 의 `github_token` 은 읽자마자 버린다. 저장 · 로그 · 커밋 금지. 백업 파일은 저장소에 넣지 않는다.
+- `data/market_secrets.local.json` (Gunpula) 값은 출력하지 않는다. Supabase anon key 는 공개용이지만 `--dart-define` 으로 넘긴다.
+- 서명 키(keystore)와 비밀번호는 저장소 밖, GitHub Actions secrets 에만 둔다.
 
 ## 작업 방식
-- 한 번에 화면 하나만 만든다. 만들기 전에 그 화면의 위젯 트리(요소 번호 · 위젯명 · 비즈니스 명칭)를 먼저 보여 준다.
-- 상태가 바뀌는 지점은 구현하지 말고 코드 주석으로 표시한다: `// STATE: <데이터> → <보여질 위젯>`
-- 화면 파일 맨 위 **디자인 가이드 대응표** 주석(번호 · 위젯명 · 비즈니스 명칭 · 원칙)을 `docs/디자인가이드.md`와 같게 유지한다.
-- 원칙을 보여 주는 위젯 줄 끝에 요소 번호와 원칙 번호를 단다: `// A-5 P09`. 커밋 메시지는 `p09: …`로 시작한다.
-- 끝나면 `flutter analyze`가 0 issues인지 확인한다.
-
-## 제출 전 자가 점검 (사람이 실행 — 규칙 파일은 참고 문맥이지 차단 장치가 아니다)
-```bash
-grep -rnE "http\.(post|put|patch|delete)|SharedPreferences|sqflite|hive|FirebaseAuth|ChangeNotifierProvider|Riverpod|BlocProvider" lib/ pubspec.yaml
-```
-결과가 비어 있어야 한다. 걸린 줄은 지운다(안내문 8장: "AI가 실제 동작을 넣었다면 지워야 감점이 없다").
+- 상태: 앱 전체 한 벌은 위쪽 Host(InheritedWidget) + 저장소 객체(ChangeNotifier), 화면 안 표시는 `setState`.
+- 무거운 JSON(kits-gundam 9 MB)은 `Isolate.run` 으로 푼다.
+- 확인: 경로에 한글이 있어 `flutter analyze` 가 멈춘다 → `dart analyze lib test tool` 0 issues + `flutter test`.
+- 커밋은 `v3: …` 로 시작하고, 단계마다 commit + push (origin = hobby-atlas-v3).
+- Gunpula 저장소는 다른 세션도 동시에 커밋한다. 거기서 작업할 땐 내 파일만 stage 하고 push 전에 fetch.

@@ -1,4 +1,4 @@
-package kr.ac.yonsei.gai3008.mid_project_template
+package com.mdefitko.hobbyatlas
 
 import io.flutter.embedding.android.FlutterActivity
 

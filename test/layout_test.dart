@@ -6,19 +6,19 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mid_project_template/api.dart';
-import 'package:mid_project_template/detail_pane.dart';
-import 'package:mid_project_template/marks.dart';
-import 'package:mid_project_template/widgets.dart';
-import 'package:mid_project_template/models.dart';
-import 'package:mid_project_template/screens/d_kit_detail_screen.dart';
-import 'package:mid_project_template/screens/f_collection_screen.dart';
-import 'package:mid_project_template/screens/g_guide_view.dart';
-import 'package:mid_project_template/screens/i_profile_screen.dart';
-import 'package:mid_project_template/screens/l_friend_collection_screen.dart';
-import 'package:mid_project_template/screens/n_notifications_screen.dart';
-import 'package:mid_project_template/screens/s_app_shell.dart';
-import 'package:mid_project_template/theme.dart';
+import 'package:hobby_atlas/api.dart';
+import 'package:hobby_atlas/detail_pane.dart';
+import 'package:hobby_atlas/marks.dart';
+import 'package:hobby_atlas/widgets.dart';
+import 'package:hobby_atlas/models.dart';
+import 'package:hobby_atlas/screens/d_kit_detail_screen.dart';
+import 'package:hobby_atlas/screens/f_collection_screen.dart';
+import 'package:hobby_atlas/screens/g_guide_view.dart';
+import 'package:hobby_atlas/screens/i_profile_screen.dart';
+import 'package:hobby_atlas/screens/l_friend_collection_screen.dart';
+import 'package:hobby_atlas/screens/n_notifications_screen.dart';
+import 'package:hobby_atlas/screens/s_app_shell.dart';
+import 'package:hobby_atlas/theme.dart';
 
 final Map<String, Object?> db = jsonDecode(File('mock_server/db.json').readAsStringSync()) as Map<String, Object?>;
 

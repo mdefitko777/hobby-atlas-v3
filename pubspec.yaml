@@ -1,5 +1,5 @@
-name: mid_project_template
-description: "GAI3008 중간고사 — 실제 앱 v2 UI 프로토타입 (UI만 구현, json-server GET)"
+name: hobby_atlas
+description: "Hobby Atlas — 개인용 수집 앱 (Gunpula 데이터 · 안드로이드)"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -32,8 +32,12 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-  # 추가 패키지는 http 하나뿐 — 다른 패키지를 넣기 전에 AGENTS.md를 다시 읽는다
+
   http: ^1.6.0
+  path_provider: ^2.1.6
+  url_launcher: ^6.3.3
+  file_picker: ^13.3.0
+  cached_network_image: ^4.0.6
 
 dev_dependencies:
   flutter_test:
