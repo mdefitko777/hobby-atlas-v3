@@ -121,15 +121,18 @@ class NotifyStore extends ChangeNotifier {
       if (r.kitId == kitId && !isRead(r.id)) r.id,
   ], true);
 
-  /// 읽음 · 지움을 파일에 — 쓰기 직전에 파일을 다시 읽어 합친다 (백그라운드 확인이 그 사이 썼을 수 있다)
+  /// 읽음 · 지움을 파일에 — 잠그고, 쓰기 직전에 파일을 다시 읽어 합친다 (백그라운드 확인이 그 사이 썼을 수 있다)
   void _saveState() {
     notifyListeners();
     if (!persist) return;
     _writes = _writes
         .then((_) async {
-          final disk = NotifyState.fromJson(_decode(await BlobStore.read(notifyStateKey)));
-          final next = NotifyState.merge(disk, state);
-          await BlobStore.write(notifyStateKey, jsonEncode(next.toJson()));
+          final next = await BlobStore.locked(notifyStateKey, () async {
+            final disk = NotifyState.fromJson(_decode(await BlobStore.read(notifyStateKey)));
+            final next = NotifyState.merge(disk, state);
+            await BlobStore.write(notifyStateKey, jsonEncode(next.toJson()));
+            return next;
+          });
           _adopt(next);
         })
         .catchError((Object e) => debugPrint('[notify] 알림함 저장 실패: $e'));
@@ -173,14 +176,19 @@ class NotifyStore extends ChangeNotifier {
     }
   }
 
-  /// "마지막 확인 11.01 13:20 · 피드 2026-10-23 · 새 알림 2"
+  /// "마지막 확인 11.01 13:20 · 피드 2026-10-23 · 새 알림 2" (+ 요약 피드만 읽었으면 그렇다고)
   String get statusLine {
     final at = DateTime.tryParse(state.lastCheckAt)?.toLocal();
     if (at == null) return '아직 확인하지 않았어요';
     String two(int n) => n.toString().padLeft(2, '0');
     final t = '${at.month}.${two(at.day)} ${two(at.hour)}:${two(at.minute)}';
     if (state.lastError.isNotEmpty) return '마지막 확인 $t · ${state.lastError}';
-    return '마지막 확인 $t · 피드 ${state.lastSeen.isEmpty ? '-' : state.lastSeen} · 새 알림 ${state.lastNew}';
+    final src = switch (state.lastSource) {
+      'lite' => ' · 요약 피드(날짜마다 20개까지)',
+      'atlas+lite' => ' · 새 소식 파일 기다리는 중',
+      _ => '',
+    };
+    return '마지막 확인 $t · 피드 ${state.lastSeen.isEmpty ? '-' : state.lastSeen} · 새 알림 ${state.lastNew}$src';
   }
 
   // ── 설정 ──
@@ -256,6 +264,20 @@ class NotifyStore extends ChangeNotifier {
       ..pb = byId.isEmpty ? config.pb : pbWindowsFor(wanted, byId, DateTime.now());
     await BlobStore.write(notifyConfigKey, jsonEncode(config.toJson()));
   }
+}
+
+/// 알림 한 벌을 위젯 트리에 (AGENTS.md: 위쪽 Host(InheritedWidget) + 저장소 객체 — MarksHost 와 같은 모양).
+/// main.dart 의 MaterialApp.builder 가 NotifyStore.instance 로 감싼다. 🔔 · 알림 화면 · 설정이 같은 값을 본다.
+class NotifyScope extends InheritedNotifier<NotifyStore> {
+  const NotifyScope({super.key, required NotifyStore store, required super.child}) : super(notifier: store);
+
+  /// 그리는 중(build)에 — 알림함 · 설정이 바뀌면 다시 그려진다. 위에 없으면(단독 위젯 테스트) 앱 전체 한 벌.
+  static NotifyStore of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<NotifyScope>()?.notifier ?? NotifyStore.instance;
+
+  /// 누를 때 · initState 에 (다시 그리지 않는다)
+  static NotifyStore read(BuildContext context) =>
+      context.getInheritedWidgetOfExactType<NotifyScope>()?.notifier ?? NotifyStore.instance;
 }
 
 /// 좋아요한 상품 중 PB 예약 기간이 아직 지나지 않은 것 (마감일이 없으면 시작일이 사흘 안쪽인 것)

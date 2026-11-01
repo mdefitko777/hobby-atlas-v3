@@ -8,13 +8,13 @@ const gunpulaBase = 'https://mdefitko777.github.io/Gunpula/';
 /// Pages 가 안 될 때만 (raw 는 kits.json 을 압축하지 않으니 split 만 받는다)
 const gunpulaRawBase = 'https://raw.githubusercontent.com/mdefitko777/Gunpula/main/';
 
-/// 매일 갱신되는 순서대로 받는 파일들 (kits.json · search-index.json 은 받지 않는다)
+/// 매일 갱신되는 순서대로 받는 파일들 (kits.json · search-index.json 은 받지 않는다).
+/// 새 소식 피드는 여기서 받지 않는다 — 알림 확인(lib/background/catalog_check_worker.dart)이 manifest 가 바뀔 때 한 번만 받는다.
 const franchiseIds = ['gundam', 'beyblade', 'pokemon', 'armored_core', 'fate'];
 const auxFiles = [
   'grades.json',
   'kit-first-seen.json',
   'announcements.json',
-  'update-feed-lite.json',
   'atlas-groups.json',
   'gget-units.json',
   'gget-kit-map.json',

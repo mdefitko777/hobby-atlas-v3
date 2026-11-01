@@ -5,6 +5,7 @@
 // │ S-14 │ MaterialApp           │ Hobby Atlas                                │ —             │
 // │ S-15 │ buildGpTheme()        │ 흑백 + 파랑(고름) · 민트(가진 것) · 글자 6단계 │ P08 · P04 │
 // │ S-16 │ MarksHost · PaneHost  │ 좋아요 · 구매함 / 오른쪽 칸에 연 것 (앱 전체) │ P04 · P01 │
+// │ S-18 │ NotifyScope           │ 알림함 · 안 읽은 수 · 알림 설정 (앱 전체)    │ P01           │
 // └────────────────────────────────────────────────────────────────────────────┘
 import 'package:flutter/material.dart';
 
@@ -34,8 +35,11 @@ class HobbyAtlasApp extends StatelessWidget {
       title: 'Hobby Atlas', // S-14
       debugShowCheckedModeBanner: false,
       theme: buildGpTheme(), // S-15 P08
-      // S-16 앱 전체 한 벌(setState 를 위로): 좋아요 · 구매함(MarksHost) · 반반 화면 오른쪽 칸에 연 것(PaneHost)
-      builder: (context, child) => MarksHost(child: PaneHost(child: child!)),
+      // S-16 앱 전체 한 벌(setState 를 위로): 좋아요 · 구매함(MarksHost) · 반반 화면 오른쪽 칸에 연 것(PaneHost) · 알림(NotifyScope)
+      builder: (context, child) => NotifyScope(
+        store: NotifyStore.instance,
+        child: MarksHost(child: PaneHost(child: child!)),
+      ),
       // 새 데이터를 받으면 화면들이 다시 불러오도록 셸을 새로 만든다 (하루 한 번쯤)
       home: ListenableBuilder(
         listenable: Catalog.instance,

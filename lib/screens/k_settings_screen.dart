@@ -62,7 +62,7 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  NotifyStore get _n => widget.notify ?? NotifyStore.instance;
+  NotifyStore get _n => widget.notify ?? NotifyScope.read(context);
   String _language = '한국어';
   bool _refreshing = false;
 

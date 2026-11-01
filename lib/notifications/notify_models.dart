@@ -249,6 +249,8 @@ class NotifyState {
     this.lastCheckAt = '',
     this.lastError = '',
     this.lastNew = 0,
+    this.lastSource = '',
+    this.pending = '',
     Set<String>? seenFeed,
     List<NoticeRecord>? inbox,
     Map<String, NoticeFlag>? flags,
@@ -270,6 +272,13 @@ class NotifyState {
 
   /// 마지막 확인에서 새로 들어온 알림 수
   int lastNew;
+
+  /// 마지막으로 읽은 피드: atlas(data/atlas/notify-feed.json, 전부) · lite(update-feed-lite, 날짜마다 20개까지) · atlas+lite
+  String lastSource;
+
+  /// `<manifest 서명>|<처음 본 시각>` — manifest 는 바뀌었는데 같은 판의 피드를 아직 못 받았다 (Pages 가 늦거나
+  /// Gunpula 의 Atlas 작업이 아직 안 돌았다). 다음 확인에서 다시 받고, 오래 지나면 그만 기다린다. 다 받았으면 빈 글자.
+  String pending;
 
   /// [lastSeen] 날짜에서 이미 본 상품 줄 id (규칙에 안 걸린 것도). 같은 날짜를 다시 볼 때 늘어난 상품만 보려고 —
   /// 그 사이 규칙을 켜거나 좋아요를 눌러도 이미 지나간 소식으로 휴대폰이 울리지 않게.
@@ -294,6 +303,8 @@ class NotifyState {
     'last_check_at': lastCheckAt,
     if (lastError.isNotEmpty) 'last_error': lastError,
     'last_new': lastNew,
+    if (lastSource.isNotEmpty) 'last_source': lastSource,
+    if (pending.isNotEmpty) 'pending': pending,
     'seen_feed': seenFeed.toList(),
     'inbox': [for (final r in inbox) r.toJson()],
     'flags': {for (final e in flags.entries) e.key: e.value.toJson()},
@@ -307,6 +318,8 @@ class NotifyState {
       lastCheckAt: _str(j['last_check_at']),
       lastError: _str(j['last_error']),
       lastNew: j['last_new'] is num ? (j['last_new']! as num).toInt() : 0,
+      lastSource: _str(j['last_source']),
+      pending: _str(j['pending']),
       seenFeed: _list(j['seen_feed']).whereType<String>().toSet(),
       inbox: _list(j['inbox']).map(NoticeRecord.fromJson).nonNulls.toList(),
       flags: {for (final e in _map(j['flags']).entries) e.key: ?NoticeFlag.fromJson(e.value)},
@@ -335,6 +348,8 @@ class NotifyState {
       lastCheckAt: newer.lastCheckAt,
       lastError: newer.lastError,
       lastNew: newer.lastNew,
+      lastSource: newer.lastSource,
+      pending: newer.pending,
       seenFeed: {if (a.lastSeen == lastSeen) ...a.seenFeed, if (b.lastSeen == lastSeen) ...b.seenFeed},
       inbox: byId.values.toList(),
       flags: flags,
@@ -346,15 +361,21 @@ class NotifyState {
     return c != 0 ? c : x.id.compareTo(y.id);
   });
 
-  /// [keepDays] 일보다 오래된 것 · [maxInbox] 개를 넘는 것을 버리고, 주인 없는 읽음 표시도 지운다
+  /// [keepDays] 일보다 오래된 것 · [maxInbox] 개를 넘는 것을 버린다.
+  /// 읽음 · 지움 표시: 알림함 줄(feed- · pb-)의 것은 줄이 없어지면 같이, 알림함 밖 줄(친구 요청 req- 처럼 화면이 따로
+  /// 만드는 것)의 것은 바꾼 지 [keepDays] 일이 지나면 — 확인할 때마다 지우면 수락 · 거절한 요청이 다시 나타난다.
   void prune(DateTime now) {
     sortInbox();
     final cutoff = now.subtract(const Duration(days: keepDays));
     inbox.removeWhere((r) => r.at.isBefore(cutoff));
     if (inbox.length > maxInbox) inbox.removeRange(maxInbox, inbox.length);
     final ids = {for (final r in inbox) r.id};
-    flags.removeWhere((id, _) => !ids.contains(id));
+    final oldMs = cutoff.millisecondsSinceEpoch;
+    flags.removeWhere((id, f) => isInboxId(id) ? !ids.contains(id) : f.u < oldMs);
   }
+
+  /// 알림함(이 파일)이 만드는 줄의 id 인가
+  static bool isInboxId(String id) => id.startsWith('feed-') || id.startsWith('pb-');
 }
 
 /// 32비트 FNV-1a — 휴대폰 알림 id 가 isolate · 실행마다 같도록 (String.hashCode 는 보장되지 않음)

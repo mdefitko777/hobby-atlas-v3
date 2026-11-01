@@ -1,4 +1,8 @@
-// "내 채널의 새 소식" 계산 — Gunpula data/update-feed-lite.json 을 지난번 본 날짜와 비교해 알림함에 넣을 줄을 만든다.
+// "내 채널의 새 소식" 계산 — Gunpula 의 새 소식 파일을 지난번 본 날짜와 비교해 알림함에 넣을 줄을 만든다.
+//   data/atlas/notify-feed.json : 날짜마다 알릴 만한 변화 전부 (kits.json 의 git 판끼리 비교, 개수 제한 없음 · 사진만 바뀐 것은 뺌)
+//   data/update-feed-lite.json  : 위 파일이 아직 없거나 늦을 때만. 날짜마다 추가 20 · 변경 20개까지라 바쁜 날엔 PB · SEED/00 ·
+//                                 좋아요한 상품의 가격 변경이 잘려 나간다 (2026-11-01: 새 상품 312개 중 20개만)
+//   두 파일 모두 entries[].added[] · changed[] 의 상품 모양이 같아 parseFeed 하나로 읽는다.
 // 규칙은 옛 Gunpula 앱(app/main.js updateEntryMatchesNotificationFilters · app/update-feed.js itemIsPremiumBandai)과 같고,
 // v3 에서 바꾼 점:
 //   · 피드 날짜 하나를 통째로가 아니라 상품 하나씩 거른다 (내 채널 · 규칙 · 좋아요)
@@ -100,15 +104,19 @@ class FeedEntry {
     this.generatedAt,
     this.addedCount = 0,
     this.changedCount = 0,
+    this.totalAfter,
   });
 
   /// YYYY-MM-DD
   final String date;
   final DateTime? generatedAt;
 
-  /// 그날 전체 수 (items 는 lite 파일이라 앞의 20개씩만 들어 있다)
+  /// 그날 전체 수 (사진만 바뀐 것 포함 — lite 파일의 items 는 앞의 20개씩뿐)
   final int addedCount;
   final int changedCount;
+
+  /// 그날 데이터를 다 만든 뒤의 상품 수 (가장 새 날짜는 split/manifest.json 의 total 과 같아야 한다)
+  final int? totalAfter;
   final List<FeedItem> items;
 }
 
@@ -125,6 +133,7 @@ List<FeedEntry> parseFeed(Object? json) {
         generatedAt: DateTime.tryParse(_str(e['generated_at'])),
         addedCount: e['added_count'] is num ? (e['added_count']! as num).toInt() : 0,
         changedCount: e['changed_count'] is num ? (e['changed_count']! as num).toInt() : 0,
+        totalAfter: e['total_after'] is num ? (e['total_after']! as num).toInt() : null,
         items: [
           for (final it in _list(e['added'])) ?FeedItem.fromJson(it, 'added'),
           for (final it in _list(e['changed'])) ?FeedItem.fromJson(it, 'changed'),
@@ -134,6 +143,35 @@ List<FeedEntry> parseFeed(Object? json) {
   }
   out.sort((a, b) => b.date.compareTo(a.date));
   return out;
+}
+
+/// 피드가 이 manifest 와 같은 판인가 — 가장 새 날짜 = manifest.updated_at, 그날 상품 수 = manifest.total.
+/// Pages(CDN)가 manifest 는 새것 · 피드는 옛것을 줄 때가 있어, 같은 판을 받았을 때만 "이 manifest 는 다 봤다"고 적는다.
+bool feedMatches(List<FeedEntry> entries, Object? manifest) {
+  final m = _map(manifest);
+  if (entries.isEmpty) return false;
+  final top = entries.first;
+  final total = m['total'];
+  return top.date == _str(m['updated_at']) && total is num && top.totalAfter == total.toInt();
+}
+
+/// 두 피드를 날짜별로 합친다 ([a] 의 상품이 앞 — 같은 상품은 planCheck 가 id 로 한 번만 넣는다)
+List<FeedEntry> combineFeeds(List<FeedEntry> a, List<FeedEntry> b) {
+  final byDate = <String, FeedEntry>{for (final e in a) e.date: e};
+  for (final e in b) {
+    final x = byDate[e.date];
+    byDate[e.date] = x == null
+        ? e
+        : FeedEntry(
+            date: e.date,
+            generatedAt: x.generatedAt ?? e.generatedAt,
+            addedCount: x.addedCount > e.addedCount ? x.addedCount : e.addedCount,
+            changedCount: x.changedCount > e.changedCount ? x.changedCount : e.changedCount,
+            totalAfter: x.totalAfter ?? e.totalAfter,
+            items: [...x.items, ...e.items],
+          );
+  }
+  return byDate.values.toList()..sort((x, y) => y.date.compareTo(x.date));
 }
 
 /// 이 상품이 걸린 규칙 (좋아요 제외). 내 채널 소식만이면 내 채널 밖은 빈 집합.
@@ -254,6 +292,8 @@ class CheckPlan {
     required this.checkedAt,
     this.seenFeed = const {},
     this.error = '',
+    this.source = '',
+    this.pending = '',
   });
 
   /// 새로 알림함에 들어갈 줄 (seen = 조용히 넣는 지난 소식)
@@ -266,6 +306,12 @@ class CheckPlan {
   final Set<String> seenFeed;
   final String error;
 
+  /// 이번에 읽은 피드 (atlas · lite · atlas+lite, 받지 않았으면 빈 글자 → 지난 값 그대로)
+  final String source;
+
+  /// 아직 다 보지 못한 manifest (NotifyState.pending)
+  final String pending;
+
   int get liveCount => records.where((r) => !r.seen).length;
 
   /// [state] 에 이 결과를 합친 새 상태
@@ -277,6 +323,8 @@ class CheckPlan {
       lastCheckAt: checkedAt.toUtc().toIso8601String(),
       lastError: error,
       lastNew: liveCount,
+      lastSource: source.isEmpty ? state.lastSource : source,
+      pending: pending,
       seenFeed: seenFeed,
       inbox: records,
     ),
@@ -295,6 +343,8 @@ CheckPlan planCheck({
   required String manifestSig,
   required DateTime now,
   String error = '',
+  String source = '',
+  String pending = '',
 }) {
   final known = {for (final r in state.inbox) r.id, ...state.seenFeed};
   final first = state.lastSeen.isEmpty;
@@ -323,6 +373,8 @@ CheckPlan planCheck({
     checkedAt: now,
     seenFeed: seenFeed,
     error: error,
+    source: source,
+    pending: pending,
   );
 }
 

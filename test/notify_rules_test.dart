@@ -1,6 +1,9 @@
-// 새 소식 알림 계산 — Gunpula update-feed-lite.json 에서 잘라 낸 실제 모양 조각(test/fixtures)으로 확인한다.
+// 새 소식 알림 계산 — Gunpula 실제 파일에서 잘라 낸 조각(test/fixtures)으로 확인한다.
+//   update-feed-lite.sample.json        : 2026-10-23 기준 lite 피드 (날짜마다 20개까지)
+//   notify-feed.sample.json · update-feed-lite-1101.sample.json · manifest-1101.sample.json :
+//       2026-11-01(새 상품 312개) 의 새 소식 파일(atlas, 건담 · 포켓몬 · AC 는 전부, Fate 는 일부) 과 같은 날의 lite 피드
 //   거르기(내 채널 · 규칙 · 좋아요) · 처음 실행 · 같은 날짜 다시 · 규칙 끄기 · 오래 꺼져 있다 켜기 · PB 예약 기간 ·
-//   알림함 합치기(앱 ↔ 백그라운드) · 파일까지 한 바퀴(runCatalogCheck)
+//   알림함 합치기(앱 ↔ 백그라운드) · 바쁜 날 lite 가 잘라 낸 상품 · 피드 고르기(atlas → lite) · 파일까지 한 바퀴(runCatalogCheck)
 import 'dart:convert';
 import 'dart:io';
 
@@ -15,18 +18,29 @@ import 'package:hobby_atlas/notifications/notify_store.dart' show pbWindowsFor;
 final Map<String, Object?> feedJson =
     jsonDecode(File('test/fixtures/update-feed-lite.sample.json').readAsStringSync()) as Map<String, Object?>;
 final String manifestText = File('test/fixtures/manifest.sample.json').readAsStringSync();
+final String atlasText = File('test/fixtures/notify-feed.sample.json').readAsStringSync();
+final String lite1101Text = File('test/fixtures/update-feed-lite-1101.sample.json').readAsStringSync();
+final String manifest1101Text = File('test/fixtures/manifest-1101.sample.json').readAsStringSync();
+
+/// 새 소식 파일에서 [date] 이전(포함) 날짜만 남긴 것 = Gunpula Atlas 작업이 아직 그날 것을 안 올린 상태
+String atlasUpTo(String date) {
+  final j = jsonDecode(atlasText) as Map<String, Object?>;
+  j['entries'] = (j['entries']! as List).where((e) => ((e as Map)['date'] as String).compareTo(date) <= 0).toList();
+  return jsonEncode(j);
+}
 
 /// 기본 설정 (옛 앱 기본 규칙 + 처음 내 채널: 건담 · 베이블레이드 · 포켓몬)
 NotifyConfig defaults({Set<String> wanted = const {}, List<PbWindow> pb = const []}) =>
     NotifyConfig(channels: const ['gundam', 'beyblade', 'pokemon'], wanted: wanted, pb: pb);
 
 /// 피드에 날짜 하나를 더한다 — [from] 날짜의 상품 그대로, 날짜만 [date]
-Map<String, Object?> withEntry(String date, {String from = '2026-10-23', List<String>? only}) {
+Map<String, Object?> withEntry(String date, {String from = '2026-10-23', List<String>? only, int? total}) {
   final copy = jsonDecode(jsonEncode(feedJson)) as Map<String, Object?>;
   final entries = copy['entries']! as List;
   final src = Map<String, Object?>.from(entries.firstWhere((e) => (e as Map)['date'] == from) as Map);
   src['date'] = date;
   src['generated_at'] = '${date}T00:10:00.000Z';
+  if (total != null) src['total_after'] = total;
   if (only != null) {
     for (final k in ['added', 'changed']) {
       src[k] = (src[k]! as List).where((i) => only.contains((i as Map)['kit_id'])).toList();
@@ -447,14 +461,40 @@ void main() {
       final base = DateTime.utc(2026, 10, 25);
       final s = NotifyState(
         inbox: [
-          rec('old', base.subtract(const Duration(days: NotifyState.keepDays + 1))),
-          for (var i = 0; i < NotifyState.maxInbox + 5; i++) rec('n$i', base.subtract(Duration(minutes: i))),
+          rec('feed-old', base.subtract(const Duration(days: NotifyState.keepDays + 1))),
+          for (var i = 0; i < NotifyState.maxInbox + 5; i++) rec('feed-n$i', base.subtract(Duration(minutes: i))),
         ],
-        flags: {'old': const NoticeFlag(read: true, u: 1), 'n0': const NoticeFlag(read: true, u: 1)},
+        flags: {
+          'feed-old': const NoticeFlag(read: true, u: 1),
+          'feed-n0': const NoticeFlag(read: true, u: 1),
+          'pb-open-gone-2026-10-01': const NoticeFlag(dismissed: true, u: 1),
+        },
       )..prune(base);
       expect(s.inbox, hasLength(NotifyState.maxInbox));
-      expect(s.inbox.first.id, 'n0');
-      expect(s.flags.keys, ['n0']);
+      expect(s.inbox.first.id, 'feed-n0');
+      expect(s.flags.keys, ['feed-n0']);
+    });
+
+    test('알림함 밖 줄(친구 요청 req- 등)의 표시는 확인할 때 지우지 않는다 — 바꾼 지 120일이 지나면만', () {
+      final base = DateTime.utc(2026, 10, 25);
+      final recent = base.subtract(const Duration(days: 1)).millisecondsSinceEpoch;
+      final old = base.subtract(const Duration(days: NotifyState.keepDays + 1)).millisecondsSinceEpoch;
+      final s = NotifyState(
+        inbox: [rec('feed-a', base)],
+        flags: {
+          'req-alice': NoticeFlag(dismissed: true, read: true, u: recent), // 수락한 친구 요청
+          'friend-demo-1': NoticeFlag(read: true, u: recent),
+          'req-old': NoticeFlag(dismissed: true, u: old),
+          'feed-orphan': NoticeFlag(read: true, u: recent),
+        },
+      );
+      // 백그라운드 확인이 한 바퀴 돌아도 (merge → prune)
+      final next = NotifyState.merge(NotifyState(), s)..prune(base);
+      expect(next.flags.keys.toSet(), {'req-alice', 'friend-demo-1'});
+      expect(next.isDismissed('req-alice'), isTrue);
+      expect(NotifyState.isInboxId('feed-2026-10-23-x'), isTrue);
+      expect(NotifyState.isInboxId('pb-close-x-2026-11-03'), isTrue);
+      expect(NotifyState.isInboxId('req-alice'), isFalse);
     });
 
     test('JSON 로 저장했다 읽어도 같다', () {
@@ -501,7 +541,9 @@ void main() {
       }
 
       var r = await runCatalogCheck(now: now, fetch: fetch);
-      expect(asked, ['data/split/manifest.json', 'data/update-feed-lite.json']);
+      // 새 소식 파일이 아직 없으면(이 테스트의 fetch 는 그 파일에도 lite 를 준다 → schema 가 달라 버림) lite 로
+      expect(asked, ['data/split/manifest.json', notifyFeedPath, liteFeedPath]);
+      expect(r.source, 'lite');
       expect(r.liveCount, 0); // 처음: 읽음으로만
       expect(r.posted, 0); // Windows 테스트에서는 휴대폰 알림 없음
       var state = NotifyState.fromJson(jsonDecode((await BlobStore.read(notifyStateKey))!));
@@ -518,10 +560,10 @@ void main() {
       await BlobStore.write(notifyStateKey, jsonEncode(state.toJson()));
 
       asked.clear();
-      feed = jsonEncode(withEntry('2026-10-24'));
+      feed = jsonEncode(withEntry('2026-10-24', total: 8860));
       manifest = jsonEncode({'updated_at': '2026-10-24', 'total': 8860});
       r = await runCatalogCheck(now: now, fetch: fetch);
-      expect(asked, ['data/split/manifest.json', 'data/update-feed-lite.json']);
+      expect(asked, ['data/split/manifest.json', notifyFeedPath, liteFeedPath]);
       expect(r.liveCount, 2);
       state = NotifyState.fromJson(jsonDecode((await BlobStore.read(notifyStateKey))!));
       expect(state.inbox, hasLength(10));
@@ -536,6 +578,211 @@ void main() {
       final state = NotifyState.fromJson(jsonDecode((await BlobStore.read(notifyStateKey))!));
       expect(state.lastSeen, '');
       expect(state.lastError, r.error);
+    });
+
+    // 2026-11-01 갱신 직후: Pages 에 manifest · lite 는 새것, 새 소식 파일은 몇 분 늦게 올라온다
+    test('새 소식 파일이 늦으면 lite 로 먼저 알리고, 올라온 뒤 다시 받아 잘린 상품을 알린다', () async {
+      final c = defaults(wanted: {'pokemon-kr-137529060'});
+      await BlobStore.write(notifyConfigKey, jsonEncode(c.toJson()));
+      // 10.23 까지 본 상태
+      final s0 = planCheck(
+        config: c,
+        state: NotifyState(),
+        entries: parseFeed(jsonDecode(lite1101Text)).where((e) => e.date == '2026-10-23').toList(),
+        manifestSig: '2026-10-23|8853',
+        now: DateTime.utc(2026, 10, 24),
+      ).applyTo(NotifyState());
+      await BlobStore.write(notifyStateKey, jsonEncode(s0.toJson()));
+
+      final asked = <String>[];
+      var atlas = atlasUpTo('2026-10-23');
+      Future<String?> fetch(String path) async {
+        asked.add(path);
+        return switch (path) {
+          'data/split/manifest.json' => manifest1101Text,
+          notifyFeedPath => atlas,
+          _ => lite1101Text,
+        };
+      }
+
+      final t0 = DateTime.utc(2026, 11, 1, 5); // lite 를 만든 지 25분
+      var r = await runCatalogCheck(now: t0, fetch: fetch);
+      expect(asked, ['data/split/manifest.json', notifyFeedPath, liteFeedPath]);
+      expect(r.source, 'atlas+lite');
+      var state = NotifyState.fromJson(jsonDecode((await BlobStore.read(notifyStateKey))!));
+      expect(state.lastSeen, '2026-11-01');
+      expect(state.lastManifest, '2026-10-23|8853'); // 다 본 것으로 적지 않는다 → 다음에 다시
+      expect(state.pending, startsWith('2026-11-01|9165|'));
+      final firstIds = {for (final x in state.inbox) x.id};
+      expect(firstIds, isNot(contains('feed-2026-11-01-pokemon-kr-137529060'))); // lite 에는 없다
+
+      // 25분 뒤: 새 소식 파일이 올라왔다
+      asked.clear();
+      atlas = atlasText;
+      r = await runCatalogCheck(now: t0.add(const Duration(minutes: 25)), fetch: fetch);
+      expect(asked, ['data/split/manifest.json', notifyFeedPath]); // lite 는 다시 받지 않는다
+      expect(r.source, 'atlas');
+      state = NotifyState.fromJson(jsonDecode((await BlobStore.read(notifyStateKey))!));
+      expect(state.lastManifest, '2026-11-01|9165');
+      expect(state.pending, '');
+      expect(state.lastSource, 'atlas');
+      final late = state.inbox.where((x) => !firstIds.contains(x.id)).toList();
+      expect(late.map((x) => x.id), contains('feed-2026-11-01-pokemon-kr-137529060')); // 좋아요한 상품 (lite 가 잘라 냄)
+      expect(late.map((x) => x.id), contains('feed-2026-11-01-hg-hg-1-144-4573102691859000')); // PB (lite 가 잘라 냄)
+      expect(late.where((x) => x.seen), isEmpty); // 늦게라도 휴대폰 알림
+      expect(r.liveCount, late.length);
+
+      // 그다음은 manifest 만
+      asked.clear();
+      r = await runCatalogCheck(now: t0.add(const Duration(hours: 1)), fetch: fetch);
+      expect(asked, ['data/split/manifest.json']);
+      expect(r.liveCount, 0);
+    });
+
+    test('같은 판의 피드가 끝내 안 오면(사진만 다시 받은 날) 6시간 뒤 그만 기다린다', () async {
+      await BlobStore.write(notifyConfigKey, jsonEncode(defaults().toJson()));
+      final s0 = NotifyState(lastSeen: '2026-10-23', lastManifest: '2026-10-23|8853', lastCheckAt: '2026-10-24T00:00:00.000Z');
+      await BlobStore.write(notifyStateKey, jsonEncode(s0.toJson()));
+      final asked = <String>[];
+      Future<String?> fetch(String path) async {
+        asked.add(path);
+        return switch (path) {
+          'data/split/manifest.json' => jsonEncode({'updated_at': '2026-10-25', 'total': 8853}),
+          notifyFeedPath => null, // 404
+          _ => jsonEncode(feedJson), // 10.23 판 그대로
+        };
+      }
+
+      final t0 = DateTime.utc(2026, 10, 25, 1);
+      await runCatalogCheck(now: t0, fetch: fetch);
+      var state = NotifyState.fromJson(jsonDecode((await BlobStore.read(notifyStateKey))!));
+      expect(state.lastManifest, '2026-10-23|8853');
+      expect(state.pending, '2026-10-25|8853|${t0.toIso8601String()}');
+
+      await runCatalogCheck(now: t0.add(const Duration(hours: 3)), fetch: fetch);
+      state = NotifyState.fromJson(jsonDecode((await BlobStore.read(notifyStateKey))!));
+      expect(state.lastManifest, '2026-10-23|8853');
+      expect(state.pending, startsWith('2026-10-25|8853|${t0.toIso8601String()}')); // 처음 본 시각 그대로
+
+      asked.clear();
+      await runCatalogCheck(now: t0.add(const Duration(hours: 7)), fetch: fetch);
+      state = NotifyState.fromJson(jsonDecode((await BlobStore.read(notifyStateKey))!));
+      expect(state.lastManifest, '2026-10-25|8853');
+      expect(state.pending, '');
+      asked.clear();
+      await runCatalogCheck(now: t0.add(const Duration(hours: 8)), fetch: fetch);
+      expect(asked, ['data/split/manifest.json']);
+    });
+  });
+
+  group('바쁜 날: lite 피드가 잘라 낸 상품 (2026-11-01 새 상품 312개)', () {
+    final lite = parseFeed(jsonDecode(lite1101Text));
+    final atlas = parseFeed(jsonDecode(atlasText));
+    final manifest = jsonDecode(manifest1101Text);
+
+    test('두 파일 모두 같은 모양으로 읽고, manifest 와 같은 판인지 안다', () {
+      expect(atlas.map((e) => e.date), ['2026-11-01', '2026-10-23']);
+      expect(atlas.first.totalAfter, 9165);
+      expect(atlas.first.addedCount, 312);
+      expect(lite.first.items.where((i) => i.changeType == 'added'), hasLength(20)); // lite 는 20개까지
+      expect(feedMatches(atlas, manifest), isTrue);
+      expect(feedMatches(lite, manifest), isTrue);
+      expect(feedMatches(parseFeed(jsonDecode(atlasUpTo('2026-10-23'))), manifest), isFalse); // CDN 이 옛 판
+      expect(feedMatches(parseFeed(feedJson), manifest), isFalse);
+      expect(feedMatches(atlas, {'updated_at': '2026-11-01', 'total': 9166}), isFalse); // 같은 날 두 번째 갱신
+      expect(feedMatches(const [], manifest), isFalse);
+      final mandala = atlas.first.items.firstWhere((i) => i.kitId == 'hg-hg-1-144-4573102691859000');
+      expect(mandala.isPb, isTrue); // 새 소식 파일은 is_premium_bandai 를 미리 계산해 둔다
+      expect(mandala.reasons, ['source']);
+      expect(mandala.name, 'HG 1 / 144 マンダラ건담');
+    });
+
+    test('좋아요한 상품 · PB 는 lite 로는 놓치고 새 소식 파일로는 잡힌다', () {
+      final c = defaults(wanted: {'pokemon-kr-137529060', 'hg-hg-1-144-4580886844531000'});
+      final s0 = planCheck(
+        config: c,
+        state: NotifyState(),
+        entries: lite.where((e) => e.date == '2026-10-23').toList(),
+        manifestSig: '2026-10-23|8853',
+        now: DateTime.utc(2026, 10, 24),
+      ).applyTo(NotifyState());
+      List<NoticeRecord> live(List<FeedEntry> entries) => planCheck(
+        config: c,
+        state: s0,
+        entries: entries,
+        manifestSig: '2026-11-01|9165',
+        now: DateTime.utc(2026, 11, 1, 6),
+      ).records.where((r) => !r.seen && r.date == '2026-11-01').toList();
+      final fromLite = live(lite);
+      final fromAtlas = live(atlas);
+      expect(fromLite.where((r) => r.wanted), isEmpty);
+      expect(fromLite.where((r) => r.pb).map((r) => r.kitId), ['hg-hg-1-144-specii-4573102688590000']); // lite 에 남은 PB 하나뿐
+      expect(fromAtlas.where((r) => r.wanted).map((r) => r.kitId).toSet(), {
+        'pokemon-kr-137529060',
+        'hg-hg-1-144-4580886844531000',
+      });
+      expect(fromAtlas.where((r) => r.pb).map((r) => r.kitId).toSet(), {
+        'hg-hg-1-144-specii-4573102688590000',
+        'hg-hg-1-144-4573102691859000', // HG 만다라 건담 (lite 가 잘라 냄)
+      });
+      expect(fromAtlas.map((r) => r.id).toSet().containsAll(fromLite.map((r) => r.id)), isTrue); // lite 에 있던 것도 그대로
+      final alerts = buildAlerts(fromAtlas);
+      expect(alerts.where((a) => a.channel == 'wanted'), hasLength(2)); // 하나씩
+    });
+
+    test('loadFeed: 새 소식 파일 → (없거나 옛 판이면) lite', () async {
+      Future<FeedLoad> load({String? atlasBody, String? liteBody, DateTime? at, List<String>? asked}) =>
+          loadFeed((p) async {
+            asked?.add(p);
+            return p == notifyFeedPath ? atlasBody : liteBody;
+          }, manifest as Map<String, Object?>, at ?? DateTime.utc(2026, 11, 1, 5));
+      final asked = <String>[];
+      var f = await load(atlasBody: atlasText, liteBody: lite1101Text, asked: asked);
+      expect((f.source, f.settled), ('atlas', true));
+      expect(asked, [notifyFeedPath]); // lite 는 받지 않는다
+      f = await load(atlasBody: null, liteBody: lite1101Text);
+      expect((f.source, f.settled), ('lite', true)); // 아직 Gunpula 에 없는 파일 → lite 로 다 본 것
+      f = await load(atlasBody: atlasUpTo('2026-10-23'), liteBody: lite1101Text);
+      expect((f.source, f.settled), ('atlas+lite', false)); // 늦는 중 → 다시 받아 본다
+      expect(f.entries.map((e) => e.date), ['2026-11-01', '2026-10-23']);
+      expect(f.entries.last.items.length, greaterThan(lite.last.items.length)); // 10.23 은 새 소식 파일 것까지
+      f = await load(atlasBody: atlasUpTo('2026-10-23'), liteBody: lite1101Text, at: DateTime.utc(2026, 11, 1, 8));
+      expect((f.source, f.settled), ('atlas+lite', true)); // lite 를 만든 지 2시간 넘음 → 그만 기다린다
+      f = await load(atlasBody: atlasUpTo('2026-10-23'), liteBody: jsonEncode(feedJson));
+      expect((f.source, f.settled), ('atlas+lite', false)); // 둘 다 옛 판 (CDN)
+      f = await load(atlasBody: '{"schema":2}', liteBody: null);
+      expect((f.source, f.settled), ('', false));
+      expect(f.entries, isEmpty);
+    });
+  });
+
+  group('파일 잠금 (앱 화면 · 백그라운드가 같은 파일을 동시에)', () {
+    late Directory dir;
+    setUp(() {
+      dir = Directory.systemTemp.createTempSync('notify_lock');
+      BlobStore.debugDirectory = dir;
+    });
+    tearDown(() => dir.deleteSync(recursive: true));
+
+    test('읽고 · 합치고 · 쓰는 동안 끼어들지 못한다 · 임시 파일이 남지 않는다', () async {
+      await BlobStore.write('counter', '0');
+      Future<void> bump() => BlobStore.locked('counter', () async {
+        final v = int.parse((await BlobStore.read('counter'))!);
+        await Future<void>.delayed(const Duration(milliseconds: 3));
+        await BlobStore.write('counter', '${v + 1}');
+      });
+      await Future.wait([for (var i = 0; i < 12; i++) bump()]);
+      expect(await BlobStore.read('counter'), '12');
+      expect(dir.listSync().map((f) => f.uri.pathSegments.last), ['counter']);
+    });
+
+    test('쓰다 죽은 잠금(30초 넘음)은 지우고 진행한다', () async {
+      final stale = File('${dir.path}/x.lock')..writeAsStringSync('');
+      stale.setLastModifiedSync(DateTime.now().subtract(const Duration(minutes: 5)));
+      final sw = Stopwatch()..start();
+      expect(await BlobStore.locked('x', () async => 7), 7);
+      expect(sw.elapsed, lessThan(const Duration(seconds: 2)));
+      expect(stale.existsSync(), isFalse);
     });
   });
 }

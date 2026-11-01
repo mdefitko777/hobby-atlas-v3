@@ -100,7 +100,7 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  NotifyStore get _store => widget.notify ?? NotifyStore.instance;
+  NotifyStore get _store => widget.notify ?? NotifyScope.read(context);
   late Future<List<AppNotice>> _future = widget.loaders.notifications(); // STATE: 알림함
   late int _rev = _store.inboxRevision;
   _Tab _tab = _Tab.all;
