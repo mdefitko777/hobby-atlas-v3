@@ -129,4 +129,16 @@ void main() {
     );
     expect(widths.toSet(), hasLength(1));
   });
+
+  test('setDetails 는 준 값만 바꾼다 (옛 앱의 보관 장소 · 메모를 지우지 않음)', () {
+    final me = UserStore.memory();
+    me.setStatus('a', CollectStatus.owned);
+    me.setDetails('a', storage: '책장', note: '선물');
+    me.setDetails('a', purchasePrice: 12000);
+    expect(me.entry('a')?['storage'], '책장');
+    expect(me.entry('a')?['note'], '선물');
+    expect(me.entry('a')?['purchase_price'], 12000);
+    me.setDetails('a', note: '');
+    expect(me.entry('a')?.containsKey('note'), isFalse);
+  });
 }

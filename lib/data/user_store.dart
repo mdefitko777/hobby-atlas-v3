@@ -329,7 +329,12 @@ class UserStore extends ChangeNotifier {
     if (old == null) return;
     final next = {...old, 'updated_at': _now(), 'updated_by': member};
     if (quantity != null) next['quantity'] = quantity.clamp(1, 99);
-    void put(String k, Object? v) => (v == null || v == '') ? next.remove(k) : next[k] = v;
+    // 준 값만 바꾼다 (null = 그대로, '' · 0 이하 = 지우기) — 옛 앱에서 온 보관 장소 · 메모를 지우지 않게
+    void put(String k, Object? v) {
+      if (v == null) return;
+      (v == '' || (v is int && v <= 0)) ? next.remove(k) : next[k] = v;
+    }
+
     put('purchase_price', purchasePrice);
     put('storage', storage);
     put('note', note);

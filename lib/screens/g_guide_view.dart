@@ -18,7 +18,8 @@
 // │ G-7  │ 세대 · 작품 카드 + 진행 막대          │ 포켓몬 세대 · Fate 작품 · AC 세대       │ P01           │
 // │ G-7b │ TagGameCards (포켓몬 세대 위)         │ MEZASTAR · Frienda 태그 도감 입구 (R)   │ P06           │
 // │ G-7a │ SectionListView (쌓기)              │ 묶음 카드 → 그 묶음 상품 (찾기 · 필터 · 격자/목록) │ P07 │
-// │ G-8  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 정리 안 된 작품     │ P01 · P09     │
+// │ G-8  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 정리 안 된 작품(정리 요청) │ P01 · P09 │
+// │ G-5d │ 기체 시트 ⚑                          │ 빠진 상품 제보 (GitHub 이슈)             │ P07           │
 // │ G-9  │ FindBar + GuideFilterSheet(60% 시트) │ 도감에서 찾기(작품 · 기체 이름 · 형식번호) + 도감 필터: 단계(아직 · ♡ · 구매함 · 내 사진) · 상품 있는 것만 · 등급 · 종류 · 시대 · 정렬 │ P04 · P07 · P01 │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 🔧 → T 베이 조합 만들기(쌓기). 작품 카드 → 작품 도감(쌓기) → 기체 시트(덮기) → D 상품 상세(쌓기, 이 기체 상품끼리 좌우). 베이 → 부품 시트(덮기).
@@ -29,6 +30,7 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../detail_pane.dart';
+import '../report.dart';
 import '../filter_sheet.dart';
 import '../level.dart';
 import '../marks.dart';
@@ -653,11 +655,14 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
           }
           final all = snap.data!;
           if (all.isEmpty) {
-            return const EmptyView(
-              // G-8 P09
+            return EmptyView(
+              // G-8 P09 · 정리 요청 = Gunpula 데이터 저장소에 이슈 (lib/report.dart)
               icon: Icons.grid_view,
               message: '이 작품은 아직 기체 정리가 안 됐어요',
-              detail: '정리되면 기체마다 칸이 생기고, 모은 만큼 불이 켜져요',
+              action: OutlinedButton(
+                onPressed: () => reportDataIssue(context, unitName: widget.work.name, kind: ReportKind.guide),
+                child: const Text('정리 요청'),
+              ),
             );
           }
           // G-9 이름 · 형식번호로 찾기 + 도감 필터
@@ -963,7 +968,7 @@ class _UnitSheet extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    photo == null ? '상품을 구매함에 넣거나 손으로 켜면 칸에 불이 들어와요' : '도감 칸에 이 사진이 보여요 · 다시 누르면 사진 바꾸기',
+                    photo == null ? '' : '다시 누르면 사진 바꾸기',
                     style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
                   ),
                 ),
@@ -979,6 +984,12 @@ class _UnitSheet extends StatelessWidget {
               '이 기체의 상품',
               subtitle: lit.isEmpty ? '' : '${lit.length}개',
               padding: const EdgeInsets.fromLTRB(0, 14, 0, 4),
+              // G-5d 빠진 상품 제보 → Gunpula 이슈 (lib/report.dart)
+              trailing: ToolIcon(
+                icon: Icons.flag_outlined,
+                tip: '빠진 상품 제보',
+                onTap: () => reportDataIssue(context, unitName: unit.name, kind: ReportKind.missingKit),
+              ),
             ),
             if (lit.isEmpty)
               const Padding(
