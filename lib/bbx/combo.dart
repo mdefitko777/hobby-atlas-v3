@@ -177,10 +177,15 @@ class OwnedPart {
 
   static OwnedPart? fromJson(Object? json) {
     if (json is! Map || json['instance_id'] is! String || json['variant_id'] is! String) return null;
+    // 모르는 상태를 '가짐'으로 세지 않는다 (옛 수집 기록의 wanted → wish, deleted · 그 밖 → 버림)
+    final status = json['status'] == 'wanted'
+        ? OwnStatus.wish
+        : OwnStatus.values.where((s) => s.name == (json['status'] ?? 'owned')).firstOrNull;
+    if (status == null) return null;
     return OwnedPart(
       instanceId: json['instance_id'] as String,
       variantId: json['variant_id'] as String,
-      status: OwnStatus.values.where((s) => s.name == json['status']).firstOrNull ?? OwnStatus.owned,
+      status: status,
       fromSeriesId: json['from_series_id'] is String ? json['from_series_id'] as String : null,
       note: json['note'] is String ? json['note'] as String : '',
     );

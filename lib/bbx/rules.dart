@@ -232,8 +232,8 @@ List<RuleIssue> comboIssues(Combo combo, BbxCatalog catalog) {
         issues.add(
           RuleIssue(
             IssueCode.simpleOnlyWithIntegratedBit,
-            '${blade.name('en')} with an integrated bit is not covered by the sources; check the current regulation.',
-            severity: Severity.warning,
+            // Beydex restrictions: ClockMirage ratchetType = Simple. 일체형 비트는 래칫 칸까지 차지해 단순 래칫이 아니다.
+            '${blade.name('en')} takes only simple ratchets; an integrated bit replaces the ratchet, so it cannot be used.',
             slot: Slot.bit,
             moldKey: bit!.key,
           ),

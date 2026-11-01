@@ -278,8 +278,8 @@ void main() {
       }
       final withTurbo = comboIssues(bey(Arch.standard, {Slot.blade: clockMirage, Slot.bit: turbo}), cat);
       expect(withTurbo.map((i) => i.code), [IssueCode.simpleOnlyWithIntegratedBit]);
-      expect(withTurbo.single.severity, Severity.warning);
-      expect(isLegalBey(bey(Arch.standard, {Slot.blade: clockMirage, Slot.bit: turbo}), cat), isTrue);
+      expect(withTurbo.single.severity, Severity.error); // Beydex: ClockMirage ratchetType = Simple
+      expect(isLegalBey(bey(Arch.standard, {Slot.blade: clockMirage, Slot.bit: turbo}), cat), isFalse);
     });
 
     test('unknown, misplaced and non-part records', () {

@@ -232,13 +232,16 @@ class SyncService extends ChangeNotifier with WidgetsBindingObserver {
     if (phase != SyncPhase.synced) _set(SyncPhase.syncing, '');
     try {
       await store.load();
-      _bindAccount();
       // 15초 받기는 v2 만 (payload 에 집 사진 data URL 이 있어 무겁다). v3 get_me(친구 요청 · 복사본 확인)는
       // 로그인 · 돌아옴 · 직접 · 저장할 때, 그리고 받기 4번에 1번(약 1분).
       var full = reason != 'poll' || (++_polls % 4 == 0);
       do {
         _again = false;
+        // 기다리는 사이 다른 계정으로 바뀌었을 수 있다 → 돌 때마다 주인 확인, 도는 중 바뀌면 한 번 더
+        _bindAccount();
+        final who = auth.userId;
         await _cycle(full: full);
+        if (auth.userId != who) _again = true;
         full = true;
       } while (_again && auth.signedIn);
       lastSyncedAt = _clock();
