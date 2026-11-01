@@ -29,7 +29,7 @@ import 'j_announcement_screen.dart';
 import '../clock.dart';
 
 /// 홈에서 펼칠 수 있는 목록
-enum HomeSection { recent, month, announcements, viewed }
+enum HomeSection { recent, month, announcements, viewed, limited }
 
 enum KitSort { newest, release, priceLow, priceHigh }
 

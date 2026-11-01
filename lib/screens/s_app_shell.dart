@@ -110,17 +110,20 @@ class _AppShellState extends State<AppShell> {
     );
   }
 
+  /// 내 정보 숫자 · 홈 내 보드 → 컬렉션 탭 + 그 목록(좋아요 · 구매함 · 도감)
+  void _jumpTo(CollectionJump j) => setState(() {
+    _tab = 3; // STATE: 컬렉션 탭 + 그 목록
+    _jump = j;
+    _jumpTick++;
+    _barShown = true;
+  });
+
   void _openProfile() => openProfile(
     // S-1 → I 내 정보
     context,
     loaders: widget.loaders,
     myChannels: _myChannels,
-    onJump: (j) => setState(() {
-      _tab = 3; // STATE: 내 정보 숫자 → 컬렉션 탭 + 그 목록
-      _jump = j;
-      _jumpTick++;
-      _barShown = true;
-    }),
+    onJump: _jumpTo,
   );
 
   @override
@@ -174,6 +177,7 @@ class _AppShellState extends State<AppShell> {
             onMyChannelsChanged: _setChannels,
             onCamera: _openAdd,
             onOpenSearch: _goSearch,
+            onJump: _jumpTo,
             loaders: widget.loaders,
           )
         : i == 1

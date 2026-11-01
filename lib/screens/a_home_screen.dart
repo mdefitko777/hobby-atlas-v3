@@ -24,17 +24,20 @@ import '../channels.dart';
 import '../clock.dart';
 import '../data/catalog.dart';
 import '../data/user_store.dart';
+import '../marks.dart';
 import '../models.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'c_channel_screen.dart';
 import 'd_kit_detail_screen.dart';
+import 'f_collection_screen.dart' show CollectionJump;
 import 'j_announcement_screen.dart';
 import 'o_see_all_screen.dart';
 
 /// 최근 본 상품 — 상세를 열 때마다 기기에 남긴다. 아직 없으면 가짜 데이터(db.json) 예시
-List<String> get recentViewedIds =>
-    UserStore.instance.recentViewed.isNotEmpty ? UserStore.instance.recentViewed : const ['gu03', 'be43', 'po21', 'fa30', 'ar35'];
+List<String> get recentViewedIds => UserStore.instance.recentViewed.isNotEmpty
+    ? UserStore.instance.recentViewed
+    : const ['gu03', 'be43', 'po21', 'fa30', 'ar35'];
 
 /// 이번 달 발매 줄 제목
 String get currentMonthTitle => '${appNow().month}월 발매';
@@ -54,9 +57,13 @@ class HomeScreen extends StatefulWidget {
     required this.onMyChannelsChanged,
     required this.onOpenSearch,
     required this.onCamera,
+    this.onJump,
     this.leading,
     this.loaders = const Loaders(),
   });
+
+  /// 내 보드 · 도감 아이콘 → 컬렉션 탭 (앱 셸)
+  final ValueChanged<CollectionJump>? onJump;
 
   final List<String> myChannels;
   final ValueChanged<List<String>> onMyChannelsChanged;
@@ -92,6 +99,7 @@ String _titleOf(HomeSection s) => switch (s) {
   HomeSection.month => currentMonthTitle,
   HomeSection.announcements => '공식 예고',
   HomeSection.viewed => '최근 본',
+  HomeSection.limited => '한정 · PB',
 };
 
 /// 가로 줄 하나
@@ -250,7 +258,16 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
         if (k.month) k,
     ];
     final viewed = [for (final id in recentViewedIds) ?byId[id]];
-    final lists = {HomeSection.recent: recent, HomeSection.month: month, HomeSection.viewed: viewed};
+    final limited = [
+      for (final k in data.kits)
+        if (k.pb || k.limited) k,
+    ];
+    final lists = {
+      HomeSection.recent: recent,
+      HomeSection.month: month,
+      HomeSection.viewed: viewed,
+      HomeSection.limited: limited,
+    };
 
     // O 전체 목록 (홈 위쪽은 그대로, 아래만 바뀜)
     if (_section case final sec?) {
@@ -283,7 +300,10 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
       _Row(
         '최근 추가',
         [for (final k in recent) kitItem(k)],
-        subtitle: recentRangeLabel,
+        subtitle: joinDot([
+          recentRangeLabel,
+          if (Catalog.instance.updatedAt.length >= 10) '데이터 ${dateDot(Catalog.instance.updatedAt.substring(5))}',
+        ]),
         onMore: () => _openSection(HomeSection.recent),
       ),
       _Row(currentMonthTitle, [for (final k in month) kitItem(k)], onMore: () => _openSection(HomeSection.month)),
@@ -297,38 +317,58 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
     ];
     final heroes = data.announcements.where((a) => a.hero).toList();
 
-    return ListView(
-      padding: EdgeInsets.only(bottom: navClearance(context)),
-      children: [
-        search,
-        if (heroes.isNotEmpty)
-          ColoredBox(
-            color: Gp.panel,
-            child: _HeroBanner(
-              // A-3
-              items: heroes,
-              onTap: (a) => openAnnouncement(context, a, loaders: widget.loaders),
-            ),
-          ),
-        for (final row in rows)
-          if (row.items.isNotEmpty)
-            SectionPanel(
-              // A-8 흰 띠 + 회백색 틈 = 층 구분 (상세와 같은 부품)
-              padding: const EdgeInsets.only(bottom: 18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SectionHeader(
-                    // A-5 P06
-                    row.title,
-                    subtitle: row.subtitle,
-                    onMore: row.onMore, // → O 전체 목록
-                  ),
-                  _HorizontalRow(row: row, loaders: widget.loaders), // A-6 P08
-                ],
+    final shortcuts = <_Shortcut>[
+      _Shortcut(Icons.grid_view_rounded, '도감', () => widget.onJump?.call(CollectionJump.guide), mine: true),
+      _Shortcut(
+        Icons.calendar_month_outlined,
+        currentMonthTitle.replaceAll(' 발매', ''),
+        () => _openSection(HomeSection.month),
+      ),
+      _Shortcut(Icons.workspace_premium_outlined, '한정 · PB', () => _openSection(HomeSection.limited)),
+      _Shortcut(Icons.campaign_outlined, '공식 예고', () => _openSection(HomeSection.announcements)),
+    ];
+
+    // 당겨서 새로 고침 = Gunpula 새 데이터 확인 (바뀌면 앱 셸이 화면을 다시 불러온다)
+    return RefreshIndicator(
+      onRefresh: () async {
+        final changed = await Catalog.instance.refresh();
+        if (!changed && mounted) setState(reloadScope);
+      },
+      child: ListView(
+        padding: EdgeInsets.only(bottom: navClearance(context)),
+        children: [
+          search,
+          _MyBoard(kits: data.kits, scope: scopeIds, loaders: widget.loaders, onJump: widget.onJump), // A-10
+          _ShortcutRow(items: shortcuts), // A-11
+          if (heroes.isNotEmpty)
+            ColoredBox(
+              color: Gp.panel,
+              child: _HeroBanner(
+                // A-3
+                items: heroes,
+                onTap: (a) => openAnnouncement(context, a, loaders: widget.loaders),
               ),
             ),
-      ],
+          for (final row in rows)
+            if (row.items.isNotEmpty)
+              SectionPanel(
+                // A-8 흰 띠 + 회백색 틈 = 층 구분 (상세와 같은 부품)
+                padding: const EdgeInsets.only(bottom: 18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SectionHeader(
+                      // A-5 P06
+                      row.title,
+                      subtitle: row.subtitle,
+                      onMore: row.onMore, // → O 전체 목록
+                    ),
+                    _HorizontalRow(row: row, loaders: widget.loaders), // A-6 P08
+                  ],
+                ),
+              ),
+        ],
+      ),
     );
   }
 }
@@ -485,6 +525,255 @@ class _HorizontalRow extends StatelessWidget {
             marks: kit == null ? null : QuickMarks(kit: kit), // A-9 P07
           );
         },
+      ),
+    );
+  }
+}
+
+/// A-10 내 보드 — 홈에서 "내 것"이 보이는 칸: 숫자 · 가장 급한 것 2개 · 도감 진행 1줄
+class _MyBoard extends StatefulWidget {
+  const _MyBoard({required this.kits, required this.scope, required this.loaders, this.onJump});
+  final List<Kit> kits;
+  final List<String> scope;
+  final Loaders loaders;
+  final ValueChanged<CollectionJump>? onJump;
+
+  @override
+  State<_MyBoard> createState() => _MyBoardState();
+}
+
+/// 도감 한 줄 (가장 많이 켠 작품 · 세대)
+typedef _Lit = ({String label, int owned, int total});
+
+class _MyBoardState extends State<_MyBoard> {
+  late Future<_Lit?> _lit = _loadLit();
+
+  @override
+  void didUpdateWidget(_MyBoard old) {
+    super.didUpdateWidget(old);
+    if (old.scope.join() != widget.scope.join()) _lit = _loadLit();
+  }
+
+  Future<_Lit?> _loadLit() async {
+    try {
+      if (widget.scope.contains('gundam')) {
+        final works = [...await widget.loaders.guideWorks()]..sort((a, b) => b.owned.compareTo(a.owned));
+        final w = works.where((w) => w.owned > 0).firstOrNull;
+        return w == null ? null : (label: w.name, owned: w.owned, total: w.total);
+      }
+      if (widget.scope.isEmpty) return null;
+      final worlds = [...await widget.loaders.worlds(widget.scope.first)]..sort((a, b) => b.owned.compareTo(a.owned));
+      final w = worlds.where((w) => w.owned > 0).firstOrNull;
+      return w == null ? null : (label: w.label, owned: w.owned, total: w.total);
+    } on Object {
+      return null;
+    }
+  }
+
+  /// 좋아요 · 구매함 중 날짜가 다가오는 것 (PB 예약 마감 > 발매일)
+  List<(Kit, String, bool)> _upcoming(Marks marks) {
+    final now = appNow();
+    final today = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final out = <(String, Kit, String, bool)>[];
+    for (final k in widget.kits) {
+      final st = marks.statusOf(k);
+      if (st == CollectStatus.none) continue;
+      if (st == CollectStatus.wanted && k.pbCloses.length >= 10 && k.pbCloses.compareTo(today) >= 0) {
+        final d = DateTime.parse(k.pbCloses).difference(DateTime(now.year, now.month, now.day)).inDays;
+        out.add((k.pbCloses, k, d == 0 ? '오늘 예약 마감' : '예약 마감 D-$d', true));
+      } else if (k.date.length == 10 && k.date.compareTo(today) >= 0) {
+        out.add((k.date, k, '${dateDot(k.date.substring(5))} 발매', false));
+      } else if (k.date.length == 7 && k.date.compareTo(today.substring(0, 7)) >= 0) {
+        out.add(('${k.date}-99', k, '${int.parse(k.date.substring(5))}월 발매', false));
+      }
+    }
+    out.sort((a, b) => a.$1.compareTo(b.$1));
+    return [for (final e in out.take(2)) (e.$2, e.$3, e.$4)];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final marks = Marks.of(context); // 좋아요 · 구매함이 바뀌면 다시 그린다
+    final me = UserStore.instance;
+    final soon = _upcoming(marks);
+    Widget count(String label, int n, CollectionJump j) => InkWell(
+      onTap: () => widget.onJump?.call(j),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        child: Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(text: '$label '),
+              TextSpan(
+                text: '$n',
+                style: const TextStyle(fontWeight: FontWeight.w700, color: Gp.ink),
+              ),
+            ],
+          ),
+          style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+        ),
+      ),
+    );
+    return SectionPanel(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Text(
+                '내 보드',
+                style: TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w700),
+              ),
+              const Spacer(),
+              count('구매', me.ownedCount, CollectionJump.owned),
+              count('좋아요', me.wantedCount, CollectionJump.liked),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (soon.isEmpty)
+            const Text(
+              '좋아요한 상품의 예약 마감 · 발매일이 여기 먼저 떠요',
+              style: TextStyle(fontSize: Gp.t12, color: Gp.faint),
+            )
+          else
+            for (final (k, label, urgent) in soon)
+              InkWell(
+                onTap: () => openKitDetail(context, k, loaders: widget.loaders),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 5),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          k.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: Gp.t14),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: Gp.t12,
+                          fontWeight: FontWeight.w600,
+                          color: urgent ? Gp.danger : Gp.accent,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          const SizedBox(height: 6),
+          FutureBuilder<_Lit?>(
+            future: _lit,
+            builder: (context, snap) {
+              final lit = snap.data;
+              return InkWell(
+                onTap: () => widget.onJump?.call(CollectionJump.guide),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: lit == null
+                      ? const Text(
+                          '도감: 구매함에 넣으면 칸이 켜져요 ›',
+                          style: TextStyle(fontSize: Gp.t12, color: Gp.faint),
+                        )
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    '도감 · ${lit.label}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                                  ),
+                                ),
+                                Text(
+                                  '${lit.owned}/${lit.total}',
+                                  style: const TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w700, color: Gp.own),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(3),
+                              child: LinearProgressIndicator(
+                                value: lit.total == 0 ? 0 : lit.owned / lit.total,
+                                minHeight: 5,
+                                backgroundColor: Gp.soft,
+                                color: Gp.own,
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 바로 가기 한 칸
+class _Shortcut {
+  const _Shortcut(this.icon, this.label, this.onTap, {this.mine = false});
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  /// 내 기록으로 가는 칸은 민트(가진 것 색)
+  final bool mine;
+}
+
+/// A-11 아이콘 4칸 — 한 줄만 (8칸이면 배너 · 새 상품이 둘째 화면으로 밀린다)
+class _ShortcutRow extends StatelessWidget {
+  const _ShortcutRow({required this.items});
+  final List<_Shortcut> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return SectionPanel(
+      padding: const EdgeInsets.fromLTRB(8, 12, 8, 12),
+      child: Row(
+        children: [
+          for (final it in items)
+            Expanded(
+              child: InkWell(
+                onTap: it.onTap,
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: (it.mine ? Gp.own : Gp.accent).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(13),
+                        ),
+                        child: Icon(it.icon, size: 22, color: it.mine ? Gp.own : Gp.accent),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        it.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: Gp.t12, color: Gp.ink),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

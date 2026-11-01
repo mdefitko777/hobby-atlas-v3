@@ -121,7 +121,14 @@ void main() {
       await _show(tester, size, AppShell(loaders: fakeLoaders));
       expect(find.byType(DetailPaneView), findsOneWidget);
       expect(find.text('상품 · 공고 · 친구를 고르면 여기에 보여요'), findsOneWidget);
+      // 홈 위쪽(내 보드 · 아이콘 칸 · 배너) 아래에 있는 상품 줄까지 내린다
+      final vertical = find.byWidgetPredicate((w) => w is Scrollable && w.axisDirection == AxisDirection.down);
+      for (var i = 0; i < 6 && find.byType(ProductTile).evaluate().isEmpty; i++) {
+        await tester.drag(vertical.first, const Offset(0, -300));
+        await tester.pump(const Duration(milliseconds: 300));
+      }
       tester.widget<ProductTile>(find.byType(ProductTile).first).onTap(); // 탭 바에 가려질 수 있어 직접 호출
+      await tester.drag(vertical.first, const Offset(0, 3000)); // 다시 맨 위 (검색창이 보이게)
       for (var i = 0; i < 4; i++) {
         await tester.pump(const Duration(milliseconds: 300));
       }
