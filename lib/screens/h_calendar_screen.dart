@@ -4,7 +4,7 @@
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
 // │ H-1  │ ChannelHeader                      │ 아바타 줄 + 내 채널 바 (C-0 공용)       │ P04 · P06     │
 // │ H-2  │ ‹ 2026년 10월 › + 오늘              │ 달 넘기기 · 오늘로                      │ P03 · P07     │
-// │ H-3  │ 7열 달력 + 날짜 아래 색 점 (뜻은 ?)    │ 파랑 발매 · 회색 예고 · 빨강 PB 마감 · 민트 산 날 │ P01 · P06 │
+// │ H-3  │ 7열 달력 + 날짜 아래 색 점 (뜻은 H-12) │ 파랑 발매 · 회색 예고 · 빨강 PB 마감 · 민트 산 날 │ P01 · P06 │
 // │ H-9  │ ViewIconToggle 전체 · 내 일정        │ 좋아요 · 구매함 상품의 날짜만            │ P06           │
 // │ H-11 │ FindBar (달력 위)                   │ 일정에서 찾기 + 상품 필터 (점 · 목록이 같이 좁혀짐) │ P04 · P07 │
 // │ H-3b │ 전체 · 발매 · 예고 밑줄 탭            │ 일정 종류 거르기                        │ P06 · P07     │
@@ -13,6 +13,7 @@
 // │ H-6  │ "날짜 미정 · n월 중" 묶음            │ 날짜가 정해지지 않은 발매               │ P01 · P10     │
 // │ H-7  │ LayoutBuilder ≥720dp                │ 넓은 화면: 달력 왼쪽 · 목록 오른쪽       │ 적응형        │
 // │ H-8  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 이 달 일정 없음     │ P01 · P09     │
+// │ H-12 │ 위 줄 ? (S-19, calendarHelp)        │ 아이콘 뜻 + 점 색 (달력 위 ? 를 합침)      │ P10 · P01     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 발매 줄 → D 상품 상세(쌓기). 예고 줄 → J 공식 예고 상세(쌓기).
 // 현행 앱 문제: 발매 정보가 "최근" 화면 탭 안 "이번 달 발매"에만 있고 날짜로 볼 수 없음.
@@ -392,7 +393,7 @@ class _MonthCalendar extends StatelessWidget {
   final DateTime month;
   final int? selected;
 
-  /// 날짜 → 그날 점 색들 (글자 범례 없이 색으로, 뜻은 ? 에)
+  /// 날짜 → 그날 점 색들 (글자 범례 없이 색으로, 뜻은 위 줄 ? 에 — calendarHelp)
   final Map<int, Set<Color>> dots;
   final bool mine;
   final VoidCallback onPrev;
@@ -427,11 +428,6 @@ class _MonthCalendar extends StatelessWidget {
                 ),
               ),
               IconButton(tooltip: '다음 달', onPressed: onNext, icon: const Icon(Icons.chevron_right)),
-              IconButton(
-                tooltip: '점 색',
-                onPressed: () => _showLegend(context, mine),
-                icon: const Icon(Icons.help_outline, size: Gp.iM, color: Gp.faint),
-              ),
             ],
           ),
           if (!isThisMonth)
@@ -476,35 +472,6 @@ class _MonthCalendar extends StatelessWidget {
       ),
     );
   }
-}
-
-/// 점 색 뜻 (? 를 눌렀을 때만)
-void _showLegend(BuildContext context, bool mine) {
-  Widget row(Color c, String label) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 6),
-    child: Row(
-      children: [
-        _Dot(color: c),
-        const SizedBox(width: 10),
-        Text(label, style: const TextStyle(fontSize: Gp.t14)),
-      ],
-    ),
-  );
-  showGpSheet<void>(
-    context,
-    builder: (_) => SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: mine
-              ? [row(Gp.danger, 'PB 예약 마감'), row(Gp.accent, '발매'), row(Gp.own, '산 날')]
-              : [row(Gp.accent, '발매'), row(Gp.faint, '공식 예고 · 공지')],
-        ),
-      ),
-    ),
-  );
 }
 
 class _Dot extends StatelessWidget {
@@ -629,3 +596,14 @@ class _EventRow extends StatelessWidget {
     );
   }
 }
+
+/// H-12 ? 도움말 (위 줄 ? 의 "캘린더" 묶음 — s_app_shell.dart). 점 색 뜻도 여기에
+const calendarHelp = <HelpItem>[
+  HelpItem(Icons.tune, '필터'),
+  HelpItem(Icons.calendar_month_outlined, '전체 일정'),
+  HelpItem(Icons.person_outline, '내 일정 (좋아요 · 구매함)'),
+  HelpItem.dot(Gp.accent, '발매'),
+  HelpItem.dot(Gp.faint, '공식 예고 · 공지'),
+  HelpItem.dot(Gp.danger, 'PB 예약 마감 (내 일정)'),
+  HelpItem.dot(Gp.own, '산 날 (내 일정)'),
+];

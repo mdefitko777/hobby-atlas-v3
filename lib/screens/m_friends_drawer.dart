@@ -14,6 +14,7 @@
 // │ M-6  │ 밑줄 탭 + 접히는 그룹                │ 친구 | 공유 공간(멤버 · 역할, U-6)        │ P06           │
 // │ M-7  │ 친구 줄 (아바타 · 상태 한 줄 · Lv)    │ 친구 → 친구 프로필(I 친구 보기) · 새 사진 점 │ P07 · P01    │
 // │ M-8  │ 안내 + 로그인 버튼                   │ 로그인 전                              │ P09           │
+// │ M-9  │ 머리 줄 ? (HelpButton, ✕ 앞)        │ 서랍 아이콘 뜻 한 줄씩                   │ P10           │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 서랍 → 내 정보 · 친구 프로필(쌓기, 서랍은 닫힘). 요청 · 추가 → 덮기(바텀 시트).
 import 'package:flutter/material.dart';
@@ -187,6 +188,7 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
                 onPressed: () => showAddFriend(context),
                 icon: const Icon(Icons.person_add_alt_1_outlined, color: Gp.ink),
               ),
+              const HelpButton(title: '친구', items: friendsHelp), // M-9
               IconButton(
                 tooltip: '닫기',
                 onPressed: () => Navigator.pop(context),
@@ -450,3 +452,12 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
     );
   }
 }
+
+/// M-9 ? 도움말
+const friendsHelp = <HelpItem>[
+  HelpItem(Icons.person_add_alt_1_outlined, '아이디로 친구 추가'),
+  HelpItem(Icons.notifications_none, '받은 친구 요청'),
+  HelpItem(Icons.photo_library_outlined, '지난번 뒤 새 사진'),
+  HelpItem(Icons.star_rounded, '특별 관심 (My Page ★ 에 소식)', color: Gp.star),
+  HelpItem(Icons.close, '닫기'),
+];
