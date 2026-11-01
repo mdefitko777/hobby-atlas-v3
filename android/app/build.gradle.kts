@@ -55,6 +55,8 @@ android {
             } else {
                 signingConfigs.getByName("debug")
             }
+            // ML Kit 등 플러그인이 가리키는 넣지 않은 모델 클래스 (proguard-rules.pro)
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
 }
