@@ -6,6 +6,8 @@
 // │ H-2  │ ‹ 2026년 10월 › + 오늘              │ 달 넘기기 · 오늘로                      │ P03 · P07     │
 // │ H-3  │ 7열 달력 + 날짜 아래 색 점 (뜻은 ?)    │ 파랑 발매 · 회색 예고 · 빨강 PB 마감 · 민트 산 날 │ P01 · P06 │
 // │ H-9  │ ViewIconToggle 전체 · 내 일정        │ 좋아요 · 구매함 상품의 날짜만            │ P06           │
+// │ H-9b │ 내 일정: 보라 점 예약 도착 · 주황 점 재판매 │ 예약한 상품 도착 예정 · 좋아요 상품 재판매 │ P01 · P06 │
+// │ H-9c │ 💳 + 금액 줄 (내 일정 맨 위)          │ 이번 달 낼 돈: 이 달 도착 예정인 미결제 예약 합 │ P01      │
 // │ H-11 │ FindBar (달력 위)                   │ 일정에서 찾기 + 상품 필터 (점 · 목록이 같이 좁혀짐) │ P04 · P07 │
 // │ H-3b │ 전체 · 발매 · 예고 밑줄 탭            │ 일정 종류 거르기                        │ P06 · P07     │
 // │ H-4  │ 날짜 누르기 (다시 누르면 해제)        │ 그날만 보기 / 한 달 전체 보기           │ P03           │
@@ -20,7 +22,7 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../channels.dart';
-import '../data/user_store.dart';
+import '../logic/restock.dart';
 import '../marks.dart';
 import '../models.dart';
 import '../theme.dart';
@@ -49,7 +51,11 @@ class _Event {
     this.day,
     this.dot = Gp.accent,
     this.tag = '',
+    this.due = 0,
   });
+
+  /// 예약 도착 줄: 아직 낼 돈 (원)
+  final int due;
 
   /// 달력 점 색: 파랑 발매 · 회색 예고 · 빨강 PB 예약 마감 · 민트 산 날
   final Color dot;
@@ -73,9 +79,12 @@ class _Event {
 }
 
 class _CalData {
-  const _CalData(this.kits, this.announcements);
+  const _CalData(this.kits, this.announcements, [this.restocks = RestockIndex.empty]);
   final List<Kit> kits;
   final List<Announcement> announcements;
+
+  /// 재판매 소식 (파일이 없으면 빈 묶음)
+  final RestockIndex restocks;
 }
 
 class CalendarScreen extends StatefulWidget {
@@ -126,7 +135,8 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
     _future = Future.wait([
       widget.loaders.kits(ids),
       widget.loaders.announcements(ids),
-    ]).then((r) => _CalData(r[0] as List<Kit>, r[1] as List<Announcement>));
+      widget.loaders.restocks().catchError((Object _) => RestockIndex.empty),
+    ]).then((r) => _CalData(r[0] as List<Kit>, r[1] as List<Announcement>, r[2] as RestockIndex));
   }
 
   @override
@@ -152,7 +162,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
     int? dayOf(String date) => date.length >= 10 ? int.tryParse(date.substring(8, 10)) : null;
     _find.filter.statusOf = marks.statusOf;
     if (_mine) {
-      final me = UserStore.instance;
+      final me = marks.store;
       final out = <_Event>[];
       for (final k in d.kits) {
         final st = marks.statusOf(k);
@@ -174,6 +184,38 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
           out.add(
             _Event(title: k.name, image: k.image, sub: joinDot([k.line, yen(k.priceJpy)]), kit: k, day: dayOf(k.date)),
           );
+        }
+        // H-9b 예약 도착 예정 (하루까지 정하지 않았으면 날짜 미정)
+        final pre = me.preorderOf(k.id);
+        if (st == CollectStatus.wanted && pre != null && pre.active && pre.arrivalMonth == ym) {
+          out.add(
+            _Event(
+              title: k.name,
+              image: k.image,
+              sub: joinDot([pre.shop, pre.due > 0 ? '낼 돈 ${won(pre.due)}' : (pre.paid ? '결제 완료' : '')]),
+              kit: k,
+              day: dayOf(pre.arrival),
+              dot: Gp.reserve,
+              tag: '예약',
+              due: pre.due,
+            ),
+          );
+        }
+        // H-9b 좋아요한 상품의 재판매 (지난 것 · 쌓인 것은 빼고)
+        if (st == CollectStatus.wanted) {
+          for (final e in d.restocks.inMonth([k.id], _month)) {
+            out.add(
+              _Event(
+                title: k.name,
+                image: k.image,
+                sub: joinDot([e.label, if (e.dateEstimated) '날짜 짐작']),
+                kit: k,
+                day: e.day,
+                dot: Gp.resale,
+                tag: '재판매',
+              ),
+            );
+          }
         }
         final at = DateTime.tryParse('${me.entry(k.id)?['updated_at'] ?? ''}')?.toLocal();
         if (st == CollectStatus.owned && at != null && at.year == _month.year && at.month == _month.month) {
@@ -302,7 +344,43 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
     ],
   );
 
+  /// H-9c 이번 달 낼 돈 — 이 달에 도착 예정인 미결제 예약 (내 일정에서만, 날짜를 골라도 한 달 전체)
+  Widget? _dueRow(List<_Event> all) {
+    final dues = all.where((e) => e.tag == '예약' && e.due > 0).toList();
+    if (!_mine || dues.isEmpty) return null;
+    final total = dues.fold<int>(0, (s, e) => s + e.due);
+    return Container(
+      key: const ValueKey('month-due'),
+      margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      padding: const EdgeInsets.fromLTRB(12, 10, 14, 10),
+      decoration: BoxDecoration(
+        color: Gp.reserve.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(Gp.radius),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.payments_outlined, size: Gp.iM, color: Gp.reserve),
+          const SizedBox(width: 8),
+          Text(
+            '${_month.month}월 낼 돈',
+            style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+          ),
+          const Spacer(),
+          Text(
+            won(total),
+            style: const TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w700),
+          ),
+          Text(
+            ' · ${dues.length}건',
+            style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+          ),
+        ],
+      ),
+    );
+  }
+
   List<Widget> _list(List<_Event> all) {
+    final due = _dueRow(all);
     final inDay = _day == null ? all : all.where((e) => e.day == _day).toList();
     final shown = _mine ? inDay : inDay.where((e) => _kind == 0 || (_kind == 1) == e.isRelease).toList();
     final kinds = Padding(
@@ -328,6 +406,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
     if (shown.isEmpty) {
       return [
         if (!_mine) kinds,
+        ?due,
         EmptyView(
           // H-8 P09
           icon: Icons.event_busy_outlined,
@@ -344,6 +423,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
     final undated = shown.where((e) => e.day == null).toList();
     return [
       if (!_mine) kinds,
+      ?due,
       if (_day != null)
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
@@ -499,7 +579,13 @@ void _showLegend(BuildContext context, bool mine) {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: mine
-              ? [row(Gp.danger, 'PB 예약 마감'), row(Gp.accent, '발매'), row(Gp.own, '산 날')]
+              ? [
+                  row(Gp.danger, 'PB 예약 마감'),
+                  row(Gp.accent, '발매'),
+                  row(Gp.own, '산 날'),
+                  row(Gp.reserve, '예약 도착'),
+                  row(Gp.resale, '재판매'),
+                ]
               : [row(Gp.accent, '발매'), row(Gp.faint, '공식 예고 · 공지')],
         ),
       ),

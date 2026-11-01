@@ -12,6 +12,7 @@ import '../../theme.dart';
 import '../../widgets.dart';
 import '../d_kit_detail_screen.dart';
 import '../t_photo_screen.dart' show addMyPhoto, deleteMyPhoto;
+import '../v_share_sheet.dart' show openGuideShare;
 import 'guide_parts.dart';
 
 /// G-4 작품 하나의 기체 칸
@@ -197,6 +198,14 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
     showToast(context, '「${u.name}」 내 사진');
   }
 
+  /// G-4d 작품 진행 카드 — 칸을 다 받은 뒤 지금 단계로
+  Future<void> _shareGuide() async {
+    final units = await _future.catchError((Object _) => const <GuideUnit>[]);
+    if (!mounted || units.isEmpty) return;
+    final m = Marks.read(context);
+    await openGuideShare(context, work: widget.work, tiers: [for (final u in units) _tierOf(m, u)]);
+  }
+
   void _openUnit(GuideUnit u) {
     showGpSheet<void>(
       // G-5 덮기
@@ -268,7 +277,17 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
             ),
           ],
         ),
-        actions: const [LevelHelpButton(), SizedBox(width: 6)], // G-2
+        actions: [
+          ToolIcon(
+            // G-4d 작품 진행 카드 (그림으로 공유 · 저장)
+            key: const ValueKey('guide-share'),
+            icon: Icons.ios_share,
+            tip: '공유 카드',
+            onTap: _shareGuide,
+          ),
+          const LevelHelpButton(), // G-2
+          const SizedBox(width: 6),
+        ],
       ),
       body: FutureBuilder<List<GuideUnit>>(
         future: _future,

@@ -10,6 +10,9 @@
 // │ D-5c │ 구매함일 때 "내 구매가" 줄 → 입력 시트 │ 내가 낸 돈 기록 (한 개 값 · 동기화)      │ P01 · P03     │
 // │ D-5d │ KitPhotoStrip (T-8)                │ 구매함이면 이 상품의 내 사진 + 넣기       │ P07           │
 // │ D-5e │ 리본 · ♡ 아이콘 + @아이디              │ 이 상품을 가진 · 좋아요한 친구 (선물 · 겹침) │ P01 · P07   │
+// │ D-5f │ BuildStatusRow (단계 3칸 + 붓)        │ 조립 상태: 미조립 · 조립 중 · 완성 + 도색 (구매함) │ P01 · P03 │
+// │ D-5g │ PreorderRow → 예약 시트 · 📥 도착     │ 예약: 가게 · 낸 돈 · 결제 · 도착 예정 → 구매함으로 │ P01 · P03 │
+// │ D-5h │ SoftTag 재판매 + 재판매 줄(날짜 · ↗)  │ 재판매(再販) 소식 (restocks.json, 없으면 숨김) │ P01 · P10   │
 // │ D-6  │ 하단 고정 바: ♡ 좋아요 · 리본 구매함   │ 좋아요 · 구매함 (따로 켜고 끔, 앱 전체 한 벌) │ P03 · P04 │
 // │ D-7  │ − n + (1–99)                       │ 수량: 좋아요 = 갖고 싶은 수 · 구매함 = 가진 수 │ P03 · P01 │
 // │ D-8  │ 가로 스크롤 요약 줄 → 바텀 시트       │ 공식 정보 (요약 → 전체 표)              │ P08 · P06     │
@@ -31,6 +34,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../api.dart';
 import '../logic/friends.dart';
 import '../logic/market.dart';
+import '../logic/restock.dart';
 import '../marks.dart';
 import '../detail_pane.dart';
 import '../channels.dart';
@@ -107,11 +111,22 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
 
   Kit get k => widget.kit;
 
+  /// D-5h 이 상품의 재판매 소식 (파일이 없으면 빈 목록 → 칸 숨김)
+  List<RestockEvent> _restocks = const [];
+
   @override
   void initState() {
     super.initState();
     // 최근 본 상품 (홈 맨 아래 줄) — 그리는 중에 알리지 않게 다음 프레임에
     WidgetsBinding.instance.addPostFrameCallback((_) => UserStore.instance.markViewed(widget.kit.id));
+    widget.loaders.restocks().then((r) {
+      if (mounted && r.of(k.id).isNotEmpty) setState(() => _restocks = r.of(k.id)); // STATE: 재판매 소식 → 꼬리표 · 줄
+    }, onError: (Object _) {});
+  }
+
+  Future<void> _openUrl(String url) async {
+    final ok = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    if (!ok && mounted) showToast(context, '열지 못했어요');
   }
 
   /// 내가 낸 돈 (구매함일 때) — 기기에 저장, 컬렉션 지출 합계에 들어간다
@@ -351,6 +366,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
                 ),
                 if (k.limited) const TagPill('한정', strong: true),
                 if (k.pb) const TagPill('PB', strong: true),
+                if (_restocks.any((e) => !e.quiet)) const SoftTag('재판매', color: Gp.resale), // D-5h
               ],
             ),
             const SizedBox(height: 10),
@@ -387,6 +403,10 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
                 qty: Marks.of(context).store.quantityOf(k.id),
                 onChanged: _setQty,
               ),
+            ],
+            if (!_owned) ...[
+              const SizedBox(height: 8),
+              PreorderRow(kit: k), // D-5g 예약 (좋아요와 구매함 사이)
             ],
             if (_owned) ...[
               const SizedBox(height: 8),
@@ -431,9 +451,12 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
                 ),
               ),
               const SizedBox(height: 8),
+              BuildStatusRow(kitId: widget.kit.id), // D-5f 조립 상태
+              const SizedBox(height: 8),
               KitPhotoStrip(kitId: widget.kit.id), // D-5d 내 사진 (사진 벽에도)
             ],
             _FriendsWithKit(kitId: widget.kit.id), // D-5e 이 상품을 가진 · 좋아요한 친구
+            if (_restocks.isNotEmpty) _RestockList(events: _restocks, onOpen: _openUrl), // D-5h
           ],
         ),
       ),
@@ -873,6 +896,50 @@ class _BottomActions extends StatelessWidget {
       ),
     );
   }
+}
+
+/// D-5h 재판매 소식 줄 — 날짜 · 종류 · 출처(↗). 지난 것(quiet)은 옅게
+class _RestockList extends StatelessWidget {
+  const _RestockList({required this.events, required this.onOpen});
+  final List<RestockEvent> events;
+  final ValueChanged<String> onOpen;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 10),
+    child: Column(
+      key: const ValueKey('restock-list'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final e in events)
+          InkWell(
+            onTap: e.sourceUrl.isEmpty ? null : () => onOpen(e.sourceUrl),
+            borderRadius: BorderRadius.circular(Gp.rSmall),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 5),
+              child: Row(
+                children: [
+                  Icon(Icons.autorenew, size: Gp.iS, color: e.quiet ? Gp.faint : Gp.resale),
+                  const SizedBox(width: 8),
+                  Text(
+                    '${dateDot(e.date)}${e.dateEstimated ? ' 쯤' : ''}',
+                    style: TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w600, color: e.quiet ? Gp.faint : Gp.ink),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      e.label,
+                      style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                    ),
+                  ),
+                  if (e.sourceUrl.isNotEmpty) const Icon(Icons.north_east, size: Gp.iXS, color: Gp.muted),
+                ],
+              ),
+            ),
+          ),
+      ],
+    ),
+  );
 }
 
 /// D-5e 이 상품을 가진 · 좋아요한 친구 (받아 둔 친구 컬렉션에서, 없으면 아무것도 안 보인다)

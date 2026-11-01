@@ -138,7 +138,7 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
               Expanded(
                 child: switch (_tab) {
                   CollectionJump.liked => _kits(d.liked, d.mine, liked: true),
-                  CollectionJump.owned => _kits(d.owned, d.mine, liked: false),
+                  CollectionJump.owned || CollectionJump.backlog => _kits(d.owned, d.mine, liked: false),
                   CollectionJump.guide => _guide(d.works, d.photosByWork),
                 },
               ),

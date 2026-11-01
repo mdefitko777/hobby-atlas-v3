@@ -10,6 +10,8 @@
 //   · SEED / 00 은 series_key 로 본다 (watch_tags 의 '00' 은 BBX 의 BX-00 · CX-00 에도 붙는다)
 //   · 좋아요한 PB 상품의 예약 시작 · 마감 임박 (Wayback 기록이라 "바뀌었을 수 있어요" 를 붙인다)
 //   · 좋아요한 상품의 발매 D-7 · D-1 · 당일 (발매일이 하루까지 정해진 것만, 기기 안에서 날짜만 비교)
+//   · 좋아요 · 구매함 상품의 재판매(change_reasons 'restock', 규칙 '재판매') — "재판매 · 「이름」 YYYY.MM"
+//   · 예약한 상품의 도착 달 · 도착 날 (기기에 적은 예약, 규칙 '예약 도착')
 // 이 파일은 Flutter 위젯을 쓰지 않는다 (백그라운드 isolate · 단위 테스트).
 import '../data/gunpula.dart' show pickName;
 import 'notify_models.dart';
@@ -31,6 +33,9 @@ class FeedItem {
     this.watchTags = const [],
     this.interestTags = const [],
     this.reasons = const [],
+    this.restockDate = '',
+    this.restockKind = '',
+    this.restockQuiet = false,
   });
 
   final String kitId;
@@ -49,10 +54,23 @@ class FeedItem {
   final List<String> interestTags;
   final List<String> reasons;
 
+  /// 재판매 날짜 'YYYY-MM'(발송 달) · 'YYYY-MM-DD' — 피드 changed[] 의 restock: {date, kind, url, announced_at}.
+  /// release_date 는 원래 발매일 그대로라 쓰지 않는다
+  final String restockDate;
+
+  /// pb_resale · retail_resale · tamashii_resale · lottery
+  final String restockKind;
+
+  /// restock.quiet — 지난 것 · 쌓인 것 (알리지 않는다)
+  final bool restockQuiet;
+
+  bool get isRestock => reasons.contains('restock') && !restockQuiet;
+
   static FeedItem? fromJson(Object? json, String changeType) {
     final j = jMap(json);
     final id = jStr(j['kit_id']);
     if (id.isEmpty) return null;
+    final restock = _restockOf(j);
     return FeedItem(
       kitId: id,
       changeType: jStr(j['change_type']).isEmpty ? changeType : jStr(j['change_type']),
@@ -67,7 +85,16 @@ class FeedItem {
       watchTags: jList(j['watch_tags']).whereType<String>().toList(),
       interestTags: jList(j['interest_tags']).whereType<String>().toList(),
       reasons: jList(j['change_reasons']).whereType<String>().toList(),
+      restockDate: _ymd(jStr(restock['date']).isEmpty ? j['restock_date'] : restock['date']),
+      restockKind: jStr(restock['kind']).isEmpty ? jStr(j['restock_kind']) : jStr(restock['kind']),
+      restockQuiet: restock['quiet'] == true,
     );
+  }
+
+  /// 피드의 restock: {date, kind} 하나 또는 목록 (첫 것)
+  static Map<String, Object?> _restockOf(Map<String, Object?> j) {
+    final r = j['restock'];
+    return r is List ? jMap(r.firstOrNull) : jMap(r);
   }
 
   /// 알릴 만한 변화인가 — 새로 수록 · 가격 · 발매일 · 한정 · 판매처 (사진 · 이름 · 분류만 바뀐 것은 빼고)
@@ -190,9 +217,42 @@ Set<String> ruleHits(FeedItem it, NotifyConfig c) {
 /// 좋아요한 상품인가 (채널과 상관없이)
 bool wantedHit(FeedItem it, NotifyConfig c) => c.rule('wanted') && c.wanted.contains(it.kitId);
 
+/// 좋아요 · 구매함 상품의 재판매인가 (규칙 '재판매', 채널과 상관없이)
+bool restockHit(FeedItem it, NotifyConfig c) =>
+    it.isRestock && c.rule('restock') && (c.wanted.contains(it.kitId) || c.owned.contains(it.kitId));
+
+/// 재판매 종류 → 글자 (lib/logic/restock.dart restockKindLabels 와 같음 — 이 파일은 백그라운드에서도 돈다)
+const _restockKinds = {'pb_resale': 'PB 재판매', 'retail_resale': '일반 재판매', 'tamashii_resale': '혼 재판매', 'lottery': '추첨'};
+
+/// 짧은 종류 (변경 이유 글자 "재판매 2027.01 · PB")
+const _restockShort = {'pb_resale': 'PB', 'retail_resale': '일반', 'tamashii_resale': '혼', 'lottery': '추첨'};
+
 /// 피드 한 줄 → 알림함 한 줄 (규칙에 안 걸리면 null)
 NoticeRecord? recordForItem(FeedItem it, FeedEntry e, NotifyConfig c, {bool seen = false}) {
   if (!it.meaningful) return null;
+  if (restockHit(it, c)) {
+    final owned = c.owned.contains(it.kitId);
+    return NoticeRecord(
+      id: 'feed-${e.date}-${it.kitId}',
+      kind: 'restock',
+      kitId: it.kitId,
+      title: it.name,
+      body: [
+        '재판매',
+        if (it.restockDate.isNotEmpty) _ymDot(it.restockDate),
+        owned ? '구매함 상품' : '좋아요한 상품',
+        ?_restockKinds[it.restockKind],
+      ].join(' · '),
+      at: e.generatedAt ?? DateTime.parse('${e.date}T00:00:00Z'),
+      franchise: it.franchise,
+      // 재판매 날짜 (휴대폰 알림 제목의 YYYY.MM) — 모르면 피드 날짜
+      date: it.restockDate.isEmpty ? e.date : it.restockDate,
+      reasons: it.reasons,
+      pb: it.isPb,
+      wanted: true, // 채널과 상관없이 보인다
+      seen: seen,
+    );
+  }
   final wanted = wantedHit(it, c);
   if (!wanted && ruleHits(it, c).isEmpty) return null;
   return NoticeRecord(
@@ -234,6 +294,10 @@ String _reasonLabel(String r, FeedItem it) => switch (r) {
   'release' => it.releaseDate.isEmpty ? '발매일 변경' : '발매일 ${it.releaseDate}',
   'limited' => it.isLimited ? '한정 표시' : '한정 해제',
   'source' => '판매처 · 출처 변경',
+  'restock' => [
+    it.restockDate.isEmpty ? '재판매' : '재판매 ${_ymDot(it.restockDate)}',
+    ?_restockShort[it.restockKind],
+  ].join(' · '),
   _ => '정보 변경',
 };
 
@@ -316,6 +380,40 @@ List<NoticeRecord> releaseRecords(NotifyConfig c, Set<String> known, DateTime no
         wanted: true,
       ),
     );
+  }
+  return out;
+}
+
+/// 예약한 상품의 도착: 도착 달이 되면 한 번(month) · 하루까지 정한 예약은 그날 한 번 더(d0). 이미 알린 것([known])은 빼고.
+List<NoticeRecord> preorderRecords(NotifyConfig c, Set<String> known, DateTime now) {
+  if (!c.rule('preorder_arrival')) return const [];
+  final today = DateTime.utc(now.year, now.month, now.day).toIso8601String().substring(0, 10);
+  final ym = today.substring(0, 7);
+  final out = <NoticeRecord>[];
+  for (final p in c.preorders) {
+    if (!p.arrival.startsWith(ym)) continue;
+    final exact = p.arrival.length == 10;
+    final money = p.due > 0 ? '낼 돈 ${_comma(p.due)}원' : '결제 완료';
+    for (final (stage, label) in [
+      ('month', exact ? '${_md(p.arrival)} 도착 예정' : '이번 달 도착 예정'),
+      if (exact && p.arrival == today) ('d0', '오늘 도착 예정'),
+    ]) {
+      final id = 'pre-${p.id}-${p.arrival}-$stage';
+      if (known.contains(id)) continue;
+      out.add(
+        NoticeRecord(
+          id: id,
+          kind: 'preorder',
+          kitId: p.id,
+          title: p.name,
+          body: ['예약', label, if (p.shop.isNotEmpty) p.shop, money].join(' · '),
+          at: now.toUtc(),
+          franchise: p.franchise,
+          date: p.arrival,
+          wanted: true,
+        ),
+      );
+    }
   }
   return out;
 }
@@ -451,6 +549,7 @@ CheckPlan planCheck({
   }
   records.addAll(pbWindowRecords(config, known, now));
   records.addAll(releaseRecords(config, known, now));
+  records.addAll(preorderRecords(config, known, now));
   records.addAll(annStageRecords(config, announcements, known, now));
   return CheckPlan(
     records: records,
@@ -563,6 +662,41 @@ List<SystemAlert> buildAlerts(Iterable<NoticeRecord> fresh) {
       );
     }
   }
+  final restock = live.where((r) => r.channel == 'restock').toList();
+  if (restock.length > 3) {
+    out.add(
+      SystemAlert(
+        id: stableId('restock'),
+        channel: 'restock',
+        title: '재판매 소식 ${restock.length}개',
+        body: _names(restock),
+        payload: 'inbox',
+      ),
+    );
+  } else {
+    for (final r in restock) {
+      out.add(
+        SystemAlert(
+          id: stableId(r.id),
+          channel: 'restock',
+          title: restockTitle(r),
+          body: r.body,
+          payload: 'kit:${r.kitId}',
+        ),
+      );
+    }
+  }
+  for (final r in live.where((r) => r.channel == 'preorder')) {
+    out.add(
+      SystemAlert(
+        id: stableId(r.id),
+        channel: 'preorder',
+        title: '예약 도착 · 「${r.title}」',
+        body: r.body,
+        payload: 'kit:${r.kitId}',
+      ),
+    );
+  }
   final ann = live.where((r) => r.channel == 'ann').toList();
   if (ann.length > 3) {
     out.add(
@@ -589,6 +723,18 @@ List<SystemAlert> buildAlerts(Iterable<NoticeRecord> fresh) {
   }
   return out;
 }
+
+/// 재판매 휴대폰 알림 제목: "재판매 · 「이름」 2027.03"
+String restockTitle(NoticeRecord r) {
+  final ym = RegExp(r'^\d{4}-\d{2}').hasMatch(r.date) ? ' ${_ymDot(r.date)}' : '';
+  return '재판매 · 「${r.title}」$ym';
+}
+
+/// '2027-03-15' · '2027-03' → '2027.03'
+String _ymDot(String d) => d.length >= 7 ? d.substring(0, 7).replaceAll('-', '.') : d;
+
+/// 'YYYY-MM' · 'YYYY-MM-DD' 만 (그 밖은 빈 글자)
+String _ymd(Object? v) => RegExp(r'^\d{4}-\d{2}(-\d{2})?').firstMatch(jStr(v))?.group(0) ?? '';
 
 /// 「A」 · 「B」 외 3
 String _names(List<NoticeRecord> rs) {

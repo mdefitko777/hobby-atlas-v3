@@ -56,7 +56,8 @@ dependencies:
   mobile_scanner: ^7.4.3
   # 사진 글자 읽기 (화면 E-8 · E-11): 기기 안 ML Kit 일본어 · 한국어 글자 인식 → 상품 후보 (lib/ocr/ · lib/logic/ocr_lookup.dart)
   google_mlkit_text_recognition: ^0.17.1
-  # 공유로 받기: 다른 앱의 "공유 → Hobby Atlas" 사진 · 글 · 주소 (lib/share/share_intake.dart)
+  # 공유 카드 (화면 V): 내 컬렉션 · 도감 진행 그림(PNG)을 안드로이드 공유 창으로
+  share_plus: ^13.3.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

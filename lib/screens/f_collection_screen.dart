@@ -3,10 +3,13 @@
 // ┌──────── 디자인 가이드 대응표: F 컬렉션 ────────────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
 // │ F-1  │ ChannelHeader                      │ 아바타 줄 + 내 채널 바 (C-0 공용)       │ P04 · P06     │
-// │ F-2  │ 밑줄 탭 2개 + 개수                   │ 좋아요 · 구매함                          │ P06 · P01     │
+// │ F-2  │ 밑줄 탭 2–3개 + 개수                 │ 좋아요 · 예약(있을 때만) · 구매함         │ P06 · P01     │
+// │ F-2b │ SquareSegments (구매함 탭)           │ 조립 상태로 거르기: 전체 · 미조립 n · 조립 중 · 완성 │ P01 · P06 │
 // │ F-3  │ 아이콘 두 개 (목록 · 도감, 검색창 줄) │ 보기 방식 전환                          │ P07           │
 // │ F-4  │ Text(합계)                         │ 좋아요 정가 합계 · 구매함 지출 합계 (× 수량) │ P01         │
 // │ F-5  │ ListView 줄 (사진 · 이름 · 가격)      │ 컬렉션 목록 → 상품 상세                 │ P08           │
+// │ F-5c │ 줄 오른쪽 BuildStatusButton          │ 조립 상태 바로 바꾸기 (누름 = 다음 단계 · 길게 = 도색) │ P03 · P07 │
+// │ F-5d │ 예약 탭 줄: 가게 · 도착 · 낼 돈 + 📥   │ 예약 목록 · 도착하면 구매함으로 (밀기도 같음) │ P01 · P03  │
 // │ F-6  │ 편집 → 체크박스 + 선택 삭제           │ 정리하기 (편집 모드에서만 삭제 보임)     │ P05 · P03     │
 // │ F-7  │ showDialog(확인) → 토스트(되돌리기)   │ 삭제 전 확인 · 바로 되돌리기             │ P05 · P03     │
 // │ F-8  │ GuideView (g_guide_view.dart)       │ 도감 — 모은 만큼 불이 켜지는 칸          │ P01 · P06     │
@@ -21,7 +24,9 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../logic/build_status.dart';
 import '../logic/collection_rules.dart';
+import '../logic/preorder.dart';
 import '../marks.dart';
 import '../channels.dart';
 import '../data/catalog.dart';
@@ -32,8 +37,11 @@ import 'c_channel_screen.dart';
 import 'd_kit_detail_screen.dart';
 import 'g_guide_view.dart';
 
-/// 내 정보 숫자를 눌렀을 때 열 곳
-enum CollectionJump { liked, owned, guide }
+/// 내 정보 숫자를 눌렀을 때 열 곳 (backlog = 구매함 탭 · 미조립만)
+enum CollectionJump { liked, owned, guide, backlog }
+
+/// 목록 탭: 좋아요 · 예약(좋아요 중 예약 기록이 있는 것) · 구매함
+enum _Tab { liked, preorder, owned }
 
 class CollectionScreen extends StatefulWidget {
   const CollectionScreen({
@@ -64,8 +72,13 @@ class CollectionScreen extends StatefulWidget {
 class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
   late Future<List<Kit>> _future;
 
-  /// true = 구매함 탭, false = 좋아요 탭
-  bool _ownedTab = false;
+  _Tab _tab = _Tab.liked;
+
+  /// true = 구매함 탭
+  bool get _ownedTab => _tab == _Tab.owned;
+
+  /// F-2b 구매함 탭 조립 상태 거르기 (0 = 전체, 1.. = BuildStage)
+  int _build = 0;
 
   /// true = 도감 보기, false = 목록 보기
   bool _guide = false;
@@ -106,7 +119,11 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
     syncScope();
     if (widget.jumpTick != old.jumpTick) {
       // STATE: 내 정보 숫자 → 전체 채널 + 그 탭/보기
-      _ownedTab = widget.jump == CollectionJump.owned;
+      _tab = switch (widget.jump) {
+        CollectionJump.owned || CollectionJump.backlog => _Tab.owned,
+        _ => _Tab.liked,
+      };
+      _build = widget.jump == CollectionJump.backlog ? BuildStage.unbuilt.index + 1 : 0;
       _guide = widget.jump == CollectionJump.guide;
       _editing = false;
       _selected.clear();
@@ -189,17 +206,25 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
   }
 
   /// 이 탭 · 이 채널의 상품 (찾기 · 필터 전)
-  List<Kit> _inTab(List<Kit> all) {
+  List<Kit> _inTab(List<Kit> all, [_Tab? tab]) {
     final ids = scopeIds;
     final marks = Marks.of(context);
-    return all.where((k) => (_ownedTab ? marks.owned(k) : marks.liked(k)) && ids.contains(k.franchiseId)).toList();
+    final t = tab ?? _tab;
+    bool inTab(Kit k) => switch (t) {
+      _Tab.owned => marks.owned(k),
+      _Tab.liked => marks.liked(k),
+      _Tab.preorder => marks.liked(k) && (marks.store.preorderOf(k.id)?.active ?? false),
+    };
+    return all.where((k) => inTab(k) && ids.contains(k.franchiseId)).toList();
   }
 
   List<Kit> _visible(List<Kit> all) {
     _find.watch(context);
+    final stage = _ownedTab ? buildFilterAt(_build) : null;
+    final store = Marks.of(context).store;
     return [
       for (final k in _inTab(all))
-        if (_find.hit(k)) k,
+        if (_find.hit(k) && (stage == null || store.stageOf(k.id) == stage)) k,
     ];
   }
 
@@ -278,22 +303,14 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                 return ErrorView(message: '${snap.error}', onRetry: () => setState(reloadScope));
               }
               final all = snap.data!;
-              final ids = scopeIds;
-              final marks = Marks.of(context);
-              int count(CollectStatus s) => all
-                  .where(
-                    (k) => ids.contains(k.franchiseId) && (s == CollectStatus.owned ? marks.owned(k) : marks.liked(k)),
-                  )
-                  .length;
               return Column(
                 children: [
                   _TopRow(
-                    wantedCount: count(CollectStatus.wanted),
-                    ownedCount: count(CollectStatus.owned),
-                    ownedTab: _ownedTab,
+                    counts: {for (final t in _Tab.values) t: _inTab(all, t).length},
+                    tab: _tab,
                     guide: _guide,
-                    onTab: (owned) => setState(() {
-                      _ownedTab = owned; // STATE: 탭 → 목록 내용
+                    onTab: (t) => setState(() {
+                      _tab = t; // STATE: 탭 → 목록 내용
                       _selected.clear();
                       _editing = false;
                     }),
@@ -304,7 +321,13 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                   ),
                   FindBar(
                     // F-12 모든 탭과 같은 줄: [검색창][필터][목록 · 도감]
-                    hint: _guide ? '도감에서 찾기' : (_ownedTab ? '구매함에서 찾기' : '좋아요에서 찾기'),
+                    hint: _guide
+                        ? '도감에서 찾기'
+                        : switch (_tab) {
+                            _Tab.owned => '구매함에서 찾기',
+                            _Tab.preorder => '예약에서 찾기',
+                            _Tab.liked => '좋아요에서 찾기',
+                          },
                     onQuery: (q) => setState(() => _find.query = q), // STATE: 찾기 → 목록 · 도감
                     filterCount: _guide ? _guideFilter.filter.count : _find.filter.count,
                     onFilter: _guide && channel == allChannelId ? null : () => _openFilter(all),
@@ -357,7 +380,16 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
         child: const Icon(Icons.delete_outline, color: Gp.muted, size: Gp.iM),
       ),
     );
-    if (kits.isEmpty && _find.active) {
+    final stages = _ownedTab ? _stageSegments(all) : null; // F-2b
+    if (kits.isEmpty && (_find.active || _build != 0)) {
+      if (_build != 0 && !_find.active) {
+        return ListView(
+          children: [
+            ?stages,
+            const EmptyView(icon: Icons.inventory_2_outlined, message: '이 상태의 상품이 없어요'),
+          ],
+        );
+      }
       return EmptyView(
         // F-12 찾기 · 필터 결과 없음
         icon: Icons.search_off,
@@ -365,6 +397,13 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
         action: _find.filter.count > 0
             ? OutlinedButton(onPressed: () => setState(() => _find.filter = KitFilter()), child: const Text('필터 초기화'))
             : null,
+      );
+    }
+    if (kits.isEmpty && _tab == _Tab.preorder) {
+      return const EmptyView(
+        icon: Icons.event_available_outlined,
+        message: '기다리는 예약이 없어요',
+        detail: '상품 상세의 예약 칸에 적으면 여기에 모여요',
       );
     }
     if (kits.isEmpty) {
@@ -391,6 +430,9 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
     final total = kits.fold<int>(0, (s, k) => s + (k.priceJpy ?? 0) * me.quantityOf(k.id));
     final pieces = kits.fold<int>(0, (s, k) => s + me.quantityOf(k.id));
     final spent = kits.fold<int>(0, (s, k) => s + (_paid(k).krw ?? 0) * me.quantityOf(k.id)); // 적은 구매가, 없으면 정가 × 환율
+    final pre = {for (final k in kits) k.id: ?me.preorderOf(k.id)};
+    final due = pre.values.fold<int>(0, (s, p) => s + p.due);
+    final backlog = backlogCount(_inTab(all).map((k) => k.id), me.stageOf);
     return Stack(
       children: [
         ListView(
@@ -402,7 +444,11 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                 children: [
                   Expanded(
                     child: Text(
-                      _ownedTab ? '$pieces개 · 지출 합계 ${won(spent)}' : '합계 ${yen(total)} · $pieces개', // F-4 P01
+                      switch (_tab) {
+                        _Tab.owned => joinDot(['$pieces개', '지출 합계 ${won(spent)}', if (backlog > 0) '미조립 $backlog']),
+                        _Tab.preorder => joinDot(['${kits.length}건', if (due > 0) '낼 돈 ${won(due)}']),
+                        _Tab.liked => '합계 ${yen(total)} · $pieces개',
+                      }, // F-4 P01
                       style: const TextStyle(color: Gp.muted, fontSize: Gp.t12),
                     ),
                   ),
@@ -417,6 +463,7 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                 ],
               ),
             ),
+            ?stages,
             for (final k in kits)
               _swipe(
                 k,
@@ -427,12 +474,18 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                   title: k.name,
                   titleLines: 2,
                   size: 68,
-                  subtitle: joinDot([
-                    if (me.quantityOf(k.id) > 1) '×${me.quantityOf(k.id)}', // D-7 수량
-                    channelOf(k.franchiseId).label,
-                    k.line,
-                    k.series,
-                  ]),
+                  tag: _tab == _Tab.liked && (pre[k.id]?.active ?? false) ? '예약' : '',
+                  subtitle: _tab == _Tab.preorder
+                      ? joinDot([
+                          pre[k.id]?.shop ?? '',
+                          if (pre[k.id]?.arrival case final a? when a.isNotEmpty) '${arrivalLabel(a)} 도착',
+                        ])
+                      : joinDot([
+                          if (me.quantityOf(k.id) > 1) '×${me.quantityOf(k.id)}', // D-7 수량
+                          channelOf(k.franchiseId).label,
+                          k.line,
+                          k.series,
+                        ]),
                   leading: _editing
                       ? Icon(
                           _selected.contains(k.id) ? Icons.check_circle : Icons.radio_button_unchecked,
@@ -442,31 +495,39 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                   onTap: _editing
                       ? () => setState(() => _selected.contains(k.id) ? _selected.remove(k.id) : _selected.add(k.id))
                       : () => openKitDetail(context, k, loaders: widget.loaders),
-                  trailing: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      if (_ownedTab) ...[
-                        // 구매함: 적은 구매가 (없으면 정가 × 환율을 옅게 ≈) · 아래에 정가
-                        Text(
-                          switch (_paid(k)) {
-                            (krw: null, estimate: _) => '구매가 미입력',
-                            (krw: final int w, estimate: true) => '≈ ${won(w)}',
-                            (krw: final int w, estimate: false) => won(w),
-                          },
-                          style: TextStyle(
-                            fontSize: Gp.t14,
-                            fontWeight: _paid(k).estimate ? FontWeight.w400 : FontWeight.w600,
-                            color: _paid(k).estimate ? Gp.faint : Gp.ink,
-                          ),
+                  trailing: _tab == _Tab.preorder
+                      ? _preTrailing(k, pre[k.id])
+                      : Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                if (_ownedTab) ...[
+                                  // 구매함: 적은 구매가 (없으면 정가 × 환율을 옅게 ≈) · 아래에 정가
+                                  Text(
+                                    switch (_paid(k)) {
+                                      (krw: null, estimate: _) => '구매가 미입력',
+                                      (krw: final int w, estimate: true) => '≈ ${won(w)}',
+                                      (krw: final int w, estimate: false) => won(w),
+                                    },
+                                    style: TextStyle(
+                                      fontSize: Gp.t14,
+                                      fontWeight: _paid(k).estimate ? FontWeight.w400 : FontWeight.w600,
+                                      color: _paid(k).estimate ? Gp.faint : Gp.ink,
+                                    ),
+                                  ),
+                                  Text(
+                                    '정가 ${yen(k.priceJpy)}',
+                                    style: const TextStyle(fontSize: Gp.t11, color: Gp.faint),
+                                  ),
+                                ] else
+                                  Text(yen(k.priceJpy), style: const TextStyle(fontSize: Gp.t12)),
+                              ],
+                            ),
+                            if (_ownedTab && !_editing) BuildStatusButton(kitId: k.id), // F-5c
+                          ],
                         ),
-                        Text(
-                          '정가 ${yen(k.priceJpy)}',
-                          style: const TextStyle(fontSize: Gp.t11, color: Gp.faint),
-                        ),
-                      ] else
-                        Text(yen(k.priceJpy), style: const TextStyle(fontSize: Gp.t12)),
-                    ],
-                  ),
                 ),
               ),
           ],
@@ -505,6 +566,52 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
     );
   }
 
+  /// F-2b 조립 상태 세그먼트 (구매함 탭) — 칸마다 개수, 미조립 = 쌓인 것
+  Widget _stageSegments(List<Kit> all) {
+    final store = Marks.of(context).store;
+    final counts = stageCounts(_inTab(all).map((k) => k.id), store.stageOf);
+    final total = counts.values.fold(0, (a, b) => a + b);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+      child: SquareSegments<int>(
+        key: const ValueKey('build-filter'),
+        values: [for (var i = 0; i <= BuildStage.values.length; i++) i],
+        current: _build,
+        onPick: (i) => setState(() => _build = i), // STATE: 조립 상태 거르기 → 목록
+        child: (i) => Text(switch (buildFilterAt(i)) {
+          null => '전체 $total',
+          final s => '${s.label} ${counts[s]}',
+        }),
+      ),
+    );
+  }
+
+  /// F-5d 예약 탭 줄 오른쪽: 총액 · 낼 돈(없으면 결제 완료) + 📥 도착
+  Widget _preTrailing(Kit k, Preorder? p) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(
+            p?.price == null ? yen(k.priceJpy) : won(p!.price!),
+            style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w600),
+          ),
+          Text(
+            (p?.due ?? 0) > 0 ? '낼 돈 ${won(p!.due)}' : (p?.paid ?? false ? '결제 완료' : '미결제'),
+            style: TextStyle(fontSize: Gp.t11, color: (p?.due ?? 0) > 0 ? Gp.reserve : Gp.faint),
+          ),
+        ],
+      ),
+      if (!_editing)
+        IconButton(
+          tooltip: '도착했어요',
+          onPressed: () => markPreorderArrived(context, k),
+          icon: const Icon(Icons.move_to_inbox_outlined, size: Gp.iM, color: Gp.reserve),
+        ),
+    ],
+  );
+
   /// 적은 구매가, 없으면 정가 × 환율 (estimate)
   ({int? krw, bool estimate}) _paid(Kit k) => Catalog.instance.paidOf(k);
 
@@ -535,6 +642,10 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
           : bg(Gp.own, Icons.bookmark, '구매함으로', Alignment.centerLeft),
       secondaryBackground: bg(Gp.danger, Icons.delete_outline, '빼기', Alignment.centerRight),
       confirmDismiss: (dir) async {
+        if (dir == DismissDirection.startToEnd && _tab == _Tab.preorder) {
+          await markPreorderArrived(context, k); // 예약 → 도착 (· 구매함, 예약 총액 = 구매가)
+          return false;
+        }
         if (dir == DismissDirection.startToEnd) {
           _ownedTab ? marks.toggleLike(context, k) : marks.toggleOwn(context, k); // STATE: 옮기기 (토스트 되돌리기)
         } else {
@@ -557,36 +668,35 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
   }
 }
 
-/// F-2 · F-3 좋아요 | 구매함 탭 + 목록/도감 전환
+/// F-2 · F-3 좋아요 | 예약 | 구매함 탭 + 목록/도감 전환. 예약 탭은 예약이 있거나 고른 때만
 class _TopRow extends StatelessWidget {
   const _TopRow({
-    required this.wantedCount,
-    required this.ownedCount,
-    required this.ownedTab,
+    required this.counts,
+    required this.tab,
     required this.guide,
     required this.onTab,
     required this.onGuide,
   });
 
-  final int wantedCount;
-  final int ownedCount;
-  final bool ownedTab;
+  final Map<_Tab, int> counts;
+  final _Tab tab;
   final bool guide;
-  final ValueChanged<bool> onTab;
+  final ValueChanged<_Tab> onTab;
   final ValueChanged<bool> onGuide;
 
   @override
   Widget build(BuildContext context) {
-    Widget tab(String label, int n, bool owned) => UnderlineTab(
+    Widget one(String label, _Tab t) => UnderlineTab(
       // 채널 바와 같은 밑줄 탭
+      key: ValueKey('tab-${t.name}'),
       label: label,
-      count: n,
+      count: counts[t] ?? 0,
       fontSize: Gp.t16,
-      selected: !guide && ownedTab == owned,
+      selected: !guide && tab == t,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       onTap: () {
         onGuide(false);
-        onTab(owned);
+        onTab(t);
       },
     );
 
@@ -594,8 +704,9 @@ class _TopRow extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(6, 2, 6, 2),
       child: Row(
         children: [
-          tab('좋아요', wantedCount, false), // F-2 P06
-          tab('구매함', ownedCount, true),
+          one('좋아요', _Tab.liked), // F-2 P06
+          if ((counts[_Tab.preorder] ?? 0) > 0 || tab == _Tab.preorder) one('예약', _Tab.preorder),
+          one('구매함', _Tab.owned),
         ],
       ),
     );

@@ -24,7 +24,7 @@ AppNotice noticeOf(NoticeRecord r, Kit? kit) => r.isAnnStage
       )
     : AppNotice(
         id: r.id,
-        type: r.isPbWindow || (r.pb && r.kind == 'added')
+        type: r.isPbWindow || r.isRestock || r.isPreorder || (r.pb && r.kind == 'added')
             ? NoticeType.reserve
             : (r.reasons.contains('price') ? NoticeType.price : NoticeType.release),
         title: kit?.name ?? r.title,
