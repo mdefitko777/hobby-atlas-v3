@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import '../channels.dart' show channelCovers;
 import '../json_util.dart';
 import '../models.dart';
 import 'blob_store.dart';
@@ -222,6 +223,17 @@ class Catalog extends ChangeNotifier {
     error = '';
     _applyAliases().ignore();
     _loadRates().ignore();
+    _loadChannelCovers().ignore();
+  }
+
+  /// 채널 대표 그림 (atlas-groups.json `channels.<id>.image`, 공식 그림) → channels.dart channelCovers
+  Future<void> _loadChannelCovers() async {
+    final ch = jMap(jMap(await aux('atlas-groups.json'))['channels']);
+    for (final e in ch.entries) {
+      final img = resolveAsset(jMap(e.value)['image']);
+      if (img.isNotEmpty) channelCovers[e.key] = img;
+    }
+    if (ch.isNotEmpty) notifyListeners();
   }
 
   /// 1엔 = ? 원 (data/exchange-rates.json · Frankfurter, 매일). 못 받았으면 대략값

@@ -29,10 +29,14 @@ const allChannels = <Channel>[
   Channel(id: 'zoids', label: '조이드', hasData: false),
 ];
 
+/// 채널 대표 그림 — Gunpula atlas-groups.json `channels` 의 공식 그림 (Catalog 가 채운다). 없으면 위 기본 그림
+final channelCovers = <String, String>{};
+
 /// 처음 설치했을 때의 내 채널
 const defaultMyChannels = ['gundam', 'beyblade', 'pokemon'];
 
-Channel channelOf(String id) => allChannels.firstWhere(
-  (c) => c.id == id,
-  orElse: () => Channel(id: id, label: id, hasData: false),
-);
+Channel channelOf(String id) {
+  final c = allChannels.firstWhere((c) => c.id == id, orElse: () => Channel(id: id, label: id, hasData: false));
+  final cover = channelCovers[id];
+  return cover == null || cover.isEmpty ? c : Channel(id: c.id, label: c.label, image: cover, hasData: c.hasData);
+}

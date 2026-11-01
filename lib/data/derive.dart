@@ -298,7 +298,7 @@ Future<List<World>> deriveWorlds(String channelId) async {
           franchiseId: channelId,
           label: pickName(m['labels']),
           subtitle: pickName(m['subtitle']),
-          image: jStr(m['image']),
+          image: resolveAsset(m['image']), // ./assets/atlas/covers/… → Pages 주소 (공식 표지)
           total: ids.length,
           owned: ids.where((id) => _kitStatus(id) == CollectStatus.owned).length,
           kitIds: ids,
