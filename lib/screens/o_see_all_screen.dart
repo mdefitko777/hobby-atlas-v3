@@ -285,8 +285,9 @@ class _SectionListViewState extends State<SectionListView> {
     );
     return LayoutBuilder(
       builder: (context, box) {
-        final cols = (box.maxWidth / 170).floor().clamp(2, 5);
-        final cell = (box.maxWidth - 32 - (cols - 1) * 12) / cols;
+        // 폰에서 한 줄 3개 (홈 줄과 같은 크기)
+        final cols = (box.maxWidth / 125).floor().clamp(3, 7);
+        final cell = (box.maxWidth - 32 - (cols - 1) * 10) / cols;
         return CustomScrollView(
           slivers: [
             if (widget.header case final h?) SliverToBoxAdapter(child: h),
@@ -300,9 +301,9 @@ class _SectionListViewState extends State<SectionListView> {
                 sliver: SliverGrid.builder(
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: cols,
-                    mainAxisSpacing: 16,
-                    crossAxisSpacing: 12,
-                    mainAxisExtent: cell + 80, // 사진 + 이름 두 줄 + 가격 · 날짜 한 줄
+                    mainAxisSpacing: 14,
+                    crossAxisSpacing: 10,
+                    mainAxisExtent: cell + 76, // 사진 + 이름 두 줄 + 가격 · 날짜 한 줄
                   ),
                   itemCount: visible.length,
                   itemBuilder: (context, i) => _tile(visible[i]),

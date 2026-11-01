@@ -5,7 +5,7 @@
 // │ H-1  │ ChannelHeader                      │ 아바타 줄 + 내 채널 바 (C-0 공용)       │ P04 · P06     │
 // │ H-2  │ ‹ 2026년 10월 › + 오늘              │ 달 넘기기 · 오늘로                      │ P03 · P07     │
 // │ H-3  │ 7열 달력 + 날짜 아래 색 점 (뜻은 ?)    │ 파랑 발매 · 회색 예고 · 빨강 PB 마감 · 민트 산 날 │ P01 · P06 │
-// │ H-9  │ 밑줄 탭 전체 · 내 일정               │ 좋아요 · 구매함 상품의 날짜만            │ P06           │
+// │ H-9  │ ViewIconToggle 전체 · 내 일정        │ 좋아요 · 구매함 상품의 날짜만            │ P06           │
 // │ H-3b │ 전체 · 발매 · 예고 밑줄 탭            │ 일정 종류 거르기                        │ P06 · P07     │
 // │ H-4  │ 날짜 누르기 (다시 누르면 해제)        │ 그날만 보기 / 한 달 전체 보기           │ P03           │
 // │ H-5  │ 날짜별 묶음 목록 + 종류 알약 + D-n    │ 발매(검정 알약) · 예고 단계(회색 알약)   │ P01 · P02     │
@@ -18,7 +18,6 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
-import '../filter_sheet.dart' show SquareSegments;
 import '../channels.dart';
 import '../data/user_store.dart';
 import '../marks.dart';
@@ -266,17 +265,15 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
 
   /// 전체 / 내 일정 (홈의 전체 소식 / My Page 와 같은 밑줄 탭)
   Widget _tabs() => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 4, 16, 6),
+    padding: const EdgeInsets.fromLTRB(16, 0, 12, 0),
     child: Align(
-      alignment: Alignment.centerLeft,
-      child: SizedBox(
-        width: 210,
-        child: SquareSegments<bool>(
-          values: const [false, true],
-          current: _mine,
-          child: (v) => Text(v ? '내 일정' : '전체'),
-          onPick: (v) => setState(() => _mine = v),
-        ),
+      alignment: Alignment.centerRight,
+      child: ViewIconToggle(
+        mine: _mine,
+        onChanged: (v) => setState(() => _mine = v),
+        allIcon: Icons.calendar_month_outlined,
+        allTip: '전체 일정',
+        mineTip: '내 일정',
       ),
     ),
   );

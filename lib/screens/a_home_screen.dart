@@ -20,7 +20,6 @@ import 'dart:async' show Timer;
 import 'package:flutter/material.dart';
 
 import '../api.dart';
-import '../filter_sheet.dart' show SquareSegments;
 import '../channels.dart';
 import '../clock.dart';
 import '../data/catalog.dart';
@@ -218,7 +217,13 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
     final search = Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
       child: _section == null
-          ? GpSearchBar(onTap: widget.onOpenSearch, onCamera: widget.onCamera) // A-2 P04
+          ? Row(
+              children: [
+                Expanded(child: GpSearchBar(onTap: widget.onOpenSearch, onCamera: widget.onCamera)), // A-2 P04
+                const SizedBox(width: 6),
+                ViewIconToggle(mine: _mine, onChanged: (v) => setState(() => _mine = v)), // A-10 전체 소식 · My Page
+              ],
+            )
           : GpSearchBar(
               // O-7 이 목록 안에서만
               controller: _searchCtrl,
@@ -321,22 +326,6 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
         padding: EdgeInsets.only(bottom: navClearance(context)),
         children: [
           search,
-          Padding(
-            // A-10 전체 소식 | My Page — 위 채널 바(밑줄)와 다르게 네모 세그먼트 (필터와 같은 부품)
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: SizedBox(
-                width: 210,
-                child: SquareSegments<bool>(
-                  values: const [false, true],
-                  current: _mine,
-                  child: (v) => Text(v ? 'My Page' : '전체 소식'),
-                  onPick: (v) => setState(() => _mine = v),
-                ),
-              ),
-            ),
-          ),
           if (_mine) MyPageView(loaders: widget.loaders, onJump: widget.onJump), // A-20~24
           if (!_mine && heroes.isNotEmpty)
             _HeroBanner(
@@ -504,7 +493,9 @@ class _HorizontalRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // 공식 예고는 가로로 긴 배너 사진
-    final width = row.wide ? 232.0 : 148.0;
+    // 상품은 한 화면에 3개가 보이게 (양옆 16 · 사이 10), 공식 예고는 가로로 긴 배너
+    final third = ((MediaQuery.sizeOf(context).width - 32 - 20) / 3).clamp(92.0, 150.0);
+    final width = row.wide ? 232.0 : third;
     final aspect = row.wide ? 232 / 132 : 1.0;
     return SizedBox(
       height: width / aspect + 32,
@@ -512,7 +503,7 @@ class _HorizontalRow extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: row.items.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 12),
+        separatorBuilder: (_, _) => const SizedBox(width: 10),
         itemBuilder: (context, i) {
           final item = row.items[i];
           final kit = item.kit;

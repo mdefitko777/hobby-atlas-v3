@@ -2,7 +2,6 @@
 //
 // ┌──────── 디자인 가이드 대응표: A 홈 › My Page ──────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
-// │ A-20 │ _LevelCard (+ ? 시트)               │ 수집 레벨 · 경험치 막대 · 경험치 표       │ P01 · P10     │
 // │ A-21 │ _Stats (아이콘 4칸)                 │ 좋아요 수 · 구매함 수 · 이번 달 지출 · 총 지출 │ P01 · P07 │
 // │ A-22 │ _LikedSoon                         │ 좋아요 중 날짜가 다가오는 것 (PB 마감 · 발매) │ P01     │
 // │ A-23 │ _OwnedRow                          │ 최근 산 것 (가로 줄)                     │ P08           │
@@ -34,9 +33,6 @@ class MyPageView extends StatefulWidget {
 }
 
 class _MyPageViewState extends State<MyPageView> {
-  /// 도감에서 켜진 칸 수 (경험치) — 도감 계산은 무거워 한 번만
-  late final Future<int> _lit = widget.loaders.guideWorks().then(litCount, onError: (Object _) => 0);
-
   @override
   Widget build(BuildContext context) {
     Marks.of(context); // 좋아요 · 구매함이 바뀌면 다시 그린다
@@ -47,17 +43,15 @@ class _MyPageViewState extends State<MyPageView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        FutureBuilder<int>(
-          future: _lit,
-          builder: (context, snap) => _LevelCard(
-            xp: collectorXp(owned: owned.length, liked: liked.length, lit: snap.data ?? 0),
-            stats: _Stats(
-              liked: liked.length,
-              owned: owned.length,
-              month: me.spendInMonth(appNow()),
-              total: me.spendKrw,
-              onJump: widget.onJump,
-            ),
+        // 레벨은 왼쪽 위 아바타 옆 Lv (lib/level.dart) — 여기는 숫자 4칸만
+        SectionPanel(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          child: _Stats(
+            liked: liked.length,
+            owned: owned.length,
+            month: me.spendInMonth(appNow()),
+            total: me.spendKrw,
+            onJump: widget.onJump,
           ),
         ),
         _Section(
@@ -111,131 +105,6 @@ class _Section extends StatelessWidget {
       ),
     );
   }
-}
-
-/// A-20 레벨 카드 — 레벨 칸(10레벨마다 색) · 경험치 막대 · ? · 아래 숫자 4칸
-class _LevelCard extends StatelessWidget {
-  const _LevelCard({required this.xp, required this.stats});
-  final int xp;
-  final Widget stats;
-
-  @override
-  Widget build(BuildContext context) {
-    final lv = levelOf(xp);
-    final color = levelColor(lv.level);
-    return SectionPanel(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 46,
-                height: 46,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(color: color.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(11)),
-                child: Text(
-                  '${lv.level}',
-                  style: TextStyle(fontSize: Gp.t19, fontWeight: FontWeight.w800, color: color),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      children: [
-                        Text('Lv.${lv.level}', style: const TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w700)),
-                        const Spacer(),
-                        Text('${lv.into} / ${lv.need}', style: const TextStyle(fontSize: Gp.t12, color: Gp.muted)),
-                        InkWell(
-                          onTap: () => _showXpHelp(context),
-                          borderRadius: BorderRadius.circular(12),
-                          child: const Padding(
-                            padding: EdgeInsets.only(left: 6),
-                            child: Icon(Icons.help_outline, size: 17, color: Gp.faint),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(3),
-                      child: LinearProgressIndicator(
-                        value: lv.need == 0 ? 0 : lv.into / lv.need,
-                        minHeight: 6,
-                        backgroundColor: Gp.soft,
-                        color: color,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          stats,
-        ],
-      ),
-    );
-  }
-}
-
-/// ? — 경험치 표 · 레벨 색 (글자 설명은 여기에만)
-void _showXpHelp(BuildContext context) {
-  Widget row(Widget icon, String label, String xp) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 7),
-    child: Row(
-      children: [
-        SizedBox(width: 26, child: Center(child: icon)),
-        const SizedBox(width: 10),
-        Expanded(child: Text(label, style: const TextStyle(fontSize: Gp.t14))),
-        Text(xp, style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w700)),
-      ],
-    ),
-  );
-  showModalBottomSheet<void>(
-    context: context,
-    showDragHandle: true,
-    builder: (_) => SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text('경험치', style: TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 4),
-            row(const RibbonIcon(size: 17), '구매함에 넣기', '+10'),
-            row(const Icon(Icons.grid_view_rounded, size: 18, color: Gp.own), '도감 새 칸 켜짐', '+5'),
-            row(const Icon(Icons.photo_camera_outlined, size: 18, color: Gp.muted), '사진 인증', '+3'),
-            row(const Icon(Icons.favorite, size: 17, color: Gp.accent), '좋아요', '+1'),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                for (final (i, lv) in const [1, 10, 20, 30, 40, 50].indexed) ...[
-                  if (i > 0) const SizedBox(width: 6),
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(color: levelColor(lv), borderRadius: BorderRadius.circular(5)),
-                      child: Text(
-                        lv == 50 ? '50+' : '$lv',
-                        style: const TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w700, color: Colors.white),
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
 }
 
 /// A-21 숫자 4칸 — 아이콘 + 숫자 (좋아요 · 구매함은 누르면 그 목록)

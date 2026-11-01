@@ -1294,3 +1294,44 @@ String wonShort(int v) {
   final man = v / 10000;
   return man < 100 ? '${man.toStringAsFixed(1).replaceAll('.0', '')}만' : '${man.round()}만';
 }
+
+/// 보기 바꾸기 아이콘 두 개 (전체 ↔ 내 것) — 홈 검색창 옆 · 캘린더. 글자 없이 아이콘, 고른 쪽만 연한 파랑 칸
+class ViewIconToggle extends StatelessWidget {
+  const ViewIconToggle({
+    super.key,
+    required this.mine,
+    required this.onChanged,
+    this.allIcon = Icons.newspaper_outlined,
+    this.allTip = '전체 소식',
+    this.mineTip = 'My Page',
+  });
+
+  final bool mine;
+  final ValueChanged<bool> onChanged;
+  final IconData allIcon;
+  final String allTip;
+  final String mineTip;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget button(bool v, IconData icon, String tip) => Tooltip(
+      message: tip,
+      child: Material(
+        color: v == mine ? Gp.accent.withValues(alpha: 0.12) : Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: () => onChanged(v),
+          child: SizedBox.square(
+            dimension: 38,
+            child: Icon(icon, size: 21, color: v == mine ? Gp.accent : Gp.faint),
+          ),
+        ),
+      ),
+    );
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [button(false, allIcon, allTip), const SizedBox(width: 2), button(true, Icons.person_outline, mineTip)],
+    );
+  }
+}

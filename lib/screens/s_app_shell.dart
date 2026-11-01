@@ -29,6 +29,7 @@ import '../api.dart';
 import '../data/user_store.dart';
 import '../detail_pane.dart';
 import '../channels.dart';
+import '../level.dart';
 import '../marks.dart';
 import '../notifications/local_notifier.dart';
 import '../notifications/notify_store.dart';
@@ -251,7 +252,7 @@ class _AppShellState extends State<AppShell> {
         curve: Curves.easeOutCubic,
         alignment: Alignment.bottomCenter,
         heightFactor: _barShown ? 1 : 0,
-        child: Row(children: [avatar, const Spacer(), bell, gear]),
+        child: Row(children: [avatar, const SizedBox(width: 6), LevelButton(loaders: widget.loaders), const Spacer(), bell, gear]),
       ),
     );
     Widget page(int i) => i == 0

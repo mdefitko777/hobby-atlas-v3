@@ -21,6 +21,7 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../detail_pane.dart';
+import '../level.dart';
 import '../channels.dart';
 import '../models.dart';
 import '../theme.dart';
@@ -104,156 +105,6 @@ class _ChannelPicker extends StatelessWidget {
           ],
         ),
       ],
-    );
-  }
-}
-
-/// 칸 한 개의 단계 — 하나 더할 때마다 한 단계씩 올라간다 (index = 점수)
-enum CellTier { none, liked, owned, photo }
-
-/// 작품 레벨 하나에 필요한 점수
-const _pointsPerLevel = 5;
-
-/// 단계별 칸 틀: 흑백 · 컬러 · 컬러 + 파란 테두리 · 도는 색 고리
-Widget _tierFrame(CellTier tier, Widget child, {double radius = 12}) {
-  final photo = tier == CellTier.photo;
-  final inner = Container(
-    decoration: BoxDecoration(
-      color: Gp.panel,
-      borderRadius: BorderRadius.circular(photo ? radius - 2 : radius),
-      border: switch (tier) {
-        CellTier.photo => null,
-        CellTier.owned => Border.all(color: Gp.own, width: 2.2), // 가진 것 = 민트
-        _ => Border.all(color: Gp.line),
-      },
-    ),
-    clipBehavior: Clip.antiAlias,
-    child: child,
-  );
-  return photo ? AccentRing(radius: radius, spin: true, child: inner) : inner;
-}
-
-/// 칸 안 그림: 내 사진이면 꽉 채우고, 아니면 공식 그림 (없음 = 흑백)
-Widget _cellImage(CellTier tier, String image, String? photo) => tier == CellTier.photo && photo != null
-    ? AppImage(photo)
-    : Padding(
-        padding: const EdgeInsets.all(6),
-        child: AppImage(image, fit: BoxFit.contain, grayscale: tier == CellTier.none),
-      );
-
-/// G-2 도감 읽는 법 — 긴 범례 줄 대신 ? 하나
-class _HelpButton extends StatelessWidget {
-  const _HelpButton({this.bbx = false});
-  final bool bbx;
-
-  @override
-  Widget build(BuildContext context) {
-    return IconButton(
-      tooltip: '도감 읽는 법',
-      visualDensity: VisualDensity.compact,
-      onPressed: () => showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        builder: (_) => _HelpSheet(bbx: bbx),
-      ),
-      icon: const Icon(Icons.help_outline, size: 20, color: Gp.muted),
-    );
-  }
-}
-
-class _HelpSheet extends StatelessWidget {
-  const _HelpSheet({required this.bbx});
-  final bool bbx;
-
-  static const _sample = 'assets/gp/units/g3000u00100.webp';
-
-  @override
-  Widget build(BuildContext context) {
-    Widget row(CellTier t, String title, String detail) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          SizedBox.square(dimension: 48, child: _tierFrame(t, _cellImage(t, _sample, null), radius: 10)),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-                Text(
-                  detail,
-                  style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            '+${t.index}점',
-            style: const TextStyle(fontSize: Gp.t12, color: Gp.accent),
-          ),
-        ],
-      ),
-    );
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SectionHeader('도감 읽는 법', subtitle: '하나 더할 때마다 한 단계씩 올라가요', padding: EdgeInsets.fromLTRB(0, 0, 0, 8)),
-            row(CellTier.none, '흑백', '아직 없어요'),
-            row(CellTier.liked, '컬러', '♡ 좋아요 — 갖고 싶어요 (파랑)'),
-            row(CellTier.owned, '컬러 + 초록 테두리', '리본 + 구매함 — 가지고 있어요 (누르면 ✓)'),
-            row(CellTier.photo, '내 사진 + 도는 고리 + 배지', '이 기체가 찍힌 내 사진으로 인증했어요'),
-            const SizedBox(height: 10),
-            Text(
-              bbx
-                  ? '베이는 부품 3개(블레이드 · 래칫 · 비트)를 모두 가지면 컬러가 돼요. 칸 위 숫자 = 가진 부품 수.'
-                  : '점수가 $_pointsPerLevel점 모일 때마다 작품 레벨(Lv)이 올라가요.',
-              style: const TextStyle(fontSize: Gp.t12, color: Gp.muted, height: 1.4),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// G-4a 작품 레벨 막대
-class _LevelBar extends StatelessWidget {
-  const _LevelBar({required this.points});
-  final int points;
-
-  @override
-  Widget build(BuildContext context) {
-    final level = 1 + points ~/ _pointsPerLevel;
-    final into = points % _pointsPerLevel;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
-      child: Row(
-        children: [
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            transitionBuilder: (c, a) => ScaleTransition(scale: a, child: c),
-            child: LevelChip(key: ValueKey(level), level: level),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: TweenAnimationBuilder<double>(
-              tween: Tween(end: into / _pointsPerLevel),
-              duration: const Duration(milliseconds: 450),
-              curve: Curves.easeOutCubic,
-              builder: (_, v, _) => AccentBar(value: v, height: 6),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Text(
-            '다음 레벨까지 ${_pointsPerLevel - into}점',
-            style: const TextStyle(fontSize: Gp.t11, color: Gp.muted),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -390,7 +241,7 @@ class _GundamGuideState extends State<_GundamGuide> {
               for (final e in sections.entries) ...[
                 SectionHeader(
                   e.key,
-                  trailing: e.key == sections.keys.first ? const _HelpButton() : null, // G-2
+                  trailing: e.key == sections.keys.first ? const LevelHelpButton() : null, // G-2
                   subtitle:
                       '수집 ${e.value.fold(0, (s, w) => s + w.owned)}'
                       ' / ${e.value.fold(0, (s, w) => s + w.total)}',
@@ -474,19 +325,16 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
       ? CellTier.liked
       : CellTier.none;
 
-  int get _points => _units.fold(0, (s, u) => s + _tierOf(u).index);
-  int get _level => 1 + _points ~/ _pointsPerLevel;
 
   /// 상태 바꾸기 + 토스트(되돌리기). 레벨이 오르면 토스트에 같이 알린다
   void _change(String message, VoidCallback apply) {
     final liked = {..._liked};
     final owned = {..._owned};
     final photos = {..._photos};
-    final before = _level;
-    setState(apply); // STATE: 칸 단계 → 색 · 테두리 · 고리 · 레벨
+    setState(apply); // STATE: 칸 단계 → 색 · 테두리 · 고리 (레벨은 위 막대가 다시 센다)
     showToast(
       context,
-      _level > before ? '$message · 레벨 업! Lv.$_level' : message,
+      message,
       onUndo: () => setState(() {
         _liked
           ..clear()
@@ -604,7 +452,7 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
             ),
           ],
         ),
-        actions: const [_HelpButton(), SizedBox(width: 6)], // G-2
+        actions: const [LevelHelpButton(), SizedBox(width: 6)], // G-2
       ),
       body: FutureBuilder<List<GuideUnit>>(
         future: _future,
@@ -627,7 +475,7 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
             builder: (context, box) => ListView(
               padding: const EdgeInsets.only(bottom: 32),
               children: [
-                _LevelBar(points: _points), // G-4a
+                LiveLevelBar(loaders: widget.loaders), // G-4a 수집 레벨 (아바타 옆 Lv 와 같은 막대)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: GridView.count(
@@ -722,7 +570,7 @@ class _LitCellState extends State<_LitCell> with SingleTickerProviderStateMixin 
     final content = Stack(
       fit: StackFit.expand,
       children: [
-        _cellImage(t, widget.image, widget.photo),
+        cellImage(t, widget.image, widget.photo),
         if (widget.badge.isNotEmpty) Positioned(right: 5, top: 5, child: TagPill(widget.badge, filled: true)),
         if (t == CellTier.photo)
           const Positioned(right: 4, bottom: 4, child: VerifiedBadge()) // 3점 = 배지
@@ -747,7 +595,7 @@ class _LitCellState extends State<_LitCell> with SingleTickerProviderStateMixin 
             child: Center(
               child: AspectRatio(
                 aspectRatio: 1,
-                child: ScaleTransition(scale: _scale, child: _tierFrame(t, content)),
+                child: ScaleTransition(scale: _scale, child: tierFrame(t, content)),
               ),
             ),
           ),
@@ -821,7 +669,7 @@ class _UnitSheetState extends State<_UnitSheet> {
               children: [
                 SizedBox.square(
                   dimension: 64,
-                  child: _tierFrame(tier, _cellImage(tier, unit.image, widget.photo), radius: 12),
+                  child: tierFrame(tier, cellImage(tier, unit.image, widget.photo), radius: 12),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -1055,7 +903,7 @@ class _BbxGuideState extends State<_BbxGuide> {
             children: [
               SectionHeader(
                 '베이',
-                trailing: const _HelpButton(bbx: true),
+                trailing: const LevelHelpButton(),
                 subtitle: '완성 $done / ${tops.length}',
                 padding: const EdgeInsets.fromLTRB(16, 14, 12, 10),
               ),
