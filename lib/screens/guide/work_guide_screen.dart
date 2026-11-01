@@ -268,7 +268,10 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
             ),
           ],
         ),
-        actions: const [LevelHelpButton(), SizedBox(width: 6)], // G-2
+        actions: [
+          HelpButton(title: '작품 도감', items: workGuideHelp()),
+          const SizedBox(width: 6),
+        ], // G-2
       ),
       body: FutureBuilder<List<GuideUnit>>(
         future: _future,
@@ -570,3 +573,15 @@ class _KitLine extends StatelessWidget {
     );
   }
 }
+
+/// G-2 작품 도감 ? — 칸 단계(레벨 시트와 같은 그림) + 찾기 줄 · 기체 시트 아이콘
+List<HelpItem> workGuideHelp() => [
+  ...tierHelpItems(),
+  const HelpItem.group('아이콘'),
+  const HelpItem(Icons.tune, '도감 필터'),
+  const HelpItem(Icons.grid_view_outlined, '한 격자'),
+  const HelpItem(Icons.format_list_numbered, '화수별'),
+  const HelpItem(Icons.bookmark_add_outlined, '손으로 켜기 (상품 없이)', color: Gp.own),
+  const HelpItem(Icons.add_a_photo_outlined, '내 사진 (사진 인증)', color: Gp.own),
+  const HelpItem(Icons.flag_outlined, '빠진 상품 제보'),
+];

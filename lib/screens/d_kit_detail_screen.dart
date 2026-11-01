@@ -19,6 +19,7 @@
 // │ D-12 │ TextButton → reportDataIssue 시트   │ 정보 오류 제보 → GitHub 이슈(미리 채움)  │ P05 · P09     │
 // │ D-13 │ LayoutBuilder ≥720dp                │ 넓은 화면: 사진 왼쪽 · 정보 오른쪽      │ 적응형        │
 // │ D-14 │ 하단 고정 바 왼쪽: 복사 · 공식        │ 상품명 복사 · 공식 상품 페이지(출처)    │ P07 · P10     │
+// │ D-15 │ 오른쪽 위 ? (뒤로 맞은편, 떠 있는 원) │ 아이콘 뜻 한 줄씩 (♡ · 리본 · 수량 · 제보) │ P10        │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 홈 · 검색 · 설명 후보 · 바코드에서 쌓기(push, 오른쪽에서). 공식 정보 · 시세 · 구매가 → 덮기(바텀 시트).
 // 좋아요 · 구매함은 화면 아래에 고정 — 길게 내려 읽어도 바로 누를 수 있다 (쇼핑 앱 상세와 같은 위치).
@@ -297,6 +298,16 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
                     size: 40,
                     onTap: () => Navigator.of(context).maybePop(),
                     child: const Icon(Icons.arrow_back_ios_new, size: Gp.iM, color: Gp.ink),
+                  ),
+                ),
+              ),
+              const Positioned(
+                top: 0,
+                right: 0,
+                child: SafeArea(
+                  child: Padding(
+                    padding: EdgeInsets.all(12),
+                    child: HelpButton(title: '상품 상세', items: detailHelp, raised: true), // D-15
                   ),
                 ),
               ),
@@ -923,3 +934,14 @@ class _FriendsWithKit extends StatelessWidget {
     );
   }
 }
+
+/// D-15 ? 도움말
+const detailHelp = <HelpItem>[
+  HelpItem(Icons.favorite_border, '좋아요 (갖고 싶은 것)'),
+  HelpItem(Icons.bookmark_add_outlined, '구매함 (가진 것)', color: Gp.own),
+  HelpItem(Icons.add, '수량 (좋아요 = 갖고 싶은 수 · 구매함 = 가진 수)'),
+  HelpItem(Icons.content_copy_rounded, '상품명 복사'),
+  HelpItem(Icons.north_east, '공식 상품 페이지'),
+  HelpItem(Icons.assignment_outlined, '공식 정보 전체'),
+  HelpItem(Icons.flag_outlined, '정보 오류 제보'),
+];

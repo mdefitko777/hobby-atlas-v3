@@ -12,6 +12,7 @@
 // │ B-9  │ 검색어 · 포커스 없을 때 같은 목록      │ 처음 화면 = 전체 상품 (내 채널 상품 전부)  │ P07 · P06     │
 // │ B-8  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 결과 없음          │ P01 · P09     │
 // │ B-10 │ TagSearchSection (R 화면 파일)        │ 메자스타 · 프렌다 태그 · 게임 이름 찾기   │ P07 · P06     │
+// │ B-11 │ 위 줄 ? (S-19, searchHelp)          │ 검색창 줄 아이콘 뜻 한 줄씩              │ P10           │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 검색은 기기 안: 받아 둔 Gunpula 목록에서 거른다. 설명으로 찾기 = lib/logic/sentence_search.dart (낱말 맞추기, 서버 · AI 없음).
 // 서버가 없어 "인기 검색어" 순위는 만들지 않는다 → 내 검색 횟수(자주 찾은)와 이번 주 새 상품으로.
@@ -416,3 +417,12 @@ class SentenceCandidates extends StatelessWidget {
     );
   }
 }
+
+/// B-11 ? 도움말 (위 줄 ? 의 "검색" 묶음 — s_app_shell.dart)
+const searchHelp = <HelpItem>[
+  HelpItem(Icons.photo_camera_outlined, '찍어서 찾기 (사진 · 바코드)'),
+  HelpItem(Icons.tune, '필터'),
+  HelpItem(Icons.grid_view_outlined, '격자로 보기'),
+  HelpItem(Icons.view_list_outlined, '목록으로 보기'),
+  HelpItem(Icons.manage_search, '설명으로 찾기 예'),
+];

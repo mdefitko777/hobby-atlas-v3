@@ -11,6 +11,7 @@
 // │ A-7  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 빈 채널           │ P01 · P09     │
 // │ A-8  │ 흰 띠(섹션마다) + 회백색 틈          │ 줄과 줄 사이 층 구분                   │ P08 · P04     │
 // │ A-9  │ ProductTile 의 QuickMarks (리본 · ♡)  │ 좋아요 · 구매함 바로 담기 (앱 전체 한 벌)  │ P07 · P04     │
+// │ A-26 │ 위 줄 ? (S-19, homeHelp)            │ 검색창 줄 아이콘 뜻 한 줄씩              │ P10           │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: A-2 → 검색 탭(옆으로). › → 같은 탭 안에서 O 전체 목록(위쪽 머리 · 검색창은 그대로, 뒤로 = 홈). 상품 카드 → D 상품 상세(쌓기). 배너 · 예고 카드 → J 공식 예고 상세(쌓기).
 // 줄 안에는 날짜·가격을 쓰지 않는다 — 궁금하면 눌러서 상세에서 본다 (P08).
@@ -592,3 +593,12 @@ class _HorizontalRow extends StatelessWidget {
     );
   }
 }
+
+/// A-26 ? 도움말 (위 줄 ? 의 "홈" 묶음 — s_app_shell.dart)
+const homeHelp = <HelpItem>[
+  HelpItem(Icons.photo_camera_outlined, '찍어서 찾기'),
+  HelpItem(Icons.tune, '필터'),
+  HelpItem(Icons.newspaper_outlined, '전체 소식'),
+  HelpItem(Icons.person_outline, 'My Page (내 것 · ★ 친구)'),
+  HelpItem(Icons.grid_view_outlined, '격자 · 목록 (전체 보기 안)'),
+];

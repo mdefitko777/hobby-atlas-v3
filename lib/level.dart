@@ -120,23 +120,31 @@ class LevelBar extends StatelessWidget {
   }
 }
 
-/// ? — 칸 단계와 경험치만 짧게 (레벨 시트 · 도감 같은 내용)
+/// ? — 칸 단계와 경험치만 짧게 (레벨 시트 · 도감 같은 내용). 모양은 다른 화면의 ? (HelpButton) 와 같다
 class LevelHelpButton extends StatelessWidget {
   const LevelHelpButton({super.key});
 
   @override
-  Widget build(BuildContext context) => IconButton(
-    tooltip: '레벨 · 도감',
-    visualDensity: VisualDensity.compact,
-    onPressed: () => showGpSheet<void>(context, builder: (_) => const _LevelHelp()),
-    icon: const Icon(Icons.help_outline, size: Gp.iM, color: Gp.muted),
-  );
+  Widget build(BuildContext context) => HelpButton.sheet(title: '레벨 · 도감', builder: (_) => const _LevelHelp());
 }
+
+const _tierSample = 'assets/gp/units/g3000u00100.webp';
+
+/// 도감 칸 그림 한 개 (? 도움말 줄 · 레벨 시트)
+Widget tierHelpCell(CellTier t) =>
+    SizedBox.square(dimension: 32, child: tierFrame(t, cellImage(t, _tierSample, null), radius: Gp.rSmall));
+
+/// 도감 칸 단계 + 경험치 — 컬렉션 · 작품 도감의 ? 에 같이 넣는다
+List<HelpItem> tierHelpItems() => [
+  HelpItem.widget(tierHelpCell(CellTier.none), '흑백 = 아직'),
+  HelpItem.widget(tierHelpCell(CellTier.liked), '♡ 좋아요 · 0'),
+  HelpItem.widget(tierHelpCell(CellTier.owned), '구매함 · +10'),
+  const HelpItem(Icons.grid_view_rounded, '도감 새 칸 · +5', color: Gp.own),
+  HelpItem.widget(tierHelpCell(CellTier.photo), '사진 인증 · +3'),
+];
 
 class _LevelHelp extends StatelessWidget {
   const _LevelHelp();
-
-  static const _sample = 'assets/gp/units/g3000u00100.webp';
 
   @override
   Widget build(BuildContext context) {
@@ -156,7 +164,7 @@ class _LevelHelp extends StatelessWidget {
         ],
       ),
     );
-    Widget tier(CellTier t) => tierFrame(t, cellImage(t, _sample, null), radius: Gp.rSmall);
+    Widget tier(CellTier t) => tierFrame(t, cellImage(t, _tierSample, null), radius: Gp.rSmall);
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
@@ -238,7 +246,9 @@ Future<void> showLevelSheet(BuildContext context, Loaders loaders) => showGpShee
           const Divider(height: 1),
           Expanded(
             child: d.series.isEmpty
-                ? const Center(child: Icon(Icons.grid_view_rounded, size: Gp.iXL, color: Gp.line))
+                ? const Center(
+                    child: Icon(Icons.grid_view_rounded, size: Gp.iXL, color: Gp.line),
+                  )
                 : GridView.builder(
                     padding: const EdgeInsets.all(16),
                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
