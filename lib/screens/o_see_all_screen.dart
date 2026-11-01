@@ -6,7 +6,7 @@
 // ┌──────── 디자인 가이드 대응표: O 전체 목록 ─────────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
 // │ O-1  │ ‹ + 제목 + 개수 · 필터 · 보기 전환    │ 어느 목록인지 · 돌아가기 · 격자/목록     │ P03 · P07     │
-// │ O-2  │ 아래 시트(60%) · 네모 세그먼트 · 체크 2열 · 펼치는 줄 │ 필터: 내 상태 · 발매 · 판매 · 종류 · 라인 · 작품 · 가격 (lib/filter_sheet.dart) │ P06 · P08 · P01 · P05 │
+// │ O-2  │ 아래 시트(60%) · 네모 세그먼트 · 체크 2열 · 펼치는 줄 │ 필터: 내 상태 · 발매 · 판매 · 종류 · 라인 · 작품 · 가격 (lib/widgets/kit_filter_sheet.dart) │ P06 · P08 · P01 · P05 │
 // │ O-3  │ 고른 필터 한 줄 + showPickSheet      │ 지금 거르는 조건 · 정렬 4가지 (아래 시트)  │ P01 · P07     │
 // │ O-4  │ 격자 ProductTile(+ ♡) / ThumbRow     │ 상품 (가격 · 발매일 보임) → D 상세       │ P08 · P07     │
 // │ O-5  │ 밑줄 탭 + 16:9 카드                  │ 공식 예고: 공식 발표 · 상품화 확정 · 예약  │ P02 · P06     │
@@ -75,8 +75,7 @@ class ListToolIcons extends StatelessWidget {
           onTap: pool == null
               ? null
               : () async {
-                  tools.filter.statusOf = Marks.read(context).statusOf;
-                  final picked = await showFilterSheet(context, kits: pool!, initial: tools.filter);
+                  final picked = await pickKitFilter(context, pool: pool!, current: tools.filter);
                   if (picked != null) tools.setFilter(picked); // STATE: 필터 → 목록
                 },
         ),
@@ -229,14 +228,13 @@ class _SectionListViewState extends State<SectionListView> {
     );
   }
 
-  /// O-2 아래에서 올라오는 필터 시트 (검색 · 전체 목록 공통 — lib/filter_sheet.dart)
+  /// O-2 아래에서 올라오는 필터 시트 (검색 · 전체 목록 공통 — lib/widgets/kit_filter_sheet.dart)
   Future<void> _openFilter() async {
     final pool = [
       for (final k in _kits)
         if (kitMatches(k, widget.query)) k,
     ];
-    _filter.statusOf = Marks.read(context).statusOf;
-    final picked = await showFilterSheet(context, kits: pool, initial: _filter);
+    final picked = await pickKitFilter(context, pool: pool, current: _filter);
     if (picked != null) setState(() => _filter = picked); // STATE: 필터 → 목록
   }
 

@@ -22,7 +22,6 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../logic/collection_rules.dart';
-import '../logic/kit_rules.dart';
 import '../marks.dart';
 import '../channels.dart';
 import '../data/catalog.dart';
@@ -74,8 +73,7 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
   final Set<String> _selected = {};
 
   /// F-12 찾기 · 필터 (목록 = 상품 필터, 도감 = 도감 필터)
-  String _query = '';
-  KitFilter _filter = KitFilter();
+  final _find = KitFind();
   final _guideFilter = GuideFilterController();
 
   @override
@@ -198,10 +196,10 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
   }
 
   List<Kit> _visible(List<Kit> all) {
-    _filter.statusOf = Marks.of(context).statusOf;
+    _find.watch(context);
     return [
       for (final k in _inTab(all))
-        if (kitMatches(k, _query) && _filter.matches(k)) k,
+        if (_find.hit(k)) k,
     ];
   }
 
@@ -212,13 +210,7 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
       if (mounted) setState(() {});
       return;
     }
-    _filter.statusOf = Marks.read(context).statusOf;
-    final pool = [
-      for (final k in _inTab(all))
-        if (kitMatches(k, _query)) k,
-    ];
-    final picked = await showFilterSheet(context, kits: pool, initial: _filter);
-    if (picked != null) setState(() => _filter = picked); // STATE: 필터 → 목록
+    if (await _find.openFilter(context, _inTab(all))) setState(() {}); // STATE: 필터 → 목록
   }
 
   Future<void> _deleteSelected() async {
@@ -313,8 +305,8 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                   FindBar(
                     // F-12 모든 탭과 같은 줄: [검색창][필터][목록 · 도감]
                     hint: _guide ? '도감에서 찾기' : (_ownedTab ? '구매함에서 찾기' : '좋아요에서 찾기'),
-                    onQuery: (q) => setState(() => _query = q), // STATE: 찾기 → 목록 · 도감
-                    filterCount: _guide ? _guideFilter.filter.count : _filter.count,
+                    onQuery: (q) => setState(() => _find.query = q), // STATE: 찾기 → 목록 · 도감
+                    filterCount: _guide ? _guideFilter.filter.count : _find.filter.count,
                     onFilter: _guide && channel == allChannelId ? null : () => _openFilter(all),
                     tools: [
                       ViewIconToggle(
@@ -339,7 +331,7 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                             myChannels: widget.myChannels,
                             onPickChannel: selectChannel,
                             loaders: widget.loaders,
-                            query: _query,
+                            query: _find.query,
                             filter: _guideFilter,
                           )
                         : _list(_visible(all), all),
@@ -365,13 +357,13 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
         child: const Icon(Icons.delete_outline, color: Gp.muted, size: Gp.iM),
       ),
     );
-    if (kits.isEmpty && (_query.isNotEmpty || _filter.count > 0)) {
+    if (kits.isEmpty && _find.active) {
       return EmptyView(
         // F-12 찾기 · 필터 결과 없음
         icon: Icons.search_off,
         message: '이 조건의 상품이 없어요',
-        action: _filter.count > 0
-            ? OutlinedButton(onPressed: () => setState(() => _filter = KitFilter()), child: const Text('필터 초기화'))
+        action: _find.filter.count > 0
+            ? OutlinedButton(onPressed: () => setState(() => _find.filter = KitFilter()), child: const Text('필터 초기화'))
             : null,
       );
     }

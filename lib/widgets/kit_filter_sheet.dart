@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../logic/kit_filter.dart';
 import '../logic/kit_rules.dart';
+import '../marks.dart';
 import '../models.dart';
 import '../theme.dart';
 import 'icons.dart';
@@ -20,6 +21,50 @@ Future<KitFilter?> showFilterSheet(BuildContext context, {required List<Kit> kit
       heightFactor: gpSheetHeight,
       builder: (_) => FilterSheet(kits: kits, initial: initial),
     );
+
+/// 필터 시트를 열어 고른 조건을 돌려준다 (닫으면 null). 내 상태(좋아요 · 구매함)는 앱 전체 Marks 로 센다
+Future<KitFilter?> pickKitFilter(BuildContext context, {required List<Kit> pool, required KitFilter current}) {
+  current.statusOf = Marks.read(context).statusOf;
+  return showFilterSheet(context, kits: pool, initial: current);
+}
+
+/// 목록 안 찾기 글자 + 상품 필터 한 벌 (컬렉션 · 캘린더 · My Page). 값만 들고, 다시 그리기는 화면의 setState
+class KitFind {
+  String query = '';
+  KitFilter filter = KitFilter();
+
+  /// 찾기나 필터가 걸려 있다
+  bool get active => query.isNotEmpty || filter.count > 0;
+
+  void clear() {
+    query = '';
+    filter = KitFilter();
+  }
+
+  /// 찾기 글자에 맞나
+  bool hitText(Kit k) => kitMatches(k, query);
+
+  /// 찾기 + 필터에 맞나. 먼저 [watch] 로 내 상태를 이어 둔다
+  bool hit(Kit k) => kitMatches(k, query) && filter.matches(k);
+
+  /// build 안에서: 필터의 내 상태 = 지금 Marks (좋아요 · 구매함이 바뀌면 다시 그린다)
+  void watch(BuildContext context) => filter.statusOf = Marks.of(context).statusOf;
+
+  /// 찾기 글자에 맞는 [kits] 로 필터 시트를 연다. 골랐으면 true (화면이 setState)
+  Future<bool> openFilter(BuildContext context, Iterable<Kit> kits) async {
+    final f = await pickKitFilter(
+      context,
+      pool: [
+        for (final k in kits)
+          if (hitText(k)) k,
+      ],
+      current: filter,
+    );
+    if (f == null) return false;
+    filter = f;
+    return true;
+  }
+}
 
 class FilterSheet extends StatefulWidget {
   const FilterSheet({super.key, required this.kits, required this.initial});

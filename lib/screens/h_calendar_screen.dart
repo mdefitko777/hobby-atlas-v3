@@ -21,7 +21,6 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../channels.dart';
 import '../data/user_store.dart';
-import '../logic/kit_rules.dart';
 import '../marks.dart';
 import '../models.dart';
 import '../theme.dart';
@@ -109,21 +108,13 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
   bool _mine = false;
 
   /// H-11 찾기 · 상품 필터. 필터를 고르면 상품 일정만 (예고에는 종류 · 가격 같은 값이 없다)
-  String _query = '';
-  KitFilter _filter = KitFilter();
+  final _find = KitFind();
 
-  bool _hitKit(Kit k) => kitMatches(k, _query) && _filter.matches(k);
   bool _hitAnn(Announcement a) =>
-      _filter.count == 0 && (_query.isEmpty || a.title.toLowerCase().contains(_query.toLowerCase()));
+      _find.filter.count == 0 && (_find.query.isEmpty || a.title.toLowerCase().contains(_find.query.toLowerCase()));
 
   Future<void> _openFilter(_CalData d) async {
-    _filter.statusOf = Marks.read(context).statusOf;
-    final pool = [
-      for (final k in d.kits)
-        if (kitMatches(k, _query)) k,
-    ];
-    final picked = await showFilterSheet(context, kits: pool, initial: _filter);
-    if (picked != null) setState(() => _filter = picked); // STATE: 필터 → 달력 점 · 목록
+    if (await _find.openFilter(context, d.kits)) setState(() {}); // STATE: 필터 → 달력 점 · 목록
   }
 
   @override
@@ -159,13 +150,13 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
   List<_Event> _events(_CalData d, Marks marks) {
     final ym = '${_month.year}-${_month.month.toString().padLeft(2, '0')}';
     int? dayOf(String date) => date.length >= 10 ? int.tryParse(date.substring(8, 10)) : null;
-    _filter.statusOf = marks.statusOf;
+    _find.filter.statusOf = marks.statusOf;
     if (_mine) {
       final me = UserStore.instance;
       final out = <_Event>[];
       for (final k in d.kits) {
         final st = marks.statusOf(k);
-        if (st == CollectStatus.none || !_hitKit(k)) continue;
+        if (st == CollectStatus.none || !_find.hit(k)) continue;
         if (st == CollectStatus.wanted && k.pbCloses.startsWith(ym)) {
           out.add(
             _Event(
@@ -203,7 +194,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
     }
     return [
       for (final k in d.kits)
-        if (k.date.startsWith(ym) && _hitKit(k))
+        if (k.date.startsWith(ym) && _find.hit(k))
           _Event(
             title: k.name,
             image: k.image,
@@ -297,8 +288,8 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
   /// H-11 찾기 + 필터 + 전체 / 내 일정 (홈의 검색창 · 전체 소식 / My Page 와 같은 줄)
   Widget _tabs(_CalData d) => FindBar(
     hint: '일정에서 찾기',
-    onQuery: (q) => setState(() => _query = q), // STATE: 찾기 → 달력 점 · 목록
-    filterCount: _filter.count,
+    onQuery: (q) => setState(() => _find.query = q), // STATE: 찾기 → 달력 점 · 목록
+    filterCount: _find.filter.count,
     onFilter: () => _openFilter(d),
     tools: [
       ViewIconToggle(
@@ -340,7 +331,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
         EmptyView(
           // H-8 P09
           icon: Icons.event_busy_outlined,
-          message: _query.isNotEmpty || _filter.count > 0
+          message: _find.active
               ? '이 조건의 일정이 없어요'
               : _mine
               ? '${_month.month}월에는 좋아요 · 구매함 상품의 일정이 없어요'

@@ -1,5 +1,5 @@
 // 수집 레벨 한 벌 — 왼쪽 위 아바타 옆 Lv · 레벨 시트 · 도감 화면이 같은 막대 · 같은 ? 를 쓴다.
-// 경험치: 구매 10 · 도감 새 칸 5 · 사진 인증 3 · 좋아요 0 (models.dart collectorXp)
+// 경험치: 구매 10 · 도감 새 칸 5 · 사진 인증 3 · 좋아요 0 (lib/logic/level_math.dart collectorXp)
 import 'package:flutter/material.dart';
 
 import 'api.dart';
