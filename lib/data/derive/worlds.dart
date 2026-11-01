@@ -1,0 +1,63 @@
+// 도감 첫 화면 · 홈 진행도 — 세계관 묶음 (atlas-groups.json · 건담 시대 · 베이 라인)
+part of '../derive.dart';
+
+Future<List<World>> deriveWorlds(String channelId) async {
+  await _cat.ensureLoaded();
+  if (channelId == 'beyblade') {
+    final tops = await deriveBbxTops();
+    final lines = <String, List<BbxTop>>{};
+    for (final t in tops) {
+      (lines[t.line] ??= []).add(t);
+    }
+    return [
+      for (final e in lines.entries)
+        World(
+          id: 'beyblade-${e.key.toLowerCase()}',
+          franchiseId: 'beyblade',
+          label: '${e.key} 라인',
+          subtitle: '${e.value.length}개 상품',
+          image: e.value.first.image,
+          total: e.value.length,
+          owned: e.value.where((t) => t.owned > 0).length,
+        ),
+    ];
+  }
+  final atlas = jMap(jMap(await _cat.aux('atlas-groups.json'))['franchises']);
+  if (channelId == 'gundam') {
+    // 시대 하나 = 묶음 하나 (기체가 여러 작품에 나와도 한 번만 센다)
+    final a = await _atlas();
+    return [
+      for (final t in a.timelines)
+        if (a.works.where((w) => w.timeline == t.id).toList() case final works when works.isNotEmpty)
+          () {
+            final ids = {for (final w in works) ...w.unitIds};
+            return World(
+              id: 'gundam-${t.id.toLowerCase()}',
+              franchiseId: 'gundam',
+              label: t.name,
+              subtitle: t.nameEn,
+              image: a.timelineImage(t.id), // 그 시대 첫 작품의 공식 로고
+              total: ids.length,
+              owned: ids.where((id) => _unitStatus(a.units[id]!) == CollectStatus.owned).length,
+            );
+          }(),
+    ];
+  }
+  return [
+    for (final grp in jList(atlas[channelId]))
+      () {
+        final m = jMap(grp);
+        final ids = jList(m['kit_ids']).whereType<String>().toList();
+        return World(
+          id: '$channelId-${jStr(m['id'])}',
+          franchiseId: channelId,
+          label: pickName(m['labels']),
+          subtitle: pickName(m['subtitle']),
+          image: resolveAsset(m['image']), // ./assets/atlas/covers/… → Pages 주소 (공식 표지)
+          total: ids.length,
+          owned: ids.where((id) => _kitStatus(id) == CollectStatus.owned).length,
+          kitIds: ids,
+        );
+      }(),
+  ];
+}
