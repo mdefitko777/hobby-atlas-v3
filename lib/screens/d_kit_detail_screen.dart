@@ -35,11 +35,44 @@ import '../theme.dart';
 import '../widgets.dart';
 
 /// 상품 상세 열기 — 폰: 오른쪽에서 밀려 들어옴 / 넓은 화면: 오른쪽 칸 (detail_pane.dart)
-void openKitDetail(BuildContext context, Kit kit, {Loaders loaders = const Loaders()}) {
+/// [list] 를 주면 그 목록 안에서 좌우로 밀어 이전 · 다음 상품 (최근 추가 · 좋아요 · 검색 결과 …)
+void openKitDetail(BuildContext context, Kit kit, {Loaders loaders = const Loaders(), List<Kit> list = const []}) {
+  final i = list.indexWhere((k) => k.id == kit.id);
   openPage(
     context,
-    KitDetailScreen(kit: kit, loaders: loaders),
+    i < 0 || list.length < 2
+        ? KitDetailScreen(kit: kit, loaders: loaders)
+        : KitPager(kits: list, index: i, loaders: loaders),
     id: kit.id,
+  );
+}
+
+/// 상세를 좌우로 넘기기 — 사진 넘기기(안쪽)는 사진 위에서, 상품 넘기기는 사진 밖에서
+class KitPager extends StatefulWidget {
+  const KitPager({super.key, required this.kits, required this.index, this.loaders = const Loaders()});
+  final List<Kit> kits;
+  final int index;
+  final Loaders loaders;
+
+  @override
+  State<KitPager> createState() => _KitPagerState();
+}
+
+class _KitPagerState extends State<KitPager> {
+  late final _controller = PageController(initialPage: widget.index);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => PageView.builder(
+    controller: _controller,
+    itemCount: widget.kits.length,
+    itemBuilder: (context, i) =>
+        KitDetailScreen(key: ValueKey(widget.kits[i].id), kit: widget.kits[i], loaders: widget.loaders),
   );
 }
 

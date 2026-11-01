@@ -94,6 +94,9 @@ class _SectionListViewState extends State<SectionListView> {
       if (!_cleared.contains(k)) k,
   ];
 
+  /// 지금 보이는 목록 (상세에서 좌우로 넘길 때 같은 순서)
+  List<Kit> _shown = const [];
+
   List<Kit> _visibleKits() {
     _filter.statusOf = Marks.of(context).statusOf; // 좋아요 · 구매함으로 거르기
     final list = [
@@ -111,7 +114,7 @@ class _SectionListViewState extends State<SectionListView> {
       case KitSort.priceHigh:
         list.sort((a, b) => price(b, -1).compareTo(price(a, -1)));
     }
-    return list;
+    return _shown = list;
   }
 
   Future<void> _clearHistory() async {
@@ -327,7 +330,7 @@ class _SectionListViewState extends State<SectionListView> {
     titleLines: 2,
     subtitle: joinDot([yen(k.priceJpy), dateDot(k.date)]),
     marks: QuickMarks(kit: k),
-    onTap: () => openKitDetail(context, k, loaders: widget.loaders),
+    onTap: () => openKitDetail(context, k, loaders: widget.loaders, list: _shown),
   );
 
   Widget _row(Kit k) => ThumbRow(
@@ -352,7 +355,7 @@ class _SectionListViewState extends State<SectionListView> {
         ),
       ],
     ),
-    onTap: () => openKitDetail(context, k, loaders: widget.loaders),
+    onTap: () => openKitDetail(context, k, loaders: widget.loaders, list: _shown),
   );
 
   // ---------- 공식 예고 ----------

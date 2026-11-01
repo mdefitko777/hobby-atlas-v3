@@ -221,7 +221,8 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
               for (final e in events) {
                 if (e.day case final d?) (dots[d] ??= {}).add(e.dot);
               }
-              final calendar = _MonthCalendar(
+              // H-10 달력 위에서 좌우로 밀면 달 넘기기
+              final calendar0 = _MonthCalendar(
                 month: _month,
                 selected: _day,
                 dots: dots,
@@ -233,6 +234,15 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
                   _day = null;
                 }),
                 onPick: (d) => setState(() => _day = _day == d ? null : d), // H-4 STATE: 날짜 → 목록
+              );
+              final calendar = GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onHorizontalDragEnd: (d) {
+                  final v = d.primaryVelocity ?? 0;
+                  if (v < -250) _moveMonth(1);
+                  if (v > 250) _moveMonth(-1);
+                },
+                child: calendar0,
               );
               return LayoutBuilder(
                 builder: (context, box) {
@@ -328,7 +338,8 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
         ),
       for (final d in days) ...[
         _DayHeader(date: DateTime(_month.year, _month.month, d)), // H-5
-        for (final e in shown.where((e) => e.day == d)) _EventRow(event: e, dday: e.tag == '구매' ? '' : _dday(d), loaders: widget.loaders),
+        for (final e in shown.where((e) => e.day == d))
+          _EventRow(event: e, dday: e.tag == '구매' ? '' : _dday(d), loaders: widget.loaders),
       ],
       if (undated.isNotEmpty) ...[
         SectionHeader(

@@ -208,7 +208,7 @@ class _LikedSoon extends StatelessWidget {
       children: [
         for (final (k, u) in rows)
           InkWell(
-            onTap: () => openKitDetail(context, k, loaders: loaders),
+            onTap: () => openKitDetail(context, k, loaders: loaders, list: kits),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 5),
               child: Row(
@@ -254,7 +254,7 @@ class _OwnedRow extends StatelessWidget {
             imageWidth: 86,
             imageAspect: 1,
             id: k.id,
-            onTap: () => openKitDetail(context, k, loaders: loaders),
+            onTap: () => openKitDetail(context, k, loaders: loaders, list: kits),
           );
         },
       ),

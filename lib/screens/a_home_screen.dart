@@ -516,7 +516,7 @@ class _HorizontalRow extends StatelessWidget {
             onTap: () {
               final ann = item.ann;
               if (kit != null) {
-                openKitDetail(context, kit, loaders: loaders);
+                openKitDetail(context, kit, loaders: loaders, list: [for (final it in row.items) ?it.kit]);
               } else if (ann != null) {
                 openAnnouncement(context, ann, loaders: loaders);
               }

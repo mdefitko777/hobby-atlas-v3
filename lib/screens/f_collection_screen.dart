@@ -22,6 +22,7 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../marks.dart';
 import '../channels.dart';
+import '../data/user_store.dart';
 import '../models.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -322,7 +323,7 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
     }
     final total = kits.fold<int>(0, (s, k) => s + (k.priceJpy ?? 0));
     final pieces = kits.length;
-    final spent = kits.fold<int>(0, (s, k) => s + (k.purchaseKrw ?? 0)); // 구매함: 내가 낸 돈 합
+    final spent = kits.fold<int>(0, (s, k) => s + (_paid(k) ?? 0)); // 구매함: 내가 낸 돈 합 (기기에 적은 값)
     return Stack(
       children: [
         ListView(
@@ -350,43 +351,46 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
               ),
             ),
             for (final k in kits)
-              ThumbRow(
-                // F-5 P08 — 검색·캘린더와 같은 줄
-                id: k.id,
-                image: k.image,
-                title: k.name,
-                titleLines: 2,
-                size: 68,
-                subtitle: joinDot([channelOf(k.franchiseId).label, k.line, k.series]),
-                leading: _editing
-                    ? Icon(
-                        _selected.contains(k.id) ? Icons.check_circle : Icons.radio_button_unchecked,
-                        color: _selected.contains(k.id) ? Gp.accent : Gp.faint,
-                      )
-                    : null,
-                onTap: _editing
-                    ? () => setState(() => _selected.contains(k.id) ? _selected.remove(k.id) : _selected.add(k.id))
-                    : () => openKitDetail(context, k, loaders: widget.loaders),
-                trailing: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    if (_ownedTab) ...[
-                      // 구매함: 내가 낸 돈 (없으면 안내) · 아래에 정가
-                      Text(
-                        k.purchaseKrw == null ? '구매가 미입력' : won(k.purchaseKrw!),
-                        style: TextStyle(
-                          fontSize: Gp.t14,
-                          fontWeight: k.purchaseKrw == null ? FontWeight.w400 : FontWeight.w600,
-                          color: k.purchaseKrw == null ? Gp.faint : Gp.ink,
+              _swipe(
+                k,
+                ThumbRow(
+                  // F-5 P08 — 검색·캘린더와 같은 줄
+                  id: k.id,
+                  image: k.image,
+                  title: k.name,
+                  titleLines: 2,
+                  size: 68,
+                  subtitle: joinDot([channelOf(k.franchiseId).label, k.line, k.series]),
+                  leading: _editing
+                      ? Icon(
+                          _selected.contains(k.id) ? Icons.check_circle : Icons.radio_button_unchecked,
+                          color: _selected.contains(k.id) ? Gp.accent : Gp.faint,
+                        )
+                      : null,
+                  onTap: _editing
+                      ? () => setState(() => _selected.contains(k.id) ? _selected.remove(k.id) : _selected.add(k.id))
+                      : () => openKitDetail(context, k, loaders: widget.loaders),
+                  trailing: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      if (_ownedTab) ...[
+                        // 구매함: 내가 낸 돈 (없으면 안내) · 아래에 정가
+                        Text(
+                          _paid(k) == null ? '구매가 미입력' : won(_paid(k)!),
+                          style: TextStyle(
+                            fontSize: Gp.t14,
+                            fontWeight: _paid(k) == null ? FontWeight.w400 : FontWeight.w600,
+                            color: _paid(k) == null ? Gp.faint : Gp.ink,
+                          ),
                         ),
-                      ),
-                      Text(
-                        '정가 ${yen(k.priceJpy)}',
-                        style: const TextStyle(fontSize: Gp.t11, color: Gp.faint),
-                      ),
-                    ] else
-                      Text(yen(k.priceJpy), style: const TextStyle(fontSize: Gp.t12)),
-                  ],
+                        Text(
+                          '정가 ${yen(k.priceJpy)}',
+                          style: const TextStyle(fontSize: Gp.t11, color: Gp.faint),
+                        ),
+                      ] else
+                        Text(yen(k.priceJpy), style: const TextStyle(fontSize: Gp.t12)),
+                    ],
+                  ),
                 ),
               ),
           ],
@@ -422,6 +426,56 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
             ),
           ),
       ],
+    );
+  }
+
+  /// 기기에 적은 구매가 (없으면 상품의 값)
+  int? _paid(Kit k) => switch (UserStore.instance.entry(k.id)?['purchase_price']) {
+    final num v => v.toInt(),
+    _ => k.purchaseKrw,
+  };
+
+  /// F-5b 줄 밀기 — 오른쪽: 좋아요 ↔ 구매함 옮기기 · 왼쪽: 빼기 (토스트로 되돌리기). 편집 중에는 끔
+  Widget _swipe(Kit k, Widget row) {
+    if (_editing) return row;
+    final marks = Marks.read(context);
+    Widget bg(Color c, IconData icon, String label, Alignment a) => Container(
+      color: c.withValues(alpha: 0.14),
+      alignment: a,
+      padding: const EdgeInsets.symmetric(horizontal: 22),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: c, size: 20),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(color: c, fontWeight: FontWeight.w700, fontSize: Gp.t12),
+          ),
+        ],
+      ),
+    );
+    return Dismissible(
+      key: ValueKey('swipe-${k.id}'),
+      background: _ownedTab
+          ? bg(Gp.accent, Icons.favorite, '좋아요로', Alignment.centerLeft)
+          : bg(Gp.own, Icons.bookmark, '구매함으로', Alignment.centerLeft),
+      secondaryBackground: bg(Gp.danger, Icons.delete_outline, '빼기', Alignment.centerRight),
+      confirmDismiss: (dir) async {
+        if (dir == DismissDirection.startToEnd) {
+          _ownedTab ? marks.toggleLike(context, k) : marks.toggleOwn(context, k); // STATE: 옮기기 (토스트 되돌리기)
+        } else {
+          final wasOwned = _ownedTab;
+          marks.set(k, liked: false, owned: false); // STATE: 빼기
+          showToast(
+            context,
+            wasOwned ? '구매함에서 뺐어요' : '좋아요에서 뺐어요',
+            onUndo: () => wasOwned ? marks.set(k, owned: true) : marks.set(k, liked: true),
+          );
+        }
+        return false; // 목록은 Marks 가 바뀌면 다시 그려진다
+      },
+      child: row,
     );
   }
 }
