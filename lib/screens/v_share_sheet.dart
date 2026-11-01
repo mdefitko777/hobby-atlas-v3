@@ -101,7 +101,7 @@ class _ShareSheetState extends State<_ShareSheet> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                action(Icons.share_outlined, '공유', _share, key: const ValueKey('share-card-share')), // V-5
+                action(Icons.ios_share, '공유', _share, key: const ValueKey('share-card-share')), // V-5
                 const SizedBox(width: 24),
                 action(Icons.download_outlined, '저장', _save, key: const ValueKey('share-card-save')),
               ],

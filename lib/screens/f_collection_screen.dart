@@ -388,7 +388,7 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
         return ListView(
           children: [
             ?stages,
-            const EmptyView(icon: Icons.inventory_2_outlined, message: '이 상태의 상품이 없어요'),
+            EmptyView(icon: buildStageIcon(buildFilterAt(_build) ?? BuildStage.unbuilt), message: '이 상태의 상품이 없어요'),
           ],
         );
       }
@@ -402,11 +402,7 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
       );
     }
     if (kits.isEmpty && _tab == _Tab.preorder) {
-      return const EmptyView(
-        icon: Icons.event_available_outlined,
-        message: '기다리는 예약이 없어요',
-        detail: '상품 상세의 예약 칸에 적으면 여기에 모여요',
-      );
+      return const EmptyView(icon: preorderIcon, message: '기다리는 예약이 없어요', detail: '상품 상세의 예약 칸에 적으면 여기에 모여요');
     }
     if (kits.isEmpty) {
       return EmptyView(
@@ -477,6 +473,7 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                   titleLines: 2,
                   size: 68,
                   tag: _tab == _Tab.liked && (pre[k.id]?.active ?? false) ? '예약' : '',
+                  tagColor: Gp.reserve,
                   subtitle: _tab == _Tab.preorder
                       ? joinDot([
                           pre[k.id]?.shop ?? '',
@@ -609,7 +606,7 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
         IconButton(
           tooltip: '도착했어요',
           onPressed: () => markPreorderArrived(context, k),
-          icon: const Icon(Icons.move_to_inbox_outlined, size: Gp.iM, color: Gp.reserve),
+          icon: const Icon(arrivedIcon, size: Gp.iM, color: Gp.reserve),
         ),
     ],
   );

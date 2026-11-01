@@ -106,6 +106,7 @@ class ThumbRow extends StatelessWidget {
     this.leading,
     this.tag = '',
     this.tagStrong = false,
+    this.tagColor,
     this.size = 56,
     this.titleLines = 1,
     this.padding = const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
@@ -129,6 +130,9 @@ class ThumbRow extends StatelessWidget {
 
   /// 알약을 검정 테두리로 (확정된 것: 발매)
   final bool tagStrong;
+
+  /// 뜻이 색으로 정해진 꼬리표 (예약 = Gp.reserve · 재판매 = Gp.resale) → SoftTag. 상세 · 캘린더 · 컬렉션이 같은 모양
+  final Color? tagColor;
   final double size;
   final int titleLines;
   final EdgeInsets padding;
@@ -152,10 +156,7 @@ class ThumbRow extends StatelessWidget {
         child: Row(
           children: [
             if (leading != null) Padding(padding: const EdgeInsets.only(right: 8), child: leading),
-            SizedBox.square(
-              dimension: size,
-              child: PhotoThumb(image),
-            ),
+            SizedBox.square(dimension: size, child: PhotoThumb(image)),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -166,7 +167,7 @@ class ThumbRow extends StatelessWidget {
                       if (tag.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(right: 6),
-                          child: TagPill(tag, strong: tagStrong),
+                          child: tagColor == null ? TagPill(tag, strong: tagStrong) : SoftTag(tag, color: tagColor!),
                         ),
                       Expanded(
                         child: Text(

@@ -7,7 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show RenderRepaintBoundary;
 
 import '../theme.dart';
+import '../logic/build_status.dart' show BuildStage;
 import 'icons.dart';
+import 'kit_progress.dart' show buildStageIcon;
 import 'images.dart';
 import 'sections.dart';
 import 'tier_cell.dart' show CellTier;
@@ -156,8 +158,8 @@ class CollectionShareCard extends StatelessWidget {
               children: [
                 stat(const LikedIcon(size: Gp.iM), liked, '좋아요'),
                 stat(const OwnedIcon(size: Gp.iM), owned, '구매함'),
-                stat(const Icon(Icons.event_available_outlined, size: Gp.iM, color: Gp.reserve), preorders, '예약'),
-                stat(const Icon(Icons.inventory_2_outlined, size: Gp.iM, color: Gp.muted), backlog, '미조립'),
+                stat(const Icon(preorderIcon, size: Gp.iM, color: Gp.reserve), preorders, '예약'),
+                stat(Icon(buildStageIcon(BuildStage.unbuilt), size: Gp.iM, color: Gp.muted), backlog, '미조립'),
               ],
             ),
           ),

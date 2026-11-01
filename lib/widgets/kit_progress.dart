@@ -47,7 +47,7 @@ class BuildStageIcon extends StatelessWidget {
           Positioned(
             right: 0,
             bottom: 0,
-            child: Icon(Icons.brush, size: Gp.iXS, color: Gp.star),
+            child: Icon(paintIcon, size: Gp.iXS, color: Gp.star),
           ),
       ],
     ),
@@ -127,7 +127,7 @@ class BuildStatusRow extends StatelessWidget {
                 borderRadius: BorderRadius.circular(Gp.rSmall),
                 border: Border.all(color: rec.painted ? Gp.star : Gp.line),
               ),
-              child: Icon(Icons.brush, size: Gp.iS, color: rec.painted ? Gp.star : Gp.faint),
+              child: Icon(paintIcon, size: Gp.iS, color: rec.painted ? Gp.star : Gp.faint),
             ),
           ),
         ),
@@ -183,7 +183,7 @@ class PreorderRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(Icons.event_available_outlined, size: Gp.iS, color: p == null ? Gp.muted : Gp.reserve),
+            Icon(preorderIcon, size: Gp.iS, color: p == null ? Gp.muted : Gp.reserve),
             const SizedBox(width: 8),
             const Text(
               '예약',
@@ -207,7 +207,7 @@ class PreorderRow extends StatelessWidget {
                 key: const ValueKey('preorder-arrived'),
                 tooltip: '도착했어요',
                 onPressed: () => markPreorderArrived(context, kit),
-                icon: const Icon(Icons.move_to_inbox_outlined, size: Gp.iM, color: Gp.reserve),
+                icon: const Icon(arrivedIcon, size: Gp.iM, color: Gp.reserve),
               )
             else
               const Padding(
@@ -395,7 +395,7 @@ Future<bool> warnIfCollected(BuildContext context, List<Kit> kits) async {
       joinDot([d.build.stage.label, if (d.build.painted) '도색']),
     ),
     ScanDupKind.preorder => (
-      const Icon(Icons.event_available_outlined, size: Gp.iL, color: Gp.reserve),
+      const Icon(preorderIcon, size: Gp.iL, color: Gp.reserve),
       '이미 예약했어요',
       preorderSummary(d.preorder!),
     ),

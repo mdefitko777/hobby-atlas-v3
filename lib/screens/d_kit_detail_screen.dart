@@ -930,7 +930,7 @@ class _RestockList extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 5),
               child: Row(
                 children: [
-                  Icon(Icons.autorenew, size: Gp.iS, color: e.quiet ? Gp.faint : Gp.resale),
+                  Icon(restockIcon, size: Gp.iS, color: e.quiet ? Gp.faint : Gp.resale),
                   const SizedBox(width: 8),
                   Text(
                     '${dateDot(e.date)}${e.dateEstimated ? ' 쯤' : ''}',

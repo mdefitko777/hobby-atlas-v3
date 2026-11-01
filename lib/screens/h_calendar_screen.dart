@@ -664,6 +664,7 @@ class _EventRow extends StatelessWidget {
       subtitle: event.sub,
       tag: event.tag.isNotEmpty ? event.tag : (kit != null ? '발매' : (ann?.status ?? '예고')), // 발매 = 검정, 예고 = 회색
       tagStrong: kit != null,
+      tagColor: event.dot == Gp.reserve || event.dot == Gp.resale ? event.dot : null, // 예약 · 재판매 = 상세와 같은 색 꼬리표
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       onTap: () {
         if (kit != null) {

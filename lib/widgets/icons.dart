@@ -3,6 +3,13 @@ import 'package:flutter/material.dart';
 
 import '../theme.dart';
 
+/// 예약 · 도착 · 재판매 · 도색 — 같은 뜻은 어디서나 이 아이콘 (상세 · 컬렉션 · 캘린더 · 공유 카드 · 도움말).
+/// 조립 단계(미조립 · 조립 중 · 완성)는 kit_progress.dart buildStageIcon
+const preorderIcon = Icons.event_available_outlined;
+const arrivedIcon = Icons.move_to_inbox_outlined;
+const restockIcon = Icons.autorenew;
+const paintIcon = Icons.brush;
+
 /// 채널 관리 아이콘: 짧은 선(왼쪽 위) · 긴 선(가운데) · 짧은 선(오른쪽 아래)
 class ChannelGlyph extends StatelessWidget {
   const ChannelGlyph({super.key, this.size = 22, this.color = Gp.ink});

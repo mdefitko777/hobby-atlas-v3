@@ -407,7 +407,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SectionHeader('데이터'),
                 ListTile(
                   // K-4
-                  leading: const Icon(Icons.inventory_2_outlined),
+                  leading: const Icon(Icons.storage_outlined), // 상자 = 미조립과 겹치지 않게
                   title: const Text('상품 데이터'),
                   subtitle: Text(
                     cat.kits.isEmpty
@@ -555,7 +555,7 @@ class HelpScreen extends StatelessWidget {
               children: [
                 const SectionHeader('알림'),
                 tip(Icons.schedule, '12시간마다 확인', '앱을 열 때도 한 번 더'),
-                tip(Icons.event_available_outlined, '좋아요한 상품', '발매 D-7 · D-1 · 당일 (발매일이 정해진 것만)'),
+                tip(Icons.new_releases_outlined, '좋아요한 상품', '발매 D-7 · D-1 · 당일 (발매일이 정해진 것만)'),
                 tip(Icons.battery_alert_outlined, '늦게 오면', '설정 › 알림 › 삼성 갤럭시 안내'),
               ],
             ),

@@ -58,7 +58,7 @@ extension on NoticeType {
   };
 
   IconData get icon => switch (this) {
-    NoticeType.release => Icons.event_available_outlined,
+    NoticeType.release => Icons.new_releases_outlined, // 예약(event_available)과 다른 모양
     NoticeType.reserve => Icons.shopping_bag_outlined,
     NoticeType.price => Icons.trending_up,
     NoticeType.announce => Icons.campaign_outlined,
