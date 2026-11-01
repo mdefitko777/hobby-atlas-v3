@@ -1,5 +1,6 @@
 // 화면이 부르는 데이터 함수 — v3: Gunpula 실제 데이터(lib/data/catalog.dart) + 내 기록(lib/data/user_store.dart).
 // 화면 코드는 이 파일의 fetch…() 함수만 부른다. 테스트는 Loaders 에 가짜 함수를 넣는다.
+import 'data/bbx_builder_data.dart';
 import 'data/catalog.dart';
 import 'data/derive.dart';
 import 'data/user_store.dart';
@@ -59,6 +60,9 @@ Future<List<GuideUnit>> fetchGuideUnits(String workId) => _guard(() => deriveGui
 /// 도감 > 베이블레이드 X
 Future<List<BbxTop>> fetchBbxTops() => _guard(deriveBbxTops);
 
+/// 도감 > 베이블레이드 X > 조합 만들기: 부품 · 규칙
+Future<BbxBuilderData> fetchBbxBuilder() => _guard(deriveBbxBuilder);
+
 /// 캘린더 · 홈: 공식 예고
 Future<List<Announcement>> fetchAnnouncements(List<String> channelIds) =>
     _guard(() => channelIds.isEmpty ? Future.value(const <Announcement>[]) : deriveAnnouncements(channelIds));
@@ -83,6 +87,7 @@ class Loaders {
     this.guideWorks = fetchGuideWorks,
     this.guideUnits = fetchGuideUnits,
     this.bbxTops = fetchBbxTops,
+    this.bbxBuilder = fetchBbxBuilder,
     this.announcements = fetchAnnouncements,
     this.profile = fetchProfile,
     this.notifications = fetchNotifications,
@@ -96,6 +101,7 @@ class Loaders {
   final Future<List<GuideWork>> Function() guideWorks;
   final Future<List<GuideUnit>> Function(String workId) guideUnits;
   final Future<List<BbxTop>> Function() bbxTops;
+  final Future<BbxBuilderData> Function() bbxBuilder;
   final Future<List<Announcement>> Function(List<String> channelIds) announcements;
   final Future<Profile> Function() profile;
   final Future<List<AppNotice>> Function() notifications;

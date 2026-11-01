@@ -3,12 +3,13 @@
 // 지운 것도 'deleted' 로 남겨 둔다 (나중에 동기화할 때 "지웠다"가 이기도록).
 // 로그인하면 lib/sync/sync_service.dart 가 이 기록을 옛 앱과 같은 Supabase payload 에 합쳐 올린다:
 //   · 공유되는 것 = 구매함 · 좋아요(내 버킷) — 바꾸면 sharedRevision +1, cloudDirty = true
-//   · 이 기기에만 = 베이 부품 · 베이 연결 · 도감 손으로 켜기 · 최근 본 것 (payload 에 넣지 않음)
+//   · 이 기기에만 = 베이 부품 · 베이 연결 · 베이 조합 · 덱 · 도감 손으로 켜기 · 최근 본 것 (payload 에 넣지 않음)
 import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
+import '../bbx/combo.dart' show Combo, Deck;
 import '../channels.dart' show defaultMyChannels;
 import '../models.dart';
 import '../sync/collection_merge.dart' show collectionStatuses, normalizeCollectionEntry;
@@ -56,6 +57,12 @@ class UserStore extends ChangeNotifier {
   final Map<String, String> bbxManualMap = {};
   final Set<int> guideManualLit = {};
   final List<String> recentViewed = [];
+
+  /// 베이 조합 만들기(lib/screens/t_bbx_builder_screen.dart)에서 저장한 조합 — 최근 저장한 것부터. 기기에만
+  final List<Combo> bbxCombos = [];
+
+  /// 3on3 덱 — comboIds 는 늘 3칸, 빈 칸은 ''. 기기에만
+  final List<Deck> bbxDecks = [];
 
   /// 내 채널 (채널 바 · 알림 범위). 처음 설치하면 건담 · 베이블레이드 · 포켓몬
   final List<String> myChannels = [...defaultMyChannels];
@@ -112,6 +119,12 @@ class UserStore extends ChangeNotifier {
     recentViewed
       ..clear()
       ..addAll(jList(local['recent_viewed']).whereType<String>());
+    bbxCombos
+      ..clear()
+      ..addAll(jList(local['bbx_combos']).map(Combo.fromJson).nonNulls);
+    bbxDecks
+      ..clear()
+      ..addAll(jList(local['bbx_decks']).map(Deck.fromJson).nonNulls.map(_deck3));
     // 키가 없으면(옛 파일) 처음 값. 빈 목록은 "채널 없음"으로 그대로 둔다.
     myChannels
       ..clear()
@@ -133,6 +146,8 @@ class UserStore extends ChangeNotifier {
       'bbx_manual_map': bbxManualMap,
       'guide_manual_lit': guideManualLit.toList(),
       'recent_viewed': recentViewed,
+      'bbx_combos': [for (final c in bbxCombos) c.toJson()],
+      'bbx_decks': [for (final d in bbxDecks) d.toJson()],
       'my_channels': myChannels,
       'special_friends': specialFriends.toList(),
     },
@@ -278,6 +293,77 @@ class UserStore extends ChangeNotifier {
     if (lit ? guideManualLit.add(unitId) : guideManualLit.remove(unitId)) _changed();
   }
 
+  // ── 베이 조합 · 덱 (기기에만) ──
+  Combo? bbxCombo(String id) => bbxCombos.where((c) => c.id == id).firstOrNull;
+
+  /// 같은 id 가 있으면 그 자리에서 바꾸고, 없으면 맨 앞에 넣는다
+  void saveBbxCombo(Combo c) {
+    final i = bbxCombos.indexWhere((x) => x.id == c.id);
+    i < 0 ? bbxCombos.insert(0, c) : bbxCombos[i] = c;
+    _changed();
+  }
+
+  void renameBbxCombo(String id, String name) {
+    final i = bbxCombos.indexWhere((x) => x.id == id);
+    if (i < 0) return;
+    final n = name.trim();
+    final old = bbxCombos[i];
+    // copyWith 는 null 을 "그대로"로 읽어 이름 지우기를 못 한다 → 새로 만든다
+    bbxCombos[i] = Combo.fromJson({...old.toJson(), 'nickname': n.isEmpty ? null : n, 'updated_at': _now()})!;
+    _changed();
+  }
+
+  /// 조합을 지우면 그 조합을 넣은 덱 칸도 비운다
+  void deleteBbxCombo(String id) {
+    final before = bbxCombos.length;
+    bbxCombos.removeWhere((c) => c.id == id);
+    if (bbxCombos.length == before) return;
+    for (final (i, d) in bbxDecks.indexed) {
+      if (d.comboIds.contains(id)) bbxDecks[i] = _withIds(d, [for (final c in d.comboIds) c == id ? '' : c]);
+    }
+    _changed();
+  }
+
+  /// 같은 id 가 있으면 그 자리에서 바꾸고, 없으면 끝에 넣는다
+  void saveBbxDeck(Deck d) {
+    final i = bbxDecks.indexWhere((x) => x.id == d.id);
+    i < 0 ? bbxDecks.add(_deck3(d)) : bbxDecks[i] = _deck3(d);
+    _changed();
+  }
+
+  void deleteBbxDeck(String id) {
+    final before = bbxDecks.length;
+    bbxDecks.removeWhere((d) => d.id == id);
+    if (bbxDecks.length != before) _changed();
+  }
+
+  /// 되돌리기: 지우기 전 목록 그대로
+  void restoreBbx(List<Combo> combos, List<Deck> decks) {
+    bbxCombos
+      ..clear()
+      ..addAll(combos);
+    bbxDecks
+      ..clear()
+      ..addAll(decks);
+    _changed();
+  }
+
+  static Deck _withIds(Deck d, List<String> ids) =>
+      Deck(id: d.id, name: d.name, rulesProfile: d.rulesProfile, comboIds: ids);
+
+  /// 덱 칸은 늘 3개 (모자라면 '' · 넘치면 자름)
+  static Deck _deck3(Deck d) => d.comboIds.length == 3
+      ? d
+      : _withIds(d, [for (var i = 0; i < 3; i++) i < d.comboIds.length ? d.comboIds[i] : '']);
+
+  /// 테스트: 저장 파일(toJson 모양)을 다시 읽는다
+  @visibleForTesting
+  void debugLoadJson(Object? json) {
+    _fromJson(json);
+    revision++;
+    notifyListeners();
+  }
+
   // ── 옛 Gunpula 에서 가져오기 ──
   /// [knownKit] = 지금 카탈로그에 있는 kit_id 인지 (없는 것은 "찾을 수 없음"으로 센다)
   ImportPreview previewImport(String text, bool Function(String kitId) knownKit) => ImportPreview.parse(text, knownKit);
@@ -301,6 +387,13 @@ class UserStore extends ChangeNotifier {
     guideManualLit.addAll(p.guideManualLit);
     for (final id in p.recentViewed.reversed) {
       if (!recentViewed.contains(id)) recentViewed.insert(0, id);
+    }
+    // 베이 조합 · 덱: 없는 id 만 더한다 (기기에 있는 것이 이긴다)
+    for (final c in p.bbxCombos) {
+      if (bbxCombo(c.id) == null) bbxCombos.add(c);
+    }
+    for (final d in p.bbxDecks) {
+      if (!bbxDecks.any((x) => x.id == d.id)) bbxDecks.add(_deck3(d));
     }
     if (p.myChannels case final ch? when ch.isNotEmpty) {
       myChannels
@@ -375,7 +468,7 @@ Map<String, Object?>? normalizeEntry(Object? raw, String member) {
 /// 받는 모양 3가지:
 ///  1) 옛 앱 설정 › 데이터 › 수집 백업 내보내기: {collection, overrides, series_label_overrides, appearance, github_token?}
 ///  2) chrome://inspect 에서 뽑은 localStorage: `{local_storage: {'gunpula-…-v1': '<JSON 글자>'}}`
-///  3) 1) + local_state {bbx_owned_parts, bbx_manual_map, guide_manual_lit, recent_viewed}
+///  3) 1) + local_state {bbx_owned_parts, bbx_manual_map, guide_manual_lit, recent_viewed, bbx_combos?, bbx_decks?}
 /// github_token · 로그인 세션 · 동기화 비밀값은 읽지 않는다.
 class ImportPreview {
   ImportPreview._();
@@ -391,6 +484,10 @@ class ImportPreview {
   final Set<int> guideManualLit = {};
   final List<String> recentViewed = [];
 
+  /// Hobby Atlas 자신의 백업에만 있다 (베이 조합 · 덱)
+  final List<Combo> bbxCombos = [];
+  final List<Deck> bbxDecks = [];
+
   /// Hobby Atlas 자신의 백업에만 있다 (옛 Gunpula 에는 채널이 없음)
   List<String>? myChannels;
   int owned = 0, wanted = 0, deleted = 0, unknown = 0;
@@ -399,7 +496,13 @@ class ImportPreview {
   final Map<String, int> otherMembers = {};
 
   bool get isEmpty =>
-      items.isEmpty && bbxOwnedParts.isEmpty && bbxManualMap.isEmpty && guideManualLit.isEmpty && recentViewed.isEmpty;
+      items.isEmpty &&
+      bbxOwnedParts.isEmpty &&
+      bbxManualMap.isEmpty &&
+      guideManualLit.isEmpty &&
+      recentViewed.isEmpty &&
+      bbxCombos.isEmpty &&
+      bbxDecks.isEmpty;
 
   static ImportPreview parse(String text, bool Function(String kitId) knownKit) {
     final p = ImportPreview._();
@@ -493,6 +596,8 @@ class ImportPreview {
       jList(local['guide_manual_lit']).map((v) => v is num ? v.toInt() : int.tryParse('$v')).nonNulls,
     );
     p.recentViewed.addAll(jList(local['recent_viewed']).whereType<String>());
+    p.bbxCombos.addAll(jList(local['bbx_combos']).map(Combo.fromJson).nonNulls);
+    p.bbxDecks.addAll(jList(local['bbx_decks']).map(Deck.fromJson).nonNulls);
     if (local['my_channels'] is List) p.myChannels = jList(local['my_channels']).whereType<String>().toList();
     return p;
   }

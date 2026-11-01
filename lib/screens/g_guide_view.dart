@@ -12,11 +12,12 @@
 // │ G-5b │ 시트의 TogglePill 3개                │ 좋아요 · 구매함 · 내 사진 (가짜 저장)    │ P03 · P07     │
 // │ G-5c │ 바텀 시트(카메라 · 최근 사진) → 확인  │ 이 기체가 찍힌 사진이어야 켜짐 (가짜 판정) │ P05 · P09   │
 // │ G-6  │ 베이 칸 + n/3 · 부품 시트            │ 베이블레이드 X 도감 (부품 3개)          │ P01           │
+// │ G-6a │ 🔧 ToolIcon (베이 머리줄)            │ 조합 만들기 (화면 T) — 블레이드 · 래칫 · 비트 · 덱 │ P07     │
 // │ G-7  │ 세대 · 작품 카드 + 진행 막대          │ 포켓몬 세대 · Fate 작품 · AC 세대       │ P01           │
 // │ G-8  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 정리 안 된 작품     │ P01 · P09     │
 // │ G-9  │ FindBar (컬렉션 · 작품 도감 위)       │ 도감에서 찾기 + 필터(전체 · 켜진 것 · 아직) │ P04 · P07   │
 // └──────────────────────────────────────────────────────────────────────────────────┘
-// 전환: 작품 카드 → 작품 도감(쌓기) → 기체 시트(덮기) → D 상품 상세(쌓기). 베이 → 부품 시트(덮기).
+// 전환: 🔧 → T 베이 조합 만들기(쌓기). 작품 카드 → 작품 도감(쌓기) → 기체 시트(덮기) → D 상품 상세(쌓기). 베이 → 부품 시트(덮기).
 //       기체 시트 → 사진 고르기(덮기) → 확인 중(대화 상자) → 토스트.
 import 'package:flutter/material.dart';
 
@@ -31,6 +32,7 @@ import '../widgets.dart';
 import 'c_channel_screen.dart';
 import 'd_kit_detail_screen.dart';
 import 'e_camera_screen.dart' show albumScenes;
+import 't_bbx_builder_screen.dart';
 
 class GuideView extends StatelessWidget {
   const GuideView({
@@ -955,7 +957,20 @@ class _BbxGuideState extends State<_BbxGuide> {
             children: [
               SectionHeader(
                 '베이',
-                trailing: const LevelHelpButton(),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ToolIcon(
+                      // G-6a → T 조합 만들기
+                      icon: Icons.build_outlined,
+                      tip: '조합 만들기',
+                      onTap: () => Navigator.of(
+                        context,
+                      ).push(MaterialPageRoute<void>(builder: (_) => BbxBuilderScreen(loaders: widget.loaders))),
+                    ),
+                    const LevelHelpButton(),
+                  ],
+                ),
                 subtitle: '완성 $done / ${tops.length}',
                 padding: const EdgeInsets.fromLTRB(16, 14, 12, 10),
               ),
