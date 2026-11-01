@@ -9,6 +9,7 @@
 // │ J-4  │ 아래 띠: 이 예고 · 상품 n → 시트       │ 4단계 진행 줄 + 제목 「」 으로 찾은 상품  │ P01 · P06     │
 // │ J-5  │ 아래 띠: 브라우저로 (↗)               │ Chrome 등에서 열기 (번역할 때)          │ P10           │
 // │ J-6  │ PageView (위 띠 · 아래 띠에서)        │ 좌우로 밀어 이전 · 다음 예고            │ P03           │
+// │ J-7  │ 시트 안 가로 ProductTile (최대 12)    │ 같은 IP의 새 상품 (작품 · 없으면 채널)   │ P06 · P08     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 홈 배너 · 홈 공식 예고 줄 · 캘린더 예고 줄 · 예고 목록 · 알림에서 쌓기(push, 오른쪽에서).
 import 'package:flutter/foundation.dart' show Factory;
@@ -101,10 +102,19 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
   /// 원문 안에서 다른 페이지로 갔다 → 뒤로 = 원문 안에서 뒤로
   bool _webBack = false;
 
-  /// 제목 「」 으로 찾은 상품
-  late final Future<List<Kit>> _related = widget.loaders
+  /// 이 예고 채널의 상품 (못 받으면 빈 목록)
+  late final Future<List<Kit>> _all = widget.loaders
       .kits([widget.item.franchiseId])
-      .then((kits) => matchAnnouncementKits(widget.item.title, kits), onError: (Object _) => const <Kit>[]);
+      .then((kits) => kits, onError: (Object _) => const <Kit>[]);
+
+  /// 제목 「」 으로 찾은 상품
+  late final Future<List<Kit>> _related = _all.then((kits) => matchAnnouncementKits(widget.item.title, kits));
+
+  /// J-7 같은 IP의 새 상품 (제목으로 찾은 상품의 작품, 없으면 채널 전체)
+  late final Future<({String label, List<Kit> kits})> _sameIp = Future.wait([
+    _all,
+    _related,
+  ]).then((r) => sameIpKits(r[1], r[0], channelLabel: channelOf(widget.item.franchiseId).label));
 
   @override
   void initState() {
@@ -286,25 +296,21 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     SectionHeader('이 예고의 상품', subtitle: '${kits.length}개'), // P06
-                    SizedBox(
-                      height: 148 + 32,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: kits.length,
-                        separatorBuilder: (_, _) => const SizedBox(width: 12),
-                        itemBuilder: (context, i) => ProductTile(
-                          image: kits[i].image,
-                          title: kits[i].name,
-                          imageWidth: 148,
-                          onTap: () {
-                            Navigator.pop(sheet);
-                            openKitDetail(this.context, kits[i], loaders: widget.loaders, list: kits);
-                          },
-                          marks: QuickMarks(kit: kits[i]),
-                        ),
-                      ),
-                    ),
+                    _tiles(sheet, kits),
+                  ],
+                );
+              },
+            ),
+            FutureBuilder<({String label, List<Kit> kits})>(
+              future: _sameIp, // J-7
+              builder: (context, snap) {
+                final ip = snap.data;
+                if (ip == null || ip.kits.isEmpty) return const SizedBox.shrink();
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SectionHeader('같은 IP의 새 상품', subtitle: ip.label), // P06
+                    _tiles(sheet, ip.kits),
                   ],
                 );
               },
@@ -314,6 +320,27 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
       ),
     );
   }
+
+  /// 가로 상품 줄 (누르면 시트를 닫고 상세)
+  Widget _tiles(BuildContext sheet, List<Kit> kits) => SizedBox(
+    height: 148 + 32,
+    child: ListView.separated(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: kits.length,
+      separatorBuilder: (_, _) => const SizedBox(width: 12),
+      itemBuilder: (context, i) => ProductTile(
+        image: kits[i].image,
+        title: kits[i].name,
+        imageWidth: 148,
+        onTap: () {
+          Navigator.pop(sheet);
+          openKitDetail(this.context, kits[i], loaders: widget.loaders, list: kits);
+        },
+        marks: QuickMarks(kit: kits[i]),
+      ),
+    ),
+  );
 }
 
 /// J-1 위 띠 — 뒤로 · 제목 한 줄 · 단계 · 날짜 출처
@@ -563,4 +590,33 @@ class _StageLine extends StatelessWidget {
       ],
     );
   }
+}
+
+/// J-7 같은 IP의 새 상품 — 제목으로 찾은 상품([matches])의 작품(series_key · 작품 이름) 상품 중 발매일 새것(예정 포함)부터.
+/// 찾은 상품이 없으면 채널 전체([all]). 이미 위에 보인 상품은 뺀다. 발매일 없는 상품은 뒤로.
+({String label, List<Kit> kits}) sameIpKits(
+  List<Kit> matches,
+  List<Kit> all, {
+  String channelLabel = '',
+  int max = 12,
+}) {
+  String? key;
+  var label = channelLabel;
+  if (matches.isNotEmpty) {
+    final count = <String, int>{};
+    for (final k in matches) {
+      final s = k.seriesKey.isNotEmpty ? k.seriesKey : k.series;
+      if (s.isNotEmpty) count[s] = (count[s] ?? 0) + 1;
+    }
+    if (count.isNotEmpty) {
+      key = (count.entries.toList()..sort((a, b) => b.value.compareTo(a.value))).first.key;
+      label = matches.firstWhere((k) => k.seriesKey == key || k.series == key).series;
+    }
+  }
+  final shown = {for (final k in matches) k.id};
+  final pool = [
+    for (final k in all)
+      if (!shown.contains(k.id) && (key == null || k.seriesKey == key || (k.seriesKey.isEmpty && k.series == key))) k,
+  ]..sort((a, b) => b.date.compareTo(a.date));
+  return (label: label, kits: pool.take(max).toList());
 }

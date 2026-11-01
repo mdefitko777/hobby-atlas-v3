@@ -300,7 +300,8 @@ class NotifyStore extends ChangeNotifier {
       ..wanted = wanted.toSet()
       // 카탈로그를 아직 못 읽었으면(앱을 막 켰을 때 · 오프라인 첫 실행) 지난번 예약 기간을 그대로 둔다 —
       // 빈 목록으로 덮으면 그 사이 백그라운드 확인이 PB 예약 알림을 놓친다. 좋아요를 뺀 상품은 확인할 때 걸러진다.
-      ..pb = byId.isEmpty ? config.pb : pbWindowsFor(wanted, byId, DateTime.now());
+      ..pb = byId.isEmpty ? config.pb : pbWindowsFor(wanted, byId, DateTime.now())
+      ..releases = byId.isEmpty ? config.releases : releaseDaysFor(wanted, byId, DateTime.now());
     await BlobStore.write(notifyConfigKey, jsonEncode(config.toJson()));
   }
 }
@@ -317,6 +318,17 @@ class NotifyScope extends InheritedNotifier<NotifyStore> {
   /// 누를 때 · initState 에 (다시 그리지 않는다)
   static NotifyStore read(BuildContext context) =>
       context.getInheritedWidgetOfExactType<NotifyScope>()?.notifier ?? NotifyStore.instance;
+}
+
+/// 좋아요한 상품 중 발매일이 하루까지 정해져 있고 아직 안 지난 것 (D-7 · D-1 · 당일 알림)
+List<ReleaseDay> releaseDaysFor(Iterable<String> wantedIds, Map<String, Kit> byId, DateTime now) {
+  final today = DateTime.utc(now.year, now.month, now.day).toIso8601String().substring(0, 10);
+  final exact = RegExp(r'^\d{4}-\d{2}-\d{2}$');
+  return [
+    for (final id in wantedIds)
+      if (byId[id] case final k? when exact.hasMatch(k.date) && k.date.compareTo(today) >= 0)
+        ReleaseDay(id: k.id, name: k.name, franchise: k.franchiseId, date: k.date),
+  ];
 }
 
 /// 좋아요한 상품 중 PB 예약 기간이 아직 지나지 않은 것 (마감일이 없으면 시작일이 사흘 안쪽인 것)

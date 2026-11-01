@@ -6,11 +6,13 @@
 // │ K-1  │ SwitchListTile × 2                 │ 새 소식 알림(휴대폰) · 내 채널 소식만      │ P03 · P07     │
 // │ K-5  │ FilterChip 묶음 2개                 │ 알림 규칙: 관심 항목 · 세계관 전체          │ P04 · P05     │
 // │ K-6  │ ListTile · 대화상자                  │ 마지막 확인 · 지금 확인 · 삼성 배터리 안내   │ P10           │
-// │ K-2  │ ListTile → 바텀 시트(선택)          │ 언어                                   │ P04           │
+// │ K-2  │ ListTile (고르기 없음)               │ 언어: 화면 한국어 · 상품 이름 한국어 우선 │ P04 · P10     │
 // │ K-3  │ ListTile → 파일 · 붙여넣기 → 확인     │ 옛 Gunpula 에서 가져오기 · 백업          │ P10           │
 // │ K-4  │ ListTile                           │ 상품 데이터 기준일 · 지금 새로 받기 · 버전 │ P10           │
+// │ K-7  │ ListTile → HelpScreen(쌓기)          │ 도움말: 도감 칸 4단계 · 색 · 데이터 출처 · 알림 · 업데이트 │ P10 │
 // └──────────────────────────────────────────────────────────────────────────────────┘
-// 전환: 앱 셸 ⚙ → 쌓기(push, 오른쪽에서). 언어 → 덮기(바텀 시트). 가져오기 → 덮기(시트 · 확인 대화상자).
+// 전환: 앱 셸 ⚙ → 쌓기(push, 오른쪽에서). 도움말 → 쌓기. 가져오기 → 덮기(시트 · 확인 대화상자).
+// 언어: 화면 번역은 없다 (한국어만). 상품 이름은 Gunpula 이름 중 한국어 → 일본어 → 영어 순 — 고르는 척하지 않는다.
 // 로그인 → P 로그인 화면(쌓기). 로그아웃 → 확인 대화상자(덮기).
 import 'dart:convert';
 import 'dart:typed_data';
@@ -21,6 +23,7 @@ import 'package:flutter/material.dart';
 import '../data/catalog.dart';
 import '../data/user_store.dart';
 import '../detail_pane.dart';
+import '../level.dart' show CellTier, tierFrame;
 import '../sync/account.dart';
 import '../sync/sync_service.dart';
 import '../notifications/local_notifier.dart';
@@ -69,7 +72,6 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   late final NotifyStore _n = widget.notify ?? NotifyScope.read(context);
-  String _language = '한국어';
   bool _refreshing = false;
 
   /// 휴대폰 설정에서 이 앱 알림이 켜져 있나 (안드로이드에서만, 모르면 null)
@@ -110,18 +112,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ? '이미 확인 중이에요'
           : (r.error.isNotEmpty ? r.error : (r.liveCount == 0 ? '새 소식이 없어요' : '새 알림 ${r.liveCount}개')),
     );
-  }
-
-  Future<void> _pickLanguage() async {
-    final l = await showPickSheet(
-      // K-2 덮기 (정렬과 같은 시트)
-      context,
-      title: '언어',
-      values: const ['한국어', '中文', 'English', '日本語'],
-      current: _language,
-      label: (l) => l,
-    );
-    if (l != null) setState(() => _language = l); // STATE: 언어 → 설정 줄 글자 (화면 번역은 없음)
   }
 
   Future<void> _refresh() async {
@@ -449,13 +439,134 @@ class _SettingsScreenState extends State<SettingsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SectionHeader('앱'),
+                const ListTile(
+                  // K-2 화면 번역 없음 — 있는 그대로
+                  leading: Icon(Icons.language),
+                  title: Text('언어'),
+                  subtitle: Text('상품 이름 한국어 → 日本語 → English'),
+                  trailing: Text('한국어', style: TextStyle(color: Gp.muted)),
+                ),
                 ListTile(
-                  leading: const Icon(Icons.language),
-                  title: const Text('언어'),
-                  trailing: Text('$_language ›', style: const TextStyle(color: Gp.muted)),
-                  onTap: _pickLanguage, // K-2
+                  // K-7
+                  leading: const Icon(Icons.help_outline),
+                  title: const Text('도움말'),
+                  trailing: const Icon(Icons.chevron_right, color: Gp.faint),
+                  onTap: () => openPage(context, const HelpScreen()),
                 ),
                 const VersionTile(), // 지금 빌드 · 업데이트 확인
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// K-7 도움말 — 짧게: 도감 칸 · 색 · 데이터 출처 · 알림 · 업데이트
+class HelpScreen extends StatelessWidget {
+  const HelpScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    Widget cell(CellTier t, IconData icon, String label) => Column(
+      children: [
+        SizedBox.square(
+          dimension: 44,
+          child: tierFrame(
+            t,
+            Center(
+              child: Icon(icon, size: Gp.iM, color: t == CellTier.none ? Gp.faint : Gp.ink),
+            ),
+            radius: 10,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(label, style: const TextStyle(fontSize: Gp.t12)),
+      ],
+    );
+    Widget tip(IconData icon, String title, String body) =>
+        ListTile(leading: Icon(icon), title: Text(title), subtitle: Text(body));
+    Widget dot(Color c, String label) => Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(3)),
+        ),
+        const SizedBox(width: 6),
+        Text(label, style: const TextStyle(fontSize: Gp.t12)),
+      ],
+    );
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          '도움말',
+          style: TextStyle(fontSize: Gp.t19, fontWeight: FontWeight.w600),
+        ),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.only(bottom: 40),
+        children: [
+          SectionPanel(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SectionHeader('도감 칸'),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    cell(CellTier.none, Icons.help_outline, '아직'),
+                    cell(CellTier.liked, Icons.favorite_border, '좋아요'),
+                    cell(CellTier.owned, Icons.bookmark_added_outlined, '구매함'),
+                    cell(CellTier.photo, Icons.photo_camera_outlined, '내 사진'),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Wrap(
+                    spacing: 16,
+                    runSpacing: 8,
+                    children: [dot(Gp.accent, '파랑 = 고름 · 좋아요'), dot(Gp.own, '민트 = 가진 것')],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SectionPanel(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SectionHeader('데이터'),
+                tip(Icons.cloud_download_outlined, '상품 정보', 'Gunpula 가 공식 사이트에서 매일 모아요 (BANDAI SPIRITS · 포켓몬센터 …)'),
+                tip(Icons.payments_outlined, '가격', '일본 정가만 · 국내 시세는 상세에서 검색으로'),
+                tip(Icons.flag_outlined, '틀린 정보', '상품 상세 맨 아래 › 제보 (GitHub)'),
+              ],
+            ),
+          ),
+          SectionPanel(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SectionHeader('알림'),
+                tip(Icons.schedule, '12시간마다 확인', '앱을 열 때도 한 번 더'),
+                tip(Icons.event_available_outlined, '좋아요한 상품', '발매 D-7 · D-1 · 당일 (발매일이 정해진 것만)'),
+                tip(Icons.battery_alert_outlined, '늦게 오면', '설정 › 알림 › 삼성 갤럭시 안내'),
+              ],
+            ),
+          ),
+          SectionPanel(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SectionHeader('앱 업데이트'),
+                tip(Icons.system_update_outlined, '위 줄 ⬇ · 설정 › 앱 › 버전', '새 빌드를 받아 안드로이드 설치 창으로'),
               ],
             ),
           ),

@@ -9,6 +9,7 @@
 //   · 사진만 바뀐 것 · 이름 · 분류만 바뀐 것은 알리지 않는다 (피드의 "changed" 대부분이 사진)
 //   · SEED / 00 은 series_key 로 본다 (watch_tags 의 '00' 은 BBX 의 BX-00 · CX-00 에도 붙는다)
 //   · 좋아요한 PB 상품의 예약 시작 · 마감 임박 (Wayback 기록이라 "바뀌었을 수 있어요" 를 붙인다)
+//   · 좋아요한 상품의 발매 D-7 · D-1 · 당일 (발매일이 하루까지 정해진 것만, 기기 안에서 날짜만 비교)
 // 이 파일은 Flutter 위젯을 쓰지 않는다 (백그라운드 isolate · 단위 테스트).
 import '../data/gunpula.dart' show pickName;
 import 'notify_models.dart';
@@ -281,9 +282,52 @@ NoticeRecord _pbRecord(String id, String kind, PbWindow w, String date, String b
   wanted: true,
 );
 
+/// 좋아요한 상품의 발매 알림: 7–2일 전 한 번(D-7) · 하루 전(D-1) · 당일. 이미 알린 것([known])은 빼고.
+/// 12시간마다 확인하니, 휴대폰이 꺼져 있던 날은 다음 확인 때 그 단계로 한 번만.
+List<NoticeRecord> releaseRecords(NotifyConfig c, Set<String> known, DateTime now) {
+  if (!c.rule('release_soon')) return const [];
+  final today = DateTime.utc(now.year, now.month, now.day);
+  final out = <NoticeRecord>[];
+  for (final r in c.releases) {
+    if (!c.wanted.contains(r.id)) continue;
+    final day = _utcDay(r.date);
+    if (day == null) continue;
+    final d = day.difference(today).inDays;
+    final (stage, body) = switch (d) {
+      0 => ('d0', '오늘 발매'),
+      1 => ('d1', '내일 발매 (${_md(r.date)})'),
+      >= 2 && <= 7 => ('d7', 'D-$d · ${_md(r.date)} 발매'),
+      _ => ('', ''),
+    };
+    if (stage.isEmpty) continue;
+    final id = 'rel-${r.id}-${r.date}-$stage';
+    if (known.contains(id)) continue;
+    out.add(
+      NoticeRecord(
+        id: id,
+        kind: 'release',
+        kitId: r.id,
+        title: r.name,
+        body: '좋아요한 상품 · $body',
+        at: now.toUtc(),
+        franchise: r.franchise,
+        date: r.date,
+        reasons: const ['release'],
+        wanted: true,
+      ),
+    );
+  }
+  return out;
+}
+
 // ── 알림 받는 공식 예고 ──────────────────────────────────────────────────────
 /// announcements.json status → 화면 글자 (순서 = 단계 순서)
-const annStageLabels = {'announced': '공식 발표', 'product_confirmed': '상품화 확정', 'preorder_open': '예약 시작', 'released': '발매'};
+const annStageLabels = {
+  'announced': '공식 발표',
+  'product_confirmed': '상품화 확정',
+  'preorder_open': '예약 시작',
+  'released': '발매',
+};
 
 /// 화면 글자 → status (없으면 announced)
 String annStageKey(String label) =>
@@ -406,6 +450,7 @@ CheckPlan planCheck({
     }
   }
   records.addAll(pbWindowRecords(config, known, now));
+  records.addAll(releaseRecords(config, known, now));
   records.addAll(annStageRecords(config, announcements, known, now));
   return CheckPlan(
     records: records,
