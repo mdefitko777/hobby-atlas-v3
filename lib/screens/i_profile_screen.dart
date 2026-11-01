@@ -361,33 +361,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
           )
         else if (account.handle.isEmpty && !account.friends.unavailable)
           _Hint(icon: Icons.alternate_email, text: '아이디가 없어요', action: '아이디 정하기', onTap: () => askHandle(context)),
-        _Stats(
-          // I-4 My Page 와 같은 두 묶음
-          groups: [
-            [
-              _Cell(const LikedIcon(), '$liked', '좋아요', jump == null ? null : () => jump(CollectionJump.liked)),
-              _Cell(const OwnedIcon(), '$owned', '구매함', jump == null ? null : () => jump(CollectionJump.owned)),
-              _Cell(
-                const Icon(Icons.inventory_2_outlined, size: Gp.iS, color: Gp.muted),
-                '${backlogCount([for (final k in mine)
-                  if (marks.owned(k)) k.id], store.stageOf)}',
-                '미조립',
-                jump == null ? null : () => jump(CollectionJump.backlog),
-              ),
-            ],
-            [
-              _Cell(
-                const Icon(Icons.calendar_month_outlined, size: Gp.iS, color: Gp.muted),
-                wonShort(store.spendInMonth(appNow())),
-                '이번 달 지출',
-              ),
-              _Cell(
-                const Icon(Icons.account_balance_wallet_outlined, size: Gp.iS, color: Gp.muted),
-                wonShort(store.spendKrw),
-                '총 지출',
-              ),
-            ],
-          ],
+        Padding(
+          // I-4 My Page 와 같은 두 묶음 (lib/widgets/stats.dart)
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+          child: CollectionStats(
+            liked: liked,
+            owned: owned,
+            backlog: backlogCount([
+              for (final k in mine)
+                if (marks.owned(k)) k.id,
+            ], store.stageOf),
+            month: store.spendInMonth(appNow()),
+            total: store.spendKrw,
+            onLiked: jump == null ? null : () => jump(CollectionJump.liked),
+            onOwned: jump == null ? null : () => jump(CollectionJump.owned),
+            onBacklog: jump == null ? null : () => jump(CollectionJump.backlog),
+          ),
         ),
         PhotoWall(
           // I-6 · I-7
@@ -505,26 +494,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
           onLevel: () => open(CollectionJump.guide),
           tags: d.wall.tags,
         ),
-        _Stats(
-          groups: [
-            [
-              _Cell(const LikedIcon(), '${m.liked}', '좋아요', () => open(CollectionJump.liked)),
-              _Cell(const OwnedIcon(), '${m.owned}', '구매함', () => open(CollectionJump.owned)),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+          child: StatGroups(
+            groups: [
+              [
+                StatCell(const LikedIcon(), '${m.liked}', '좋아요', onTap: () => open(CollectionJump.liked)),
+                StatCell(const OwnedIcon(), '${m.owned}', '구매함', onTap: () => open(CollectionJump.owned)),
+              ],
+              [
+                StatCell(
+                  const Icon(Icons.auto_awesome_mosaic_outlined, size: Gp.iS, color: Gp.muted),
+                  '${m.lit}',
+                  '도감',
+                  onTap: () => open(CollectionJump.guide),
+                ),
+                StatCell(
+                  const Icon(Icons.photo_library_outlined, size: Gp.iS, color: Gp.muted),
+                  '${d.wall.photos.length}',
+                  '사진',
+                ),
+              ],
             ],
-            [
-              _Cell(
-                const Icon(Icons.auto_awesome_mosaic_outlined, size: Gp.iS, color: Gp.muted),
-                '${m.lit}',
-                '도감',
-                () => open(CollectionJump.guide),
-              ),
-              _Cell(
-                const Icon(Icons.photo_library_outlined, size: Gp.iS, color: Gp.muted),
-                '${d.wall.photos.length}',
-                '사진',
-              ),
-            ],
-          ],
+          ),
         ),
         PhotoWall(
           // I-6 친구가 보이기로 둔 사진 → 친구 구매함 상품
@@ -676,73 +668,6 @@ class _Header extends StatelessWidget {
 }
 
 /// 숫자 한 칸: 아이콘 + 숫자 (뜻은 툴팁)
-class _Cell {
-  const _Cell(this.icon, this.value, this.tip, [this.onTap]);
-  final Widget icon;
-  final String value;
-  final String tip;
-  final VoidCallback? onTap;
-}
-
-/// I-4 숫자 묶음 — My Page(A-21)와 같은 떠 있는 흰 묶음 · 아이콘 18 높이 · 숫자 t14 굵게
-class _Stats extends StatelessWidget {
-  const _Stats({required this.groups});
-  final List<List<_Cell>> groups;
-
-  @override
-  Widget build(BuildContext context) {
-    Widget cell(_Cell c) => Expanded(
-      child: Tooltip(
-        message: c.tip,
-        child: InkWell(
-          onTap: c.onTap,
-          borderRadius: BorderRadius.circular(Gp.radius),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 9),
-            child: Column(
-              children: [
-                SizedBox(height: 18, child: Center(child: c.icon)),
-                const SizedBox(height: 3),
-                Text(
-                  c.value,
-                  style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w700),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-    Widget group(List<_Cell> cells) => Expanded(
-      flex: cells.length, // 칸 너비가 묶음마다 같게
-      child: DecoratedBox(
-        decoration: Gp.raised(radius: Gp.radius),
-        child: Material(
-          type: MaterialType.transparency,
-          child: IntrinsicHeight(
-            child: Row(
-              children: [
-                for (var i = 0; i < cells.length; i++) ...[
-                  if (i > 0) const VerticalDivider(width: 1, indent: 10, endIndent: 10),
-                  cell(cells[i]),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
-      child: Row(
-        children: [
-          for (var i = 0; i < groups.length; i++) ...[if (i > 0) const SizedBox(width: 8), group(groups[i])],
-        ],
-      ),
-    );
-  }
-}
-
 /// I-2 취향 태그 시트 — 적고 + · 꼬리표 누르면 빼기 · ✓ 로 저장
 class _TagSheet extends StatefulWidget {
   const _TagSheet({required this.initial});

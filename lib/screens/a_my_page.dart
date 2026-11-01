@@ -64,14 +64,17 @@ class _MyPageViewState extends State<MyPageView> {
         Padding(
           // 페이지 바탕 위에 흰 묶음 두 개 (수집 | 돈)
           padding: const EdgeInsets.fromLTRB(16, 2, 16, 12),
-          child: _Stats(
+          child: CollectionStats(
+            // A-21 · A-21b 끝에 공유 카드
             liked: liked.length,
             owned: owned.length,
             backlog: backlogCount(owned.map((k) => k.id), me.stageOf),
-            onShare: () => openCollectionShare(context, loaders: widget.loaders),
             month: me.spendInMonth(appNow()),
             total: me.spendKrw,
-            onJump: widget.onJump,
+            onLiked: () => widget.onJump?.call(CollectionJump.liked),
+            onOwned: () => widget.onJump?.call(CollectionJump.owned),
+            onBacklog: () => widget.onJump?.call(CollectionJump.backlog),
+            onShare: () => openCollectionShare(context, loaders: widget.loaders),
           ),
         ),
         _Section(
@@ -126,104 +129,6 @@ class _Section extends StatelessWidget {
           child,
         ],
       ),
-    );
-  }
-}
-
-/// A-21 숫자 5칸 — 아이콘 + 숫자 (좋아요 · 구매함 · 미조립은 누르면 그 목록) + 끝에 공유
-class _Stats extends StatelessWidget {
-  const _Stats({
-    required this.liked,
-    required this.owned,
-    required this.backlog,
-    required this.month,
-    required this.total,
-    this.onJump,
-    this.onShare,
-  });
-  final int liked, owned, backlog, month, total;
-  final ValueChanged<CollectionJump>? onJump;
-  final VoidCallback? onShare;
-
-  @override
-  Widget build(BuildContext context) {
-    Widget cell(Widget icon, String value, String tip, {VoidCallback? onTap}) => Expanded(
-      child: Tooltip(
-        message: tip,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(Gp.radius),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 9),
-            child: Column(
-              children: [
-                SizedBox(height: 18, child: Center(child: icon)),
-                const SizedBox(height: 3),
-                Text(
-                  value,
-                  style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w700),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-    // 뜻이 같은 둘을 한 칸에: 수집(♡ | 리본) · 돈(이번 달 | 총)
-    // 검색창과 같은 떠 있는 재질 (흰→옅은 회색 · 부드러운 그림자)
-    Widget group(Widget a, Widget b, [Widget? c, int flex = 1]) => Expanded(
-      flex: flex,
-      child: DecoratedBox(
-        decoration: Gp.raised(radius: Gp.radius),
-        child: Material(
-          type: MaterialType.transparency,
-          child: IntrinsicHeight(
-            child: Row(
-              children: [
-                a,
-                const VerticalDivider(width: 1, indent: 10, endIndent: 10),
-                b,
-                if (c != null) ...[const VerticalDivider(width: 1, indent: 10, endIndent: 10), c],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-    return Row(
-      children: [
-        group(
-          cell(const LikedIcon(), '$liked', '좋아요', onTap: () => onJump?.call(CollectionJump.liked)),
-          cell(const OwnedIcon(), '$owned', '구매함', onTap: () => onJump?.call(CollectionJump.owned)),
-          cell(
-            const Icon(Icons.inventory_2_outlined, size: Gp.iS, color: Gp.muted),
-            '$backlog',
-            '미조립',
-            onTap: () => onJump?.call(CollectionJump.backlog),
-          ),
-          3,
-        ),
-        const SizedBox(width: 8),
-        group(
-          cell(const Icon(Icons.calendar_month_outlined, size: Gp.iS, color: Gp.muted), wonShort(month), '이번 달 지출'),
-          cell(
-            const Icon(Icons.account_balance_wallet_outlined, size: Gp.iS, color: Gp.muted),
-            wonShort(total),
-            '총 지출',
-          ),
-          null,
-          2,
-        ),
-        if (onShare != null)
-          IconButton(
-            // A-21b
-            key: const ValueKey('mypage-share'),
-            tooltip: '공유 카드',
-            visualDensity: VisualDensity.compact,
-            onPressed: onShare,
-            icon: const Icon(Icons.ios_share, size: Gp.iM, color: Gp.muted),
-          ),
-      ],
     );
   }
 }

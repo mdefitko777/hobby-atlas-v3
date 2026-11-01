@@ -15,6 +15,7 @@
 //   feedback      showToast · navClearance
 //   kit_progress  조립 상태(BuildStatusButton · BuildStatusRow) · 예약(PreorderRow · showPreorderSheet) · 바코드 겹침 경고
 //   share_card    공유 카드 그림 (CollectionShareCard · GuideShareCard · captureCard)
+//   stats         StatGroups · CollectionStats (My Page · 내 정보 숫자 줄)
 //   help          HelpButton · HelpItem · HelpSheet (? = 이 화면 아이콘 뜻, 머리 줄 오른쪽 끝)
 // 숫자 · 날짜 글자(lib/format.dart)도 같이 내보낸다.
 export 'format.dart';
@@ -32,6 +33,7 @@ export 'widgets/sections.dart';
 export 'widgets/share_card.dart';
 export 'widgets/sheets.dart';
 export 'widgets/states.dart';
+export 'widgets/stats.dart';
 export 'widgets/tags.dart';
 export 'widgets/tier_cell.dart';
 export 'widgets/tiles.dart';
