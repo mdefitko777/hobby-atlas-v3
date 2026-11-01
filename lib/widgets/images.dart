@@ -1,4 +1,5 @@
 // 그림 한 곳 — 인터넷(캐시) · 앱 안 그림 · 내 사진(`local:파일`) 경로를 여기서만 가른다
+import 'dart:typed_data';
 import 'dart:ui' show ImageFilter;
 
 import 'package:cached_network_image/cached_network_image.dart';
@@ -123,6 +124,21 @@ class _Placeholder extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 메모리에 있는 사진 (찍은 · 공유로 받은 · 서버에서 받은 바이트). 못 풀면 회색 칸
+class BytesImage extends StatelessWidget {
+  const BytesImage(this.bytes, {super.key, this.fit = BoxFit.cover});
+  final Uint8List bytes;
+  final BoxFit fit;
+
+  @override
+  Widget build(BuildContext context) => Image.memory(
+    bytes,
+    fit: fit,
+    gaplessPlayback: true,
+    errorBuilder: (_, _, _) => const ColoredBox(color: Gp.soft),
+  );
 }
 
 /// 원 안에 사진(또는 첫 글자) — 채널 아이콘 · 아바타

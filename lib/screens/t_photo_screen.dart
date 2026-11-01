@@ -281,12 +281,7 @@ class _FriendImage extends StatelessWidget {
   Widget build(BuildContext context) => FutureBuilder<Uint8List>(
     future: bytes,
     builder: (context, snap) => switch (snap) {
-      AsyncSnapshot(hasData: true, :final data?) => Image.memory(
-        data,
-        fit: fit,
-        gaplessPlayback: true,
-        errorBuilder: (_, _, _) => const ColoredBox(color: Gp.soft),
-      ),
+      AsyncSnapshot(hasData: true, :final data?) => BytesImage(data, fit: fit),
       AsyncSnapshot(hasError: true) => const Center(child: Icon(Icons.broken_image_outlined, color: Gp.faint)),
       _ => const ColoredBox(color: Gp.soft),
     },

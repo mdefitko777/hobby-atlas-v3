@@ -128,7 +128,11 @@ ThemeData buildGpTheme() {
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: false,
-      titleTextStyle: TextStyle(color: Gp.ink, fontSize: Gp.t19, fontWeight: FontWeight.w800),
+      titleTextStyle: TextStyle(
+        color: Gp.ink,
+        fontSize: Gp.t19,
+        fontWeight: FontWeight.w600,
+      ), // 모든 화면 제목 한 벌 (화면에서 덮어쓰지 않는다)
     ),
     dividerTheme: const DividerThemeData(color: Gp.line, thickness: 1, space: 1),
     // 큰 검정 바탕 + 흰 글자는 쓰지 않는다 → 옅은 회색 바탕 + 검정 글자

@@ -86,12 +86,7 @@ class _SignInScreenState extends State<SignInScreen> {
   Widget build(BuildContext context) {
     final account = AccountScope.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          '로그인',
-          style: TextStyle(fontSize: Gp.t19, fontWeight: FontWeight.w600),
-        ),
-      ),
+      appBar: AppBar(title: const Text('로그인')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
         children: [

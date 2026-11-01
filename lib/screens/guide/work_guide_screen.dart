@@ -264,19 +264,7 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
     final ownedNow = _units.isEmpty ? w.owned : _units.where((u) => _tierOf(m, u).index >= CellTier.owned.index).length;
     return Scaffold(
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              w.name,
-              style: const TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w600),
-            ),
-            Text(
-              '수집 $ownedNow / ${w.total}',
-              style: const TextStyle(fontSize: Gp.t12, color: Gp.own, fontWeight: FontWeight.w500),
-            ),
-          ],
-        ),
+        title: BarTitle(w.name, count: '수집 $ownedNow / ${w.total}'),
         actions: [
           ToolIcon(
             // G-4d 작품 진행 카드 (그림으로 공유 · 저장)
@@ -560,9 +548,6 @@ class _KitLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final m = Marks.of(context);
-    final liked = m.liked(kit);
-    final owned = m.owned(kit);
     return ThumbRow(
       image: kit.image,
       title: kit.name,
@@ -571,21 +556,7 @@ class _KitLine extends StatelessWidget {
       size: 52,
       padding: const EdgeInsets.symmetric(vertical: 6),
       onTap: onTap,
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          IconButton(
-            tooltip: '좋아요',
-            onPressed: () => Marks.read(context).toggleLike(context, kit),
-            icon: LikedIcon(filled: liked, size: Gp.iM, color: liked ? Gp.accent : Gp.muted),
-          ),
-          IconButton(
-            tooltip: '구매함',
-            onPressed: () => Marks.read(context).toggleOwn(context, kit),
-            icon: OwnedIcon(filled: owned, size: Gp.iM, color: owned ? Gp.own : Gp.muted),
-          ),
-        ],
-      ),
+      trailing: KitMarkButtons(kit: kit),
     );
   }
 }
@@ -594,6 +565,7 @@ class _KitLine extends StatelessWidget {
 List<HelpItem> workGuideHelp() => [
   ...tierHelpItems(),
   const HelpItem.group('아이콘'),
+  const HelpItem(Icons.ios_share, '공유 카드 (그림으로 공유 · 저장)'),
   const HelpItem(Icons.tune, '도감 필터'),
   const HelpItem(Icons.grid_view_outlined, '한 격자'),
   const HelpItem(Icons.format_list_numbered, '화수별'),

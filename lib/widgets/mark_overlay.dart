@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../marks.dart';
 import '../models.dart';
 import '../theme.dart';
+import 'icons.dart';
 
 /// 사진 위 표시 (모든 상품 사진 · 도감 칸 공통): 왼쪽 위 책갈피 리본 = 구매함(+ → ✓) · 왼쪽 아래 ♡ = 좋아요
 /// 보이는 크기는 작아도 누르는 자리는 44dp 이상 (P09 접근성)
@@ -110,6 +111,40 @@ class QuickMarks extends StatelessWidget {
       onLike: () => Marks.read(context).toggleLike(context, kit),
       onOwn: () => Marks.read(context).toggleOwn(context, kit),
       size: size,
+    );
+  }
+}
+
+/// 목록 줄 오른쪽 ♡ · 리본 버튼 두 개 (사진 없는 줄: 기체 시트 · 사진으로 찾기 후보) — 켜짐 = 채운 색, 꺼짐 = 회색 테두리
+class KitMarkButtons extends StatelessWidget {
+  const KitMarkButtons({super.key, required this.kit, this.extra});
+  final Kit kit;
+
+  /// 리본 뒤에 하나 더 (사진 붙이기)
+  final Widget? extra;
+
+  @override
+  Widget build(BuildContext context) {
+    final m = Marks.of(context);
+    final liked = m.liked(kit);
+    final owned = m.owned(kit);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          tooltip: '좋아요',
+          visualDensity: VisualDensity.compact,
+          onPressed: () => Marks.read(context).toggleLike(context, kit),
+          icon: LikedIcon(filled: liked, size: Gp.iM, color: liked ? Gp.accent : Gp.muted),
+        ),
+        IconButton(
+          tooltip: '구매함',
+          visualDensity: VisualDensity.compact,
+          onPressed: () => Marks.read(context).toggleOwn(context, kit),
+          icon: OwnedIcon(filled: owned, size: Gp.iM, color: owned ? Gp.own : Gp.muted),
+        ),
+        ?extra,
+      ],
     );
   }
 }

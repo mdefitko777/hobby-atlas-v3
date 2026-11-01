@@ -205,3 +205,26 @@ class SectionPanel extends StatelessWidget {
     );
   }
 }
+
+/// AppBar 두 줄 제목 — 이름(t16) + 아래 민트 "수집 n / m" (작품 도감 · 태그 도감). [count] 가 비면 한 줄
+class BarTitle extends StatelessWidget {
+  const BarTitle(this.title, {super.key, this.count = ''});
+  final String title;
+  final String count;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        title,
+        style: const TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w600),
+      ),
+      if (count.isNotEmpty)
+        Text(
+          count,
+          style: const TextStyle(fontSize: Gp.t12, color: Gp.own, fontWeight: FontWeight.w500),
+        ),
+    ],
+  );
+}

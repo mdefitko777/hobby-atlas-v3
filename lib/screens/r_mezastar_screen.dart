@@ -361,19 +361,9 @@ class _TagAtlasScreenState extends State<TagAtlasScreen> {
           future: _future,
           builder: (context, snap) {
             final b = snap.data;
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.game == TagGame.mezastar ? '${widget.game.label} ${_region.id}' : widget.game.label,
-                  style: const TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w600),
-                ),
-                if (b != null)
-                  Text(
-                    '수집 ${b.cards.where((c) => owned.contains(c.id)).length} / ${b.cards.length}',
-                    style: const TextStyle(fontSize: Gp.t12, color: Gp.own, fontWeight: FontWeight.w500),
-                  ),
-              ],
+            return BarTitle(
+              widget.game == TagGame.mezastar ? '${widget.game.label} ${_region.id}' : widget.game.label,
+              count: b == null ? '' : '수집 ${b.cards.where((c) => owned.contains(c.id)).length} / ${b.cards.length}',
             );
           },
         ),

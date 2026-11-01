@@ -389,12 +389,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final cat = Catalog.instance;
     final account = AccountScope.of(context); // 로그인 · 동기화 상태가 바뀌면 다시 그림
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          '설정',
-          style: TextStyle(fontSize: Gp.t19, fontWeight: FontWeight.w600),
-        ),
-      ),
+      appBar: AppBar(title: const Text('설정')),
       body: ListView(
         padding: const EdgeInsets.only(bottom: 40),
         children: [
@@ -500,12 +495,7 @@ class HelpScreen extends StatelessWidget {
       ],
     );
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          '도움말',
-          style: TextStyle(fontSize: Gp.t19, fontWeight: FontWeight.w600),
-        ),
-      ),
+      appBar: AppBar(title: const Text('도움말')),
       body: ListView(
         padding: const EdgeInsets.only(bottom: 40),
         children: [
