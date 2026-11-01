@@ -7,8 +7,10 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hobby_atlas/background/catalog_check_worker.dart';
 import 'package:hobby_atlas/data/blob_store.dart';
+import 'package:hobby_atlas/models.dart';
 import 'package:hobby_atlas/notifications/feed_rules.dart';
 import 'package:hobby_atlas/notifications/notify_models.dart';
+import 'package:hobby_atlas/notifications/notify_store.dart' show pbWindowsFor;
 
 final Map<String, Object?> feedJson =
     jsonDecode(File('test/fixtures/update-feed-lite.sample.json').readAsStringSync()) as Map<String, Object?>;
@@ -364,6 +366,49 @@ void main() {
       );
       expect(plan.records.single.body, '오늘 예약 시작 · $pbStaleNote');
       expect(buildAlerts(plan.records), hasLength(1));
+    });
+
+    test('pbWindowsFor: 좋아요한 상품 중 기간이 남은 것만 백그라운드 설정에 (마감일 없으면 시작 사흘 안쪽)', () {
+      Kit k(String id, {String opens = '', String closes = ''}) => Kit(
+        id: id,
+        franchiseId: 'gundam',
+        name: 'HG $id',
+        nameJa: '',
+        series: '',
+        line: 'HG',
+        type: '',
+        scale: '',
+        universe: '',
+        date: '',
+        priceJpy: null,
+        image: '',
+        gallery: const [],
+        limited: true,
+        pb: true,
+        status: CollectStatus.wanted,
+        wantedQty: 1,
+        recent: false,
+        month: false,
+        market: null,
+        keywords: const [],
+        pbOpens: opens,
+        pbCloses: closes,
+      );
+      final byId = {
+        for (final kit in [
+          k('open-soon', opens: '2026-10-26', closes: '2026-11-30'),
+          k('closed', opens: '2026-07-08', closes: '2026-10-12'),
+          k('no-close-recent', opens: '2026-10-23'),
+          k('no-close-old', opens: '2026-10-01'),
+          k('no-window'),
+        ])
+          kit.id: kit,
+      };
+      final ws = pbWindowsFor([...byId.keys, 'not-in-catalog'], byId, now);
+      expect(ws.map((w) => w.id), ['open-soon', 'no-close-recent']);
+      expect(ws.first.opens, '2026-10-26');
+      expect(ws.first.closes, '2026-11-30');
+      expect(ws.first.franchise, 'gundam');
     });
   });
 
