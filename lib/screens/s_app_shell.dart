@@ -9,7 +9,7 @@
 // │ S-5  │ NavigationRail (가로 폰: 높이 <520)    │ 측면 탭 (아바타 / 탭 4개 / 🔔 ⚙)          │ 적응형 · P04  │
 // │ S-6  │ IndexedStack                    │ 탭 상태 유지                           │ P03           │
 // │ S-7  │ 내 채널 목록(상태)              │ 네 화면이 같이 쓰는 내 IP 채널         │ P04           │
-// │ S-9  │ 오른쪽 위 🔔 (새 알림 점)         │ 알림 열기                              │ P01           │
+// │ S-9  │ 오른쪽 위 🔔 (받은 친구 요청 수)   │ 알림 열기                              │ P01           │
 // │ S-10 │ 오른쪽 위 ⚙                     │ 설정 열기 (K)                          │ P04 · P06     │
 // │ S-11 │ Drawer (아바타 · 홈 가장자리 밀기)     │ 친구 서랍 (M)                          │ P07           │
 // │ S-13 │ AnimatedAlign(heightFactor) 아바타 줄 │ 아래로 스크롤하면 위 줄도 접힘          │ P08           │
@@ -27,6 +27,7 @@ import 'package:flutter/rendering.dart' show ScrollDirection;
 import '../api.dart';
 import '../detail_pane.dart';
 import '../channels.dart';
+import '../sync/account.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'a_home_screen.dart';
@@ -134,9 +135,10 @@ class _AppShellState extends State<AppShell> {
     final wide = shortLandscape;
     // 폴드 펼침 · 태블릿 · 넓은 창 → 반반 화면 (QQ 처럼, S-12)
     final twoPane = !shortLandscape && size.width >= twoPaneBreakpoint;
+    final account = AccountScope.of(context); // 이름 첫 글자 · 친구 요청 수
     // S-1 P04 아바타 → 친구 서랍(M). 서랍 머리의 아바타를 한 번 더 누르면 내 정보(I)
     final avatar = RingAvatar(
-      text: 'A',
+      text: account.signedIn ? account.initial : 'A',
       size: 34,
       ringWidth: 2,
       tooltip: '친구 · 내 정보',
@@ -146,10 +148,11 @@ class _AppShellState extends State<AppShell> {
       // S-9 알림 (N)
       tooltip: '알림',
       onPressed: () => openNotifications(context, myChannels: _myChannels, loaders: widget.loaders), // N
-      icon: const Badge(
-        smallSize: 7,
-        backgroundColor: Gp.accent, // 새 알림 있음 = 브랜드 색 점
-        child: Icon(Icons.notifications_none, color: Gp.ink),
+      icon: Badge(
+        isLabelVisible: account.incomingCount > 0, // 받은 친구 요청이 있을 때만 숫자
+        label: Text('${account.incomingCount}'),
+        backgroundColor: Gp.accent,
+        child: const Icon(Icons.notifications_none, color: Gp.ink),
       ),
     );
     final gear = IconButton(

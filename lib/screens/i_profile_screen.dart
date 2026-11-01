@@ -1,24 +1,19 @@
-// 화면 I: 내 정보 — 프로필 · 수집 숫자 · 게시물 · 공유 공간 초대 (친구 서랍 머리에서 열림, 설정은 K 화면)
-// 같은 화면을 친구 보기로도 쓴다: 친구 이름을 누르면 그 친구의 숫자 · 게시물 (편집 · 친구 목록 없음)
+// 화면 I: 내 정보 — 프로필 · 수집 숫자 · 친구 추가(아이디) (친구 서랍 머리에서 열림, 설정은 K 화면)
+// 같은 화면을 친구 보기로도 쓴다: 친구 이름을 누르면 그 친구의 숫자 (편집 없음, 친구 끊기)
+// v3: 이름 · @아이디 · 친구는 Gunpula 계정(v3 get_me), 숫자는 내 기록(Marks). 게시물 · 사진 인증은 서버가 없어 숨김.
 //
 // ┌──────── 디자인 가이드 대응표: I 내 정보 ───────────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
-// │ I-1  │ 색 고리 큰 아바타 · 이름 · @아이디    │ 내 프로필                              │ P04           │
-// │ I-2  │ TagPill 줄                          │ 내 취향 태그                           │ P06           │
-// │ I-3  │ 프로필 편집 → 바텀 시트(액션 목록)    │ 아바타 · 배경 · 닉네임 · 태그 바꾸기 (가짜) │ P03 · P07  │
-// │ I-4  │ 숫자 3칸 (누르면 이동)               │ 좋아요 · 도감 레벨(배지 n) · 구매함 → 컬렉션 │ P01 · P07   │
-// │ I-5  │ 초대 코드 + 복사                    │ 공유 공간 초대 (친구 목록은 M 서랍에만)   │ P07 · P08     │
-// │ I-6  │ 사진 3열 격자                       │ 게시물 (도감에서 인증한 사진 · 친구 공개)  │ P02 · P06    │
-// │ I-7  │ 사진 보기: 미리보기 + 워터마크 스위치  │ 저장 시 "HA · @아이디" 워터마크 (끌 수 있음) │ P05 · P10  │
-// │ I-9  │ 바텀 시트: 스위치 + 친구 체크 목록     │ 게시물 공개 범위 (전체 끄기 · 친구별 숨기기) │ P05 · P07 │
-// │ I-10 │ 사진 보기의 "게시물에 보이기" 스위치  │ 사진 한 장만 숨기기 (흐리게 + 눈 꺼짐 표시) │ P05 · P01  │
-// │ I-11 │ 친구 숫자 → L 친구 컬렉션            │ 친구의 좋아요 · 구매함 · 도감 보기         │ P07        │
-// │ I-8  │ LoadingView / ErrorView             │ 프로필 불러오기 (GET /profile)          │ P01 · P09     │
+// │ I-1  │ 색 고리 큰 아바타 · 이름 · @아이디    │ 내 프로필 (계정 이름 · 아이디)           │ P04           │
+// │ I-2  │ 안내 카드 + 버튼                     │ 로그인하기 · 아이디 정하기               │ P09 · P10     │
+// │ I-3  │ 프로필 편집 → 바텀 시트(액션 목록)    │ 이름 바꾸기 · 아이디 바꾸기              │ P03 · P07     │
+// │ I-4  │ 숫자 3칸 (누르면 이동)               │ 좋아요 · 도감 레벨 · 구매함 → 컬렉션      │ P01 · P07     │
+// │ I-5  │ 내 @아이디 + 복사 · 버튼 2개          │ 친구 추가 (아이디로) · 받은 요청          │ P07 · P08     │
+// │ I-11 │ 친구 숫자 → L 친구 컬렉션            │ 친구의 좋아요 · 구매함 · 도감 보기         │ P07           │
+// │ I-12 │ OutlinedButton → 확인 대화상자        │ 친구 끊기                              │ P05           │
+// │ I-8  │ LoadingView / ErrorView             │ 불러오는 중 · 오류                      │ P01 · P09     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
-// 전환: 친구 서랍(M) 머리 아바타 → 쌓기(push, 오른쪽에서 · 넓은 화면은 오른쪽 칸). 숫자 → 닫고 컬렉션 탭(옆으로). 게시물 · 친구 → 쌓기. 편집 → 덮기.
-// 현행 앱 문제: 로그인 전엔 아바타가 곧바로 설정, 후엔 서랍 — 같은 버튼이 다르게 동작 → v2는 아바타 = 늘 친구 서랍, 서랍 머리 = 내 정보.
-// 실제 로그인 · 저장 없음: 바꾸는 동작은 토스트로만 응답한다.
-import 'package:flutter/cupertino.dart' show CupertinoPageRoute;
+// 전환: 친구 서랍(M) 머리 아바타 → 쌓기(push, 오른쪽에서 · 넓은 화면은 오른쪽 칸). 숫자 → 닫고 컬렉션 탭(옆으로). 친구 → 쌓기. 편집 → 덮기.
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 
@@ -27,10 +22,14 @@ import '../channels.dart';
 import '../marks.dart';
 import '../detail_pane.dart';
 import '../models.dart';
+import '../sync/account.dart';
+import '../sync/friends_service.dart' show FriendsFailure;
 import '../theme.dart';
 import '../widgets.dart';
 import 'f_collection_screen.dart' show CollectionJump;
 import 'l_friend_collection_screen.dart';
+import 'p_sign_in_screen.dart';
+import 'q_friend_sheets.dart';
 
 void openProfile(
   BuildContext context, {
@@ -47,6 +46,29 @@ void openFriend(BuildContext context, Member friend, {Loaders loaders = const Lo
     context,
     ProfileScreen(loaders: loaders, friend: friend),
     id: friend.handle,
+  );
+}
+
+/// 친구의 컬렉션을 계정에서 받아 화면 모델로 (프로필 · 친구 컬렉션이 같이 쓴다)
+Future<Member> loadFriendMember(Account account, String handle, Loaders loaders, {bool force = true}) async {
+  final c = await account.friends.collection(handle, force: force);
+  Map<String, int> guide = const {};
+  try {
+    guide = await loaders.friendGuide(c.ownedIds).timeout(const Duration(seconds: 8));
+  } on Object {
+    // 도감 데이터가 아직 없으면 0
+  }
+  return Member(
+    name: c.profile.name,
+    handle: c.profile.handle,
+    role: '친구',
+    self: false,
+    liked: c.likedIds.length,
+    lit: guide.values.fold(0, (s, n) => s + n),
+    owned: c.ownedIds.length,
+    likedIds: c.likedIds,
+    ownedIds: c.ownedIds,
+    guide: guide,
   );
 }
 
@@ -79,17 +101,8 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   late Future<_ProfileData> _future;
 
-  // 게시물 공개 범위 (가짜 — 저장하지 않음)
-  bool _postsPublic = true;
-
-  /// 게시물을 안 보여 줄 친구 아이디
-  final Set<String> _hiddenFrom = {};
-
-  /// 게시물에서 숨긴 사진 id
-  final Set<String> _hiddenPhotos = {};
-
-  /// 사진 id → 워터마크 (바꾼 것만, 나머지는 데이터 값)
-  final Map<String, bool> _watermark = {};
+  /// 친구 보기: 계정에서 받은 최신 숫자 (계정 친구가 아니면 넘겨받은 그대로)
+  Future<Member>? _friendFuture;
 
   @override
   void initState() {
@@ -98,85 +111,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _load() {
-    // STATE: GET /profile · /kits?status_ne=none · /guideWorks → 프로필 · 숫자 · 게시물
+    // STATE: 내 정보 · 내 채널 상품 · 도감 → 숫자
     _future = Future.wait([
       widget.loaders.profile(),
       widget.loaders.kits(widget.myChannels ?? [for (final c in allChannels) c.id]), // 내 채널 상품 전부 → Marks 로 셈
       widget.loaders.guideWorks(),
     ]).then((r) => _ProfileData(r[0] as Profile, r[1] as List<Kit>, litCount(r[2] as List<GuideWork>)));
-  }
-
-  void _fake(String what) => showToast(context, '$what은(는) 준비 중이에요');
-
-  /// I-9 게시물 공개 범위
-  void _openPrivacy(Profile p) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (sheet) => StatefulBuilder(
-        builder: (sheet, setSheet) {
-          void change(VoidCallback f) {
-            setState(f); // STATE: 공개 범위 → 게시물 제목 줄 · 친구 체크
-            setSheet(() {});
-          }
-
-          return SafeArea(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(sheet).height * 0.75),
-              child: ListView(
-                shrinkWrap: true,
-                padding: const EdgeInsets.only(bottom: 16),
-                children: [
-                  const SectionHeader('게시물 공개 범위', padding: EdgeInsets.fromLTRB(16, 0, 16, 4)),
-                  SwitchListTile(
-                    title: const Text('친구에게 게시물 보이기'),
-                    subtitle: const Text('끄면 모든 게시물이 나만 보기로 바뀌어요'),
-                    value: _postsPublic,
-                    activeThumbColor: Gp.accent,
-                    onChanged: (v) => change(() => _postsPublic = v),
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(16, 10, 16, 2),
-                    child: Text(
-                      '보여 줄 친구',
-                      style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
-                    ),
-                  ),
-                  for (final f in p.friends)
-                    CheckboxListTile(
-                      secondary: CircleThumb(image: '', label: f.name, size: 34),
-                      title: Text(f.name),
-                      subtitle: Text(
-                        '@${f.handle}',
-                        style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
-                      ),
-                      value: _postsPublic && !_hiddenFrom.contains(f.handle),
-                      activeColor: Gp.accent,
-                      onChanged:
-                          _postsPublic // 전체를 끄면 친구별 선택도 잠김 P05
-                          ? (v) => change(() => v == true ? _hiddenFrom.remove(f.handle) : _hiddenFrom.add(f.handle))
-                          : null,
-                    ),
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
-                    child: Text(
-                      '사진 한 장만 숨기려면 그 사진을 눌러 "게시물에 보이기"를 끄세요.',
-                      style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  String _postsSubtitle() {
-    if (!_postsPublic) return '나만 보기 · 친구에게 보이지 않아요';
-    final n = _hiddenFrom.length;
-    return n == 0 ? '도감에서 인증한 사진 · 친구에게 보여요' : '도감에서 인증한 사진 · 친구 $n명에게는 숨김';
+    final f = widget.friend;
+    if (f != null) {
+      final account = AccountScope.read(context);
+      final real = account.signedIn && account.friends.friends.any((x) => x.handle == f.handle);
+      // STATE: 친구 컬렉션 받기 (get_friend_collection)
+      _friendFuture = real ? loadFriendMember(account, f.handle, widget.loaders) : Future.value(f);
+    }
   }
 
   void _jump(CollectionJump j) {
@@ -185,32 +132,64 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _editProfile() {
+    if (!ensureSignedIn(context)) return;
     showModalBottomSheet<void>(
       // I-3 덮기
       context: context,
-      builder: (sheet) {
-        Widget item(IconData icon, String label) => ListTile(
-          leading: Icon(icon),
-          title: Text(label),
-          onTap: () {
-            Navigator.pop(sheet);
-            _fake(label);
-          },
-        );
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              item(Icons.account_circle_outlined, '아바타 변경'),
-              item(Icons.wallpaper_outlined, '배경 변경'),
-              item(Icons.edit_outlined, '닉네임 변경'),
-              item(Icons.sell_outlined, '취향 태그 선택'),
-              const SizedBox(height: 8),
-            ],
-          ),
-        );
-      },
+      builder: (sheet) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: const Text('이름 바꾸기'),
+              subtitle: const Text('친구에게 보이는 이름'),
+              onTap: () {
+                Navigator.pop(sheet);
+                askDisplayName(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.alternate_email),
+              title: const Text('아이디 바꾸기'),
+              subtitle: const Text('친구가 나를 찾는 @아이디'),
+              onTap: () {
+                Navigator.pop(sheet);
+                askHandle(context);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
     );
+  }
+
+  Future<void> _unfriend(Member m) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: Text('${m.name}님과 친구를 끊을까요?'),
+        content: const Text('서로의 컬렉션이 더 이상 보이지 않아요. 다시 친구가 되려면 요청을 새로 보내야 해요.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialog, false), child: const Text('취소')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Gp.danger),
+            onPressed: () => Navigator.pop(dialog, true),
+            child: const Text('친구 끊기'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    try {
+      await AccountScope.read(context).friends.remove(m.handle);
+      if (!mounted) return;
+      showToast(context, '${m.name}님과 친구를 끊었어요');
+      Navigator.of(context).maybePop();
+    } on FriendsFailure catch (e) {
+      if (mounted) showToast(context, e.message);
+    }
   }
 
   @override
@@ -228,8 +207,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
         builder: (context, snap) {
           if (snap.connectionState != ConnectionState.done) return const LoadingView(); // I-8
           if (snap.hasError) return ErrorView(message: '${snap.error}', onRetry: () => setState(_load));
-          final p = snap.data!.profile;
-          return friend == null ? _mine(p, snap.data!) : _friend(p, friend);
+          if (friend == null) return _mine(snap.data!.profile, snap.data!);
+          return FutureBuilder<Member>(
+            future: _friendFuture,
+            builder: (context, fs) {
+              if (fs.connectionState != ConnectionState.done) return const LoadingView();
+              if (fs.hasError) return ErrorView(message: '${fs.error}', onRetry: () => setState(_load));
+              return _friend(fs.data ?? friend);
+            },
+          );
         },
       ),
     );
@@ -238,81 +224,130 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _mine(Profile p, _ProfileData d) {
     final scope = widget.myChannels;
     final marks = Marks.of(context); // 앱 전체 한 벌 — 홈에서 누른 ♡ · 리본도 숫자에 반영
+    final account = AccountScope.of(context); // 로그인 · 아이디 · 친구가 바뀌면 다시 그림
     final mine = d.collection.where((k) => scope == null || scope.contains(k.franchiseId));
     final liked = mine.where(marks.liked).length;
     final owned = mine.where(marks.owned).length;
-    final photos = p.myPosts;
+    final signedIn = account.signedIn;
+    final name = signedIn ? account.displayName : p.name;
+    final handle = signedIn ? account.handle : p.handle;
     return ListView(
       padding: const EdgeInsets.only(bottom: 40),
       children: [
-        _Header(name: p.name, handle: p.handle, avatarText: p.avatarText, tags: p.tags, onEdit: _editProfile),
+        _Header(
+          name: name,
+          subtitle: handle.isNotEmpty ? '@$handle' : (signedIn ? '아이디를 아직 정하지 않았어요' : '로그인 전 · 이 기기에만 저장'),
+          avatarText: name.characters.isEmpty ? '나' : name.characters.first,
+          tags: p.tags,
+          onEdit: _editProfile,
+        ),
+        if (!signedIn)
+          _Hint(
+            // I-2 P09
+            icon: Icons.cloud_outlined,
+            text: '로그인하면 옛 Gunpula 앱의 컬렉션이 그대로 오고, 동생 · 친구와 서로의 컬렉션을 볼 수 있어요.',
+            action: '로그인',
+            onTap: () => openSignIn(context),
+          )
+        else if (account.handle.isEmpty && !account.friends.unavailable)
+          _Hint(
+            icon: Icons.alternate_email,
+            text: '친구가 나를 찾을 수 있게 아이디를 정해 주세요.',
+            action: '아이디 정하기',
+            onTap: () => askHandle(context),
+          ),
         _Stats(
           liked: liked,
           lit: d.lit,
-          verified: photos.length,
+          verified: 0, // 사진 인증은 서버가 없어 아직 0
           owned: owned,
-          spendKrw: p.spendKrw,
+          spendKrw: signedIn ? marks.store.spendKrw : p.spendKrw,
           onJump: widget.onJump == null ? null : _jump, // I-4
         ),
-        _PhotoWall(
-          // I-6
-          title: '내 게시물',
-          subtitle: _postsSubtitle(),
-          photos: photos,
-          hidden: _postsPublic ? _hiddenPhotos : {for (final ph in photos) ph.id},
-          trailing: IconButton(
-            // I-9
-            tooltip: '공개 범위',
-            onPressed: () => _openPrivacy(p),
-            icon: Icon(_postsPublic ? Icons.group_outlined : Icons.lock_outline, color: Gp.muted, size: 21),
-          ),
-          onOpen: (ph) => _openPhoto(ph, mine: true),
-        ),
-        SectionPanel(
-          // I-5
-          padding: const EdgeInsets.only(bottom: 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SectionHeader('공유 공간 초대', subtitle: '${p.workspace} · 친구 목록은 왼쪽 위 아바타(친구 서랍)에서'),
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                padding: const EdgeInsets.fromLTRB(14, 6, 4, 6),
-                decoration: BoxDecoration(color: Gp.bg, borderRadius: BorderRadius.circular(Gp.radius)),
-                child: Row(
-                  children: [
-                    const Text(
-                      '초대 코드',
-                      style: TextStyle(color: Gp.muted, fontSize: Gp.t12),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(p.inviteCode, style: const TextStyle(fontWeight: FontWeight.w700, letterSpacing: 2)),
-                    ),
-                    IconButton(
-                      tooltip: '초대 코드 복사', // P07
-                      onPressed: () {
-                        Clipboard.setData(ClipboardData(text: p.inviteCode));
-                        showToast(context, '초대 코드를 복사했어요');
-                      },
-                      icon: const Icon(Icons.content_copy_rounded, size: 18, color: Gp.muted),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
+        if (signedIn) _friendsPanel(account),
       ],
     );
   }
 
-  Widget _friend(Profile p, Member m) {
-    final photos = p.showcase.where((s) => s.owner == m.handle).toList();
+  /// I-5 친구 추가 (초대 코드 대신 내 @아이디)
+  Widget _friendsPanel(Account account) {
+    final f = account.friends;
+    return SectionPanel(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SectionHeader(
+            '친구',
+            subtitle: f.unavailable ? '서버에 친구 기능이 아직 없어요' : '친구 ${f.friends.length}명 · 목록은 왼쪽 위 아바타(친구 서랍)에서',
+          ),
+          if (account.handle.isNotEmpty)
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.fromLTRB(14, 6, 4, 6),
+              decoration: BoxDecoration(color: Gp.bg, borderRadius: BorderRadius.circular(Gp.radius)),
+              child: Row(
+                children: [
+                  const Text(
+                    '내 아이디',
+                    style: TextStyle(color: Gp.muted, fontSize: Gp.t12),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text('@${account.handle}', style: const TextStyle(fontWeight: FontWeight.w700)),
+                  ),
+                  IconButton(
+                    tooltip: '아이디 복사', // P07
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: '@${account.handle}'));
+                      showToast(context, '아이디를 복사했어요 · 친구에게 보내 주세요');
+                    },
+                    icon: const Icon(Icons.content_copy_rounded, size: 18, color: Gp.muted),
+                  ),
+                ],
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilledButton.tonalIcon(
+                  onPressed: () => showAddFriend(context),
+                  icon: const Icon(Icons.person_add_alt_1_outlined, size: 18),
+                  label: const Text('아이디로 친구 추가'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => showFriendRequests(context),
+                  icon: Badge(
+                    isLabelVisible: f.incoming.isNotEmpty,
+                    label: Text('${f.incoming.length}'),
+                    backgroundColor: Gp.accent,
+                    child: const Icon(Icons.mail_outline, size: 18),
+                  ),
+                  label: const Text('친구 요청'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _friend(Member m) {
+    final account = AccountScope.of(context);
+    final real = account.signedIn && account.friends.friends.any((x) => x.handle == m.handle);
     return ListView(
       padding: const EdgeInsets.only(bottom: 40),
       children: [
-        _Header(name: m.name, handle: m.handle, avatarText: m.name.characters.first, tags: [m.role]),
+        _Header(
+          name: m.name,
+          subtitle: '@${m.handle}',
+          avatarText: m.name.characters.isEmpty ? '?' : m.name.characters.first,
+          tags: [if (m.role.isNotEmpty) m.role],
+        ),
         _Stats(
           liked: m.liked,
           lit: m.lit,
@@ -320,36 +355,61 @@ class _ProfileScreenState extends State<ProfileScreen> {
           owned: m.owned,
           onJump: (j) => openFriendCollection(context, m, j, loaders: widget.loaders), // I-11
         ),
-        _PhotoWall(
-          title: '${m.name}의 게시물',
-          subtitle: '저장하면 워터마크가 들어갈 수 있어요',
-          photos: photos,
-          onOpen: (ph) => _openPhoto(ph, mine: false),
-        ),
+        if (real)
+          Padding(
+            // I-12 P05
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+            child: OutlinedButton.icon(
+              onPressed: () => _unfriend(m),
+              style: OutlinedButton.styleFrom(foregroundColor: Gp.danger),
+              icon: const Icon(Icons.person_remove_outlined, size: 18),
+              label: const Text('친구 끊기'),
+            ),
+          ),
       ],
     );
   }
+}
 
-  void _openPhoto(ShowcasePhoto ph, {required bool mine}) {
-    Navigator.of(context).push(
-      CupertinoPageRoute<void>(
-        builder: (_) => PhotoViewScreen(
-          photo: ph,
-          mine: mine,
-          shown: !_hiddenPhotos.contains(ph.id),
-          watermark: _watermark[ph.id] ?? ph.watermark,
-          onShown: (v) => setState(() => v ? _hiddenPhotos.remove(ph.id) : _hiddenPhotos.add(ph.id)),
-          onWatermark: (v) => setState(() => _watermark[ph.id] = v),
-        ),
+/// I-2 안내 카드 (로그인 · 아이디)
+class _Hint extends StatelessWidget {
+  const _Hint({required this.icon, required this.text, required this.action, required this.onTap});
+  final IconData icon;
+  final String text;
+  final String action;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SectionPanel(
+      padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+      child: Row(
+        children: [
+          Icon(icon, color: Gp.accent),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(text, style: const TextStyle(fontSize: Gp.t12, height: 1.4)),
+          ),
+          const SizedBox(width: 8),
+          FilledButton(onPressed: onTap, child: Text(action)),
+        ],
       ),
     );
   }
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.name, required this.handle, required this.avatarText, required this.tags, this.onEdit});
+  const _Header({
+    required this.name,
+    required this.subtitle,
+    required this.avatarText,
+    required this.tags,
+    this.onEdit,
+  });
   final String name;
-  final String handle;
+
+  /// @아이디 (없으면 안내 글)
+  final String subtitle;
   final String avatarText;
   final List<String> tags;
 
@@ -367,13 +427,19 @@ class _Header extends StatelessWidget {
             children: [
               Container(height: 70, color: Gp.soft), // 배경(커버)
               const SizedBox(height: 56), // 아바타가 겹쳐 앉는 자리
-              Text(
-                name,
-                style: const TextStyle(fontSize: Gp.t19, fontWeight: FontWeight.w700),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  name,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: Gp.t19, fontWeight: FontWeight.w700),
+                ),
               ),
-              Text('@$handle', style: const TextStyle(color: Gp.muted)),
-              const SizedBox(height: 10),
-              Wrap(spacing: 6, children: [for (final t in tags) TagPill(t)]), // I-2 P06
+              Text(subtitle, style: const TextStyle(color: Gp.muted)),
+              if (tags.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Wrap(spacing: 6, children: [for (final t in tags) TagPill(t)]), // P06
+              ],
               if (onEdit != null) ...[
                 const SizedBox(height: 14),
                 OutlinedButton(
@@ -466,19 +532,21 @@ class _Stats extends StatelessWidget {
                   '도감 레벨',
                   'Lv.${guideLevel(lit, verified)}',
                   CollectionJump.guide,
-                  extra: Padding(
-                    padding: const EdgeInsets.only(left: 6),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const VerifiedBadge(size: 16),
-                        Text(
-                          ' $verified',
-                          style: const TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w600),
+                  extra: verified == 0
+                      ? null // 사진 인증은 아직 서버가 없어 0 이면 배지를 숨긴다
+                      : Padding(
+                          padding: const EdgeInsets.only(left: 6),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const VerifiedBadge(size: 16),
+                              Text(
+                                ' $verified',
+                                style: const TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ),
                         ),
-                      ],
-                    ),
-                  ),
                 ),
                 const VerticalDivider(width: 1, indent: 6, endIndent: 6),
                 stat('구매함', '$owned', CollectionJump.owned),
@@ -493,227 +561,6 @@ class _Stats extends StatelessWidget {
             ),
           ],
         ],
-      ),
-    );
-  }
-}
-
-/// I-6 게시물 3열
-class _PhotoWall extends StatelessWidget {
-  const _PhotoWall({
-    required this.title,
-    required this.subtitle,
-    required this.photos,
-    required this.onOpen,
-    this.hidden = const {},
-    this.trailing,
-  });
-  final String title;
-  final String subtitle;
-  final List<ShowcasePhoto> photos;
-  final ValueChanged<ShowcasePhoto> onOpen;
-
-  /// 친구에게 숨긴 사진 (흐리게 + 눈 꺼짐)
-  final Set<String> hidden;
-  final Widget? trailing;
-
-  @override
-  Widget build(BuildContext context) {
-    return SectionPanel(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SectionHeader(title, subtitle: subtitle, trailing: trailing),
-          if (photos.isEmpty)
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 0, 16, 4),
-              child: Text(
-                '아직 게시물이 없어요 · 도감에서 "내 사진"으로 인증하면 여기에 모여요', // P09
-                style: TextStyle(color: Gp.muted, fontSize: Gp.t12),
-              ),
-            )
-          else
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: GridView.count(
-                crossAxisCount: 3,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 6,
-                crossAxisSpacing: 6,
-                children: [
-                  for (final ph in photos)
-                    GestureDetector(
-                      onTap: () => onOpen(ph),
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          Opacity(opacity: hidden.contains(ph.id) ? 0.35 : 1, child: PhotoThumb(ph.image, radius: 10)),
-                          const Positioned(right: 5, bottom: 5, child: VerifiedBadge(size: 20)),
-                          if (hidden.contains(ph.id))
-                            const Center(child: Icon(Icons.visibility_off_outlined, color: Gp.ink, size: 26)),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-/// I-7 사진 한 장 보기 — 다른 사람이 저장할 때의 워터마크 미리보기 + 끄고 켜기(내 사진만)
-class PhotoViewScreen extends StatefulWidget {
-  const PhotoViewScreen({
-    super.key,
-    required this.photo,
-    required this.mine,
-    this.shown = true,
-    this.watermark,
-    this.onShown,
-    this.onWatermark,
-  });
-  final ShowcasePhoto photo;
-  final bool mine;
-
-  /// 내 게시물에 보이는지 (I-10)
-  final bool shown;
-
-  /// null 이면 데이터 값
-  final bool? watermark;
-  final ValueChanged<bool>? onShown;
-  final ValueChanged<bool>? onWatermark;
-
-  @override
-  State<PhotoViewScreen> createState() => _PhotoViewScreenState();
-}
-
-class _PhotoViewScreenState extends State<PhotoViewScreen> {
-  late bool _watermark = widget.watermark ?? widget.photo.watermark;
-  late bool _shown = widget.shown;
-
-  void _save() {
-    final mark = watermarkText(widget.photo.owner);
-    final msg = widget.mine ? '내 사진은 워터마크 없이 저장했어요' : (_watermark ? '「$mark」 워터마크가 들어간 사진을 저장했어요' : '사진을 저장했어요');
-    showToast(context, msg);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final ph = widget.photo;
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          ph.unit,
-          style: const TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w600),
-        ),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: AspectRatio(
-              aspectRatio: 1,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  ColoredBox(
-                    color: Gp.panel,
-                    child: AppImage(ph.image, fit: BoxFit.contain),
-                  ),
-                  if (_watermark) Positioned(right: 10, bottom: 10, child: _Watermark(text: watermarkText(ph.owner))),
-                ],
-              ),
-            ),
-          ),
-          if (_watermark && widget.mine)
-            const Padding(
-              padding: EdgeInsets.only(top: 6),
-              child: Text(
-                '다른 사람이 저장하면 이렇게 보여요',
-                textAlign: TextAlign.right,
-                style: TextStyle(fontSize: Gp.t11, color: Gp.faint),
-              ),
-            ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              const VerifiedBadge(size: 20),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text('${ph.work} · ${ph.unit}', style: const TextStyle(fontWeight: FontWeight.w600)),
-              ),
-            ],
-          ),
-          const Padding(
-            padding: EdgeInsets.only(left: 24, top: 2),
-            child: Text(
-              '도감에서 인증한 사진',
-              style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
-            ),
-          ),
-          const SizedBox(height: 8),
-          if (widget.mine)
-            SwitchListTile(
-              // I-10 P05
-              contentPadding: EdgeInsets.zero,
-              title: const Text('게시물에 보이기'),
-              subtitle: Text(_shown ? '친구가 볼 수 있어요' : '나만 볼 수 있어요 (게시물에서 흐리게 보여요)'),
-              value: _shown,
-              activeThumbColor: Gp.accent,
-              onChanged: (v) {
-                setState(() => _shown = v); // STATE: 이 사진 공개 → 게시물 칸
-                widget.onShown?.call(v);
-              },
-            ),
-          if (widget.mine)
-            SwitchListTile(
-              // I-7 P05
-              contentPadding: EdgeInsets.zero,
-              title: const Text('다른 사람이 저장할 때 워터마크'),
-              subtitle: Text('${watermarkText(ph.owner)} 이(가) 오른쪽 아래에 들어가요'),
-              value: _watermark,
-              activeThumbColor: Gp.accent,
-              onChanged: (v) {
-                setState(() => _watermark = v); // STATE: 워터마크 → 미리보기
-                widget.onWatermark?.call(v);
-              },
-            )
-          else
-            Text(
-              _watermark ? '@${ph.owner} 님의 사진 · 저장하면 워터마크가 들어가요' : '@${ph.owner} 님이 워터마크를 껐어요',
-              style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
-            ),
-          const SizedBox(height: 16),
-          OutlinedButton.icon(
-            onPressed: _save,
-            style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(46)),
-            icon: const Icon(Icons.download_outlined, size: 20),
-            label: const Text('사진 저장'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// 사진 오른쪽 아래 워터마크 — 작은 반투명 띠
-class _Watermark extends StatelessWidget {
-  const _Watermark({required this.text});
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(color: const Color(0x47000000), borderRadius: BorderRadius.circular(6)),
-      child: Text(
-        text,
-        style: const TextStyle(color: Colors.white, fontSize: Gp.t11, fontWeight: FontWeight.w600, letterSpacing: 0.3),
       ),
     );
   }

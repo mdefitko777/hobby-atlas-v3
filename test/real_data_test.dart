@@ -67,6 +67,12 @@ void main() {
     }
     // ignore: avoid_print
     print('도감 작품 ${works.length}개, ${seed.name} 기체 ${units.length}개 (상품 연결 ${units.where((u) => u.kitIds.isNotEmpty).length})');
+    // 친구 도감 비교: 친구가 그 상품을 샀으면 그 작품에 1칸 이상
+    if (withKit.kitIds.isNotEmpty) {
+      final friend = await deriveFriendGuide([withKit.kitIds.first]);
+      expect(friend[seed.id], greaterThanOrEqualTo(1));
+    }
+    expect(await deriveFriendGuide(const []), isEmpty);
   }, skip: skip);
 
   test('베이블레이드: 상품마다 부품 · 세계관 줄', () async {

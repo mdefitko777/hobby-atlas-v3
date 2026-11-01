@@ -39,6 +39,10 @@ dependencies:
   file_picker: ^13.3.0
   cached_network_image: ^4.0.6
   web: ^1.1.2
+  # 계정 · 동기화 · 친구: 옛 Gunpula 와 같은 Supabase 프로젝트 (이메일 코드 로그인 + RPC)
+  supabase_flutter: ^2.18.3
+  # 로그인 세션(refresh token)을 SharedPreferences 평문 대신 안드로이드 키스토어 암호화로 보관
+  flutter_secure_storage: ^11.2.0
 
 dev_dependencies:
   flutter_test:
@@ -72,6 +76,8 @@ flutter:
     - assets/gp/bbx/
     - assets/gp/parts/
     - assets/gp/ann/
+    # 계정 · 동기화: Gunpula Supabase 주소 + anon key (공개용 값, lib/sync/supabase_backend.dart)
+    - config/supabase.json
 
   # To add assets to your application, add an assets section, like this:
   # assets:

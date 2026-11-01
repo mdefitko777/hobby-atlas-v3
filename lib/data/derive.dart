@@ -4,6 +4,8 @@ import '../models.dart';
 import 'catalog.dart';
 import 'gunpula.dart';
 import 'user_store.dart';
+import '../sync/account.dart';
+import '../sync/friends_service.dart' show PublicProfile;
 
 String _str(Object? v) => v is String ? v : '';
 Map<String, Object?> _map(Object? v) => v is Map<String, Object?> ? v : const {};
@@ -131,6 +133,26 @@ Future<List<GuideUnit>> deriveGuideUnits(String workId) async {
           ],
         ),
   ];
+}
+
+/// 친구 도감 비교: 친구가 산 상품 → 작품 id 별 모은 기체 수 (친구의 "손으로 켜기"는 기기에만 있어 안 셈)
+Future<Map<String, int>> deriveFriendGuide(List<String> ownedKitIds) async {
+  if (ownedKitIds.isEmpty) return const {};
+  await _cat.ensureLoaded();
+  final g = await _gget();
+  final owned = ownedKitIds.toSet();
+  final litUnits = <int>{
+    for (final u in g.units)
+      if ((g.unitKits['${_int(u['unit_id'])}'] ?? const <String>[]).any(owned.contains)) _int(u['unit_id']),
+  };
+  if (litUnits.isEmpty) return const {};
+  final out = <String, int>{};
+  for (final w in g.works) {
+    final id = _int(w['work_id']);
+    final n = g.units.where((u) => litUnits.contains(_int(u['unit_id'])) && _inWork(u, id)).length;
+    if (n > 0) out['$id'] = n;
+  }
+  return out;
 }
 
 // ── 베이블레이드 X: phstudy 상품 · 시리즈 · 부품 ──────────────────────────────
@@ -333,20 +355,34 @@ Future<List<AppNotice>> deriveNotifications() async {
   return out;
 }
 
-// ── 내 정보 (계정 연결 전: 기기 기록만) ───────────────────────────────────────
+// ── 내 정보 (이름 · 아이디 · 친구는 계정에서, 숫자는 기기 기록에서) ──────────────
 Future<Profile> deriveProfile() async {
-  final name = _me.member == 'member' ? '나' : _me.member;
+  final a = Account.instance;
+  final name = a.signedIn ? a.displayName : (_me.member == 'member' ? '나' : _me.member);
   return Profile(
     name: name,
-    handle: '',
+    handle: a.handle,
     avatarText: name.characters.isEmpty ? '나' : name.characters.first,
     tags: const [],
     spendKrw: _me.spendKrw,
-    workspace: '',
+    workspace: a.sync.workspace?.name ?? '',
     inviteCode: '',
     members: const [],
     showcase: const [],
-    friends: const [],
+    friends: [
+      for (final f in a.signedIn ? a.friends.friends : const <PublicProfile>[])
+        Member(
+          name: f.name,
+          handle: f.handle,
+          role: '친구',
+          self: false,
+          liked: a.friends.collections[f.handle]?.likedIds.length ?? 0,
+          lit: 0,
+          owned: a.friends.collections[f.handle]?.ownedIds.length ?? 0,
+          likedIds: a.friends.collections[f.handle]?.likedIds ?? const [],
+          ownedIds: a.friends.collections[f.handle]?.ownedIds ?? const [],
+        ),
+    ],
     suggested: const [],
   );
 }

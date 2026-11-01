@@ -1,0 +1,5 @@
+{
+ "_comment": "Gunpula 의 Supabase 프로젝트 (공개용 값 — app/sync-config.js 와 같음). 데이터는 RLS + authenticated 전용 RPC 가 지킨다.",
+ "url": "https://wubayglibvumuozhkmew.supabase.co",
+ "anon_key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1YmF5Z2xpYnZ1bXVvemhrbWV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2OTM1NDYsImV4cCI6MjA5NzI2OTU0Nn0.URi5M9KFZ47NX2Yd53uPu9E5Tokjsy_jmfZTMbmFS9E"
+}
