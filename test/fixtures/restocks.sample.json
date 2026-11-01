@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "updated_at": "2026-11-02",
+  "generated_at": "2026-11-02T04:10:00.000Z",
+  "baseline": "2026-11-01",
+  "history_months": 24,
+  "kinds": ["pb_resale", "retail_resale", "tamashii_resale", "lottery"],
+  "counts": {"pb_resale": 3, "retail_resale": 1, "tamashii_resale": 1, "lottery": 1},
+  "sources": ["pb_news"],
+  "events": [
+    {"kit_id": "hg-001", "date": "2026-12", "kind": "pb_resale", "source_url": "https://p-bandai.jp/item/item-1000260724/", "announced_at": "2026-10-30", "seen": "2026-11-02", "source": "pb_news", "title": "ＨＧ 1/144 ガンダムローズ【再販】【３次：２０２６年１２月発送】"},
+    {"kit_id": "hg-001", "date": "2025-06-14", "kind": "retail_resale", "source_url": "https://bandai-hobby.net/news/1", "announced_at": "2025-05-01", "seen": "2026-11-01", "source": "pb_news", "title": "old", "quiet": true},
+    {"kit_id": "hg-001", "date": "2026-12", "kind": "pb_resale", "source_url": "https://p-bandai.jp/item/item-1000260724/", "announced_at": "2026-10-30", "seen": "2026-11-02", "source": "pb_news", "title": "dup"},
+    {"kit_id": "mg-002", "date": "2026-11-20", "kind": "tamashii_resale", "source_url": "javascript:alert(1)", "announced_at": "2026-10-20", "seen": "2026-11-02", "source": "pb_news", "title": "魂", "date_estimated": true, "previous_date": "2026-10"},
+    {"kit_id": "rg-003", "date": "2027-01", "kind": "lottery", "source_url": "", "announced_at": "2026-10-31", "seen": "2026-11-02", "source": "pb_news", "title": "抽選"},
+    {"kit_id": "", "date": "2026-12", "kind": "pb_resale"},
+    {"kit_id": "bad-date", "date": "12월 중", "kind": "pb_resale"}
+  ],
+  "by_kit": {"hg-001": [0, 1, 2], "mg-002": [3], "rg-003": [4]}
+}

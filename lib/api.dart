@@ -3,8 +3,10 @@
 import 'data/bbx_builder_data.dart';
 import 'data/catalog.dart';
 import 'data/derive.dart';
+import 'data/restocks.dart';
 import 'data/user_store.dart';
 import 'logic/kit_rules.dart';
+import 'logic/restock.dart';
 import 'models.dart';
 
 /// 화면에 그대로 보여 줄 수 있는 오류 문장
@@ -86,6 +88,9 @@ Future<Map<String, int>> fetchFriendGuide(List<String> ownedKitIds) => _guard(()
 /// 건담 작품 도감: 화수 · 장 묶음 (data/atlas/gundam-chapters.json — 없으면 빈 목록)
 Future<List<GuideChapter>> fetchGuideChapters(String workId) => _guard(() => deriveGuideChapters(workId));
 
+/// 상세 · 캘린더: 재판매 소식 (data/atlas/restocks.json — 없으면 빈 묶음, 오류를 내지 않는다)
+Future<RestockIndex> fetchRestocks() => loadRestocks();
+
 /// 화면 사이에 그대로 넘겨 주는 데이터 함수 묶음 (의존성 주입).
 /// 앱은 기본값(실제 데이터)을, 테스트는 가짜 함수를 넣는다.
 class Loaders {
@@ -104,6 +109,7 @@ class Loaders {
     this.friendGuide = fetchFriendGuide,
     this.guideChapters = fetchGuideChapters,
     this.kitsByJan = fetchKitsByJan,
+    this.restocks = fetchRestocks,
   });
 
   final Future<List<Kit>> Function(List<String> channelIds) kits;
@@ -124,4 +130,7 @@ class Loaders {
 
   /// 바코드(JAN · EAN · UPC) → 그 상품들
   final Future<List<Kit>> Function(String code) kitsByJan;
+
+  /// 재판매 소식 (kit_id 별) — 없으면 빈 묶음
+  final Future<RestockIndex> Function() restocks;
 }

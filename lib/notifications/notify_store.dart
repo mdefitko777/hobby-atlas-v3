@@ -12,6 +12,7 @@ import '../channels.dart' show defaultMyChannels;
 import '../data/blob_store.dart';
 import '../data/catalog.dart';
 import '../data/user_store.dart';
+import '../logic/preorder.dart' show Preorder;
 import '../models.dart';
 import 'feed_rules.dart' show annRank, annStageKey;
 import 'local_notifier.dart';
@@ -287,7 +288,7 @@ class NotifyStore extends ChangeNotifier {
     _configTimer = Timer(const Duration(milliseconds: 600), () => unawaited(_writeConfig()));
   }
 
-  /// 설정 + 내 채널 · 좋아요 id · 좋아요한 PB 상품의 예약 기간 → notify_config.json (백그라운드 확인이 읽는다)
+  /// 설정 + 내 채널 · 좋아요 · 구매함 id · 좋아요한 PB 상품의 예약 기간 · 예약 도착 → notify_config.json (백그라운드 확인이 읽는다)
   Future<void> _writeConfig() async {
     _configTimer?.cancel();
     if (!persist) return;
@@ -297,6 +298,10 @@ class NotifyStore extends ChangeNotifier {
     config
       ..channels = [...me.myChannels]
       ..wanted = wanted.toSet()
+      ..owned = me
+          .idsWith(const {CollectStatus.owned})
+          .toSet() // 재판매 알림만
+      ..preorders = byId.isEmpty ? config.preorders : preorderDuesFor(me.activePreorders, byId)
       // 카탈로그를 아직 못 읽었으면(앱을 막 켰을 때 · 오프라인 첫 실행) 지난번 예약 기간을 그대로 둔다 —
       // 빈 목록으로 덮으면 그 사이 백그라운드 확인이 PB 예약 알림을 놓친다. 좋아요를 뺀 상품은 확인할 때 걸러진다.
       ..pb = byId.isEmpty ? config.pb : pbWindowsFor(wanted, byId, DateTime.now())
@@ -318,6 +323,20 @@ class NotifyScope extends InheritedNotifier<NotifyStore> {
   static NotifyStore read(BuildContext context) =>
       context.getInheritedWidgetOfExactType<NotifyScope>()?.notifier ?? NotifyStore.instance;
 }
+
+/// 기다리는 예약 중 도착 예정을 적은 것 (도착 달 · 도착 날 알림)
+List<PreorderDue> preorderDuesFor(Map<String, Preorder> active, Map<String, Kit> byId) => [
+  for (final e in active.entries)
+    if (e.value.arrival.isNotEmpty)
+      PreorderDue(
+        id: e.key,
+        name: byId[e.key]?.name ?? e.key,
+        franchise: byId[e.key]?.franchiseId ?? '',
+        arrival: e.value.arrival,
+        due: e.value.due,
+        shop: e.value.shop,
+      ),
+];
 
 /// 좋아요한 상품 중 발매일이 하루까지 정해져 있고 아직 안 지난 것 (D-7 · D-1 · 당일 알림)
 List<ReleaseDay> releaseDaysFor(Iterable<String> wantedIds, Map<String, Kit> byId, DateTime now) {

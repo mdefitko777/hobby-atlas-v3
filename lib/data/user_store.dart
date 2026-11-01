@@ -6,7 +6,8 @@
 //   · 이 기기에만 = 베이 부품 · 베이 연결 · 베이 조합 · 덱 · 도감 손으로 켜기 · 메자스타 · 프렌다 태그 · 최근 본 것 · 내 사진 목록 · 취향 태그 (payload 에 넣지 않음)
 //     (내 사진 중 친구에게 보이기를 켠 것은 lib/sync/photo_share.dart 가 Storage 에, 태그는 v3 preferences.tags 에 따로 올린다)
 //     최근 검색어 · 검색 횟수 · 컬렉션 휴지통도 이 기기에만
-// 나눈 곳 (같은 라이브러리의 part): user_store/atlas_local · history · trash · profile_local · import
+//   · 조립 상태 · 예약 = local_state 'build_status' · 'preorders' (items 에 칸을 더하지 않는다 — user_store/kit_progress)
+// 나눈 곳 (같은 라이브러리의 part): user_store/atlas_local · history · trash · profile_local · import · kit_progress
 library;
 
 import 'dart:async';
@@ -18,6 +19,8 @@ import '../bbx/combo.dart' show Combo, Deck;
 import '../channels.dart' show defaultMyChannels;
 import '../format.dart' show dayKey;
 import '../json_util.dart';
+import '../logic/build_status.dart';
+import '../logic/preorder.dart';
 import '../logic/spend.dart';
 import '../models.dart';
 import '../sync/collection_merge.dart' show collectionStatuses, normalizeCollectionEntry;
@@ -28,10 +31,11 @@ import 'social_local.dart';
 part 'user_store/atlas_local.dart';
 part 'user_store/history.dart';
 part 'user_store/import.dart';
+part 'user_store/kit_progress.dart';
 part 'user_store/profile_local.dart';
 part 'user_store/trash.dart';
 
-class UserStore extends ChangeNotifier with _AtlasLocal, _History, _ProfileLocal, _Trash {
+class UserStore extends ChangeNotifier with _AtlasLocal, _History, _ProfileLocal, _Trash, _KitProgress {
   UserStore._() : persist = true;
 
   /// 테스트용: 파일에 쓰지 않는다
@@ -160,6 +164,7 @@ class UserStore extends ChangeNotifier with _AtlasLocal, _History, _ProfileLocal
       ..clear()
       ..addAll(_trashFrom(local['trash']));
     _purgeTrash(DateTime.now());
+    _loadKitProgress(local);
   }
 
   Map<String, Object?> toJson() => {
@@ -185,6 +190,7 @@ class UserStore extends ChangeNotifier with _AtlasLocal, _History, _ProfileLocal
       'recent_searches': recentSearches,
       'search_counts': searchCounts,
       'trash': _trashJson(),
+      ..._kitProgressJson(),
     },
   };
 
@@ -318,6 +324,45 @@ class UserStore extends ChangeNotifier with _AtlasLocal, _History, _ProfileLocal
     _changed(shared: true);
   }
 
+  /// 예약한 상품이 도착했다 — [toOwned] 면 구매함으로 옮기고 예약 총액을 내 구매가로 (예약은 지움으로 남긴다).
+  /// 아니면 도착만 적는다 (좋아요 그대로). 되돌리기는 [undoArrival]
+  ({Map<String, Object?>? entry, Preorder pre})? preorderArrived(String kitId, {required bool toOwned}) {
+    final pre = preorderOf(kitId);
+    if (pre == null) return null;
+    final before = (entry: _items[kitId] == null ? null : {..._items[kitId]!}, pre: pre);
+    final now = _now();
+    preorders[kitId] = pre.copyWith(arrivedAt: now, deleted: toOwned, updatedAt: now);
+    if (toOwned) {
+      final old = _items[kitId];
+      _items[kitId] = {
+        ...?old,
+        'status': 'owned',
+        'updated_at': now,
+        'updated_by': member,
+        'quantity': old?['quantity'] ?? 1,
+        'purchase_price': ?pre.price,
+      };
+    }
+    _changed(shared: toOwned);
+    return before;
+  }
+
+  /// [preorderArrived] 되돌리기 — 수집 기록 · 예약을 앞의 값으로 (시각은 새로)
+  void undoArrival(String kitId, ({Map<String, Object?>? entry, Preorder pre}) before) {
+    final now = _now();
+    preorders[kitId] = before.pre.copyWith(updatedAt: now);
+    final e = before.entry;
+    final cur = _items[kitId];
+    // 구매함으로 옮겼을 때만 수집 기록이 바뀌었다 (상태 · 구매가)
+    final moved = jStr(e?['status']) != jStr(cur?['status']) || e?['purchase_price'] != cur?['purchase_price'];
+    if (moved) {
+      _items[kitId] = e == null
+          ? {...?cur, 'status': 'deleted', 'updated_at': now, 'updated_by': member}
+          : {...e, 'updated_at': now, 'updated_by': member};
+    }
+    _changed(shared: moved);
+  }
+
   void setMyChannels(List<String> ids) {
     if (listEquals(ids, myChannels)) return;
     myChannels
@@ -428,6 +473,9 @@ class UserStore extends ChangeNotifier with _AtlasLocal, _History, _ProfileLocal
     syncedAccount = accountId;
     member = 'member';
     _items.clear();
+    // 조립 상태 · 예약은 앞 계정의 구매함 · 좋아요에 붙은 기록이라 같이 비운다
+    buildStatus.clear();
+    preorders.clear();
     payloadExtra = {};
     collectionExtra = {};
     cloudDirty = false;

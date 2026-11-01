@@ -39,6 +39,8 @@ const auxFiles = [
   'atlas/mezastar-intl.json',
   'atlas/mezastar-jp.json',
   'atlas/pokemon-frienda.json',
+  // 재판매(再販) 소식 — Gunpula 작업 중 (없으면 404 → 상세 · 캘린더의 재판매 칸만 숨김, lib/data/restocks.dart)
+  'atlas/restocks.json',
 ];
 
 /// `./assets/…` · `../app/assets/…` 처럼 Gunpula 웹앱 기준 상대 경로 → 전체 주소

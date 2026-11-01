@@ -17,6 +17,10 @@ const notifyRuleDefaults = <String, bool>{
   'wanted': true,
   'pb_window': true,
   'release_soon': true,
+  // 좋아요 · 구매함 상품의 재판매(再販) 소식 (Gunpula 피드 change_reasons 'restock')
+  'restock': true,
+  // 예약한 상품의 도착 달 · 도착 날 (기기에 적은 예약 — lib/logic/preorder.dart)
+  'preorder_arrival': true,
   'gundam': false,
   'armored_core': false,
   'pokemon': false,
@@ -24,7 +28,16 @@ const notifyRuleDefaults = <String, bool>{
 };
 
 /// 관심 항목 (켜 두면 그 항목만) · 세계관 전체 (그 채널의 새 상품 전부)
-const notifyInterestRules = ['premium_bandai', 'seed_00', 'bbx', 'wanted', 'pb_window', 'release_soon'];
+const notifyInterestRules = [
+  'premium_bandai',
+  'seed_00',
+  'bbx',
+  'wanted',
+  'pb_window',
+  'release_soon',
+  'restock',
+  'preorder_arrival',
+];
 const notifyWorldRules = ['gundam', 'armored_core', 'pokemon', 'fate'];
 
 const notifyRuleLabels = <String, String>{
@@ -34,6 +47,8 @@ const notifyRuleLabels = <String, String>{
   'wanted': '좋아요한 상품',
   'pb_window': 'PB 예약 기간',
   'release_soon': '발매 D-7 · D-1',
+  'restock': '재판매',
+  'preorder_arrival': '예약 도착',
   'gundam': '건담 전체',
   'armored_core': '아머드 코어 전체',
   'pokemon': '포켓몬 전체',
@@ -90,6 +105,53 @@ class ReleaseDay {
   }
 }
 
+/// 예약한 상품의 도착 예정 (기기 local_state 'preorders' 에서 앱 화면이 옮겨 적는다) — 도착 달 · 도착 날 알림
+class PreorderDue {
+  const PreorderDue({
+    required this.id,
+    required this.name,
+    required this.arrival,
+    this.franchise = '',
+    this.due = 0,
+    this.shop = '',
+  });
+
+  final String id;
+  final String name;
+  final String franchise;
+
+  /// 'YYYY-MM' 또는 'YYYY-MM-DD'
+  final String arrival;
+
+  /// 아직 낼 돈 (원, 결제 완료면 0)
+  final int due;
+  final String shop;
+
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'name': name,
+    'franchise': franchise,
+    'arrival': arrival,
+    if (due > 0) 'due': due,
+    if (shop.isNotEmpty) 'shop': shop,
+  };
+
+  static PreorderDue? fromJson(Object? json) {
+    final j = jMap(json);
+    final id = jStr(j['id']);
+    final arrival = RegExp(r'^\d{4}-\d{2}(-\d{2})?$').hasMatch(jStr(j['arrival'])) ? jStr(j['arrival']) : '';
+    if (id.isEmpty || arrival.isEmpty) return null;
+    return PreorderDue(
+      id: id,
+      name: jStr(j['name']),
+      franchise: jStr(j['franchise']),
+      arrival: arrival,
+      due: j['due'] is num ? (j['due']! as num).toInt() : 0,
+      shop: jStr(j['shop']),
+    );
+  }
+}
+
 /// 설정 + 확인할 대상. 앱 화면이 만들어 저장하고, 백그라운드 확인이 읽는다.
 class NotifyConfig {
   NotifyConfig({
@@ -100,12 +162,16 @@ class NotifyConfig {
     this.permissionAsked = false,
     List<String>? channels,
     Set<String>? wanted,
+    Set<String>? owned,
+    List<PreorderDue>? preorders,
     List<PbWindow>? pb,
     List<ReleaseDay>? releases,
     Map<String, FollowedAnn>? followed,
   }) : rules = {...notifyRuleDefaults, ...?rules},
        channels = channels ?? const ['gundam', 'beyblade', 'pokemon'],
        wanted = wanted ?? const {},
+       owned = owned ?? const {},
+       preorders = preorders ?? const [],
        pb = pb ?? const [],
        releases = releases ?? const [],
        followed = followed ?? {};
@@ -125,6 +191,12 @@ class NotifyConfig {
 
   List<String> channels;
   Set<String> wanted;
+
+  /// 구매함 id — 재판매 알림만 본다 (좋아요한 상품의 다른 알림과 섞지 않는다)
+  Set<String> owned;
+
+  /// 기다리는 예약 중 도착 예정이 있는 것
+  List<PreorderDue> preorders;
   List<PbWindow> pb;
 
   /// 좋아요한 상품 중 발매일이 아직 안 지난 것 (D-7 · D-1 · 당일 알림)
@@ -145,6 +217,8 @@ class NotifyConfig {
     'channels': channels,
     'wanted': wanted.toList(),
     'pb': [for (final w in pb) w.toJson()],
+    if (owned.isNotEmpty) 'owned': owned.toList(),
+    if (preorders.isNotEmpty) 'preorders': [for (final p in preorders) p.toJson()],
     if (releases.isNotEmpty) 'releases': [for (final r in releases) r.toJson()],
     if (followed.isNotEmpty) 'followed': {for (final e in followed.entries) e.key: e.value.toJson()},
   };
@@ -162,6 +236,8 @@ class NotifyConfig {
       permissionAsked: j['permission_asked'] == true,
       channels: j['channels'] is List ? jList(j['channels']).whereType<String>().toList() : null,
       wanted: jList(j['wanted']).whereType<String>().toSet(),
+      owned: jList(j['owned']).whereType<String>().toSet(),
+      preorders: jList(j['preorders']).map(PreorderDue.fromJson).nonNulls.toList(),
       pb: jList(j['pb']).map(PbWindow.fromJson).nonNulls.toList(),
       releases: jList(j['releases']).map(ReleaseDay.fromJson).nonNulls.toList(),
       followed: {for (final e in jMap(j['followed']).entries) e.key: ?FollowedAnn.fromJson(e.value)},
@@ -206,10 +282,10 @@ class NoticeRecord {
   });
 
   /// `feed-<피드 날짜>-<kit_id>` · `pb-open-<kit_id>-<날짜>` · `pb-close-<kit_id>-<날짜>` · `ann-<예고 id>-<단계>` ·
-  /// `rel-<kit_id>-<발매일>-d7|d1|d0`
+  /// `rel-<kit_id>-<발매일>-d7|d1|d0` · `pre-<kit_id>-<도착 예정>-month|d0`
   final String id;
 
-  /// added · changed · pb_open · pb_close · ann_stage · release
+  /// added · changed · pb_open · pb_close · ann_stage · release · restock(재판매) · preorder(예약 도착)
   final String kind;
 
   /// ann_stage: 공식 예고 id (단계는 [reasons] 첫 칸)
@@ -240,9 +316,20 @@ class NoticeRecord {
 
   bool get isPbWindow => kind == 'pb_open' || kind == 'pb_close';
   bool get isAnnStage => kind == 'ann_stage';
+  bool get isRestock => kind == 'restock';
+  bool get isPreorder => kind == 'preorder';
 
-  /// 휴대폰 알림 채널 — catalog(새 상품 · 변경) · wanted(좋아요한 상품) · pb(PB 예약) · ann(알림 받는 공식 예고)
-  String get channel => isAnnStage ? 'ann' : (isPbWindow ? 'pb' : (wanted ? 'wanted' : 'catalog'));
+  /// 휴대폰 알림 채널 — catalog(새 상품 · 변경) · wanted(좋아요한 상품) · pb(PB 예약) · ann(알림 받는 공식 예고) ·
+  /// restock(재판매) · preorder(예약 도착)
+  String get channel => isAnnStage
+      ? 'ann'
+      : isPbWindow
+      ? 'pb'
+      : isRestock
+      ? 'restock'
+      : isPreorder
+      ? 'preorder'
+      : (wanted ? 'wanted' : 'catalog');
 
   Map<String, Object?> toJson() => {
     'id': id,
@@ -441,7 +528,11 @@ class NotifyState {
 
   /// 알림함(이 파일)이 만드는 줄의 id 인가
   static bool isInboxId(String id) =>
-      id.startsWith('feed-') || id.startsWith('pb-') || id.startsWith('ann-') || id.startsWith('rel-');
+      id.startsWith('feed-') ||
+      id.startsWith('pb-') ||
+      id.startsWith('ann-') ||
+      id.startsWith('rel-') ||
+      id.startsWith('pre-');
 }
 
 /// 32비트 FNV-1a — 휴대폰 알림 id 가 isolate · 실행마다 같도록 (String.hashCode 는 보장되지 않음)
