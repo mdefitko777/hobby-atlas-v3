@@ -31,7 +31,8 @@ class Catalog extends ChangeNotifier {
 
   /// 상품 매핑 규칙(lib/data/gunpula.dart)을 바꾸면 +1 → 기기 캐시를 버리고 다시 받아 정리한다
   /// 4: 건담 박스 아트(data/atlas/gundam-boxart.json)를 대표 사진으로
-  static const mapVersion = 4;
+  /// 5: 사진 없는 상품의 참고 그림(imageRef) · 魂 라인 이름(Hi-Resolution Model · 超合金 …)
+  static const mapVersion = 5;
 
   CatalogPhase phase = CatalogPhase.empty;
   String error = '';
@@ -303,8 +304,10 @@ class Catalog extends ChangeNotifier {
       final byLabel = lineCovers[f.key] = {};
       for (final e in jMap(f.value).entries) {
         final img = resolveAsset(jMap(e.value)['image']);
-        // 베이 라인(BX · UX · CX)은 코드가 곧 이름, 나머지는 등급 코드 → 앱의 라인 이름
-        if (img.isNotEmpty) byLabel[f.key == 'beyblade' ? e.key : lineLabel(e.key, '', '')] = img;
+        // 베이 라인(BX · UX · CX)은 코드가 곧 이름, 건담 굿즈 묶음(GUNDAM_MERCH)의 그림은 가샤폰 로고라
+        // 종류 도감의 "가샤폰" 카드로, 나머지는 등급 코드 → 앱의 라인 이름
+        final label = f.key == 'beyblade' ? e.key : (e.key == 'GUNDAM_MERCH' ? '가샤폰' : lineLabel(e.key, '', ''));
+        if (img.isNotEmpty) byLabel[label] = img;
       }
     }
     if (ch.isNotEmpty || lines.isNotEmpty) notifyListeners();

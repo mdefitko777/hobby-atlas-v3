@@ -22,9 +22,10 @@ const gundamLineOrder = [
   // SD
   'MGSD', 'SD', 'SDW', 'SDEX', 'SDCS', 'BB',
   // 1/100 · 옛 라인
-  'RE100', 'FM', 'HIRM', 'MEGA', 'No Grade', 'AG', 'FG', 'HY2M',
+  'RE100', 'FM', 'Hi-Resolution Model', 'MEGA', 'No Grade', 'AG', 'FG', 'HY2M',
   // 완성품
-  'ROBOT魂', 'METAL BUILD', 'METAL ROBOT魂', 'S.H.Figuarts',
+  'ROBOT魂', 'METAL BUILD', 'METAL ROBOT魂', 'S.H.Figuarts', 'Figuarts mini', 'GUNDAM FIX FIGURATION',
+  'GUNDAM UNIVERSE', 'METAL STRUCTURE', '超合金', 'NXEDGE STYLE', 'SDX', '元祖 SD', '魂 기타',
   // 식완 · 가샤폰
   'G FRAME FA', 'CONVERGE', 'MS 앙상블', '가샤폰 전사 f', 'MOBILITY JOINT', '건담 아티팩트', 'Superior Define',
   // 굿즈
