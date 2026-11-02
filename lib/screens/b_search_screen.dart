@@ -13,6 +13,7 @@
 // │ B-9  │ 줄 "전체 상품 n개 ›" → SectionListView │ 내 채널 상품 전부 (옛 처음 화면)          │ P07 · P06     │
 // │ B-14 │ GuideView (g_guide_view.dart)       │ 처음 화면 = 도감 둘러보기 (G-1 … G-9)     │ P06 · P01     │
 // │ B-15 │ ViewIconToggle 세대 · 종류 (검색창 줄) │ 도감 두 가지: 세대(작품 · 시대 · 게임) / 종류(HG · MG … · 인형 …, G-10) │ P06 · P07 │
+// │ B-16 │ UserStore.guideView (기기 저장)     │ 마지막으로 본 것(세대 · 종류 · 전체 상품)으로 다시 열기 — 사람마다 좋아하는 첫 화면 │ P07 · P03 │
 // │ B-12 │ GuideHits (guide/guide_search.dart) │ 검색어에 맞는 작품 · 기체 → 도감(그 기체 시트) │ P07 · P06 │
 // │ B-13 │ 결과 위 "기체별로 묶기" + GroupedResults │ 결과를 기체별로 묶기 (상품 n · 가짐 m) — 검색창 폭은 그대로 │ P01 · P07 │
 // │ B-8  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 결과 없음          │ P01 · P09     │
@@ -128,10 +129,16 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
   Future<GuideIndex> get _guideIndex =>
       _index ??= widget.loaders.guideIndex().catchError((Object _) => GuideIndex.empty);
 
+  /// B-16 세대 · 종류 · 전체 상품 중 무엇을 보고 있나 → 기기에 (다음에 이 탭을 열면 그대로)
+  void _rememberView() => Marks.read(context).store.setGuideView(_allProducts ? 'all' : (_byType ? 'type' : 'era'));
+
   @override
   void initState() {
     super.initState();
     reloadScope();
+    final v = Marks.read(context).store.guideView; // B-16
+    _byType = v == 'type';
+    _allProducts = v == 'all';
     // 검색창을 누르면(포커스) 최근 · 자주 찾은 · 설명으로 찾기 판, 벗어나면 다시 전체 상품
     _focus.addListener(() => setState(() {})); // STATE: 포커스 → 보여 줄 판
   }
@@ -198,6 +205,7 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
         if (_query.isNotEmpty) _setQuery('');
         _focus.unfocus(); // 뒤로 = 판 닫고 도감
         setState(() => _allProducts = false);
+        _rememberView();
       },
       child: _page(),
     );
@@ -253,7 +261,10 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
                   ViewIconToggle(
                     // B-15
                     mine: _byType,
-                    onChanged: (v) => setState(() => _byType = v), // STATE: 도감 축 → 세대 ↔ 종류
+                    onChanged: (v) {
+                      setState(() => _byType = v); // STATE: 도감 축 → 세대 ↔ 종류
+                      _rememberView();
+                    },
                     allIcon: Icons.auto_awesome_mosaic_outlined,
                     mineIcon: Icons.category_outlined,
                     allTip: '세대별 도감',
@@ -299,7 +310,10 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
       children: [
         InkWell(
           key: const ValueKey('all-products'),
-          onTap: () => setState(() => _allProducts = true), // STATE: 전체 상품 펼치기
+          onTap: () {
+            setState(() => _allProducts = true); // STATE: 전체 상품 펼치기
+            _rememberView();
+          },
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
             child: Row(
@@ -536,6 +550,7 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
         _setQuery(''); // STATE: 돌아가기 → 도감 둘러보기
         _focus.unfocus();
         setState(() => _allProducts = false);
+        _rememberView();
       },
       loaders: widget.loaders,
     );

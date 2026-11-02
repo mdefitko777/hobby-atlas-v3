@@ -108,6 +108,42 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('마지막으로 고른 보기(종류 · 전체 상품)로 다시 열린다 (기기 저장)', (tester) async {
+    final store = UserStore.memory();
+    Future<void> open() async {
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildGpTheme(),
+          builder: (context, child) => MarksHost(
+            store: store,
+            child: PaneHost(child: child!),
+          ),
+          home: _screen(),
+        ),
+      );
+      await _settle(tester);
+    }
+
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await open();
+    expect(find.byType(GuideView), findsOneWidget); // 처음 = 세대
+    await tester.tap(find.byTooltip('종류별 도감'));
+    await _settle(tester);
+    expect(store.guideView, 'type');
+    await open();
+    expect(find.byType(LineGuideView), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('all-products')));
+    await _settle(tester);
+    expect(store.guideView, 'all');
+    expect(store.localStateJson()['guide_view'], 'all');
+    await open();
+    expect(find.text('전체 상품'), findsOneWidget);
+    expect(UserStore.memory().localStateJson().containsKey('guide_view'), isFalse); // 처음 값은 적지 않는다
+  });
+
   testWidgets('browseTick 이 바뀌면 검색어를 지우고 도감으로', (tester) async {
     await _pump(tester, _screen());
     await tester.enterText(find.byType(TextField), '스트라이크');

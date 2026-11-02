@@ -32,6 +32,10 @@ const allChannels = <Channel>[
 /// 채널 대표 그림 — Gunpula atlas-groups.json `channels` 의 공식 그림 (Catalog 가 채운다). 없으면 위 기본 그림
 final channelCovers = <String, String>{};
 
+/// 종류별 도감 카드의 공식 그림 — atlas-groups.json `line_covers` (채널 → 종류 이름 → 그림, Catalog 가 채운다).
+/// 종류 이름 = 앱의 라인 이름(lib/data/gunpula.dart lineLabel). 없으면 그 종류의 최근 상품 사진
+final lineCovers = <String, Map<String, String>>{};
+
 /// 처음 설치했을 때의 내 채널
 const defaultMyChannels = ['gundam', 'beyblade', 'pokemon'];
 

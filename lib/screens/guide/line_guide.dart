@@ -203,7 +203,7 @@ class _LineGuideViewState extends State<LineGuideView> {
                       return GuideWorkCard(
                         // G-10 P01
                         key: ValueKey('line-${e.key}-${g.key}'),
-                        image: g.cover,
+                        image: lineCovers[e.key]?[g.key] ?? g.cover, // G-10 공식 로고 · 대표 그림, 없으면 최근 상품
                         name: g.label,
                         subtitle: h.carry
                             ? '찾은 ${h.count}개'

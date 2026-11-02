@@ -1,6 +1,7 @@
 // 종류별 도감 화면 (lib/screens/guide/line_guide.dart): 종류 카드 → 묶음 칸 · ♡ · 리본 · 찾기 · 정렬 · 상태 · 큰 묶음 · 화면 크기
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hobby_atlas/channels.dart';
 import 'package:hobby_atlas/api.dart';
 import 'package:hobby_atlas/clock.dart';
 import 'package:hobby_atlas/data/user_store.dart';
@@ -8,6 +9,7 @@ import 'package:hobby_atlas/detail_pane.dart';
 import 'package:hobby_atlas/marks.dart';
 import 'package:hobby_atlas/models.dart';
 import 'package:hobby_atlas/screens/c_channel_screen.dart' show allChannelId;
+import 'package:hobby_atlas/screens/guide/guide_parts.dart' show GuideWorkCard;
 import 'package:hobby_atlas/screens/guide/line_guide.dart';
 import 'package:hobby_atlas/theme.dart';
 import 'package:hobby_atlas/widgets.dart';
@@ -87,6 +89,14 @@ void main() {
     await t.pumpAndSettle();
     expect(find.text('종류별 도감'), findsOneWidget);
     expect(find.text('초록 테두리 = 구매함'), findsOneWidget);
+  });
+
+  testWidgets('종류 카드 그림: atlas-groups line_covers 의 공식 그림이 있으면 그것, 없으면 최근 상품', (t) async {
+    lineCovers['gundam'] = {'MG': 'assets/test/mg-logo.png'};
+    addTearDown(lineCovers.clear);
+    await _show(t, LineGuideView(channel: 'gundam', loaders: _loaders(_kits)));
+    expect(t.widget<GuideWorkCard>(_card('gundam', 'MG')).image, 'assets/test/mg-logo.png');
+    expect(t.widget<GuideWorkCard>(_card('gundam', 'HG')).image, isNot('assets/test/mg-logo.png'));
   });
 
   testWidgets('묶음 열기 → 칸 격자 · 연도 머리 · ♡ / 리본이 단계와 숫자를 바꾼다', (t) async {

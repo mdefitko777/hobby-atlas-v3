@@ -10,7 +10,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
-import '../channels.dart' show channelCovers;
+import '../channels.dart' show channelCovers, lineCovers;
 import '../json_util.dart';
 import '../models.dart';
 import 'blob_store.dart';
@@ -290,13 +290,24 @@ class Catalog extends ChangeNotifier {
   }
 
   /// 채널 대표 그림 (atlas-groups.json `channels.<id>.image`, 공식 그림) → channels.dart channelCovers
+  /// + 종류별 도감 카드 그림 (`line_covers.<채널>.<등급 코드>`, 공식 로고 · 대표 그림) → lineCovers
   Future<void> _loadChannelCovers() async {
-    final ch = jMap(jMap(await aux('atlas-groups.json'))['channels']);
+    final groups = jMap(await aux('atlas-groups.json'));
+    final ch = jMap(groups['channels']);
     for (final e in ch.entries) {
       final img = resolveAsset(jMap(e.value)['image']);
       if (img.isNotEmpty) channelCovers[e.key] = img;
     }
-    if (ch.isNotEmpty) notifyListeners();
+    final lines = jMap(groups['line_covers']);
+    for (final f in lines.entries) {
+      final byLabel = lineCovers[f.key] = {};
+      for (final e in jMap(f.value).entries) {
+        final img = resolveAsset(jMap(e.value)['image']);
+        // 베이 라인(BX · UX · CX)은 코드가 곧 이름, 나머지는 등급 코드 → 앱의 라인 이름
+        if (img.isNotEmpty) byLabel[f.key == 'beyblade' ? e.key : lineLabel(e.key, '', '')] = img;
+      }
+    }
+    if (ch.isNotEmpty || lines.isNotEmpty) notifyListeners();
   }
 
   /// 1엔 = ? 원 (data/exchange-rates.json · Frankfurter, 매일). 못 받았으면 대략값
