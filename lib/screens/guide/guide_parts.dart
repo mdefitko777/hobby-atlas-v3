@@ -1,4 +1,4 @@
-// 도감(G) 공용 조각 — 찾기 + 도감 필터 · 작품 카드 · 진행 막대 · 칸 한 개
+// 도감(G) 공용 조각 — 찾기 + 도감 필터 · 칸 한 개 (작품 · 세대 · 채널 고르기는 공용 CategoryTile · CategoryGrid)
 import 'package:flutter/material.dart';
 
 import '../../theme.dart';
@@ -60,7 +60,7 @@ class GuideProgress extends StatelessWidget {
   }
 }
 
-/// 작품 · 세대 카드 (이미지 + 이름 + 진행)
+/// 진행 막대 카드 (이미지 + 이름 + 진행) — 종류별 도감(line_guide)만 아직 쓴다. 새 분류 칸은 CategoryTile
 class GuideWorkCard extends StatelessWidget {
   const GuideWorkCard({
     super.key,
@@ -133,7 +133,7 @@ class GuideWorkCard extends StatelessWidget {
 
 int guideCols(double w, double min) => (w / min).floor().clamp(2, 6);
 
-/// 도감 칸 한 개 (기체 · 베이) — TierCell + 오른쪽 위 꼬리표 · 인증 배지 · 리본 · ♡
+/// 도감 칸 한 개 (기체 · 베이) — TierCell(늘 컬러) + 오른쪽 위 꼬리표 · 인증 배지 · 리본 · ♡
 class GuideCell extends StatelessWidget {
   const GuideCell({
     super.key,
@@ -158,7 +158,7 @@ class GuideCell extends StatelessWidget {
   final String badge;
   final bool liked;
 
-  /// 주면 칸 위에 ♡ + 리본
+  /// 주면 칸 위에 누르는 ♡ + 리본 (MarkOverlay), 없으면 켜진 표시만 (StatusMarks)
   final VoidCallback? onLike;
   final VoidCallback? onOwn;
 
@@ -181,7 +181,9 @@ class GuideCell extends StatelessWidget {
             onLike: onLike!,
             onOwn: onOwn!,
           ),
-        ),
+        )
+      else
+        tierMarks(tier, liked: liked),
     ],
     caption: SizedBox(
       height: 30,
@@ -190,7 +192,7 @@ class GuideCell extends StatelessWidget {
         maxLines: 2,
         textAlign: TextAlign.center,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(fontSize: Gp.t12, color: tier == CellTier.none ? Gp.muted : Gp.ink, height: 1.25),
+        style: const TextStyle(fontSize: Gp.t12, color: Gp.ink, height: 1.25),
       ),
     ),
   );

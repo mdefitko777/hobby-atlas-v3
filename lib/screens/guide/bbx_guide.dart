@@ -34,16 +34,15 @@ class _BbxGuideState extends State<BbxGuide> {
         }
         if (snap.data!.isEmpty) return const EmptyView(message: '베이 도감이 아직 없어요');
         final m = Marks.of(context);
-        // G-9 찾기 + 도감 필터 (단계 = 부품 다 모음 · 상품 좋아요, 라인 = BX · UX · CX)
+        bool done(BbxTop t) => t.total > 0 && t.owned >= t.total; // 부품 다 모음 = 구매함
+        bool liked(BbxTop t) => t.kitIds.any((id) => m.store.statusOf(id) == CollectStatus.wanted);
+        // G-9 찾기 + 도감 필터 (상태 = 부품 다 모음 · 상품 좋아요, 라인 = BX · UX · CX)
         final tops = widget.find.apply(
           snap.data!,
           (t) => t.name,
           (t) => GuideFacet(
             name: t.name,
-            tiers: {
-              if (t.total > 0 && t.owned >= t.total) GuideTier.owned else GuideTier.none,
-              if (t.kitIds.any((id) => m.store.statusOf(id) == CollectStatus.wanted)) GuideTier.liked,
-            },
+            tiers: {done(t) ? GuideTier.owned : GuideTier.none, if (liked(t)) GuideTier.liked},
             grades: {if (t.line.isNotEmpty) t.line},
             kits: t.kitIds.length,
             boughtAt: [
@@ -52,7 +51,6 @@ class _BbxGuideState extends State<BbxGuide> {
           ),
         );
         if (tops.isEmpty) return guideNoHit;
-        final done = tops.where((t) => t.total > 0 && t.owned >= t.total).length;
         return LayoutBuilder(
           builder: (context, box) => ListView(
             padding: EdgeInsets.only(bottom: navClearance(context)),
@@ -73,7 +71,6 @@ class _BbxGuideState extends State<BbxGuide> {
                     const LevelHelpButton(),
                   ],
                 ),
-                subtitle: '완성 $done / ${tops.length}',
                 padding: const EdgeInsets.fromLTRB(16, 14, 12, 10),
               ),
               Padding(
@@ -91,7 +88,8 @@ class _BbxGuideState extends State<BbxGuide> {
                         // G-6 P01
                         image: t.image,
                         name: t.name,
-                        tier: t.total > 0 && t.owned >= t.total ? CellTier.owned : CellTier.none,
+                        tier: done(t) ? CellTier.owned : (liked(t) ? CellTier.liked : CellTier.none), // 늘 컬러 · 리본 · ♡
+                        liked: liked(t),
                         badge: '${t.owned}/${t.total}',
                         onTap: () => showGpSheet<void>(context, builder: (_) => _TopSheet(top: t)),
                       ),
@@ -135,7 +133,7 @@ class _TopSheet extends StatelessWidget {
                   children: [
                     SizedBox.square(
                       dimension: 52,
-                      child: AppImage(p.image, fit: BoxFit.contain, grayscale: !p.have),
+                      child: AppImage(p.image, fit: BoxFit.contain), // 늘 컬러 — 가진 것은 오른쪽 '보유'
                     ),
                     const SizedBox(width: 12),
                     Expanded(

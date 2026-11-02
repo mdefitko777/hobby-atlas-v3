@@ -2,11 +2,11 @@
 //
 // ┌──────── 디자인 가이드 대응표: R 태그 도감 ─────────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
-// │ R-1  │ TagGameCards (도감 › 포켓몬 위쪽)    │ MEZASTAR · Frienda 입구 + 구매함 · 좋아요 수 │ P06 · P01 │
+// │ R-1  │ TagGameCards (CategoryTile)        │ 도감 › 포켓몬 '태그' 줄: MEZASTAR · Frienda 입구 (그림 + 이름만) │ P06 │
 // │ R-2  │ SquareSegments (KR · JP · HK · TW)  │ 메자스타 지역 고르기                     │ P04           │
 // │ R-3  │ ToolRow [검색창][필터][격자 · 목록]   │ 이 도감에서 찾기 (다른 탭과 같은 줄)      │ P04 · P07     │
 // │ R-4  │ 가로 탄 칸 + 진행 막대               │ 탄 · 시리즈 고르기 (구매함 n / 전체)      │ P01 · P06     │
-// │ R-5  │ TagCell 격자 (TierCell)             │ 흑백 = 아직 · 컬러 = 좋아요 · + 민트 테두리 = 구매함 │ P01 · P04 │
+// │ R-5  │ TagCell 격자 (TierCell, 늘 컬러)     │ 아직 = 그림 그대로 · ♡ = 좋아요 · 리본 + 옅은 민트 테두리 = 구매함 │ P01 · P04 │
 // │ R-5b │ 칸 누르기 → 태그 상세 (R-6)           │ 상품 칸과 같음: 누르면 상세              │ P07 · P08     │
 // │ R-5c │ FriendaImages (기기에서 공식 페이지)  │ 프렌다 픽 그림: 탄을 열면 받아 7일 보관     │ P02 · P01     │
 // │ R-5d │ 칸 위 MarkOverlay (리본 · ♡)        │ 바로 구매함 · 좋아요 → 토스트(되돌리기)   │ P03 · P07     │
@@ -14,7 +14,7 @@
 // │ R-6a │ 시트의 TogglePill 2개 (♡ · 리본)     │ 좋아요 · 구매함 (상품 상세와 같은 버튼)   │ P03 · P07     │
 // │ R-6b │ 시트 그림 누르기 → openImageViewer  │ 공식 그림 크게 (앞 · 뒤 넘기기, 확대)     │ P02 · P08     │
 // │ R-6c │ 시트 ↗ 공식 페이지 (앱 밖 브라우저)  │ 프렌다 픽 목록 · 태그스타 팝업            │ P09           │
-// │ R-7  │ 필터 시트 (전체 · ♡ · 리본 · 아직 · 등급 · 타입) │ 네모 세그먼트 + 네모 체크 칸   │ P04 · P08     │
+// │ R-7  │ 필터 시트 (전체 · ♡ · 리본 · 아직 없음 · 등급 · 타입) │ 상품 필터와 같은 상태 줄(MineStateLabel) + 네모 체크 칸 │ P04 · P08 │
 // │ R-8  │ TagSearchSection (B 검색 결과 위)    │ 검색 탭에서 태그 · 게임 이름 찾기         │ P07 · P06     │
 // │ R-8b │ TagRow + TagMarkButtons (♡ · 리본)  │ 목록 · 검색 · 컬렉션 줄의 좋아요 · 구매함  │ P03 · P07     │
 // │ R-9  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 맞는 태그 없음       │ P01 · P09     │
@@ -27,6 +27,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../channels.dart' show lineCovers;
 import '../data/frienda_images.dart';
 import '../data/tag_atlas.dart';
 import '../data/user_store.dart' show UserStore;
@@ -49,7 +50,7 @@ int ownedTagCount(Set<String> ids, TagGame game) =>
 /// 좋아요만 (구매함이 이긴다 — 두 기기에서 따로 켜 둘 다 든 것은 구매함)
 Set<String> likedOnlyTags(Set<String> liked, Set<String> owned) => liked.difference(owned);
 
-/// 칸 단계 — 상품 도감 칸과 같다 (흑백 · 컬러 · 민트 테두리)
+/// 칸 단계 — 상품 도감 칸과 같다 (늘 컬러 · ♡ · 리본)
 CellTier tagTier(CollectStatus s) => switch (s) {
   CollectStatus.owned => CellTier.owned,
   CollectStatus.wanted => CellTier.liked,
@@ -60,7 +61,7 @@ CellTier tagTier(CollectStatus s) => switch (s) {
 void toggleTagLike(BuildContext context, TagCard c) {
   final store = Marks.read(context).store;
   final before = store.tagStatus(c.id);
-  store.setTagMark(c.id, liked: before != CollectStatus.wanted); // STATE: 좋아요 → 칸 컬러 · 컬렉션 좋아요
+  store.setTagMark(c.id, liked: before != CollectStatus.wanted); // STATE: 좋아요 → 칸 ♡ · 컬렉션 좋아요
   showToast(
     context,
     before == CollectStatus.wanted
@@ -76,7 +77,7 @@ void toggleTagLike(BuildContext context, TagCard c) {
 void toggleTagOwn(BuildContext context, TagCard c) {
   final store = Marks.read(context).store;
   final before = store.tagStatus(c.id);
-  store.setTagMark(c.id, owned: before != CollectStatus.owned); // STATE: 구매함 → 민트 테두리 · 수집 수
+  store.setTagMark(c.id, owned: before != CollectStatus.owned); // STATE: 구매함 → 칸 리본 · 수집 수
   showToast(
     context,
     before == CollectStatus.owned ? '구매함에서 뺐어요' : '「${c.name}」 구매함에 넣었어요',
@@ -86,6 +87,7 @@ void toggleTagOwn(BuildContext context, TagCard c) {
 
 // ── R-1 입구 카드 ─────────────────────────────────────────────────────────────────
 
+/// R-1 태그 도감 입구 — 분류 칸(CategoryTile) 한 벌: 그림 + 이름만 (숫자 없음)
 class TagGameCards extends StatelessWidget {
   const TagGameCards({super.key, this.padding = const EdgeInsets.fromLTRB(16, 10, 16, 0), this.only});
   final EdgeInsets padding;
@@ -94,107 +96,38 @@ class TagGameCards extends StatelessWidget {
   final TagGame? only;
 
   @override
-  Widget build(BuildContext context) {
-    final store = Marks.of(context).store;
-    final liked = likedOnlyTags(store.tagLiked, store.tagOwned);
-    final games = only == null ? TagGame.values : [only!];
-    return Padding(
-      padding: padding,
-      child: Row(
-        children: [
-          for (final (i, g) in games.indexed) ...[
-            if (i > 0) const SizedBox(width: 10),
-            Expanded(
-              child: _GameCard(
-                game: g,
-                owned: ownedTagCount(store.tagOwned, g),
-                liked: ownedTagCount(liked, g),
-                onTap: () => openTagAtlas(context, g),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _GameCard extends StatelessWidget {
-  const _GameCard({required this.game, required this.owned, required this.onTap, this.liked = 0});
-  final TagGame game;
-  final int owned;
-  final int liked;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Material(
-    color: Colors.transparent,
-    child: InkWell(
-      borderRadius: BorderRadius.circular(Gp.radius),
-      onTap: onTap, // STATE: 입구 → R 태그 도감
-      child: Ink(
-        decoration: Gp.raised(),
-        padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: Gp.accent.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(Gp.rSmall),
-              ),
-              child: Icon(
-                game == TagGame.mezastar ? Icons.style_outlined : Icons.catching_pokemon,
-                color: Gp.accent,
-                size: Gp.iL,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    game.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w700),
-                  ),
-                  Text(
-                    owned + liked > 0
-                        ? joinDot([if (owned > 0) '구매함 $owned', if (liked > 0) '좋아요 $liked'])
-                        : game.subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: Gp.t11,
-                      color: owned > 0
-                          ? Gp.own
-                          : liked > 0
-                          ? Gp.accent
-                          : Gp.faint,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right, color: Gp.muted, size: Gp.iM),
-          ],
+  Widget build(BuildContext context) => CategoryGrid(
+    padding: padding,
+    children: [
+      for (final g in only == null ? TagGame.values : [only!])
+        CategoryTile(
+          image: tagGameCover(g),
+          icon: g == TagGame.mezastar ? Icons.style_outlined : Icons.catching_pokemon,
+          name: g.label,
+          onTap: () => openTagAtlas(context, g), // STATE: 입구 → R 태그 도감
         ),
-      ),
-    ),
+    ],
   );
 }
 
+/// 태그 게임 공식 그림 — atlas-groups.json line_covers.pokemon 에 게임 이름(MEZASTAR · Frienda)이 있으면, 없으면 빈 값(아이콘)
+String tagGameCover(TagGame g) => lineCovers['pokemon']?[g.label] ?? '';
+
 // ── R-7 필터 ──────────────────────────────────────────────────────────────────────
 
-/// 상태 거르기 — 전체 · 좋아요 · 구매함 · 아직
+/// 상태 거르기 — 전체 · 좋아요 · 구매함 · 아직 없음 (상품 필터 MineState 와 같은 순서 · 같은 말)
 enum TagMarkFilter {
   any,
   liked,
   owned,
   none;
+
+  MineState get mine => switch (this) {
+    any => MineState.any,
+    liked => MineState.liked,
+    owned => MineState.owned,
+    none => MineState.none,
+  };
 
   bool hit(CollectStatus s) => switch (this) {
     any => true,
@@ -282,18 +215,7 @@ class _TagFilterSheetState extends State<_TagFilterSheet> {
         SquareSegments<TagMarkFilter>(
           values: TagMarkFilter.values,
           current: _draft.mark,
-          child: (v) => switch (v) {
-            TagMarkFilter.any => const Text('전체'),
-            TagMarkFilter.liked => const Tooltip(
-              message: '좋아요',
-              child: LikedIcon(size: Gp.iS),
-            ),
-            TagMarkFilter.owned => const Tooltip(
-              message: '구매함',
-              child: OwnedIcon(size: Gp.iS),
-            ),
-            TagMarkFilter.none => const Text('아직'),
-          },
+          child: (v) => MineStateLabel(v.mine), // 상품 필터와 같은 줄
           onPick: (v) => setState(() => _draft.mark = v),
         ),
         title('등급'),
@@ -703,8 +625,8 @@ class _SetStrip extends StatelessWidget {
   }
 }
 
-/// R-5 태그 칸 — 상품 도감 칸과 같은 TierCell: 아직 = 흑백 · 좋아요 = 컬러 · 구매함 = 컬러 + 민트 테두리.
-/// [onLike] · [onOwn] 을 주면 칸 위에 상품 칸과 같은 ♡ · 리본 (R-5d)
+/// R-5 태그 칸 — 상품 도감 칸과 같은 TierCell (늘 컬러): 좋아요 = ♡ · 구매함 = 리본 + 옅은 민트 테두리.
+/// [onLike] · [onOwn] 을 주면 칸 위에 상품 칸과 같은 누르는 ♡ · 리본 (R-5d), 없으면 켜진 표시만
 class TagCell extends StatelessWidget {
   const TagCell({
     super.key,
@@ -744,8 +666,8 @@ class TagCell extends StatelessWidget {
           Positioned.fill(
             child: MarkOverlay(size: 22, liked: liked, owned: owned, onLike: onLike!, onOwn: onOwn!),
           )
-        else if (owned)
-          const Positioned(right: 4, bottom: 4, child: OwnedIcon(size: Gp.iM)),
+        else
+          tierMarks(tagTier(status)),
       ],
       caption: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -762,7 +684,7 @@ class TagCell extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: Gp.t12, color: status == CollectStatus.none ? Gp.muted : Gp.ink),
+            style: const TextStyle(fontSize: Gp.t12, color: Gp.ink),
           ),
         ],
       ),
@@ -1180,15 +1102,15 @@ class _TagCollectionSectionState extends State<TagCollectionSection> {
 
 /// R-10 ? 도움말 — 칸 색 (상품 도감 칸과 같은 그림) · 누르기 · 찾기 줄 아이콘
 List<HelpItem> tagHelp() => [
-  HelpItem.widget(tierHelpCell(CellTier.none), '흑백 = 아직'),
-  HelpItem.widget(tierHelpCell(CellTier.liked), '컬러 = ♡ 좋아요'),
-  HelpItem.widget(tierHelpCell(CellTier.owned), '컬러 + 민트 테두리 = 구매함 (수집 수)'),
+  HelpItem.widget(tierHelpCell(CellTier.none), '그림 그대로 = 아직 (칸은 늘 컬러)'),
+  HelpItem.widget(tierHelpCell(CellTier.liked), '♡ = 좋아요'),
+  HelpItem.widget(tierHelpCell(CellTier.owned), '리본 = 구매함 (수집 수)'),
   const HelpItem(Icons.bookmark_add_outlined, '칸 왼쪽 위 리본 = 구매함 켜고 끄기', color: Gp.own),
   const HelpItem(Icons.favorite_border, '칸 왼쪽 아래 ♡ = 좋아요 켜고 끄기', color: Gp.accent),
   const HelpItem(Icons.touch_app_outlined, '칸 누르기 = 태그 상세 (좋아요 · 구매함 버튼)'),
   const HelpItem(Icons.zoom_out_map, '상세의 그림 누르기 = 크게 보기 (앞 · 뒤)'),
   const HelpItem(Icons.open_in_new, '공식 페이지 (브라우저)'),
-  const HelpItem(Icons.tune, '필터 (좋아요 · 구매함 · 아직 · 등급 · 타입)'),
+  const HelpItem(Icons.tune, '필터 (상품 필터와 같은 상태 줄 · 등급 · 타입)'),
   const HelpItem(Icons.grid_view_outlined, '격자로 보기'),
   const HelpItem(Icons.view_list_outlined, '목록으로 보기 (줄 오른쪽 ♡ · 리본)'),
 ];

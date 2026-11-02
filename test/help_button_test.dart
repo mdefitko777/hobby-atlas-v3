@@ -110,9 +110,11 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('검색 ? 에 기체별 묶기 · 컬렉션 ? 에 휴지통 · 편집 · 도감 칸', (tester) async {
+  testWidgets('검색 ? 에 기체별 묶기 · 컬렉션 ? 에 휴지통 · 편집 · 도감 칸 (늘 컬러)', (tester) async {
     expect(searchHelp().map((i) => i.text), contains('검색 결과를 기체별로 묶기'));
-    expect(collectionHelp().map((i) => i.text), containsAll(['휴지통 (30일 동안 되살리기)', '편집 (골라서 지우기)', '구매함 · +10']));
+    final c = collectionHelp().map((i) => i.text);
+    expect(c, containsAll(['휴지통 (30일 동안 되살리기)', '편집 (골라서 지우기)', '리본 = 구매함 · +10']));
+    expect(c.join(), isNot(contains('흑백'))); // 도감 칸은 늘 컬러
   });
 
   testWidgets('상품 상세 — 오른쪽 위 ? (뒤로 맞은편)', (tester) async {

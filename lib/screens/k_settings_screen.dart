@@ -9,7 +9,7 @@
 // │ K-2  │ ListTile (고르기 없음)               │ 언어: 화면 한국어 · 상품 이름 한국어 우선 │ P04 · P10     │
 // │ K-3  │ ListTile → 파일 · 붙여넣기 → 확인     │ 옛 Gunpula 에서 가져오기 · 백업          │ P10           │
 // │ K-4  │ ListTile                           │ 상품 데이터 기준일 · 지금 새로 받기 · 버전 │ P10           │
-// │ K-7  │ ListTile → HelpScreen(쌓기)          │ 도움말: 도감 칸 4단계 · 색 · 데이터 출처 · 알림 · 업데이트 │ P10 │
+// │ K-7  │ ListTile → HelpScreen(쌓기)          │ 도움말: 도감 칸(늘 컬러 · ♡ · 리본 · 내 사진) · 색 · 데이터 출처 · 알림 · 업데이트 │ P10 │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 앱 셸 ⚙ → 쌓기(push, 오른쪽에서). 도움말 → 쌓기. 가져오기 → 덮기(시트 · 확인 대화상자).
 // 언어: 화면 번역은 없다 (한국어만). 상품 이름은 Gunpula 이름 중 한국어 → 일본어 → 영어 순 — 고르는 척하지 않는다.
@@ -470,8 +470,15 @@ class HelpScreen extends StatelessWidget {
           dimension: 44,
           child: tierFrame(
             t,
-            Center(
-              child: Icon(icon, size: Gp.iM, color: t == CellTier.none ? Gp.faint : Gp.ink),
+            Stack(
+              fit: StackFit.expand,
+              children: [
+                // 늘 같은 색 — 상태는 표시로만
+                Center(
+                  child: Icon(icon, size: Gp.iM, color: Gp.ink),
+                ),
+                tierMarks(t, size: 14),
+              ],
             ),
             radius: Gp.rSmall,
           ),
@@ -508,9 +515,9 @@ class HelpScreen extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    cell(CellTier.none, Icons.help_outline, '아직'),
-                    cell(CellTier.liked, Icons.favorite_border, '좋아요'),
-                    cell(CellTier.owned, Icons.bookmark_added_outlined, '구매함'),
+                    cell(CellTier.none, Icons.image_outlined, '아직'),
+                    cell(CellTier.liked, Icons.image_outlined, '♡ 좋아요'),
+                    cell(CellTier.owned, Icons.image_outlined, '리본 구매함'),
                     cell(CellTier.photo, Icons.photo_camera_outlined, '내 사진'),
                   ],
                 ),

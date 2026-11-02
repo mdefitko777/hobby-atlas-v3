@@ -130,17 +130,32 @@ class LevelHelpButton extends StatelessWidget {
 
 const _tierSample = 'assets/gp/units/g3000u00100.webp';
 
-/// 도감 칸 그림 한 개 (? 도움말 줄 · 레벨 시트)
-Widget tierHelpCell(CellTier t) =>
-    SizedBox.square(dimension: 32, child: tierFrame(t, cellImage(t, _tierSample, null), radius: Gp.rSmall));
+/// 도감 칸 견본 (늘 컬러 + 켜진 표시) — ? 도움말 줄 · 레벨 시트 · 설정 도움말
+Widget tierSample(CellTier t, {double size = 32}) => SizedBox.square(
+  dimension: size,
+  child: tierFrame(
+    t,
+    Stack(
+      fit: StackFit.expand,
+      children: [
+        cellImage(t, _tierSample, null),
+        tierMarks(t, size: size * 0.36),
+      ],
+    ),
+    radius: Gp.rSmall,
+  ),
+);
 
-/// 도감 칸 단계 + 경험치 — 컬렉션 · 작품 도감의 ? 에 같이 넣는다
+/// 도감 칸 그림 한 개 (? 도움말 줄)
+Widget tierHelpCell(CellTier t) => tierSample(t);
+
+/// 도감 칸 표시 + 경험치 — 컬렉션 · 작품 도감의 ? 에 같이 넣는다
 List<HelpItem> tierHelpItems() => [
-  HelpItem.widget(tierHelpCell(CellTier.none), '흑백 = 아직'),
-  HelpItem.widget(tierHelpCell(CellTier.liked), '♡ 좋아요 · 0'),
-  HelpItem.widget(tierHelpCell(CellTier.owned), '구매함 · +10'),
+  HelpItem.widget(tierHelpCell(CellTier.none), '그림 그대로 = 아직 (칸은 늘 컬러)'),
+  HelpItem.widget(tierHelpCell(CellTier.liked), '♡ = 좋아요 · 0'),
+  HelpItem.widget(tierHelpCell(CellTier.owned), '리본 = 구매함 · +10'),
   const HelpItem(Icons.grid_view_rounded, '도감 새 칸 · +5', color: Gp.own),
-  HelpItem.widget(tierHelpCell(CellTier.photo), '사진 인증 · +3'),
+  HelpItem.widget(tierHelpCell(CellTier.photo), '내 사진 + 도는 고리 = 사진 인증 · +3'),
 ];
 
 class _LevelHelp extends StatelessWidget {
@@ -164,7 +179,7 @@ class _LevelHelp extends StatelessWidget {
         ],
       ),
     );
-    Widget tier(CellTier t) => tierFrame(t, cellImage(t, _tierSample, null), radius: Gp.rSmall);
+    Widget tier(CellTier t) => tierSample(t, size: 40);
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),

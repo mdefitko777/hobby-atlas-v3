@@ -1,5 +1,5 @@
 // 상품 필터 시트 — 검색 결과 · 전체 목록 · 홈 · 캘린더 · 컬렉션이 같이 쓰는 한 벌.
-// 아래에서 올라오는 시트(화면의 60%). 캡슐 대신 네모 세그먼트 · 체크 2열 · 펼치는 줄.
+// 아래에서 올라오는 시트(화면의 60%). 캡슐 대신 네모 세그먼트 · 체크 2열 · 펼치는 줄. 도감 필터도 같은 틀 · 같은 상태 줄.
 //   위 3줄(내 상태 · 발매 · 판매)은 하나만 고르는 세그먼트, 종류는 개수 붙은 체크, 라인 · 작품 · 가격은 한 줄 눌러 펼침.
 // 거르는 규칙(KitFilter.matches)은 lib/logic/kit_filter.dart
 import 'package:flutter/material.dart';
@@ -66,6 +66,20 @@ class KitFind {
   }
 }
 
+/// 상태 줄 한 칸 (전체 · ♡ · 리본 · 아직 없음) — 상품 · 도감 · 태그 필터가 같은 말 · 같은 아이콘
+class MineStateLabel extends StatelessWidget {
+  const MineStateLabel(this.state, {super.key});
+  final MineState state;
+
+  @override
+  Widget build(BuildContext context) => switch (state) {
+    MineState.any => const Text('전체'),
+    MineState.liked => const Tooltip(message: '좋아요', child: LikedIcon()),
+    MineState.owned => const Tooltip(message: '구매함', child: OwnedIcon()),
+    MineState.none => const Text('아직 없음'),
+  };
+}
+
 class FilterSheet extends StatefulWidget {
   const FilterSheet({super.key, required this.kits, required this.initial});
   final List<Kit> kits;
@@ -108,12 +122,7 @@ class _FilterSheetState extends State<FilterSheet> {
         SquareSegments<MineState>(
           values: MineState.values,
           current: _draft.mine,
-          child: (v) => switch (v) {
-            MineState.any => const Text('전체'),
-            MineState.liked => const LikedIcon(),
-            MineState.owned => const OwnedIcon(size: Gp.iS),
-            MineState.none => const Text('아직 없음'),
-          },
+          child: MineStateLabel.new,
           onPick: (v) => setState(() => _draft.mine = v),
         ),
         const SizedBox(height: 8),
