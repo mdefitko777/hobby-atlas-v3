@@ -60,14 +60,12 @@ jobs:
 
       - name: APK
         run: |
-          # arm64 만 (요즘 폰 전부, 플러그인 네이티브도 build.gradle.kts abiFilters 로 arm64 만).
-          # APP_BUILD = 앱이 자기 빌드 번호를 안다 (업데이트 확인)
+          # arm64 만 (요즘 폰 전부 · 76 MB → 약 40 MB). APP_BUILD = 앱이 자기 빌드 번호를 안다 (업데이트 확인)
           # 버전 이름 = pubspec 앞 두 자리 + 빌드 번호 (1.1.6) — 설정 › 버전 · 업데이트 시트에 보인다
-          # --split-debug-info: Dart 디버그 기호를 APK 밖으로 (libapp.so 가 작아진다)
           mm=$(sed -nE 's/^version: *([0-9]+\.[0-9]+)\..*/\1/p' pubspec.yaml)
           name="$mm.${{ github.run_number }}"
           echo "APP_VERSION=$name" >> "$GITHUB_ENV"
-          flutter build apk --release --target-platform android-arm64 --split-debug-info=build/symbols \
+          flutter build apk --release --target-platform android-arm64 \
             --build-name=$name --build-number=${{ github.run_number }} \
             --dart-define=APP_BUILD=${{ github.run_number }} --dart-define=APP_VERSION=$name
           cp build/app/outputs/flutter-apk/app-release.apk hobby-atlas.apk

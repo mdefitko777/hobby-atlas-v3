@@ -40,13 +40,6 @@ android {
         }
     }
 
-    packaging {
-        jniLibs {
-            // LiteRT GPU 위임은 쓰지 않는다 (CPU · XNNPACK 로 충분, lib/ml/visual_engine_io.dart)
-            excludes += "**/libtensorflowlite_gpu_jni.so"
-        }
-    }
-
     signingConfigs {
         create("release") {
             if (keystorePropertiesFile.exists()) {
