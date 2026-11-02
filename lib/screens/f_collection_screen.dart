@@ -16,7 +16,7 @@
 // │ F-9  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 빈 컬렉션           │ P01 · P09     │
 // │ F-10 │ 🗑 아이콘(개수 배지) → 바텀 시트      │ 휴지통: 지운 상품 복원 (기기 저장 · 30일)  │ P03 · P05     │
 // │ F-11 │ jumpTick (내 정보 숫자에서)          │ 좋아요 · 구매함 · 도감으로 바로 이동       │ P07           │
-// │ F-12 │ FindBar (탭 아래)                   │ 이 탭 · 도감에서 찾기 + 필터(도감 = GuideFilterSheet) │ P04 · P07 │
+// │ F-12 │ FindBar (채널 바 바로 아래, 탭 위)   │ 이 탭 · 도감에서 찾기 + 필터(도감 = GuideFilterSheet) │ P04 · P07 │
 // │ F-13 │ 위 줄 ? (S-19, collectionHelp)      │ 목록 · 도감 · 휴지통 · 편집 + 도감 칸 단계 │ P10 · P01     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 줄 → D 상품 상세(쌓기). 빈 상태 "검색하러 가기" → 검색 탭(옆으로).
@@ -226,7 +226,7 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
     final store = Marks.of(context).store;
     return [
       for (final k in _inTab(all))
-        if (_find.hit(k) && (stage == null || store.stageOf(k.id) == stage)) k,
+        if (_find.hit(k) && (stage == null || (needsAssembly(k) && store.stageOf(k.id) == stage))) k,
     ];
   }
 
@@ -307,22 +307,8 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
               final all = snap.data!;
               return Column(
                 children: [
-                  _TopRow(
-                    counts: {for (final t in _Tab.values) t: _inTab(all, t).length},
-                    tab: _tab,
-                    guide: _guide,
-                    onTab: (t) => setState(() {
-                      _tab = t; // STATE: 탭 → 목록 내용
-                      _selected.clear();
-                      _editing = false;
-                    }),
-                    onGuide: (g) => setState(() {
-                      _guide = g; // STATE: 보기 방식 → 목록 ↔ 도감
-                      _editing = false;
-                    }),
-                  ),
                   FindBar(
-                    // F-12 모든 탭과 같은 줄: [검색창][필터][목록 · 도감]
+                    // F-12 모든 탭과 같은 줄 · 같은 높이(채널 바 바로 아래): [검색창][필터][목록 · 도감]
                     hint: _guide
                         ? '도감에서 찾기'
                         : switch (_tab) {
@@ -347,6 +333,21 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                         mineTip: '도감',
                       ),
                     ],
+                  ),
+                  _TopRow(
+                    // F-2 탭은 검색 줄 아래 (달력의 전체 · 발매 · 예고와 같은 자리)
+                    counts: {for (final t in _Tab.values) t: _inTab(all, t).length},
+                    tab: _tab,
+                    guide: _guide,
+                    onTab: (t) => setState(() {
+                      _tab = t; // STATE: 탭 → 목록 내용
+                      _selected.clear();
+                      _editing = false;
+                    }),
+                    onGuide: (g) => setState(() {
+                      _guide = g; // STATE: 보기 방식 → 목록 ↔ 도감
+                      _editing = false;
+                    }),
                   ),
                   Expanded(
                     child: _guide
@@ -430,7 +431,7 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
     final spent = kits.fold<int>(0, (s, k) => s + (_paid(k).krw ?? 0) * me.quantityOf(k.id)); // 적은 구매가, 없으면 정가 × 환율
     final pre = {for (final k in kits) k.id: ?me.preorderOf(k.id)};
     final due = pre.values.fold<int>(0, (s, p) => s + p.due);
-    final backlog = backlogCount(_inTab(all).map((k) => k.id), me.stageOf);
+    final backlog = backlogCount(_inTab(all).where(needsAssembly).map((k) => k.id), me.stageOf);
     return Stack(
       children: [
         ListView(
@@ -525,7 +526,9 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                                   Text(yen(k.priceJpy), style: const TextStyle(fontSize: Gp.t12)),
                               ],
                             ),
-                            if (_ownedTab && !_editing) BuildStatusButton(kitId: k.id), // F-5c
+                            // F-5c 조립하는 상품만 (나머지는 같은 너비로 비워 가격 줄을 맞춘다)
+                            if (_ownedTab && !_editing)
+                              needsAssembly(k) ? BuildStatusButton(kitId: k.id) : const SizedBox(width: 40),
                           ],
                         ),
                 ),
@@ -569,8 +572,9 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
   /// F-2b 조립 상태 세그먼트 (구매함 탭) — 칸마다 개수, 미조립 = 쌓인 것
   Widget _stageSegments(List<Kit> all) {
     final store = Marks.of(context).store;
-    final counts = stageCounts(_inTab(all).map((k) => k.id), store.stageOf);
-    final total = counts.values.fold(0, (a, b) => a + b);
+    final inTab = _inTab(all);
+    final counts = stageCounts(inTab.where(needsAssembly).map((k) => k.id), store.stageOf);
+    final total = inTab.length; // 전체 = 구매함 전부, 단계 칸 = 조립하는 상품만
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
       child: SquareSegments<int>(

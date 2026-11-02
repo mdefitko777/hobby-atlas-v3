@@ -1,7 +1,17 @@
 // 조립 상태 (구매함 상품) — 미조립 · 조립 중 · 완성 (+ 도색). 순수 Dart.
 // 기기 local_state 'build_status' 에 kit_id 별로 둔다 (lib/data/user_store/kit_progress.dart).
 // 수집 기록(items[kit_id])에는 넣지 않는다 — 옛 Gunpula 앱이 동기화 때 모르는 칸을 버릴 수 있다.
+// 조립하는 상품만 단계가 있다 ([needsAssembly]) — 피규어 · 인형 · 굿즈는 사면 끝.
 import '../json_util.dart';
+import '../models.dart';
+
+/// 프라모델이 아니어도 직접 조립하는 라인 (lib/data/gunpula.dart lineLabel 의 이름)
+const _assemblyLines = {'건담 아티팩트', 'G FRAME FA', 'MOBILITY JOINT', 'MS 앙상블'};
+
+/// 조립 상태를 둘 상품인가 — 프라모델(HG · MG · RG · PG · EG · SD · RE/100 · 옵션 파츠 · 30MM · V.I. · 포켓프라 …)
+/// + 조립식 식완 · 가샤폰 라인. 아머드 코어 식완(어셈블 컬렉션)도 조립식
+bool needsAssembly(Kit k) =>
+    k.type == '프라모델' || _assemblyLines.contains(k.line) || (k.franchiseId == 'armored_core' && k.line == '식완');
 
 /// 조립 단계 — 기록이 없으면 미조립
 enum BuildStage {

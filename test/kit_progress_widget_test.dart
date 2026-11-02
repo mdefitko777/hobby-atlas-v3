@@ -165,6 +165,23 @@ void main() {
       expect(store.stageOf(k.id), BuildStage.built);
     });
 
+    testWidgets('조립하지 않는 상품(인형 · 피규어): 조립 상태 칸이 없다', (tester) async {
+      final store = UserStore.memory();
+      final json =
+          Map<String, Object?>.of(
+              (db['kits']! as List).firstWhere((k) => (k as Map)['id'] == 'gu01') as Map<String, Object?>,
+            )
+            ..['type'] = '인형'
+            ..['line'] = '봉제인형';
+      final k = Kit.fromJson(json)!;
+      expect(needsAssembly(k), isFalse);
+      await _pump(tester, store, KitDetailScreen(kit: k, loaders: _loaders()));
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -600));
+      await _settle(tester);
+      expect(find.text('조립 중'), findsNothing);
+      expect(find.byKey(ValueKey('paint-${k.id}')), findsNothing);
+    });
+
     testWidgets('재판매: 꼬리표 + 소식 줄 (지난 것도 줄에는) · 파일이 없으면 숨김', (tester) async {
       final k = _kit('gu03');
       await _pump(

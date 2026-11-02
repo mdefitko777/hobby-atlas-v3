@@ -110,17 +110,17 @@ void main() {
     return p;
   }
 
-  testWidgets('사진 벽: 내 사진이 없으면 구매함 상품 사진으로 채운다', (tester) async {
+  testWidgets('사진 벽: 공식 상품 사진은 넣지 않는다 (직접 찍은 사진만)', (tester) async {
     store
       ..setStatus('k1', CollectStatus.owned)
       ..setStatus('k2', CollectStatus.owned)
       ..setStatus('a', CollectStatus.wanted);
     await loadMe(tester);
     await show(tester, ProfileScreen(loaders: _loaders, onJump: (_) {}));
-    expect(find.byKey(const ValueKey('kit-photo-k1')), findsOneWidget);
-    expect(find.byKey(const ValueKey('kit-photo-k2')), findsOneWidget);
-    expect(find.byKey(const ValueKey('kit-photo-a')), findsNothing); // 좋아요는 벽에 없음
+    expect(find.byKey(const ValueKey('kit-photo-k1')), findsNothing);
+    expect(find.byKey(const ValueKey('kit-photo-k2')), findsNothing);
     expect(find.byType(MyPhotoTile), findsNothing);
+    expect(find.byIcon(Icons.photo_outlined), findsOneWidget); // 빈 벽
     // My Page 와 같은 아이콘 숫자 (♡ 1 · 리본 2)
     expect(find.byTooltip('좋아요'), findsOneWidget);
     expect(find.byTooltip('구매함'), findsOneWidget);
@@ -147,10 +147,8 @@ void main() {
     expect(store.photos, hasLength(1));
     final p = store.photos.single;
     expect(files.files[p.file], _jpeg);
-    // 내 사진이 상품 사진보다 앞 (왼쪽 위)
-    final mine = tester.getTopLeft(find.byKey(ValueKey('my-photo-${p.id}')));
-    final kit = tester.getTopLeft(find.byKey(const ValueKey('kit-photo-k1')));
-    expect(mine.dx < kit.dx || mine.dy < kit.dy, isTrue);
+    expect(find.byKey(ValueKey('my-photo-${p.id}')), findsOneWidget);
+    expect(find.byKey(const ValueKey('kit-photo-k1')), findsNothing);
     // 0.9초 뒤 올림: Storage <user_id>/<id>.jpg + put_photo
     await tester.pump(const Duration(seconds: 1));
     await settle(tester);
@@ -204,7 +202,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('서버에 사진 공유가 없으면: 사진은 기기에 · ⚠ · 친구는 구매함 사진', (tester) async {
+  testWidgets('서버에 사진 공유가 없으면: 사진은 기기에 · ⚠ · 친구는 빈 벽', (tester) async {
     storage.missingBucket = true;
     server.missing.add('gunpula_v3_get_friend_wall');
     await loadMe(tester);
@@ -217,10 +215,10 @@ void main() {
     expect(store.photo(p.id)!.uploadedTo, '');
     expect(tester.takeException(), isNull);
 
-    // 친구 보기: get_friend_wall 이 없어도 친구 구매함 상품으로
+    // 친구 보기: get_friend_wall 이 없으면 빈 벽 (공식 상품 사진으로 채우지 않는다)
     const friend = Member(name: '동생', handle: 'dongsaeng', role: '친구', self: false, liked: 0, lit: 0, owned: 0);
     await show(tester, ProfileScreen(friend: friend, loaders: _loaders));
-    expect(find.byKey(const ValueKey('kit-photo-b')), findsOneWidget);
+    expect(find.byKey(const ValueKey('kit-photo-b')), findsNothing);
     expect(find.byType(FriendPhotoTile), findsNothing);
     expect(tester.takeException(), isNull);
   });

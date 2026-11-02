@@ -142,7 +142,7 @@ Future<void> openCollectionShare(BuildContext context, {Loaders loaders = const 
       liked: me.wantedCount,
       owned: owned.length,
       preorders: me.activePreorders.keys.where((id) => me.statusOf(id) != CollectStatus.owned).length,
-      backlog: backlogCount(owned, me.stageOf),
+      backlog: backlogCount(owned.where((id) => byId[id] != null && needsAssembly(byId[id]!)), me.stageOf),
       thumbs: [
         for (final id in owned)
           if (byId[id]?.image case final img? when img.isNotEmpty) img,

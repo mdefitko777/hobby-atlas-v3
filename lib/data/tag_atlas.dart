@@ -91,6 +91,8 @@ class TagCard {
     this.grade,
     this.types = const [],
     this.image = '',
+    this.large = const [],
+    this.url = '',
     this.dex = 0,
     this.variant = '',
   });
@@ -123,6 +125,12 @@ class TagCard {
   final int? grade;
   final List<String> types;
   final String image;
+
+  /// 크게 볼 공식 그림 (앞 · 뒤). 없으면 [image] 를 크게 (lib/widgets/images.dart openImageViewer)
+  final List<String> large;
+
+  /// 공식 페이지 (메자스타 KR · 국제판 태그 팝업, 프렌다 픽 목록) — 앱 밖 브라우저로 연다
+  final String url;
   final int dex;
 
   /// 같은 번호의 다른 판 (체험판 · 캠페인)
@@ -276,6 +284,7 @@ TagBook parseMezastar(Object? json, TagRegion region) {
       final pSets = jList(p['sets']).whereType<String>().toList();
       final variant = jStr(p['variant']).isNotEmpty ? jStr(p['variant']) : campaign;
       final image = [p['img_thumb'], p['img_front']].map(jStr).firstWhere((s) => s.isNotEmpty, orElse: () => '');
+      final large = [p['img_front'], p['img_back']].map(jStr).where((s) => s.isNotEmpty).toList();
       cards.add(
         TagCard(
           id: id,
@@ -291,6 +300,8 @@ TagBook parseMezastar(Object? json, TagRegion region) {
           grade: _grade(t['grade']),
           types: jList(t['types']).whereType<String>().toList(),
           image: image.isNotEmpty ? image : dexArtwork(jInt(t['dex'])),
+          large: large,
+          url: jStr(p['url']),
           dex: jInt(t['dex']),
           variant: variant,
         ),
@@ -350,7 +361,8 @@ TagBook parseFrienda(Object? json) {
     final number = no.length > 1 ? no : id.substring(id.indexOf(':') + 1);
     final kind = jStr(p['kind']);
     final rarity = jStr(p['rarity']).isNotEmpty ? jStr(p['rarity']) : kind;
-    // 지금 데이터엔 그림이 없다 (ATLAS_FRIENDA_IMAGES=1 로 만들면 thumb · img 가 붙는다)
+    // 데이터엔 그림이 없다 — 공식 사이트 약관이 그림 직링크를 삼가 달라고 해서 Gunpula 가 넣지 않는다
+    // (https://pokemonfrienda.com/policy/). 칸은 포켓몬 공식 아트워크, 시트의 "공식 페이지" 로 사이트에서 본다
     final image = [
       p['thumb'],
       p['img_thumb'],
@@ -373,6 +385,8 @@ TagBook parseFrienda(Object? json) {
         grade: _grade(p['grade']),
         types: jList(p['types']).whereType<String>().toList(),
         image: image.isNotEmpty ? image : dexArtwork(jInt(p['dex'])),
+        large: [p['img']].map(jStr).where((s) => s.isNotEmpty).toList(),
+        url: jStr(p['url']),
         dex: jInt(p['dex']),
         variant: variant,
       ),

@@ -81,6 +81,12 @@ void main() {
       expect(mewtwo.rarityLabel, '슈퍼스타');
       expect(mewtwo.types, ['Psychic']);
       expect(mewtwo.image, startsWith('https://pokemontagstar.co.kr/'));
+      // 크게 볼 그림 = 앞 · 뒤 (썸네일 아님) + 공식 팝업 주소
+      expect(mewtwo.large, [
+        'https://pokemontagstar.co.kr/data/goodsImages/17760475689.png',
+        'https://pokemontagstar.co.kr/data/goodsImages/177604756810.png',
+      ]);
+      expect(mewtwo.url, 'https://pokemontagstar.co.kr/kr/sub/stage_pop.php?idx=176');
       expect(b.cards.first.rarity, 'regular');
     });
 
@@ -215,6 +221,32 @@ void main() {
       await _settle(tester);
       expect(find.text('루기아'), findsOneWidget);
       expect(find.text('수집 0 / 7'), findsOneWidget); // 대만 전체 (앱 바)
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('태그 시트: 그림을 누르면 앞 · 뒤 크게 보기 · 공식 페이지 버튼', (tester) async {
+      // 인터넷 그림 대신 없는 앱 그림 경로 (자리표시로 그려진다)
+      Object? local(Object? v) => switch (v) {
+        final Map<String, Object?> m => {
+          for (final e in m.entries) e.key: e.key.startsWith('img') ? 'assets/test/${e.key}.png' : local(e.value),
+        },
+        final List<Object?> l => [for (final x in l) local(x)],
+        _ => v,
+      };
+      TagAtlas.source = (file) async => local(_files[file]);
+      final store = UserStore.memory();
+      await _pump(tester, const TagAtlasScreen(game: TagGame.mezastar, region: 'KR'), store);
+      await tester.longPress(find.byType(TagCell).at(1));
+      await _settle(tester);
+      expect(find.byTooltip('공식 페이지'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('tag-image')));
+      await _settle(tester);
+      expect(find.byKey(const ValueKey('image-viewer')), findsOneWidget);
+      expect(find.text('1 / 2'), findsOneWidget); // 앞 · 뒤
+      await tester.drag(find.byKey(const ValueKey('image-viewer')), const Offset(-400, 0));
+      await _settle(tester);
+      expect(find.text('2 / 2'), findsOneWidget);
+      expect(store.tagOwned, isEmpty); // 보기만, 가짐은 그대로
       expect(tester.takeException(), isNull);
     });
 

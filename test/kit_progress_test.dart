@@ -34,6 +34,21 @@ Kit kit(String id, {String jan = ''}) => Kit(
 
 void main() {
   group('조립 상태 규칙', () {
+    test('조립하는 상품만: 프라모델 · 조립식 식완 / 가샤폰 — 피규어 · 인형 · 굿즈는 아님', () {
+      Kit k(String type, String line, {String franchise = 'gundam'}) =>
+          Kit.fromJson({'id': 'x', 'type': type, 'line': line, 'franchiseId': franchise})!;
+      expect(needsAssembly(k('프라모델', 'HG')), isTrue);
+      expect(needsAssembly(k('프라모델', 'NG')), isTrue); // 옵션 파츠 세트
+      expect(needsAssembly(k('프라모델', 'POKEPLA', franchise: 'pokemon')), isTrue);
+      expect(needsAssembly(k('식완', 'G FRAME FA')), isTrue);
+      expect(needsAssembly(k('가샤폰', 'MS 앙상블')), isTrue);
+      expect(needsAssembly(k('식완', '식완', franchise: 'armored_core')), isTrue); // 어셈블 컬렉션
+      expect(needsAssembly(k('피규어', 'ROBOT魂')), isFalse);
+      expect(needsAssembly(k('식완', 'CONVERGE')), isFalse);
+      expect(needsAssembly(k('인형', '봉제인형', franchise: 'pokemon')), isFalse);
+      expect(needsAssembly(k('굿즈', '굿즈')), isFalse);
+    });
+
     test('단계 순환 · 글자 · 모르는 값은 미조립', () {
       expect(BuildStage.unbuilt.next, BuildStage.building);
       expect(BuildStage.building.next, BuildStage.built);

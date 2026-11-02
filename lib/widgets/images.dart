@@ -215,3 +215,64 @@ class BlurFitImage extends StatelessWidget {
     );
   }
 }
+
+/// 공식 그림 크게 보기 — 검은 바탕 전체 화면, 두 손가락으로 확대, 여러 장이면 옆으로 넘기기 (태그 앞 · 뒤, 상품 사진)
+Future<void> openImageViewer(BuildContext context, List<String> images, {int index = 0, String label = ''}) {
+  final list = [
+    for (final s in images)
+      if (s.isNotEmpty) s,
+  ];
+  if (list.isEmpty) return Future.value();
+  return Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      fullscreenDialog: true,
+      builder: (_) => ImageViewerScreen(images: list, index: index.clamp(0, list.length - 1), label: label),
+    ),
+  );
+}
+
+class ImageViewerScreen extends StatefulWidget {
+  const ImageViewerScreen({super.key, required this.images, this.index = 0, this.label = ''});
+  final List<String> images;
+  final int index;
+  final String label;
+
+  @override
+  State<ImageViewerScreen> createState() => _ImageViewerScreenState();
+}
+
+class _ImageViewerScreenState extends State<ImageViewerScreen> {
+  late int _page = widget.index;
+  late final _pages = PageController(initialPage: widget.index);
+
+  @override
+  void dispose() {
+    _pages.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final many = widget.images.length > 1;
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: many ? Text('${_page + 1} / ${widget.images.length}', style: const TextStyle(fontSize: Gp.t14)) : null,
+      ),
+      body: PageView.builder(
+        key: const ValueKey('image-viewer'),
+        controller: _pages,
+        itemCount: widget.images.length,
+        onPageChanged: (i) => setState(() => _page = i), // STATE: 몇 번째 그림
+        itemBuilder: (_, i) => InteractiveViewer(
+          maxScale: 5,
+          child: Center(
+            child: AppImage(widget.images[i], fit: BoxFit.contain, placeholder: widget.label),
+          ),
+        ),
+      ),
+    );
+  }
+}

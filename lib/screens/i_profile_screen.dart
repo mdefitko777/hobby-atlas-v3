@@ -1,7 +1,7 @@
 // 화면 I: 내 정보 — 프로필 · 취향 태그 · 수집 숫자 · 사진 벽 · 친구 추가(아이디) (친구 서랍 머리에서 열림, 설정은 K 화면)
 // 같은 화면을 친구 보기로도 쓴다: 친구 이름을 누르면 그 친구의 숫자 · 사진 벽 · 태그 (편집 없음, 친구 끊기)
 // v3: 이름 · @아이디 · 친구는 Gunpula 계정(v3 get_me), 숫자는 내 기록(Marks), 태그는 preferences.tags,
-//     사진 벽은 내 사진(기기) → 구매함 상품 사진. 친구 사진은 Storage(docs/supabase-v3-photos.sql) — 없으면 친구 구매함 사진.
+//     사진 벽은 직접 찍은 사진만 (공식 상품 사진은 넣지 않는다). 친구 사진은 Storage(docs/supabase-v3-photos.sql).
 //     아바타 · 배경 · 사진 공개 범위 · 공유 공간은 u_social.dart (서버 = docs/supabase-v3-social.sql, 없으면 기기에만).
 // 숫자 · 아이콘은 My Page(A-21)와 같은 모양: ♡ | 리본, 이번 달 | 총 지출을 떠 있는 흰 묶음 두 개에.
 //
@@ -14,7 +14,7 @@
 // │ I-14 │ 머리 공유 아이콘 → V 공유 카드        │ 내 컬렉션 카드 (그림으로 공유 · 저장)      │ P07 · P10     │
 // │ I-5  │ 친구 줄: 👥 n · 추가 · 요청 아이콘     │ 친구 추가 (아이디로) · 받은 요청 · 내 아이디 복사 │ P07 · P08 │
 // │ I-5b │ WorkspaceMembers (U-6, 있을 때만)    │ 공유 공간 이름 · 멤버 · 역할 (읽기만)       │ P06 · P08     │
-// │ I-6  │ PhotoWall 3열 (T-1)                 │ 사진 벽: 내 사진 → 구매함 상품 사진         │ P02 · P06     │
+// │ I-6  │ PhotoWall 3열 (T-1)                 │ 사진 벽: 직접 찍은 사진만                   │ P02 · P06     │
 // │ I-7  │ 사진 칸 → T 사진 보기                │ 친구에게 보이기 · 워터마크 저장            │ P05 · P10     │
 // │ I-9  │ 👥/🔒 아이콘 → 바텀 시트(U-5)         │ 사진 공개 범위 (전체 끄기 · 친구별 숨기기)  │ P05 · P07     │
 // │ I-13 │ 안내 카드 + 버튼                     │ 로그인하기 · 아이디 정하기                │ P09 · P10     │
@@ -92,9 +92,6 @@ Future<Member> loadFriendMember(Account account, String handle, Loaders loaders,
   );
 }
 
-/// 사진 벽에 상품 사진을 몇 칸까지 채울지 (내 사진은 전부)
-const _wallKits = 24;
-
 /// 취향 태그 한도
 const _maxTags = 8;
 const _maxTagLength = 12;
@@ -108,12 +105,11 @@ class _ProfileData {
   final int lit;
 }
 
-/// 친구 보기: 숫자 · 사진 벽(+태그) · 구매함 상품
+/// 친구 보기: 숫자 · 사진 벽(+태그)
 class _FriendData {
-  const _FriendData(this.member, this.wall, this.owned);
+  const _FriendData(this.member, this.wall);
   final Member member;
   final FriendWall wall;
-  final List<Kit> owned;
 }
 
 class ProfileScreen extends StatefulWidget {
@@ -172,13 +168,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     ]);
     final m = results[0] as Member;
     if (real) await account.profileImages.cacheFriendAvatars(); // I-1 친구 아바타 (사진 벽의 avatar_path)
-    var owned = const <Kit>[];
-    try {
-      owned = await widget.loaders.kitsByIds(m.ownedIds.take(_wallKits).toList());
-    } on Object {
-      // 상품 사진이 없어도 숫자 · 사진은 보여 준다
-    }
-    return _FriendData(m, results[1] as FriendWall, owned);
+    return _FriendData(m, results[1] as FriendWall);
   }
 
   void _jump(CollectionJump j) {
@@ -302,7 +292,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             builder: (context, fs) {
               if (fs.connectionState != ConnectionState.done) return const LoadingView();
               if (fs.hasError) return ErrorView(message: '${fs.error}', onRetry: () => setState(_load));
-              return _friend(fs.data ?? _FriendData(friend, const FriendWall(), const []));
+              return _friend(fs.data ?? _FriendData(friend, const FriendWall()));
             },
           );
         },
@@ -324,14 +314,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final level = guideLevel(d.lit, 0, owned: store.ownedCount); // 왼쪽 위 Lv 와 같은 셈 (lib/level.dart)
     final jump = widget.onJump == null ? null : _jump;
 
-    // I-6 사진 벽: 내 사진 → 구매함 상품 (사진을 이어 붙인 상품은 한 번만)
+    // I-6 사진 벽: 직접 찍은 사진만
     final photos = store.photos;
-    final withPhoto = {for (final ph in photos) ph.kitId};
-    String at(Kit k) => '${store.entry(k.id)?['updated_at'] ?? ''}';
-    final ownedKits = [
-      for (final k in d.collection)
-        if (marks.owned(k) && !withPhoto.contains(k.id)) k,
-    ]..sort((a, b) => at(b).compareTo(at(a)));
 
     return ListView(
       padding: const EdgeInsets.only(bottom: 40),
@@ -364,7 +348,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             owned: owned,
             backlog: backlogCount([
               for (final k in mine)
-                if (marks.owned(k)) k.id,
+                if (marks.owned(k) && needsAssembly(k)) k.id,
             ], store.stageOf),
             month: store.spendInMonth(appNow()),
             total: store.spendKrw,
@@ -387,7 +371,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 )
               : null,
           onAdd: () => addMyPhoto(context),
-          tiles: [for (final ph in photos) MyPhotoTile(ph), for (final k in ownedKits.take(_wallKits)) KitPhotoTile(k)],
+          tiles: [for (final ph in photos) MyPhotoTile(ph)],
         ),
         if (signedIn) _friendsPanel(account),
         if (signedIn && account.sync.workspace != null)
@@ -476,7 +460,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       loaders: widget.loaders,
       photoKitIds: [for (final ph in d.wall.photos) ph.kitId],
     );
-    final withPhoto = {for (final ph in d.wall.photos) ph.kitId};
     return ListView(
       padding: const EdgeInsets.only(bottom: 40),
       children: [
@@ -514,12 +497,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
         PhotoWall(
-          // I-6 친구가 보이기로 둔 사진 → 친구 구매함 상품
-          tiles: [
-            for (final ph in d.wall.photos) FriendPhotoTile(ph),
-            for (final k in d.owned)
-              if (!withPhoto.contains(k.id)) KitPhotoTile(k),
-          ],
+          // I-6 친구가 보이기로 둔 사진만
+          tiles: [for (final ph in d.wall.photos) FriendPhotoTile(ph)],
         ),
         if (real)
           Padding(

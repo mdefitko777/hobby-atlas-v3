@@ -4,7 +4,7 @@
 //
 // ┌──────── 디자인 가이드 대응표: T 사진 벽 · 사진 보기 ─────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
-// │ T-1  │ PhotoWall (3열 격자)                │ 사진 벽: 내 사진 먼저 → 구매함 상품 사진   │ P02 · P06     │
+// │ T-1  │ PhotoWall (3열 격자)                │ 사진 벽: 직접 찍은 사진만                 │ P02 · P06     │
 // │ T-2  │ + 칸 → 바텀 시트(카메라 · 갤러리)     │ 내 사진 넣기                            │ P07           │
 // │ T-3  │ PhotoViewScreen                    │ 사진 한 장 보기 (워터마크 미리보기)        │ P02 · P10     │
 // │ T-4  │ SwitchListTile(👥)                  │ 친구에게 보이기 (사진마다)                │ P05 · P01     │
@@ -232,23 +232,6 @@ class MyPhotoTile extends StatelessWidget {
     onTap: () => openPage(context, PhotoViewScreen(mine: photo.id)),
     badge: photo.shared ? null : _dot(const Icon(Icons.visibility_off_outlined, size: Gp.iXS, color: Gp.muted)),
     child: LocalPhotoImage(photo.file),
-  );
-}
-
-/// 구매함 상품 사진 칸 (사진이 없어도 벽이 비지 않게) — 리본 표시 · 누르면 상품 상세
-class KitPhotoTile extends StatelessWidget {
-  const KitPhotoTile(this.kit, {super.key});
-  final Kit kit;
-
-  @override
-  Widget build(BuildContext context) => _Tile(
-    key: ValueKey('kit-photo-${kit.id}'),
-    onTap: () => openKitDetail(context, kit),
-    badge: _dot(const OwnedIcon(size: Gp.iXS)),
-    child: Padding(
-      padding: const EdgeInsets.all(4),
-      child: AppImage(kit.image, fit: BoxFit.contain, placeholder: kit.line),
-    ),
   );
 }
 

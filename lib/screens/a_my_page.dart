@@ -68,7 +68,7 @@ class _MyPageViewState extends State<MyPageView> {
             // A-21 · A-21b 끝에 공유 카드
             liked: liked.length,
             owned: owned.length,
-            backlog: backlogCount(owned.map((k) => k.id), me.stageOf),
+            backlog: backlogCount(owned.where(needsAssembly).map((k) => k.id), me.stageOf),
             month: me.spendInMonth(appNow()),
             total: me.spendKrw,
             onLiked: () => widget.onJump?.call(CollectionJump.liked),

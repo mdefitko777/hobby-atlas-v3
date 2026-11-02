@@ -9,6 +9,8 @@
 // │ R-5  │ 태그 칸 격자 (tierFrame · cellImage) │ 흑백 = 아직 · 컬러 + 민트 테두리 = 가짐   │ P01 · P04     │
 // │ R-5b │ 칸 누르기 → 토스트(되돌리기)          │ 가짐 켜기 · 끄기                        │ P03 · P07     │
 // │ R-6  │ 바텀 시트 (길게 누르기 · 목록 줄)     │ 태그 정보 · 가짐 버튼                    │ P07 · P10     │
+// │ R-6b │ 시트 그림 누르기 → openImageViewer  │ 공식 그림 크게 (앞 · 뒤 넘기기, 확대)     │ P02 · P08     │
+// │ R-6c │ 시트 ↗ 공식 페이지 (앱 밖 브라우저)  │ 프렌다 픽 목록 · 태그스타 팝업            │ P09           │
 // │ R-7  │ 필터 시트 (가짐 · 등급 · 타입)        │ 네모 세그먼트 + 네모 체크 칸             │ P04 · P08     │
 // │ R-8  │ TagSearchSection (B 검색 결과 위)    │ 검색 탭에서 태그 · 게임 이름 찾기         │ P07 · P06     │
 // │ R-9  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 맞는 태그 없음       │ P01 · P09     │
@@ -17,6 +19,7 @@
 // 전환: 도감 카드 → R(쌓기) → 태그 시트(덮기). 검색 결과 줄 → 태그 시트(덮기) → R(쌓기).
 // 가짐 = UserStore.tagOwned (기기에만 · 백업 파일에 들어감). 키 = Gunpula atlas 의 인쇄 id · 픽 id.
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../data/tag_atlas.dart';
 import '../detail_pane.dart';
@@ -682,11 +685,27 @@ class _TagSheet extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            SizedBox(
-              height: 200,
-              child: tierFrame(
-                have ? CellTier.owned : CellTier.none,
-                cellImage(have ? CellTier.owned : CellTier.none, card.image, null),
+            GestureDetector(
+              // R-6b 크게 보기 (앞 · 뒤)
+              key: const ValueKey('tag-image'),
+              onTap: () =>
+                  openImageViewer(context, card.large.isNotEmpty ? card.large : [card.image], label: card.name),
+              child: SizedBox(
+                height: 240,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    tierFrame(
+                      have ? CellTier.owned : CellTier.none,
+                      cellImage(have ? CellTier.owned : CellTier.none, card.large.firstOrNull ?? card.image, null),
+                    ),
+                    const Positioned(
+                      right: 8,
+                      bottom: 8,
+                      child: Icon(Icons.zoom_out_map, size: Gp.iS, color: Gp.muted),
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 12),
@@ -702,6 +721,17 @@ class _TagSheet extends StatelessWidget {
                   card.number,
                   style: const TextStyle(fontSize: Gp.t14, color: Gp.muted, fontWeight: FontWeight.w600),
                 ),
+                if (card.url.isNotEmpty)
+                  IconButton(
+                    // R-6c
+                    tooltip: '공식 페이지',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () async {
+                      final ok = await launchUrl(Uri.parse(card.url), mode: LaunchMode.externalApplication);
+                      if (!ok && context.mounted) showToast(context, '열지 못했어요');
+                    },
+                    icon: const Icon(Icons.open_in_new, size: Gp.iM, color: Gp.muted),
+                  ),
               ],
             ),
             if (card.local.isNotEmpty && card.local != card.name)
@@ -886,6 +916,8 @@ List<HelpItem> tagHelp() => [
   HelpItem.widget(tierHelpCell(CellTier.none), '흑백 = 아직'),
   HelpItem.widget(tierHelpCell(CellTier.owned), '컬러 + 민트 테두리 = 가짐'),
   const HelpItem(Icons.touch_app_outlined, '누르기 = 가짐 켜고 끄기 · 길게 = 정보'),
+  const HelpItem(Icons.zoom_out_map, '정보의 그림 누르기 = 크게 보기 (앞 · 뒤)'),
+  const HelpItem(Icons.open_in_new, '공식 페이지 (브라우저)'),
   const HelpItem(Icons.tune, '필터 (가짐 · 등급 · 타입)'),
   const HelpItem(Icons.grid_view_outlined, '격자로 보기'),
   const HelpItem(Icons.view_list_outlined, '목록으로 보기'),

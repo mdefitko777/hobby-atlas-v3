@@ -4,6 +4,7 @@
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
 // │ D-1  │ RaisedCircleButton(‹)              │ 뒤로 (보던 화면 그대로)                 │ P03           │
 // │ D-2  │ PageView + 점 표시                 │ 공식 사진 (여러 장 넘기기)              │ P02 · P08     │
+// │ D-2b │ 사진 누르기 → openImageViewer       │ 크게 보기 (확대 · 넘기기)               │ P02 · P08     │
 // │ D-4  │ 제목 + 일본어 원래 이름              │ 상품명 (공식 사이트 검색용 원문)        │ P02           │
 // │ D-5  │ Text(¥) + 발매일 + 한정 표시         │ 일본 정가 · 발매 · 한정/PB              │ P02 · P01     │
 // │ D-5b │ 정가 아래 시세 한 줄 → 바텀 시트      │ 정가 ↔ 국내 시세 (시세는 이 한 곳에만)   │ P01 · P08     │
@@ -33,6 +34,7 @@ import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:url_launcher/url_launcher.dart';
 
 import '../api.dart';
+import '../logic/build_status.dart' show needsAssembly;
 import '../logic/friends.dart';
 import '../logic/market.dart';
 import '../logic/restock.dart';
@@ -462,8 +464,10 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              BuildStatusRow(kitId: widget.kit.id), // D-5f 조립 상태
-              const SizedBox(height: 8),
+              if (needsAssembly(widget.kit)) ...[
+                BuildStatusRow(kitId: widget.kit.id), // D-5f 조립 상태 (조립하는 상품만)
+                const SizedBox(height: 8),
+              ],
               KitPhotoStrip(kitId: widget.kit.id), // D-5d 내 사진 (사진 벽에도)
             ],
             _FriendsWithKit(kitId: widget.kit.id), // D-5e 이 상품을 가진 · 좋아요한 친구
@@ -573,9 +577,13 @@ class _GalleryState extends State<_Gallery> {
           PageView.builder(
             itemCount: widget.images.length,
             onPageChanged: (i) => setState(() => _page = i), // STATE: 사진 번호 → 점
-            itemBuilder: (context, i) => Padding(
-              padding: const EdgeInsets.fromLTRB(16, 56, 16, 28),
-              child: AppImage(widget.images[i], fit: BoxFit.contain, placeholder: widget.label),
+            itemBuilder: (context, i) => GestureDetector(
+              // D-2b 누르면 크게 (확대 · 넘기기)
+              onTap: () => openImageViewer(context, widget.images, index: i, label: widget.label),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 56, 16, 28),
+                child: AppImage(widget.images[i], fit: BoxFit.contain, placeholder: widget.label),
+              ),
             ),
           ),
           if (widget.images.length > 1)
