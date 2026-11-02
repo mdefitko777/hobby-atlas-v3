@@ -14,7 +14,7 @@ import '../channels.dart' show channelCovers;
 import '../json_util.dart';
 import '../models.dart';
 import 'blob_store.dart';
-import 'gundam_atlas.dart' show atlasBoxartFile;
+import 'gundam_atlas.dart' show atlasBoxartFile, atlasKitMsFile, atlasMsFile;
 import 'gunpula.dart';
 import 'user_store.dart';
 
@@ -196,6 +196,8 @@ class Catalog extends ChangeNotifier {
             'grades': aux['grades.json'] ?? '{}',
             'firstSeen': aux['kit-first-seen.json'] ?? '{}',
             if (f == 'gundam' && aux[atlasBoxartFile] != null) 'boxart': aux[atlasBoxartFile]!,
+            if (f == 'gundam' && aux[atlasKitMsFile] != null) 'kitMs': aux[atlasKitMsFile]!, // 사진 없는 상품의 참고 그림
+            if (f == 'gundam' && aux[atlasMsFile] != null) 'ms': aux[atlasMsFile]!,
           }),
         );
       }
@@ -355,7 +357,9 @@ class Catalog extends ChangeNotifier {
     for (final base in [gunpulaBase, gunpulaRawBase]) {
       final client = debugClient ?? http.Client();
       try {
-        final res = await client.send(http.Request('GET', Uri.parse('$base$path'))).timeout(const Duration(seconds: 60));
+        final res = await client
+            .send(http.Request('GET', Uri.parse('$base$path')))
+            .timeout(const Duration(seconds: 60));
         if (res.statusCode == 200) {
           final bytes = BytesBuilder(copy: false);
           // 한 조각을 60초 넘게 못 받으면 멈춘 것으로 본다 (큰 파일도 천천히 오는 동안은 기다린다)

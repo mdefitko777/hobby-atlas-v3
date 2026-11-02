@@ -5,6 +5,7 @@
 // │ D-1  │ RaisedCircleButton(‹)              │ 뒤로 (보던 화면 그대로)                 │ P03           │
 // │ D-2  │ PageView + 점 표시                 │ 공식 사진 (여러 장 넘기기)              │ P02 · P08     │
 // │ D-2b │ 사진 누르기 → openImageViewer       │ 크게 보기 (확대 · 넘기기)               │ P02 · P08     │
+// │ D-2c │ SoftTag "참고 그림 · 같은 기체"       │ 공식 사진이 없는 상품 — 같은 기체 상품 사진  │ P02 · P09     │
 // │ D-4  │ 제목 + 일본어 원래 이름              │ 상품명 (공식 사이트 검색용 원문)        │ P02           │
 // │ D-5  │ Text(¥) + 발매일 + 한정 표시         │ 일본 정가 · 발매 · 한정/PB              │ P02 · P01     │
 // │ D-5b │ 정가 아래 시세 한 줄 → 바텀 시트      │ 정가 ↔ 국내 시세 (시세는 이 한 곳에만)   │ P01 · P08     │
@@ -275,7 +276,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
       body: LayoutBuilder(
         builder: (context, box) {
           final wide = box.maxWidth >= detailWideBreakpoint; // D-13
-          final gallery = _Gallery(images: _images, label: k.line);
+          final gallery = _Gallery(images: _images, label: k.line, reference: k.imageRef);
           final info = _info(context);
           return Stack(
             children: [
@@ -557,9 +558,12 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
 
 /// D-2 공식 사진 넘기기 (정사각형, 전체가 보이게 contain)
 class _Gallery extends StatefulWidget {
-  const _Gallery({required this.images, required this.label});
+  const _Gallery({required this.images, required this.label, this.reference = false});
   final List<String> images;
   final String label;
+
+  /// D-2c 이 상품 사진이 없어 같은 기체의 다른 상품 사진을 빌린 것
+  final bool reference;
 
   @override
   State<_Gallery> createState() => _GalleryState();
@@ -592,6 +596,17 @@ class _GalleryState extends State<_Gallery> {
               right: 0,
               bottom: 12,
               child: PageDots(count: widget.images.length, index: _page),
+            ),
+          if (widget.reference)
+            const Positioned(
+              // D-2c
+              left: 16,
+              bottom: 10,
+              child: Tooltip(
+                message: '공식 사진이 없어 같은 기체의 다른 상품 사진을 보여 줘요',
+                triggerMode: TooltipTriggerMode.tap,
+                child: SoftTag('참고 그림 · 같은 기체'),
+              ),
             ),
         ],
       ),

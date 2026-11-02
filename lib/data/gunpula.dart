@@ -342,5 +342,49 @@ List<Map<String, Object?>> mapKitsJob(Map<String, String> msg) {
       'blob': [name, nameJa, seriesLabel, line, type, ...keywords].join(' ').toLowerCase(),
     });
   }
+  if (msg['kitMs'] != null) {
+    fillReferenceImages(out, jsonDecode(msg['kitMs']!), ms: msg['ms'] == null ? null : jsonDecode(msg['ms']!));
+  }
   return out;
+}
+
+/// 사진이 하나도 없는 상품(옛 웹 한정 ROBOT魂 처럼 공식 목록에서 사라진 것)에 같은 기체(gundam-kit-ms)의
+/// 다른 상품 대표 사진을 빌려 준다 — `imageRef: true` 로 표시해 상세가 "참고 그림" 이라고 알린다.
+/// 고르는 순서: 그 기체의 역할 main 상품 먼저, 같은 역할 안에서는 파일 순서 → 상품이 그것 하나뿐이면
+/// 도감 기체 그림 ([ms] = gundam-ms.json 의 icon)
+void fillReferenceImages(List<Map<String, Object?>> out, Object? kitMs, {Object? ms}) {
+  final links = jMap(jMap(kitMs)['links']);
+  final template = jStr(jMap(ms)['icon_template']);
+  final icons = <String, String>{
+    for (final raw in jList(jMap(ms)['ms']))
+      if (jStr(jMap(raw)['icon']) case final icon when icon.isNotEmpty && template.isNotEmpty)
+        jStr(jMap(raw)['id']): template.replaceAll('{icon}', icon),
+  };
+  final byId = {for (final m in out) jStr(m['id']): m};
+  final kitsByMs = <String, List<(String, bool)>>{};
+  for (final e in links.entries) {
+    for (final l in jList(e.value)) {
+      final ms = jStr(jMap(l)['ms']);
+      if (ms.isNotEmpty) (kitsByMs[ms] ??= []).add((e.key, jStr(jMap(l)['role']) == 'main'));
+    }
+  }
+  for (final m in out) {
+    if (jStr(m['image']).isNotEmpty) continue;
+    final linked = [for (final l in jList(links[jStr(m['id'])])) jStr(jMap(l)['ms'])];
+    String fromKits(String msId) {
+      final kits = [...?kitsByMs[msId]];
+      return [...kits.where((k) => k.$2), ...kits.where((k) => !k.$2)]
+          .map((k) => byId[k.$1]?['imageRef'] == true ? '' : jStr(byId[k.$1]?['image']))
+          .firstWhere((s) => s.isNotEmpty, orElse: () => '');
+    }
+
+    final img = [
+      ...linked.map(fromKits),
+      ...linked.map((id) => icons[id] ?? ''),
+    ].firstWhere((s) => s.isNotEmpty, orElse: () => '');
+    if (img.isEmpty) continue;
+    m['image'] = img;
+    m['gallery'] = [img];
+    m['imageRef'] = true;
+  }
 }

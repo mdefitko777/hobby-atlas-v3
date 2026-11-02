@@ -213,6 +213,50 @@ void main() {
     });
   });
 
+  group('사진 없는 상품 → 같은 기체의 참고 그림', () {
+    test('같은 기체 main 상품 사진 → 없으면 도감 기체 그림 · 연결이 없으면 그대로', () {
+      final out = <Map<String, Object?>>[
+        {'id': 'web', 'image': '', 'gallery': <String>[]},
+        {'id': 'figure', 'image': 'https://x/figure.jpg', 'gallery': <String>[]},
+        {'id': 'hg', 'image': 'https://x/hg.jpg', 'gallery': <String>[]},
+        {'id': 'solo', 'image': '', 'gallery': <String>[]},
+        {'id': 'lonely', 'image': '', 'gallery': <String>[]},
+      ];
+      fillReferenceImages(
+        out,
+        {
+          'links': {
+            'web': [
+              {'ms': 'A', 'role': 'figure'},
+            ],
+            'figure': [
+              {'ms': 'A', 'role': 'figure'},
+            ],
+            'hg': [
+              {'ms': 'A', 'role': 'main'},
+            ],
+            'solo': [
+              {'ms': 'B', 'role': 'figure'},
+            ],
+          },
+        },
+        ms: {
+          'icon_template': 'https://i/{icon}.webp',
+          'ms': [
+            {'id': 'B', 'icon': 'b1'},
+          ],
+        },
+      );
+      expect(out[0]['image'], 'https://x/hg.jpg'); // main 먼저
+      expect(out[0]['gallery'], ['https://x/hg.jpg']);
+      expect(out[0]['imageRef'], isTrue);
+      expect(out[2]['imageRef'], isNull); // 자기 사진이 있는 것은 그대로
+      expect(out[3]['image'], 'https://i/b1.webp'); // 상품이 그것 하나 → 기체 그림
+      expect(out[4]['image'], ''); // 연결 없음
+      expect(Kit.fromSlim(out[0], recentSince: '', monthPrefix: '2026-11').imageRef, isTrue);
+    });
+  });
+
   group('도감 계산 (카탈로그 + 내 기록)', () {
     final me = UserStore.instance;
     setUp(() => loadAtlasFixture());

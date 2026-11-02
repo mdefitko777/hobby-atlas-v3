@@ -68,6 +68,7 @@ class Kit {
     this.blob = '',
     this.goodsKind = '',
     this.sourceUrls = const [],
+    this.imageRef = false,
   });
 
   final String id;
@@ -135,6 +136,9 @@ class Kit {
   /// 이 칸이 생기기 전 기기 캐시에는 없다 → 다음 새 데이터 때 채워진다 (그동안은 [officialUrl] 만)
   final List<String> sourceUrls;
 
+  /// [image] 가 이 상품 사진이 아니라 같은 기체의 다른 상품 사진 (lib/data/gunpula.dart fillReferenceImages)
+  final bool imageRef;
+
   /// lib/data/gunpula.dart mapKitsJob 의 결과 → Kit.
   /// [recentSince] 이후에 처음 들어온 상품 = 최근 추가, [monthPrefix]('yyyy-mm')에 발매 = 이번 달
   static Kit fromSlim(Map<String, Object?> j, {required String recentSince, required String monthPrefix}) {
@@ -173,6 +177,7 @@ class Kit {
       blob: jStr(j['blob']),
       goodsKind: jStr(j['goodsKind']),
       sourceUrls: _strs(j['sourceUrls']),
+      imageRef: _b(j, 'imageRef'),
     );
   }
 
