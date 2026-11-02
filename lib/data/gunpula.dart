@@ -128,7 +128,8 @@ String _halfWidth(String s) =>
 
 /// 세부 시리즈 이름 — 세부 시리즈가 실제로 갈리는 라인만 (그 밖의 subline 은 라인 풀네임 · 탄 번호 · 판매처라 버린다)
 ///   HG → HGUC · HGCE · HGBF · HGBD:R … / ROBOT魂 · METAL ROBOT魂 → ver. A.N.I.M.E. · Ka signature /
-///   CONVERGE → CORE · SB · # / 超合金 → 超合金の塊 · 超合金魂 …
+///   CONVERGE → CORE · SB · # / 超合金 → 超合金の塊 · 超合金魂 … /
+///   BEYBLADE X → 상품 형태 (스타터 · 부스터 · 랜덤 부스터 · 세트 · 런처 · 도구 — 라인 BX · UX · CX 는 세대 쪽)
 String cleanSubline(String subline, String code, String line, {String name = ''}) {
   final s = subline.trim();
   switch (code) {
@@ -149,9 +150,14 @@ String cleanSubline(String subline, String code, String line, {String name = ''}
       return rest.isEmpty ? '' : 'CONVERGE $rest';
     case 'CHOGOKIN':
       return s == line ? '' : s;
+    case 'BEYBLADE_X':
+      return _beyForms[s.replaceFirst('BEYBLADE X ', '')] ?? '';
   }
   return '';
 }
+
+/// 베이 상품 형태 (Gunpula subline 'BEYBLADE X Starter' …)
+const _beyForms = {'Starter': '스타터', 'Booster': '부스터', 'Random Booster': '랜덤 부스터', 'Set': '세트', 'Tool': '런처 · 도구'};
 
 String lineLabel(String code, String subline, String kitId) {
   if (code == 'BEYBLADE_X') {
