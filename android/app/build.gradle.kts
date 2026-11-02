@@ -34,9 +34,13 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        // 폰은 전부 arm64 — 플러그인(ML Kit · LiteRT)이 가져오는 x86_64 · armeabi-v7a 네이티브 라이브러리(약 40 MB)를 넣지 않는다
-        ndk {
-            abiFilters += listOf("arm64-v8a")
+    }
+
+    // 폰은 전부 arm64 — 플러그인(ML Kit · LiteRT)이 가져오는 x86_64 · armeabi-v7a 네이티브 라이브러리(약 40 MB)를 넣지 않는다
+    // (defaultConfig.ndk.abiFilters 는 Flutter 플러그인이 덮어써서 듣지 않았다 → 묶을 때 뺀다)
+    packaging {
+        jniLibs {
+            excludes += listOf("lib/x86_64/**", "lib/x86/**", "lib/armeabi-v7a/**")
         }
     }
 
