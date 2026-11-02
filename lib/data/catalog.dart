@@ -33,7 +33,8 @@ class Catalog extends ChangeNotifier {
   /// 4: 건담 박스 아트(data/atlas/gundam-boxart.json)를 대표 사진으로
   /// 5: 사진 없는 상품의 참고 그림(imageRef) · 魂 라인 이름(Hi-Resolution Model · 超合金 …)
   /// 6: 세부 시리즈(subline — HGUC · HGCE · ver. A.N.I.M.E. …)
-  static const mapVersion = 6;
+  /// 7: 베이 상품 형태(subline — 스타터 · 부스터 · 랜덤 부스터 · 세트 · 런처 · 도구)
+  static const mapVersion = 7;
 
   CatalogPhase phase = CatalogPhase.empty;
   String error = '';

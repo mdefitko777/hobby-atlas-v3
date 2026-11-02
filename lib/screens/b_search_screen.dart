@@ -12,7 +12,7 @@
 // │ B-7  │ SectionListView (O 전체 목록 재사용) │ 검색 결과 · 필터 · 정렬 · 격자/목록      │ P08 · 적응형 │
 // │ B-9  │ 탭 "전체" (처음) → SectionListView │ 내 채널 상품 전부                        │ P07 · P06     │
 // │ B-14 │ UnderlineTab 전체 · 종류 · 세대      │ 둘러보기 세 가지 (검색창 줄 아래, 컬렉션 탭 줄과 같은 자리) │ P06 · P04 │
-// │ B-15 │ 탭 "종류" · "세대" → 분류 칸 격자     │ 공식 그림 + 이름만 → 그 분류 상품 (같은 필터) │ P06 · P08  │
+// │ B-15 │ 탭 "종류" · "세대" → TypeBrowse · EraBrowse (B-20 · B-21) │ 공식 그림 + 이름만 → 그 분류 상품 (같은 필터) │ P06 · P08 │
 // │ B-12 │ GuideHits (guide/guide_search.dart) │ 검색어에 맞는 작품 · 기체 → 도감(그 기체 시트) │ P07 · P06 │
 // │ B-13 │ 결과 위 "기체별로 묶기" + GroupedResults │ 결과를 기체별로 묶기 (상품 n · 가짐 m) — 검색창 폭은 그대로 │ P01 · P07 │
 // │ B-8  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 결과 없음          │ P01 · P09     │
@@ -33,11 +33,10 @@ import '../models.dart';
 import '../logic/sentence_search.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'b_category_browse.dart';
 import 'c_channel_screen.dart';
 import 'd_kit_detail_screen.dart';
-import 'g_guide_view.dart';
 import 'guide/guide_search.dart';
-import 'guide/line_guide.dart';
 import 'o_see_all_screen.dart';
 import 'r_mezastar_screen.dart' show TagSearchSection;
 
@@ -255,19 +254,27 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
 
   /// B-14 · B-15 둘러보기 본문 — 전체 = 상품 목록, 종류 · 세대 = 분류 칸 (같은 필터)
   Widget _browse(List<Kit> kits) => switch (_view) {
-    1 => LineGuideView(
-      // B-15 종류 (TODO 분류 칸 격자로 바꿈)
-      channel: channel,
-      loaders: widget.loaders,
-      myChannels: widget.myChannels,
-      onPickChannel: selectChannel,
+    1 => ListenableBuilder(
+      // B-15 종류 (B-20 · 검색창 줄 필터가 칸을 거른다)
+      listenable: _tools,
+      builder: (context, _) => TypeBrowse(
+        channel: channel,
+        loaders: widget.loaders,
+        myChannels: widget.myChannels,
+        onPickChannel: selectChannel,
+        filter: _tools.filter,
+      ),
     ),
-    2 => GuideView(
-      // B-15 세대 (TODO 분류 칸 격자로 바꿈)
-      channel: channel,
-      myChannels: widget.myChannels,
-      onPickChannel: selectChannel,
-      loaders: widget.loaders,
+    2 => ListenableBuilder(
+      // B-15 세대 (B-21)
+      listenable: _tools,
+      builder: (context, _) => EraBrowse(
+        channel: channel,
+        loaders: widget.loaders,
+        myChannels: widget.myChannels,
+        onPickChannel: selectChannel,
+        filter: _tools.filter,
+      ),
     ),
     _ => SectionListView(
       // B-9 전체 상품

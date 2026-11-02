@@ -105,8 +105,12 @@ class SectionListView extends StatefulWidget {
     this.query = '',
     this.header,
     this.tools,
+    this.titleRow = true,
     this.loaders = const Loaders(),
   });
+
+  /// false = 맨 위 제목 줄(O-1)을 숨긴다 — 제목이 AppBar 에 있는 화면 (검색 탭 분류 상품 B-23)
+  final bool titleRow;
 
   /// 있으면 필터 · 격자/목록은 위 검색창 줄이 바꾼다 (이 목록 머리에서는 숨김)
   final ListTools? tools;
@@ -245,55 +249,56 @@ class _SectionListViewState extends State<SectionListView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          // O-1
-          padding: const EdgeInsets.fromLTRB(4, 0, 8, 0),
-          child: Row(
-            children: [
-              if (widget.onBack case final back?)
-                IconButton(
-                  tooltip: '돌아가기',
-                  onPressed: back,
-                  icon: const Icon(Icons.arrow_back_ios_new, size: Gp.iM),
-                )
-              else
-                const SizedBox(width: 12),
-              Container(width: 3, height: 16, color: Gp.accent), // 홈 줄 제목과 같은 색 막대
-              const SizedBox(width: 8),
-              Text(
-                widget.title,
-                style: const TextStyle(fontSize: Gp.t19, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  joinDot([widget.subtitle, '$count개']),
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: Gp.t12, color: Gp.accent, fontWeight: FontWeight.w500),
+        if (widget.titleRow)
+          Padding(
+            // O-1
+            padding: const EdgeInsets.fromLTRB(4, 0, 8, 0),
+            child: Row(
+              children: [
+                if (widget.onBack case final back?)
+                  IconButton(
+                    tooltip: '돌아가기',
+                    onPressed: back,
+                    icon: const Icon(Icons.arrow_back_ios_new, size: Gp.iM),
+                  )
+                else
+                  const SizedBox(width: 12),
+                Container(width: 3, height: 16, color: Gp.accent), // 홈 줄 제목과 같은 색 막대
+                const SizedBox(width: 8),
+                Text(
+                  widget.title,
+                  style: const TextStyle(fontSize: Gp.t19, fontWeight: FontWeight.w700),
                 ),
-              ),
-              if (widget.history && _kits.isNotEmpty)
-                TextButton(onPressed: _clearHistory, child: const Text('기록 지우기')), // O-6
-              if (anns == null && _kits.isNotEmpty && widget.tools == null) ...[
-                IconButton(
-                  tooltip: '필터',
-                  onPressed: _openFilter,
-                  icon: Badge(
-                    isLabelVisible: _filter.count > 0,
-                    backgroundColor: Gp.accent,
-                    label: Text('${_filter.count}'),
-                    child: const Icon(Icons.tune, color: Gp.ink),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    joinDot([widget.subtitle, '$count개']),
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: Gp.t12, color: Gp.accent, fontWeight: FontWeight.w500),
                   ),
                 ),
-                IconButton(
-                  tooltip: _grid ? '목록으로 보기' : '격자로 보기',
-                  onPressed: () => setState(() => _grid = !_grid), // STATE: 보기 방식
-                  icon: Icon(_grid ? Icons.view_list_outlined : Icons.grid_view_outlined, color: Gp.muted),
-                ),
+                if (widget.history && _kits.isNotEmpty)
+                  TextButton(onPressed: _clearHistory, child: const Text('기록 지우기')), // O-6
+                if (anns == null && _kits.isNotEmpty && widget.tools == null) ...[
+                  IconButton(
+                    tooltip: '필터',
+                    onPressed: _openFilter,
+                    icon: Badge(
+                      isLabelVisible: _filter.count > 0,
+                      backgroundColor: Gp.accent,
+                      label: Text('${_filter.count}'),
+                      child: const Icon(Icons.tune, color: Gp.ink),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: _grid ? '목록으로 보기' : '격자로 보기',
+                    onPressed: () => setState(() => _grid = !_grid), // STATE: 보기 방식
+                    icon: Icon(_grid ? Icons.view_list_outlined : Icons.grid_view_outlined, color: Gp.muted),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
-        ),
         Expanded(child: anns != null ? _announcementBody(anns) : _kitBody()),
       ],
     );

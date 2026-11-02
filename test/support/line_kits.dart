@@ -1,4 +1,4 @@
-// 종류별 도감 테스트용 상품 한 개 (Kit 생성자의 필수 칸을 채운다)
+// 종류 · 세대 둘러보기 테스트용 상품 한 개 (Kit 생성자의 필수 칸을 채운다)
 import 'package:hobby_atlas/models.dart';
 
 Kit lineKit(
@@ -7,6 +7,7 @@ Kit lineKit(
   String line = 'HG',
   String type = '프라모델',
   String goodsKind = '',
+  String subline = '',
   String date = '2024-01-01',
   String image = 'assets/gp/kits/gu01.jpg',
   String? name,
@@ -39,6 +40,7 @@ Kit lineKit(
     keywords: const [],
     goodsKind: goodsKind,
     imageRef: imageRef,
+    subline: subline,
     blob: [n, line, type, goodsKind].join(' ').toLowerCase(),
   );
 }

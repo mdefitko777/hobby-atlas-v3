@@ -200,7 +200,6 @@ void main() {
       testWidgets('건담 작품 칸 · 시대 머리에 숫자 없음 (폭 $width)', (t) async {
         me.setStatus('ex-archangel', CollectStatus.owned);
         await _pump(t, _gundam(), width: width);
-        expect(find.byType(GuideWorkCard), findsNothing);
         expect(find.text('코즈믹 에라'), findsOneWidget);
         expect(find.textContaining('수집'), findsNothing);
         expectNameOnly(t);
