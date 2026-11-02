@@ -12,6 +12,7 @@
 // │ B-7  │ SectionListView (O 전체 목록 재사용) │ 검색 결과 · 필터 · 정렬 · 격자/목록      │ P08 · 적응형 │
 // │ B-9  │ 줄 "전체 상품 n개 ›" → SectionListView │ 내 채널 상품 전부 (옛 처음 화면)          │ P07 · P06     │
 // │ B-14 │ GuideView (g_guide_view.dart)       │ 처음 화면 = 도감 둘러보기 (G-1 … G-9)     │ P06 · P01     │
+// │ B-15 │ ViewIconToggle 세대 · 종류 (검색창 줄) │ 도감 두 가지: 세대(작품 · 시대 · 게임) / 종류(HG · MG … · 인형 …, G-10) │ P06 · P07 │
 // │ B-12 │ GuideHits (guide/guide_search.dart) │ 검색어에 맞는 작품 · 기체 → 도감(그 기체 시트) │ P07 · P06 │
 // │ B-13 │ ToolIcon 기체별 + GroupedResults     │ 결과를 기체별로 묶기 (상품 n · 가짐 m)     │ P01 · P07     │
 // │ B-8  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 결과 없음          │ P01 · P09     │
@@ -37,6 +38,7 @@ import 'c_channel_screen.dart';
 import 'd_kit_detail_screen.dart';
 import 'g_guide_view.dart';
 import 'guide/guide_search.dart';
+import 'guide/line_guide.dart';
 import 'o_see_all_screen.dart';
 import 'r_mezastar_screen.dart' show TagSearchSection;
 
@@ -114,6 +116,12 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
 
   /// B-13 결과를 기체별로 묶기
   bool _grouped = false;
+
+  /// B-15 도감 둘러보기 축: false = 세대(작품 · 시대 · 게임), true = 종류(등급 · 상품 종류)
+  bool _byType = false;
+
+  /// B-15 종류 도감에서 내가 좋아요 · 구매함한 것이 있는 묶음만 (필터 버튼)
+  bool _mineOnly = false;
 
   /// B-12 · B-13 건담 도감 표 (처음 쓸 때 한 번)
   Future<GuideIndex>? _index;
@@ -217,15 +225,39 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
           ),
           tools: _browsing
               ? [
-                  FilterButton(
-                    // B-14 도감 필터 ('전체' 채널은 고르기 판이라 없음)
-                    count: _guideFilter.filter.count,
-                    onTap: channel == allChannelId
-                        ? null
-                        : () async {
-                            await _guideFilter.openSheet(context); // STATE: 도감 필터 → 칸
-                            if (mounted) setState(() {});
+                  _byType
+                      ? FilterButton(
+                          // B-15 종류 도감: 전부 · 내 것만
+                          count: _mineOnly ? 1 : 0,
+                          onTap: () async {
+                            final v = await showPickSheet<bool>(
+                              context,
+                              title: '종류 도감',
+                              values: const [false, true],
+                              current: _mineOnly,
+                              label: (m) => m ? '내 것만 (좋아요 · 구매함)' : '전부',
+                            );
+                            if (v != null) setState(() => _mineOnly = v); // STATE: 내 것만 → 묶음
                           },
+                        )
+                      : FilterButton(
+                          // B-14 도감 필터 ('전체' 채널은 고르기 판이라 없음)
+                          count: _guideFilter.filter.count,
+                          onTap: channel == allChannelId
+                              ? null
+                              : () async {
+                                  await _guideFilter.openSheet(context); // STATE: 도감 필터 → 칸
+                                  if (mounted) setState(() {});
+                                },
+                        ),
+                  ViewIconToggle(
+                    // B-15
+                    mine: _byType,
+                    onChanged: (v) => setState(() => _byType = v), // STATE: 도감 축 → 세대 ↔ 종류
+                    allIcon: Icons.auto_awesome_mosaic_outlined,
+                    mineIcon: Icons.category_outlined,
+                    allTip: '세대별 도감',
+                    mineTip: '종류별 도감',
                   ),
                 ]
               : [
@@ -294,13 +326,22 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
           ),
         ),
         Expanded(
-          child: GuideView(
-            channel: channel,
-            myChannels: widget.myChannels,
-            onPickChannel: selectChannel,
-            loaders: widget.loaders,
-            filter: _guideFilter,
-          ),
+          child: _byType
+              ? LineGuideView(
+                  // B-15 종류별 도감 (G-10)
+                  channel: channel,
+                  loaders: widget.loaders,
+                  mineOnly: _mineOnly,
+                  myChannels: widget.myChannels,
+                  onPickChannel: selectChannel,
+                )
+              : GuideView(
+                  channel: channel,
+                  myChannels: widget.myChannels,
+                  onPickChannel: selectChannel,
+                  loaders: widget.loaders,
+                  filter: _guideFilter,
+                ),
         ),
       ],
     );
@@ -546,6 +587,8 @@ class SentenceCandidates extends StatelessWidget {
 List<HelpItem> searchHelp() => [
   const HelpItem(Icons.photo_camera_outlined, '찍어서 찾기 (사진 · 바코드)'),
   const HelpItem(Icons.tune, '필터 (도감: 단계 = 내 진행 · 등급 · 종류 · 시대)'),
+  const HelpItem(Icons.auto_awesome_mosaic_outlined, '세대별 도감 (작품 · 시대 · 게임)'),
+  const HelpItem(Icons.category_outlined, '종류별 도감 (HG · MG … · 인형 · 피규어 …)'),
   const HelpItem(Icons.view_agenda_outlined, '전체 상품 목록'),
   const HelpItem(Icons.grid_view_outlined, '격자로 보기'),
   const HelpItem(Icons.view_list_outlined, '목록으로 보기'),

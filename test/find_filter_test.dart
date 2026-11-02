@@ -9,6 +9,7 @@ import 'package:hobby_atlas/widgets.dart';
 import 'package:hobby_atlas/marks.dart';
 import 'package:hobby_atlas/models.dart';
 import 'package:hobby_atlas/screens/a_home_screen.dart';
+import 'package:hobby_atlas/screens/b_search_screen.dart';
 import 'package:hobby_atlas/screens/f_collection_screen.dart';
 import 'package:hobby_atlas/screens/h_calendar_screen.dart';
 import 'package:hobby_atlas/theme.dart';
@@ -110,7 +111,7 @@ void main() {
     expect(me.spendKrw, 20500);
   });
 
-  testWidgets('검색창 줄: 홈 · 캘린더 · 컬렉션 모두 [검색창][필터][보기 두 칸] — 검색창 폭이 같다', (tester) async {
+  testWidgets('검색창 줄: 홈 · 도감 · 캘린더 · 컬렉션 모두 [검색창][필터][보기 두 칸] — 검색창 폭이 같다', (tester) async {
     final widths = <double>[];
     Future<void> measure(Widget screen) async {
       await _pump(tester, Scaffold(body: screen));
@@ -120,11 +121,25 @@ void main() {
     }
 
     await measure(
-      HomeScreen(myChannels: const ['gundam'], onMyChannelsChanged: (_) {}, onOpenSearch: () {}, onCamera: () {}, loaders: fakeLoaders),
+      HomeScreen(
+        myChannels: const ['gundam'],
+        onMyChannelsChanged: (_) {},
+        onOpenSearch: () {},
+        onCamera: () {},
+        loaders: fakeLoaders,
+      ),
     );
     await measure(CalendarScreen(myChannels: const ['gundam'], onMyChannelsChanged: (_) {}, loaders: fakeLoaders));
     await measure(
-      CollectionScreen(myChannels: const ['gundam'], onMyChannelsChanged: (_) {}, onGoSearch: () {}, loaders: fakeLoaders),
+      CollectionScreen(
+        myChannels: const ['gundam'],
+        onMyChannelsChanged: (_) {},
+        onGoSearch: () {},
+        loaders: fakeLoaders,
+      ),
+    );
+    await measure(
+      SearchScreen(myChannels: const ['gundam'], onMyChannelsChanged: (_) {}, onCamera: () {}, loaders: fakeLoaders),
     );
     expect(widths.toSet(), hasLength(1));
   });

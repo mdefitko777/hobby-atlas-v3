@@ -11,6 +11,7 @@ import 'package:hobby_atlas/screens/b_search_screen.dart';
 import 'package:hobby_atlas/screens/d_kit_detail_screen.dart';
 import 'package:hobby_atlas/screens/g_guide_view.dart';
 import 'package:hobby_atlas/screens/guide/guide_search.dart';
+import 'package:hobby_atlas/screens/guide/line_guide.dart';
 import 'package:hobby_atlas/theme.dart';
 
 import 'layout_test.dart' show db, fakeLoaders;
@@ -91,6 +92,19 @@ void main() {
     await _settle(tester);
     expect(find.byType(WorkGuideScreen), findsOneWidget);
     expect(find.text('스트라이크 건담'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('검색창 줄의 세대 · 종류 전환 → 종류별 도감', (tester) async {
+    await _pump(tester, _screen());
+    expect(find.byType(LineGuideView), findsNothing);
+    await tester.tap(find.byTooltip('종류별 도감'));
+    await _settle(tester);
+    expect(find.byType(LineGuideView), findsOneWidget);
+    expect(find.byType(GuideView), findsNothing);
+    await tester.tap(find.byTooltip('세대별 도감'));
+    await _settle(tester);
+    expect(find.byType(GuideView), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
