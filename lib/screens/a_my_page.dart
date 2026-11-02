@@ -62,7 +62,7 @@ class _MyPageViewState extends State<MyPageView> {
       children: [
         // 레벨은 왼쪽 위 아바타 옆 Lv (lib/level.dart) — 여기는 숫자 4칸만
         Padding(
-          // 페이지 바탕 위에 흰 묶음 두 개 (수집 | 돈)
+          // 페이지 바탕 위 평평한 한 줄 (수집 | 돈) — 튀어나오지 않게
           padding: const EdgeInsets.fromLTRB(16, 2, 16, 12),
           child: CollectionStats(
             // A-21 · A-21b 끝에 공유 카드

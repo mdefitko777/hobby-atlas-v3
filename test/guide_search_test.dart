@@ -1,5 +1,5 @@
-// 도감 탭(B, 검색 + 도감) — 처음 화면 = 도감 둘러보기 · 전체 상품 줄, 검색 = 작품 · 기체 줄 · 기체별 묶기,
-// 상품 상세 "도감에서 보기" (D-16), 컬렉션 숫자의 도감 → 도감 탭
+// 검색 탭(B) — 처음 = 전체 상품, 탭 줄 전체 · 종류 · 세대, 검색 = 작품 · 기체 줄 · 기체별 묶기 /
+// 컬렉션 탭 줄의 "도감"(F-8), 상품 상세 "도감에서 보기" (D-16)
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hobby_atlas/clock.dart';
@@ -9,10 +9,11 @@ import 'package:hobby_atlas/marks.dart';
 import 'package:hobby_atlas/models.dart';
 import 'package:hobby_atlas/screens/b_search_screen.dart';
 import 'package:hobby_atlas/screens/d_kit_detail_screen.dart';
+import 'package:hobby_atlas/screens/f_collection_screen.dart';
 import 'package:hobby_atlas/screens/g_guide_view.dart';
 import 'package:hobby_atlas/screens/guide/guide_search.dart';
-import 'package:hobby_atlas/screens/guide/line_guide.dart';
 import 'package:hobby_atlas/theme.dart';
+import 'package:hobby_atlas/widgets.dart';
 
 import 'layout_test.dart' show db, fakeLoaders;
 
@@ -39,13 +40,23 @@ Future<void> _settle(WidgetTester tester) async {
   }
 }
 
-Widget _screen({int browseTick = 0}) => Scaffold(
+Widget _screen() => Scaffold(
   body: SearchScreen(
     myChannels: const ['gundam'],
     onMyChannelsChanged: (_) {},
     onCamera: () {},
-    browseTick: browseTick,
     loaders: fakeLoaders,
+  ),
+);
+
+Widget _collection({CollectionJump jump = CollectionJump.liked, int tick = 0}) => Scaffold(
+  body: CollectionScreen(
+    myChannels: const ['gundam'],
+    onMyChannelsChanged: (_) {},
+    onGoSearch: () {},
+    loaders: fakeLoaders,
+    jump: jump,
+    jumpTick: tick,
   ),
 );
 
@@ -61,18 +72,41 @@ void main() {
     expect(guideUnitHits(index, ''), isEmpty);
   });
 
-  testWidgets('처음 화면 = 도감 + "전체 상품 n개" → 펼치면 전체 상품, 돌아가기 = 도감', (tester) async {
+  testWidgets('검색 탭 처음 = 전체 상품 · 탭 줄 전체 · 종류 · 세대 · 검색창 줄은 늘 [필터][격자][목록]', (tester) async {
     await _pump(tester, _screen());
+    expect(find.text('전체 상품'), findsOneWidget);
+    final row = find.byType(ToolRow).first;
+    expect(find.descendant(of: row, matching: find.byType(ToolIcon)), findsNWidgets(3));
+    await tester.tap(find.byKey(const ValueKey('view-1')));
+    await _settle(tester);
+    expect(find.text('전체 상품'), findsNothing);
+    expect(find.descendant(of: row, matching: find.byType(ToolIcon)), findsNWidgets(3));
+    await tester.tap(find.byKey(const ValueKey('view-0')));
+    await _settle(tester);
+    expect(find.text('전체 상품'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('컬렉션 탭 줄 끝 "도감" → 도감(내 진행) · 편집 자리에 공유 카드', (tester) async {
+    await _pump(tester, _collection());
+    expect(find.byType(GuideView), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('tab-guide')));
+    await _settle(tester);
     expect(find.byType(GuideView), findsOneWidget);
-    expect(find.byKey(const ValueKey('all-products')), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('all-products')));
+    expect(find.byTooltip('공유 카드'), findsOneWidget);
+    expect(find.byTooltip('편집'), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('tab-liked')));
     await _settle(tester);
     expect(find.byType(GuideView), findsNothing);
-    expect(find.text('전체 상품'), findsOneWidget);
-    await tester.tap(find.byTooltip('돌아가기'));
-    await _settle(tester);
-    expect(find.byType(GuideView), findsOneWidget);
+    expect(find.byTooltip('편집'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('컬렉션: 내 정보 Lv(CollectionJump.guide) → 도감 탭으로 열린다', (tester) async {
+    await _pump(tester, _collection(jump: CollectionJump.guide));
+    expect(find.byType(GuideView), findsNothing);
+    await _pump(tester, _collection(jump: CollectionJump.guide, tick: 1));
+    expect(find.byType(GuideView), findsOneWidget);
   });
 
   testWidgets('검색: 맞는 기체 줄 → 도감 기체 시트 · 기체별로 묶기', (tester) async {
@@ -93,65 +127,6 @@ void main() {
     expect(find.byType(WorkGuideScreen), findsOneWidget);
     expect(find.text('스트라이크 건담'), findsWidgets);
     expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('검색창 줄의 세대 · 종류 전환 → 종류별 도감', (tester) async {
-    await _pump(tester, _screen());
-    expect(find.byType(LineGuideView), findsNothing);
-    await tester.tap(find.byTooltip('종류별 도감'));
-    await _settle(tester);
-    expect(find.byType(LineGuideView), findsOneWidget);
-    expect(find.byType(GuideView), findsNothing);
-    await tester.tap(find.byTooltip('세대별 도감'));
-    await _settle(tester);
-    expect(find.byType(GuideView), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('마지막으로 고른 보기(종류 · 전체 상품)로 다시 열린다 (기기 저장)', (tester) async {
-    final store = UserStore.memory();
-    Future<void> open() async {
-      await tester.pumpWidget(const SizedBox());
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: buildGpTheme(),
-          builder: (context, child) => MarksHost(
-            store: store,
-            child: PaneHost(child: child!),
-          ),
-          home: _screen(),
-        ),
-      );
-      await _settle(tester);
-    }
-
-    tester.view.physicalSize = const Size(390, 844);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
-    await open();
-    expect(find.byType(GuideView), findsOneWidget); // 처음 = 세대
-    await tester.tap(find.byTooltip('종류별 도감'));
-    await _settle(tester);
-    expect(store.guideView, 'type');
-    await open();
-    expect(find.byType(LineGuideView), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('all-products')));
-    await _settle(tester);
-    expect(store.guideView, 'all');
-    expect(store.localStateJson()['guide_view'], 'all');
-    await open();
-    expect(find.text('전체 상품'), findsOneWidget);
-    expect(UserStore.memory().localStateJson().containsKey('guide_view'), isFalse); // 처음 값은 적지 않는다
-  });
-
-  testWidgets('browseTick 이 바뀌면 검색어를 지우고 도감으로', (tester) async {
-    await _pump(tester, _screen());
-    await tester.enterText(find.byType(TextField), '스트라이크');
-    await _settle(tester);
-    expect(find.byType(GuideView), findsNothing);
-    FocusManager.instance.primaryFocus?.unfocus();
-    await _pump(tester, _screen(browseTick: 1));
-    expect(find.byType(GuideView), findsOneWidget);
   });
 
   testWidgets('상품 상세: 건담 상품은 "도감에서 보기" → 그 기체 시트', (tester) async {

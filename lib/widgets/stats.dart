@@ -1,4 +1,5 @@
-// 내 숫자 줄 — My Page(A-21) · 내 정보(I-4) 공용: 떠 있는 흰 묶음 두 개 (수집 ♡ · 리본 · 미조립 | 돈 이번 달 · 총)
+// 내 숫자 줄 — My Page(A-21) · 내 정보(I-4) 공용: 평평한 한 줄 (수집 ♡ · 리본 · 미조립 | 돈 이번 달 · 총).
+// 떠 있는 판 · 굵은 숫자로 튀어나오지 않게 — 바탕 위에 아이콘 + 숫자만, 묶음 사이 가는 세로 줄
 import 'package:flutter/material.dart';
 
 import '../format.dart';
@@ -7,7 +8,7 @@ import '../theme.dart';
 import 'icons.dart';
 import 'kit_progress.dart' show buildStageIcon;
 
-/// 숫자 칸 하나 — 아이콘(18 높이) + 숫자 t14 굵게, 길게 누르면 [tip]
+/// 숫자 칸 하나 — 아이콘(18 높이) + 숫자 t14 (보통 굵기 · 옅은 색), 길게 누르면 [tip]
 class StatCell {
   const StatCell(this.icon, this.value, this.tip, {this.onTap});
   final Widget icon;
@@ -16,7 +17,7 @@ class StatCell {
   final VoidCallback? onTap;
 }
 
-/// 숫자 묶음들 — 묶음 사이 8, 칸 너비는 묶음마다 같게(flex = 칸 수). [trailing] = 줄 끝 (공유 카드)
+/// 숫자 묶음들 — 묶음 사이 가는 세로 줄, 칸 너비는 묶음마다 같게(flex = 칸 수). [trailing] = 줄 끝 (공유 카드)
 class StatGroups extends StatelessWidget {
   const StatGroups({super.key, required this.groups, this.trailing});
   final List<List<StatCell>> groups;
@@ -38,7 +39,7 @@ class StatGroups extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(
                   c.value,
-                  style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w700),
+                  style: const TextStyle(fontSize: Gp.t14, color: Gp.muted),
                 ),
               ],
             ),
@@ -48,29 +49,21 @@ class StatGroups extends StatelessWidget {
     );
     Widget group(List<StatCell> cells) => Expanded(
       flex: cells.length,
-      child: DecoratedBox(
-        // 검색창과 같은 떠 있는 재질
-        decoration: Gp.raised(radius: Gp.radius),
-        child: Material(
-          type: MaterialType.transparency,
-          child: IntrinsicHeight(
-            child: Row(
-              children: [
-                for (var i = 0; i < cells.length; i++) ...[
-                  if (i > 0) const VerticalDivider(width: 1, indent: 10, endIndent: 10),
-                  cell(cells[i]),
-                ],
-              ],
-            ),
-          ),
-        ),
+      child: Material(
+        type: MaterialType.transparency,
+        child: Row(children: [for (final c in cells) cell(c)]),
       ),
     );
-    return Row(
-      children: [
-        for (var i = 0; i < groups.length; i++) ...[if (i > 0) const SizedBox(width: 8), group(groups[i])],
-        ?trailing,
-      ],
+    return IntrinsicHeight(
+      child: Row(
+        children: [
+          for (var i = 0; i < groups.length; i++) ...[
+            if (i > 0) const VerticalDivider(width: 17, indent: 12, endIndent: 12),
+            group(groups[i]),
+          ],
+          ?trailing,
+        ],
+      ),
     );
   }
 }

@@ -1,5 +1,5 @@
-// 화면 B: 도감 · 검색 (아래 탭 "도감") — 검색어가 없으면 도감으로 둘러보기, 있으면 이름 · 번호 · 작품 · 기체, 또는 "말로 설명해서" 찾기.
-// v3: 검색과 도감을 한 탭으로 합쳤다 (컬렉션의 도감 보기를 이리로 옮김).
+// 화면 B: 검색 — 검색어가 없으면 상품 둘러보기(전체 · 종류 · 세대), 있으면 이름 · 번호 · 작품 · 기체, 또는 "말로 설명해서" 찾기.
+// 상품 화면과 같은 모양 · 같은 필터 하나. 내 수집 진행(도감)은 컬렉션 탭 "도감" 에 있다.
 //
 // ┌──────── 디자인 가이드 대응표: B 검색 ──────────────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
@@ -10,10 +10,9 @@
 // │ B-5  │ 예시 문장 칩                        │ 설명으로 찾기 (낱말 표 · AI 아님)        │ P10 · P07     │
 // │ B-6  │ ThumbRow + 일치도 %                 │ 설명과 겹친 상품 (맞은 낱말 = 이유)      │ P01 · P09     │
 // │ B-7  │ SectionListView (O 전체 목록 재사용) │ 검색 결과 · 필터 · 정렬 · 격자/목록      │ P08 · 적응형 │
-// │ B-9  │ 줄 "전체 상품 n개 ›" → SectionListView │ 내 채널 상품 전부 (옛 처음 화면)          │ P07 · P06     │
-// │ B-14 │ GuideView (g_guide_view.dart)       │ 처음 화면 = 도감 둘러보기 (G-1 … G-9)     │ P06 · P01     │
-// │ B-15 │ ViewIconToggle 세대 · 종류 (검색창 줄) │ 도감 두 가지: 세대(작품 · 시대 · 게임) / 종류(HG · MG … · 인형 …, G-10) │ P06 · P07 │
-// │ B-16 │ UserStore.guideView (기기 저장)     │ 마지막으로 본 것(세대 · 종류 · 전체 상품)으로 다시 열기 — 사람마다 좋아하는 첫 화면 │ P07 · P03 │
+// │ B-9  │ 탭 "전체" (처음) → SectionListView │ 내 채널 상품 전부                        │ P07 · P06     │
+// │ B-14 │ UnderlineTab 전체 · 종류 · 세대      │ 둘러보기 세 가지 (검색창 줄 아래, 컬렉션 탭 줄과 같은 자리) │ P06 · P04 │
+// │ B-15 │ 탭 "종류" · "세대" → 분류 칸 격자     │ 공식 그림 + 이름만 → 그 분류 상품 (같은 필터) │ P06 · P08  │
 // │ B-12 │ GuideHits (guide/guide_search.dart) │ 검색어에 맞는 작품 · 기체 → 도감(그 기체 시트) │ P07 · P06 │
 // │ B-13 │ 결과 위 "기체별로 묶기" + GroupedResults │ 결과를 기체별로 묶기 (상품 n · 가짐 m) — 검색창 폭은 그대로 │ P01 · P07 │
 // │ B-8  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 결과 없음          │ P01 · P09     │
@@ -32,7 +31,6 @@ import '../logic/kit_rules.dart';
 import '../marks.dart';
 import '../models.dart';
 import '../logic/sentence_search.dart';
-import '../level.dart' show tierHelpItems;
 import '../theme.dart';
 import '../widgets.dart';
 import 'c_channel_screen.dart';
@@ -53,7 +51,6 @@ class SearchScreen extends StatefulWidget {
     required this.onMyChannelsChanged,
     required this.onCamera,
     this.focusTick = 0,
-    this.browseTick = 0,
     this.leading,
     this.loaders = const Loaders(),
   });
@@ -66,9 +63,6 @@ class SearchScreen extends StatefulWidget {
 
   /// 값이 바뀌면 검색창에 커서를 둔다 (홈 검색 알약에서 넘어올 때)
   final int focusTick;
-
-  /// 값이 바뀌면 검색어를 지우고 도감 둘러보기로 (내 정보 Lv · 도감 숫자에서 넘어올 때)
-  final int browseTick;
   final Widget? leading;
   final Loaders loaders;
 
@@ -109,36 +103,21 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
   final _tools = ListTools();
   List<Kit>? _all;
 
-  /// B-14 둘러보기(도감)의 필터 — 단계(아직 · ♡ · 구매함 · 내 사진 = 내 진행) · 등급 · 종류 · 시대 · 정렬
-  final _guideFilter = GuideFilterController();
-
-  /// B-9 "전체 상품" 목록을 펼쳤나 (검색어 없이)
-  bool _allProducts = false;
+  /// B-14 둘러보기 탭: 0 = 전체(처음), 1 = 종류, 2 = 세대
+  int _view = 0;
 
   /// B-13 결과를 기체별로 묶기
   bool _grouped = false;
-
-  /// B-15 도감 둘러보기 축: false = 세대(작품 · 시대 · 게임), true = 종류(등급 · 상품 종류)
-  bool _byType = false;
-
-  /// B-15 종류 도감에서 내가 좋아요 · 구매함한 것이 있는 묶음만 (필터 버튼)
-  bool _mineOnly = false;
 
   /// B-12 · B-13 건담 도감 표 (처음 쓸 때 한 번)
   Future<GuideIndex>? _index;
   Future<GuideIndex> get _guideIndex =>
       _index ??= widget.loaders.guideIndex().catchError((Object _) => GuideIndex.empty);
 
-  /// B-16 세대 · 종류 · 전체 상품 중 무엇을 보고 있나 → 기기에 (다음에 이 탭을 열면 그대로)
-  void _rememberView() => Marks.read(context).store.setGuideView(_allProducts ? 'all' : (_byType ? 'type' : 'era'));
-
   @override
   void initState() {
     super.initState();
     reloadScope();
-    final v = Marks.read(context).store.guideView; // B-16
-    _byType = v == 'type';
-    _allProducts = v == 'all';
     // 검색창을 누르면(포커스) 최근 · 자주 찾은 · 설명으로 찾기 판, 벗어나면 다시 전체 상품
     _focus.addListener(() => setState(() {})); // STATE: 포커스 → 보여 줄 판
   }
@@ -148,23 +127,17 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
     super.didUpdateWidget(old);
     syncScope();
     if (widget.focusTick != old.focusTick) _focus.requestFocus();
-    if (widget.browseTick != old.browseTick) {
-      _setQuery(''); // STATE: 내 정보 → 도감 둘러보기
-      _focus.unfocus();
-      _allProducts = false;
-    }
   }
 
   @override
   void dispose() {
     _controller.dispose();
     _focus.dispose();
-    _guideFilter.dispose();
     super.dispose();
   }
 
-  /// 검색어도 포커스도 없고 전체 상품도 안 펼쳤으면 = 도감 둘러보기
-  bool get _browsing => _query.isEmpty && !_focus.hasFocus && !_allProducts;
+  /// 검색어도 포커스도 없으면 = 둘러보기 (전체 · 종류 · 세대)
+  bool get _browsing => _query.isEmpty && !_focus.hasFocus;
 
   void _setQuery(String q) {
     _controller.text = q;
@@ -203,9 +176,7 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
         if (_query.isNotEmpty) _setQuery('');
-        _focus.unfocus(); // 뒤로 = 판 닫고 도감
-        setState(() => _allProducts = false);
-        _rememberView();
+        _focus.unfocus(); // 뒤로 = 판 닫고 둘러보기
       },
       child: _page(),
     );
@@ -231,58 +202,19 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
             onSubmitted: _submit,
             onCamera: widget.onCamera,
           ),
-          tools: _browsing
-              ? [
-                  _byType
-                      ? FilterButton(
-                          // B-15 종류 도감: 전부 · 내 것만
-                          count: _mineOnly ? 1 : 0,
-                          onTap: () async {
-                            final v = await showPickSheet<bool>(
-                              context,
-                              title: '종류 도감',
-                              values: const [false, true],
-                              current: _mineOnly,
-                              label: (m) => m ? '내 것만 (좋아요 · 구매함)' : '전부',
-                            );
-                            if (v != null) setState(() => _mineOnly = v); // STATE: 내 것만 → 묶음
-                          },
-                        )
-                      : FilterButton(
-                          // B-14 도감 필터 ('전체' 채널은 고르기 판이라 없음)
-                          count: _guideFilter.filter.count,
-                          onTap: channel == allChannelId
-                              ? null
-                              : () async {
-                                  await _guideFilter.openSheet(context); // STATE: 도감 필터 → 칸
-                                  if (mounted) setState(() {});
-                                },
-                        ),
-                  ViewIconToggle(
-                    // B-15
-                    mine: _byType,
-                    onChanged: (v) {
-                      setState(() => _byType = v); // STATE: 도감 축 → 세대 ↔ 종류
-                      _rememberView();
-                    },
-                    allIcon: Icons.auto_awesome_mosaic_outlined,
-                    mineIcon: Icons.category_outlined,
-                    allTip: '세대별 도감',
-                    mineTip: '종류별 도감',
-                  ),
-                ]
-              : [
-                  ListToolIcons(
-                    tools: _tools,
-                    pool: _all == null
-                        ? null
-                        : [
-                            for (final k in _all!)
-                              if (kitMatches(k, _query)) k,
-                          ],
-                  ),
-                ],
+          tools: [
+            ListToolIcons(
+              tools: _tools,
+              pool: _all == null
+                  ? null
+                  : [
+                      for (final k in _all!)
+                        if (kitMatches(k, _query)) k,
+                    ],
+            ),
+          ],
         ),
+        if (_browsing) _viewTabs(), // B-14
         Expanded(
           child: FutureBuilder<List<Kit>>(
             future: _future,
@@ -293,7 +225,7 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
               if (snap.hasError) {
                 return ErrorView(message: '${snap.error}', onRetry: () => setState(reloadScope)); // B-8 P09
               }
-              // 검색어가 없으면: 검색창을 누른 동안 = 최근 · 자주 찾은 · 설명으로 찾기, 아니면 = 도감(B-14) · 전체 상품(B-9)
+              // 검색어가 없으면: 검색창을 누른 동안 = 최근 · 자주 찾은 · 설명으로 찾기, 아니면 = 둘러보기(B-14)
               if (_browsing) return _browse(snap.data!);
               return _query.isEmpty && _focus.hasFocus ? _idle(snap.data!) : _results(snap.data!);
             },
@@ -303,55 +235,50 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
     );
   }
 
-  /// B-14 처음 화면: 맨 위 "전체 상품 n개 ›"(B-9) + 도감 (채널 '전체' = IP 고르기)
-  Widget _browse(List<Kit> kits) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+  /// B-14 전체 · 종류 · 세대 (컬렉션의 좋아요 · 예약 · 구매함과 같은 밑줄 탭)
+  Widget _viewTabs() => Padding(
+    padding: const EdgeInsets.fromLTRB(6, 2, 6, 2),
+    child: Row(
       children: [
-        InkWell(
-          key: const ValueKey('all-products'),
-          onTap: () {
-            setState(() => _allProducts = true); // STATE: 전체 상품 펼치기
-            _rememberView();
-          },
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
-            child: Row(
-              children: [
-                const Icon(Icons.view_agenda_outlined, size: Gp.iS, color: Gp.muted),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '전체 상품 ${kits.length}개',
-                    style: const TextStyle(fontSize: Gp.t14, color: Gp.muted),
-                  ),
-                ),
-                const Icon(Icons.chevron_right, size: Gp.iM, color: Gp.muted),
-              ],
-            ),
+        for (final (i, label) in const ['전체', '종류', '세대'].indexed)
+          UnderlineTab(
+            key: ValueKey('view-$i'),
+            label: label,
+            fontSize: Gp.t16,
+            selected: _view == i,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            onTap: () => setState(() => _view = i), // STATE: 둘러보기 → 전체 · 종류 · 세대
           ),
-        ),
-        Expanded(
-          child: _byType
-              ? LineGuideView(
-                  // B-15 종류별 도감 (G-10)
-                  channel: channel,
-                  loaders: widget.loaders,
-                  mineOnly: _mineOnly,
-                  myChannels: widget.myChannels,
-                  onPickChannel: selectChannel,
-                )
-              : GuideView(
-                  channel: channel,
-                  myChannels: widget.myChannels,
-                  onPickChannel: selectChannel,
-                  loaders: widget.loaders,
-                  filter: _guideFilter,
-                ),
-        ),
       ],
-    );
-  }
+    ),
+  );
+
+  /// B-14 · B-15 둘러보기 본문 — 전체 = 상품 목록, 종류 · 세대 = 분류 칸 (같은 필터)
+  Widget _browse(List<Kit> kits) => switch (_view) {
+    1 => LineGuideView(
+      // B-15 종류 (TODO 분류 칸 격자로 바꿈)
+      channel: channel,
+      loaders: widget.loaders,
+      myChannels: widget.myChannels,
+      onPickChannel: selectChannel,
+    ),
+    2 => GuideView(
+      // B-15 세대 (TODO 분류 칸 격자로 바꿈)
+      channel: channel,
+      myChannels: widget.myChannels,
+      onPickChannel: selectChannel,
+      loaders: widget.loaders,
+    ),
+    _ => SectionListView(
+      // B-9 전체 상품
+      key: const ValueKey('all'),
+      tools: _tools,
+      title: '전체 상품',
+      subtitle: channel == allChannelId ? '' : channelOf(channel).label,
+      kits: kits,
+      loaders: widget.loaders,
+    ),
+  };
 
   /// 검색어가 없을 때: 최근 검색 · 자주 찾은 · 새로 들어온 · 설명으로 찾기
   Widget _idle(List<Kit> kits) {
@@ -547,10 +474,8 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
       kits: results,
       header: header,
       onBack: () {
-        _setQuery(''); // STATE: 돌아가기 → 도감 둘러보기
+        _setQuery(''); // STATE: 돌아가기 → 둘러보기
         _focus.unfocus();
-        setState(() => _allProducts = false);
-        _rememberView();
       },
       loaders: widget.loaders,
     );
@@ -608,18 +533,12 @@ class SentenceCandidates extends StatelessWidget {
   }
 }
 
-/// B-11 ? 도움말 (위 줄 ? 의 "도감" 묶음 — s_app_shell.dart). 도감 칸 단계는 lib/level.dart 와 같은 그림
-List<HelpItem> searchHelp() => [
-  const HelpItem(Icons.photo_camera_outlined, '찍어서 찾기 (사진 · 바코드)'),
-  const HelpItem(Icons.tune, '필터 (도감: 단계 = 내 진행 · 등급 · 종류 · 시대)'),
-  const HelpItem(Icons.auto_awesome_mosaic_outlined, '세대별 도감 (작품 · 시대 · 게임)'),
-  const HelpItem(Icons.category_outlined, '종류별 도감 (HG · MG … · 인형 · 피규어 …)'),
-  const HelpItem(Icons.view_agenda_outlined, '전체 상품 목록'),
-  const HelpItem(Icons.grid_view_outlined, '격자로 보기'),
-  const HelpItem(Icons.view_list_outlined, '목록으로 보기'),
-  const HelpItem(Icons.account_tree_outlined, '검색 결과를 기체별로 묶기'),
-  const HelpItem(Icons.manage_search, '설명으로 찾기 예'),
-  const HelpItem(Icons.build_outlined, '베이 조합 만들기 (베이 도감)'),
-  const HelpItem.group('도감 칸'),
-  ...tierHelpItems(),
+/// B-11 ? 도움말 (위 줄 ? 의 "검색" 묶음 — s_app_shell.dart)
+List<HelpItem> searchHelp() => const [
+  HelpItem(Icons.photo_camera_outlined, '찍어서 찾기 (사진 · 바코드)'),
+  HelpItem(Icons.tune, '필터 (상태 · 종류 · 작품 · 발매 · 가격) — 전체 · 종류 · 세대 · 검색 결과가 같이 쓴다'),
+  HelpItem(Icons.grid_view_outlined, '격자로 보기'),
+  HelpItem(Icons.view_list_outlined, '목록으로 보기'),
+  HelpItem(Icons.account_tree_outlined, '검색 결과를 기체별로 묶기'),
+  HelpItem(Icons.manage_search, '설명으로 찾기 예'),
 ];

@@ -151,10 +151,6 @@ class UserStore extends ChangeNotifier with _AtlasLocal, _History, _ProfileLocal
     tagLiked
       ..clear()
       ..addAll(jList(local['tag_liked']).whereType<String>());
-    guideView = switch (local['guide_view']) {
-      final String v when guideViews.contains(v) => v,
-      _ => 'era',
-    };
     // 키가 없으면(옛 파일) 처음 값. 빈 목록은 "채널 없음"으로 그대로 둔다.
     myChannels
       ..clear()
@@ -200,7 +196,6 @@ class UserStore extends ChangeNotifier with _AtlasLocal, _History, _ProfileLocal
       'tag_owned': tagOwned.toList(),
       'tag_liked': tagLiked.toList(),
       'my_channels': myChannels,
-      if (guideView != 'era') 'guide_view': guideView, // 처음 값이면 적지 않는다 (저장 모양 골든 그대로)
       'special_friends': specialFriends.toList(),
       ...social.toJson(),
       'photos': [for (final p in _photos) p.toJson()],
@@ -379,16 +374,6 @@ class UserStore extends ChangeNotifier with _AtlasLocal, _History, _ProfileLocal
           : {...e, 'updated_at': now, 'updated_by': member};
     }
     _changed(shared: moved);
-  }
-
-  /// 도감 탭 처음 보기 — 'era'(세대) · 'type'(종류) · 'all'(전체 상품). 이 기기에서 마지막으로 고른 것
-  static const guideViews = ['era', 'type', 'all'];
-  String guideView = 'era';
-
-  void setGuideView(String v) {
-    if (v == guideView || !guideViews.contains(v)) return;
-    guideView = v;
-    _changed();
   }
 
   void setMyChannels(List<String> ids) {

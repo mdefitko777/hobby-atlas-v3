@@ -1,9 +1,10 @@
-// 화면 F: 컬렉션 — 좋아요 · 예약 · 구매함 (도감은 아래 탭 "도감" 으로 옮겼다 — b_search_screen.dart)
+// 화면 F: 컬렉션 — 좋아요 · 예약 · 구매함 · 도감 (내 것과 내 수집 진행은 여기, 상품 둘러보기는 검색 탭)
 //
 // ┌──────── 디자인 가이드 대응표: F 컬렉션 ────────────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
 // │ F-1  │ ChannelHeader                      │ 아바타 줄 + 내 채널 바 (C-0 공용)       │ P04 · P06     │
-// │ F-2  │ 밑줄 탭 2–3개 + 개수                 │ 좋아요 · 예약(있을 때만) · 구매함         │ P06 · P01     │
+// │ F-2  │ 밑줄 탭 3–4개 + 개수                 │ 좋아요 · 예약(있을 때만) · 구매함 · 도감  │ P06 · P01     │
+// │ F-8  │ 탭 "도감" → GuideView (g_guide_view) │ 내 수집 진행: 작품 · 세대 → 기체 칸 (전부 컬러, ♡ · 리본 표시) │ P01 · P06 │
 // │ F-2b │ SquareSegments (구매함 탭)           │ 조립 상태로 거르기: 전체 · 미조립 n · 조립 중 · 완성 │ P01 · P06 │
 // │ F-4  │ Text(합계)                         │ 좋아요 정가 합계 · 구매함 지출 합계 (× 수량) │ P01         │
 // │ F-5  │ ListView 줄 (사진 · 이름 · 가격)      │ 컬렉션 목록 → 상품 상세                 │ P08           │
@@ -14,15 +15,16 @@
 // │ F-9  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 빈 컬렉션           │ P01 · P09     │
 // │ F-10 │ 🗑 아이콘(개수 배지) → 바텀 시트      │ 휴지통: 지운 상품 복원 (기기 저장 · 30일)  │ P03 · P05     │
 // │ F-11 │ jumpTick (내 정보 숫자에서)          │ 좋아요 · 구매함 · 도감으로 바로 이동       │ P07           │
-// │ F-12 │ FindBar (채널 바 바로 아래, 탭 위)   │ [찾기][필터][휴지통][편집] — 다른 탭과 같은 폭 │ P04 · P07 │
+// │ F-12 │ FindBar (채널 바 바로 아래, 탭 위)   │ [찾기][필터][휴지통][편집 · 도감이면 공유 카드] — 다른 탭과 같은 폭 │ P04 · P07 │
 // │ F-13 │ 위 줄 ? (S-19, collectionHelp)      │ 필터 · 휴지통 · 편집 · 조립 · 예약 아이콘 뜻 │ P10 · P01     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 줄 → D 상품 상세(쌓기). 빈 상태 "검색하러 가기" → 검색 탭(옆으로).
 // 현행 앱 문제: 컬렉션 화면에 빨간 "전체 삭제"가 늘 보임(실수 위험) · 도감이 따로 떨어진 화면
-//              → v2는 편집 모드에서만 삭제. 도감은 v3 에서 아래 탭 "도감"(검색과 합침)으로 옮겼다.
+//              → v2는 편집 모드에서만 삭제, 도감은 컬렉션의 탭 하나.
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../level.dart' show tierHelpItems;
 import '../logic/build_status.dart';
 import '../logic/collection_rules.dart';
 import '../logic/preorder.dart';
@@ -34,6 +36,8 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'c_channel_screen.dart';
 import 'd_kit_detail_screen.dart';
+import 'g_guide_view.dart';
+import 'v_share_sheet.dart' show openCollectionShare;
 import 'r_mezastar_screen.dart' show TagCollectionSection;
 
 /// 내 정보 숫자를 눌렀을 때 열 곳 (backlog = 구매함 탭 · 미조립만, guide = 아래 탭 "도감" — 앱 셸이 탭을 바꾼다)
@@ -85,6 +89,18 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
   /// F-12 찾기 · 상품 필터
   final _find = KitFind();
 
+  /// F-8 도감 탭을 보고 있나 (좋아요 · 예약 · 구매함 대신)
+  bool _guide = false;
+
+  /// F-8 도감 필터 (상품 필터와 같은 모양의 시트 — lib/widgets/guide_filter_sheet.dart)
+  final _guideFilter = GuideFilterController();
+
+  @override
+  void dispose() {
+    _guideFilter.dispose();
+    super.dispose();
+  }
+
   /// 휴지통 (UserStore.trash, 기기에 30일): 지운 상품 id → 어느 탭에서 지웠나 (true = 구매함).
   /// 그 사이 다른 화면에서 다시 좋아요 · 구매함에 넣은 상품은 빼고 보여 준다. 지우기 = 앱 전체 Marks 에서 끄기
   Map<String, bool> get _removed => trashView(Marks.read(context).store);
@@ -114,6 +130,7 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
         _ => _Tab.liked,
       };
       _build = widget.jump == CollectionJump.backlog ? BuildStage.unbuilt.index + 1 : 0;
+      _guide = widget.jump == CollectionJump.guide;
       _editing = false;
       _selected.clear();
       if (channel != allChannelId) selectChannel(allChannelId);
@@ -217,8 +234,13 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
     ];
   }
 
-  /// F-12 필터 시트 — 검색 화면과 같은 상품 필터
+  /// F-12 필터 시트 — 검색 화면과 같은 상품 필터 (도감 탭이면 도감 필터)
   Future<void> _openFilter(List<Kit> all) async {
+    if (_guide) {
+      await _guideFilter.openSheet(context); // STATE: 도감 필터 → 칸
+      if (mounted) setState(() {});
+      return;
+    }
     if (await _find.openFilter(context, _inTab(all))) setState(() {}); // STATE: 필터 → 목록
   }
 
@@ -291,14 +313,16 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                 children: [
                   FindBar(
                     // F-12 모든 탭과 같은 줄 · 같은 높이(채널 바 바로 아래): [검색창][필터]
-                    hint: switch (_tab) {
-                      _Tab.owned => '구매함에서 찾기',
-                      _Tab.preorder => '예약에서 찾기',
-                      _Tab.liked => '좋아요에서 찾기',
-                    },
-                    onQuery: (q) => setState(() => _find.query = q), // STATE: 찾기 → 목록
-                    filterCount: _find.filter.count,
-                    onFilter: () => _openFilter(all),
+                    hint: _guide
+                        ? '도감에서 찾기'
+                        : switch (_tab) {
+                            _Tab.owned => '구매함에서 찾기',
+                            _Tab.preorder => '예약에서 찾기',
+                            _Tab.liked => '좋아요에서 찾기',
+                          },
+                    onQuery: (q) => setState(() => _find.query = q), // STATE: 찾기 → 목록 · 도감
+                    filterCount: _guide ? _guideFilter.filter.count : _find.filter.count,
+                    onFilter: _guide && channel == allChannelId ? null : () => _openFilter(all),
                     tools: [
                       ToolIcon(
                         // F-10 휴지통 (지운 수 배지)
@@ -307,28 +331,52 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                         badge: _removed.length,
                         onTap: () => _openTrash(all),
                       ),
-                      ToolIcon(
-                        // F-6 편집 → 체크박스 · 삭제 바
-                        icon: _editing ? Icons.done : Icons.checklist,
-                        tip: _editing ? '편집 끝내기' : '편집',
-                        onTap: () => setState(() {
-                          _editing = !_editing; // STATE: 편집 → 체크박스 · 삭제 바
-                          _selected.clear();
-                        }),
-                      ),
+                      _guide
+                          ? ToolIcon(
+                              // F-8 도감 탭: 편집 자리에 내 컬렉션 공유 카드
+                              icon: Icons.ios_share,
+                              tip: '공유 카드',
+                              onTap: () => openCollectionShare(context, loaders: widget.loaders),
+                            )
+                          : ToolIcon(
+                              // F-6 편집 → 체크박스 · 삭제 바
+                              icon: _editing ? Icons.done : Icons.checklist,
+                              tip: _editing ? '편집 끝내기' : '편집',
+                              onTap: () => setState(() {
+                                _editing = !_editing; // STATE: 편집 → 체크박스 · 삭제 바
+                                _selected.clear();
+                              }),
+                            ),
                     ],
                   ),
                   _TopRow(
                     // F-2 탭은 검색 줄 아래 (달력의 전체 · 발매 · 예고와 같은 자리)
                     counts: {for (final t in _Tab.values) t: _inTab(all, t).length},
-                    tab: _tab,
+                    tab: _guide ? null : _tab,
                     onTab: (t) => setState(() {
                       _tab = t; // STATE: 탭 → 목록 내용
+                      _guide = false;
                       _selected.clear();
                       _editing = false;
                     }),
+                    onGuide: () => setState(() {
+                      _guide = true; // STATE: 도감 탭
+                      _editing = false;
+                    }),
                   ),
-                  Expanded(child: _list(_visible(all), all)),
+                  Expanded(
+                    child: _guide
+                        ? GuideView(
+                            // F-8
+                            channel: channel,
+                            myChannels: widget.myChannels,
+                            onPickChannel: selectChannel,
+                            loaders: widget.loaders,
+                            query: _find.query,
+                            filter: _guideFilter,
+                          )
+                        : _list(_visible(all), all),
+                  ),
                 ],
               );
             },
@@ -633,13 +681,14 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
   }
 }
 
-/// F-2 좋아요 | 예약 | 구매함 탭. 예약 탭은 예약이 있거나 고른 때만
+/// F-2 좋아요 | 예약 | 구매함 | 도감 탭. 예약 탭은 예약이 있거나 고른 때만. [tab] null = 도감
 class _TopRow extends StatelessWidget {
-  const _TopRow({required this.counts, required this.tab, required this.onTab});
+  const _TopRow({required this.counts, required this.tab, required this.onTab, required this.onGuide});
 
   final Map<_Tab, int> counts;
-  final _Tab tab;
+  final _Tab? tab;
   final ValueChanged<_Tab> onTab;
+  final VoidCallback onGuide;
 
   @override
   Widget build(BuildContext context) {
@@ -654,13 +703,24 @@ class _TopRow extends StatelessWidget {
       onTap: () => onTab(t),
     );
 
-    return Padding(
+    // 작은 폰(320)에서 탭 네 개 + 개수가 넘치면 옆으로 밀어 본다
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.fromLTRB(6, 2, 6, 2),
       child: Row(
         children: [
           one('좋아요', _Tab.liked), // F-2 P06
           if ((counts[_Tab.preorder] ?? 0) > 0 || tab == _Tab.preorder) one('예약', _Tab.preorder),
           one('구매함', _Tab.owned),
+          UnderlineTab(
+            // F-8 도감 (개수 없음 — 내 진행은 칸으로)
+            key: const ValueKey('tab-guide'),
+            label: '도감',
+            fontSize: Gp.t16,
+            selected: tab == null,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            onTap: onGuide,
+          ),
         ],
       ),
     );
@@ -674,4 +734,8 @@ List<HelpItem> collectionHelp() => [
   const HelpItem(Icons.checklist, '편집 (골라서 지우기)'),
   const HelpItem.group('구매함 · 예약 (누르면 다음 단계 · 길게 = 도색)'),
   ...kitProgressHelp(),
+  const HelpItem.group('도감'),
+  const HelpItem(Icons.ios_share, '내 컬렉션 공유 카드'),
+  const HelpItem(Icons.build_outlined, '베이 조합 만들기 (베이 도감)'),
+  ...tierHelpItems(),
 ];
