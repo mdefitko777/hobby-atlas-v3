@@ -1,4 +1,4 @@
-// 메자스타 · 프렌다 태그 도감 — 데이터 매핑(작은 fixtures) · 검색 · 가짐 저장 · 화면
+// 메자스타 · 프렌다 태그 도감 — 데이터 매핑(작은 fixtures) · 검색 · 좋아요 · 구매함 저장 · 화면 · 컬렉션
 import 'dart:convert';
 import 'dart:io';
 
@@ -11,9 +11,13 @@ import 'package:hobby_atlas/data/user_store.dart';
 import 'package:hobby_atlas/detail_pane.dart';
 import 'package:hobby_atlas/logic/frienda_page.dart';
 import 'package:hobby_atlas/marks.dart';
+import 'package:hobby_atlas/models.dart';
 import 'package:hobby_atlas/screens/b_search_screen.dart';
+import 'package:hobby_atlas/screens/f_collection_screen.dart';
 import 'package:hobby_atlas/screens/r_mezastar_screen.dart';
+import 'package:hobby_atlas/sync/device_state.dart';
 import 'package:hobby_atlas/theme.dart';
+import 'package:hobby_atlas/widgets.dart';
 
 import 'layout_test.dart' show fakeLoaders;
 
@@ -177,7 +181,7 @@ void main() {
     });
   });
 
-  group('가짐 저장', () {
+  group('좋아요 · 구매함 저장', () {
     test('UserStore: tag_owned 가 local_state 에 · 백업 가져오기로 돌아온다', () {
       final a = UserStore.memory()..setTagOwned('mz-intl:1-1-001@KR', true);
       a.setTagOwned('frienda:1-1-001', true);
@@ -189,6 +193,92 @@ void main() {
       expect(p.isEmpty, isFalse);
       final b = UserStore.memory()..applyImport(p);
       expect(b.tagOwned, {'mz-intl:1-1-001@KR'});
+    });
+
+    test('상품과 같은 규칙: 상태 하나 · 구매함을 켜면 좋아요에서 빠진다 · 끄는 쪽은 그 상태일 때만', () {
+      const id = 'frienda:1-1-001';
+      final s = UserStore.memory();
+      var changes = 0;
+      s.addListener(() => changes++);
+      expect(s.tagStatus(id), CollectStatus.none);
+      s.setTagMark(id, liked: true);
+      expect(s.tagStatus(id), CollectStatus.wanted);
+      expect(s.tagLiked, {id});
+      s.setTagMark(id, owned: true); // 좋아요 → 구매함
+      expect(s.tagStatus(id), CollectStatus.owned);
+      expect(s.tagLiked, isEmpty);
+      expect(s.tagOwned, {id});
+      s.setTagMark(id, liked: false); // 좋아요가 아니니 그대로
+      expect(s.tagStatus(id), CollectStatus.owned);
+      s.setTagMark(id, liked: true); // 구매함 → 좋아요로 옮김
+      expect(s.tagStatus(id), CollectStatus.wanted);
+      expect(s.tagOwned, isEmpty);
+      s.setTagMark(id, liked: false);
+      expect(s.tagStatus(id), CollectStatus.none);
+      expect([s.tagLiked, s.tagOwned], [isEmpty, isEmpty]);
+      final before = changes;
+      s.setTagMark(id, owned: false); // 바뀐 게 없으면 알리지 않는다
+      expect(changes, before);
+      s.setTagStatus(id, CollectStatus.owned); // 되돌리기 길
+      expect(s.tagStatus(id), CollectStatus.owned);
+      // 두 기기에서 따로 켜 둘 다 든 것 → 구매함이 이기고, 다음에 누르면 하나로 정리
+      s.tagLiked.add(id);
+      expect(s.tagStatus(id), CollectStatus.owned);
+      expect(likedOnlyTags(s.tagLiked, s.tagOwned), isEmpty);
+      s.setTagMark(id, owned: true);
+      expect(s.tagLiked, isEmpty);
+    });
+
+    test('tag_liked: 저장 파일 · 백업 왕복 · 옛 파일(tag_owned 만)도 그대로 · payload 밖', () {
+      final a = UserStore.memory()
+        ..setTagMark('mz-intl:1-1-001@KR', liked: true)
+        ..setTagMark('frienda:1-1-001', owned: true);
+      final json = a.toJson();
+      final local = json['local_state']! as Map;
+      expect(local['tag_liked'], ['mz-intl:1-1-001@KR']);
+      expect(local['tag_owned'], ['frienda:1-1-001']);
+      // 옛 앱과 같이 쓰는 payload · 수집 기록에는 없다
+      expect(jsonEncode(json['collection']), isNot(contains('mz-intl')));
+      expect(jsonEncode(json['payload_extra']), isNot(contains('tag_')));
+      final again = UserStore.memory()..debugLoadJson(jsonDecode(jsonEncode(json)));
+      expect(again.tagLiked, {'mz-intl:1-1-001@KR'});
+      expect(again.tagOwned, {'frienda:1-1-001'});
+
+      final p = ImportPreview.parse(jsonEncode(json), (_) => true);
+      expect(p.tagLiked, {'mz-intl:1-1-001@KR'});
+      final onlyLiked = ImportPreview.parse(
+        jsonEncode({
+          'schema': 1,
+          'local_state': {
+            'tag_liked': ['x'],
+          },
+        }),
+        (_) => true,
+      );
+      expect(onlyLiked.isEmpty, isFalse);
+      // 가져오기: 이미 구매함인 것은 좋아요로 내리지 않는다
+      final b = UserStore.memory()..setTagOwned('mz-intl:1-1-001@KR', true);
+      b.applyImport(p);
+      expect(b.tagStatus('mz-intl:1-1-001@KR'), CollectStatus.owned);
+      expect(b.tagLiked, isEmpty);
+      expect(b.tagOwned, {'mz-intl:1-1-001@KR', 'frienda:1-1-001'});
+
+      // 이 기능 전 저장 파일 (tag_liked 없음) → 구매함 그대로, 좋아요 없음
+      final old = UserStore.memory()
+        ..debugLoadJson({
+          'schema': 1,
+          'local_state': {
+            'tag_owned': ['frienda:1-1-001'],
+          },
+        });
+      expect(old.tagStatus('frienda:1-1-001'), CollectStatus.owned);
+      expect(old.tagLiked, isEmpty);
+    });
+
+    test('기기 기록 동기화: tag_liked 도 tag_owned 처럼 순서 없는 모음으로 맞춘다', () {
+      final s = builtInDeviceSections.where((s) => s.key == 'tag_liked').single;
+      final o = builtInDeviceSections.where((s) => s.key == 'tag_owned').single;
+      expect(s.kind, o.kind);
     });
 
     test('BlobStore: / 가 든 키 (aux_atlas/…) 도 쓰고 읽는다', () async {
@@ -228,22 +318,53 @@ void main() {
       FriendaImages.fetch = (_) async => null; // 기본: 인터넷 없음 → 공식 아트워크
     });
 
-    testWidgets('도감: 찾기가 칸을 거르고 · 칸을 누르면 가짐', (tester) async {
+    testWidgets('도감: 찾기가 칸을 거르고 · 칸 위 리본 = 구매함 · ♡ = 좋아요 · 칸 누르기 = 상세', (tester) async {
       final store = UserStore.memory();
       await _pump(tester, const TagAtlasScreen(game: TagGame.mezastar, region: 'KR'), store);
       expect(find.byType(TagCell), findsNWidgets(4)); // 스타더스트 1탄 (한국)
       expect(find.text('수집 0 / 4'), findsWidgets);
+      expect(find.byType(MarkOverlay), findsNWidgets(4)); // 상품 도감 칸과 같은 빠른 버튼
 
       await tester.enterText(find.byType(TextField), '뮤츠');
       await _settle(tester);
       expect(find.byType(TagCell), findsOneWidget);
       expect(find.text('1-1-001'), findsOneWidget);
+      TagCell cell() => tester.widget<TagCell>(find.byType(TagCell));
+      final quick = find.descendant(of: find.byType(MarkOverlay), matching: find.byType(GestureDetector));
 
-      await tester.tap(find.byType(TagCell));
+      // 칸 누르기 = 상세만 (옛날처럼 켜지지 않는다)
+      await tester.tap(find.descendant(of: find.byType(TagCell), matching: find.text('뮤츠')));
+      await _settle(tester);
+      expect(store.tagOwned, isEmpty);
+      expect(find.widgetWithText(TogglePill, '좋아요'), findsOneWidget);
+      expect(find.widgetWithText(TogglePill, '구매함'), findsOneWidget);
+      await tester.tap(find.widgetWithText(TogglePill, '좋아요')); // R-6a
+      await _settle(tester);
+      expect(store.tagStatus('mz-intl:1-1-001@KR'), CollectStatus.wanted);
+      expect(tester.widget<TogglePill>(find.widgetWithText(TogglePill, '좋아요')).active, isTrue);
+      await tester.tapAt(const Offset(195, 40)); // 시트 닫기
+      await _settle(tester);
+      expect(cell().liked, isTrue);
+      expect(tester.widget<TierCell>(find.byType(TierCell)).tier, CellTier.liked); // 컬러
+      expect(find.text('수집 0 / 4'), findsWidgets); // 좋아요는 수집이 아니다
+      expect(find.textContaining('좋아요 1'), findsOneWidget); // 탄 머리 줄
+
+      await tester.tap(quick.first); // 리본 → 구매함 (좋아요에서 빠짐)
       await _settle(tester);
       expect(store.tagOwned, {'mz-intl:1-1-001@KR'});
+      expect(store.tagLiked, isEmpty);
       expect(find.text('수집 1 / 4'), findsWidgets);
-      expect(tester.widget<TagCell>(find.byType(TagCell)).owned, isTrue);
+      expect(cell().owned, isTrue);
+      expect(tester.widget<TierCell>(find.byType(TierCell)).tier, CellTier.owned); // + 민트 테두리
+      expect(find.text('「뮤츠」 구매함에 넣었어요'), findsOneWidget);
+
+      await tester.tap(quick.last); // ♡ → 구매함에서 좋아요로 옮김
+      await _settle(tester);
+      expect(store.tagStatus('mz-intl:1-1-001@KR'), CollectStatus.wanted);
+      expect(find.text('「뮤츠」 구매함 → 좋아요로 옮겼어요'), findsOneWidget);
+      await tester.tap(find.text('되돌리기'));
+      await _settle(tester);
+      expect(store.tagStatus('mz-intl:1-1-001@KR'), CollectStatus.owned);
 
       // 지역 → 대만 (가장 새 탄 = 스타더스트 3탄)
       await tester.enterText(find.byType(TextField), '');
@@ -266,7 +387,7 @@ void main() {
       TagAtlas.source = (file) async => local(_files[file]);
       final store = UserStore.memory();
       await _pump(tester, const TagAtlasScreen(game: TagGame.mezastar, region: 'KR'), store);
-      await tester.longPress(find.byType(TagCell).at(1));
+      await tester.tap(find.byType(TagCell).at(1), warnIfMissed: false); // 가운데 = 상세 (빠른 버튼 밖)
       await _settle(tester);
       expect(find.byTooltip('공식 페이지'), findsOneWidget);
       await tester.tap(find.byKey(const ValueKey('tag-image')));
@@ -276,7 +397,7 @@ void main() {
       await tester.drag(find.byKey(const ValueKey('image-viewer')), const Offset(-400, 0));
       await _settle(tester);
       expect(find.text('2 / 2'), findsOneWidget);
-      expect(store.tagOwned, isEmpty); // 보기만, 가짐은 그대로
+      expect([store.tagOwned, store.tagLiked], [isEmpty, isEmpty]); // 보기만, 좋아요 · 구매함은 그대로
       expect(tester.takeException(), isNull);
     });
 
@@ -316,6 +437,119 @@ void main() {
       await _settle(tester);
       expect(find.text('아르세우스'), findsNothing);
       expect(find.text('디아루가'), findsOneWidget);
+      // 목록 줄 오른쪽 ♡ · 리본 (상품 줄과 같음)
+      final row = find.ancestor(of: find.text('디아루가'), matching: find.byType(TagRow));
+      await tester.tap(find.descendant(of: row, matching: find.byTooltip('좋아요')));
+      await _settle(tester);
+      expect(store.tagStatus('frienda:3-2-002'), CollectStatus.wanted);
+      expect(find.text('디아루가'), findsNothing); // 아직 필터에서 빠진다
+      // 필터 ♡ → 좋아요만
+      await tester.tap(find.byTooltip('필터'));
+      await _settle(tester);
+      await tester.tap(find.byTooltip('좋아요').last);
+      await _settle(tester);
+      await tester.tap(find.text('1개 보기'));
+      await _settle(tester);
+      expect(find.text('디아루가'), findsOneWidget);
+      expect(find.text('아르세우스'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    test('필터: 전체 · 좋아요 · 구매함 · 아직', () {
+      const c = TagCard(id: 'x', tagId: 'x', game: TagGame.frienda, region: '', number: '1', name: 'x', setIds: []);
+      bool hit(TagMarkFilter m, CollectStatus s) => TagFilter(mark: m).hit(c, s);
+      expect(CollectStatus.values.where((s) => hit(TagMarkFilter.any, s)), CollectStatus.values);
+      expect(CollectStatus.values.where((s) => hit(TagMarkFilter.liked, s)), [CollectStatus.wanted]);
+      expect(CollectStatus.values.where((s) => hit(TagMarkFilter.owned, s)), [CollectStatus.owned]);
+      expect(CollectStatus.values.where((s) => hit(TagMarkFilter.none, s)), [CollectStatus.none]);
+      expect(TagFilter(mark: TagMarkFilter.liked).count, 1);
+    });
+
+    testWidgets('컬렉션: 좋아요 · 구매함 탭 끝에 내 태그 · 픽 (전체 · 포켓몬 채널만)', (tester) async {
+      final store = UserStore.memory()
+        ..setTagMark('mz-intl:1-1-001@KR', liked: true)
+        ..setTagMark('frienda:3-2-001', owned: true);
+      Widget section({bool owned = false, String query = '', String channel = 'all'}) => Scaffold(
+        body: ListView(
+          children: [TagCollectionSection(owned: owned, query: query, channel: channel)],
+        ),
+      );
+      await _pump(tester, section(), store);
+      expect(find.text('태그 · 픽'), findsOneWidget);
+      expect(find.text('뮤츠  1-1-001'), findsOneWidget);
+      expect(find.text('아르세우스  3-2-001'), findsNothing); // 구매함 것은 구매함 탭에
+      expect(find.text('1개'), findsOneWidget);
+
+      await _pump(tester, section(owned: true), store);
+      expect(find.text('아르세우스  3-2-001'), findsOneWidget);
+      expect(find.text('뮤츠  1-1-001'), findsNothing);
+      // 줄의 ♡ → 구매함에서 좋아요로 옮기면 구매함 탭에서 빠진다
+      await tester.tap(find.descendant(of: find.byType(TagRow), matching: find.byTooltip('좋아요')));
+      await _settle(tester);
+      expect(store.tagStatus('frienda:3-2-001'), CollectStatus.wanted);
+      expect(find.byType(TagRow), findsNothing);
+      expect(find.text('태그 · 픽'), findsNothing); // 없으면 상자도 없다
+
+      await _pump(tester, section(query: '아르'), store);
+      expect(find.text('아르세우스  3-2-001'), findsOneWidget);
+      expect(find.text('뮤츠  1-1-001'), findsNothing);
+
+      await _pump(tester, section(channel: 'gundam'), store);
+      expect(find.text('태그 · 픽'), findsNothing);
+      await _pump(tester, section(channel: 'pokemon'), store);
+      expect(find.text('태그 · 픽'), findsOneWidget);
+
+      // 줄 누르기 → 태그 상세 (+ 도감에서 보기)
+      await tester.tap(find.text('뮤츠  1-1-001'));
+      await _settle(tester);
+      expect(find.widgetWithText(TogglePill, '구매함'), findsOneWidget);
+      expect(find.text('도감에서 보기'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('컬렉션 화면: 좋아요 탭 목록 끝에 태그 상자가 붙는다', (tester) async {
+      final store = UserStore.memory()..setTagMark('frienda:3-2-002', liked: true);
+      await _pump(
+        tester,
+        Scaffold(
+          body: CollectionScreen(
+            myChannels: const ['gundam', 'pokemon'],
+            onMyChannelsChanged: (_) {},
+            onGoSearch: () {},
+            loaders: fakeLoaders,
+          ),
+        ),
+        store,
+      );
+      final box = find.text('디아루가  3-2-002');
+      await tester.scrollUntilVisible(box, 300, scrollable: find.byType(Scrollable).last);
+      await _settle(tester);
+      expect(box, findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('컬렉션 화면: 상품이 하나도 없는 탭에도 태그 상자가 보인다', (tester) async {
+      final store = UserStore.memory()
+        ..setTagMark('frienda:3-2-002', owned: true)
+        ..setStatus('po19', CollectStatus.wanted); // 포켓몬 구매함 상품을 좋아요로 → 구매함 탭이 빈다
+      await _pump(
+        tester,
+        Scaffold(
+          body: CollectionScreen(
+            myChannels: const ['pokemon'],
+            onMyChannelsChanged: (_) {},
+            onGoSearch: () {},
+            loaders: fakeLoaders,
+          ),
+        ),
+        store,
+      );
+      await tester.tap(find.byKey(const ValueKey('tab-owned')));
+      await _settle(tester);
+      expect(find.text('아직 구매함에 넣은 상품이 없어요'), findsOneWidget);
+      final box = find.text('디아루가  3-2-002');
+      await tester.scrollUntilVisible(box, 300, scrollable: find.byType(Scrollable).last);
+      expect(box, findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
@@ -337,13 +571,20 @@ void main() {
       await _settle(tester);
       expect(find.text('태그 · 픽'), findsOneWidget);
       expect(find.text('뮤츠  1-1-001'), findsNWidgets(3)); // KR · HK · TW
+      // 줄 오른쪽 ♡ · 리본 (상품 줄과 같음)
+      final rows = find.byType(TagRow);
+      await tester.tap(find.descendant(of: rows.at(1), matching: find.byTooltip('좋아요')));
+      await _settle(tester);
+      expect(store.tagLiked, {'mz-intl:1-1-001@EN'});
       await tester.tap(find.text('뮤츠  1-1-001').first);
       await _settle(tester);
-      await tester.tap(find.text('가짐으로 표시'));
+      await tester.tap(find.widgetWithText(TogglePill, '구매함'));
       await _settle(tester);
       expect(store.tagOwned, {'mz-intl:1-1-001@KR'});
       await tester.tapAt(const Offset(195, 40)); // 시트 닫기
       await _settle(tester);
+      final ribbon = find.descendant(of: rows.first, matching: find.byTooltip('구매함'));
+      expect(tester.widget<OwnedIcon>(find.descendant(of: ribbon, matching: find.byType(OwnedIcon))).filled, isTrue);
 
       await tester.enterText(find.byType(TextField).first, '4-5-001');
       await _settle(tester);

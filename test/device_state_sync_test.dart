@@ -308,6 +308,26 @@ void main() {
       expect(b.store.deviceSync['account'], 'uid:bro@example.com');
     });
 
+    test('태그 좋아요 · 구매함: 다른 기기로 · 좋아요 → 구매함으로 옮긴 것도 (payload 에는 안 들어감)', () async {
+      const id = 'frienda:1-1-001';
+      final a = Device(server);
+      a.store.setTagMark(id, liked: true);
+      await a.run();
+      expect(sections(server).keys, contains('tag_liked'));
+      final b = Device(server);
+      await b.run();
+      expect(b.store.tagStatus(id), CollectStatus.wanted);
+
+      a.tick();
+      a.store.setTagMark(id, owned: true); // 좋아요에서 빠지고 구매함으로
+      await a.run();
+      b.tick(const Duration(minutes: 2));
+      await b.run();
+      expect(b.store.tagStatus(id), CollectStatus.owned);
+      expect(b.store.tagLiked, isEmpty);
+      expect('${server.v3Payload}', isNot(contains('frienda')));
+    });
+
     test('바꾸고 조금 뒤에 스스로 올린다 (바뀐 게 없으면 서버를 부르지 않는다)', () async {
       final auth = FakeAuth(signedIn: true);
       final store = UserStore.memory();

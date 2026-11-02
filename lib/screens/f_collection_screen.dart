@@ -34,6 +34,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'c_channel_screen.dart';
 import 'd_kit_detail_screen.dart';
+import 'r_mezastar_screen.dart' show TagCollectionSection;
 
 /// 내 정보 숫자를 눌렀을 때 열 곳 (backlog = 구매함 탭 · 미조립만, guide = 아래 탭 "도감" — 앱 셸이 탭을 바꾼다)
 enum CollectionJump { liked, owned, guide, backlog }
@@ -362,7 +363,7 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
       return const EmptyView(icon: preorderIcon, message: '기다리는 예약이 없어요', detail: '상품 상세의 예약 칸에 적으면 여기에 모여요');
     }
     if (kits.isEmpty) {
-      return EmptyView(
+      final empty = EmptyView(
         // F-9 P09
         icon: _ownedTab ? Icons.bookmark_added_outlined : Icons.favorite_border, // 구매함 = 리본, 좋아요 = ♡
         message: _ownedTab ? '아직 구매함에 넣은 상품이 없어요' : '아직 좋아요에 담은 상품이 없어요',
@@ -378,6 +379,17 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                 icon: const Icon(Icons.delete_outline, size: Gp.iM),
                 label: Text('휴지통 (${_removed.length})'),
               ),
+      );
+      // R-11 상품은 없어도 좋아요 · 구매함한 태그 · 픽은 보인다
+      final store = Marks.of(context).store;
+      final tags = _ownedTab ? store.tagOwned : store.tagLiked;
+      if (tags.isEmpty || !TagCollectionSection.showsIn(channel)) return empty;
+      return ListView(
+        padding: EdgeInsets.only(bottom: navClearance(context)),
+        children: [
+          SizedBox(height: 280, child: empty),
+          TagCollectionSection(owned: _ownedTab, query: _find.query, channel: channel),
+        ],
       );
     }
     // F-4 합계 × 수량 (좋아요 = 갖고 싶은 수, 구매함 = 가진 수)
@@ -481,6 +493,8 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                         ),
                 ),
               ),
+            // R-11 메자스타 · 프렌다 태그 (전체 · 포켓몬 채널, r_mezastar_screen.dart)
+            if (_tab != _Tab.preorder) TagCollectionSection(owned: _ownedTab, query: _find.query, channel: channel),
           ],
         ),
         if (_editing)

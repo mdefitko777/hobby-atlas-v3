@@ -33,8 +33,9 @@ class ImportPreview {
   final List<Combo> bbxCombos = [];
   final List<Deck> bbxDecks = [];
 
-  /// 메자스타 · 프렌다 가진 태그 (Hobby Atlas 백업에만)
+  /// 메자스타 · 프렌다 구매함 · 좋아요 태그 (Hobby Atlas 백업에만)
   final Set<String> tagOwned = {};
+  final Set<String> tagLiked = {};
 
   /// 최근 검색어 · 검색 횟수 · 컬렉션 휴지통 (Hobby Atlas 백업에만)
   final List<String> recentSearches = [];
@@ -57,6 +58,7 @@ class ImportPreview {
       bbxCombos.isEmpty &&
       bbxDecks.isEmpty &&
       tagOwned.isEmpty &&
+      tagLiked.isEmpty &&
       recentSearches.isEmpty &&
       trash.isEmpty;
 
@@ -153,6 +155,7 @@ class ImportPreview {
     p.bbxCombos.addAll(jList(local['bbx_combos']).map(Combo.fromJson).nonNulls);
     p.bbxDecks.addAll(jList(local['bbx_decks']).map(Deck.fromJson).nonNulls);
     p.tagOwned.addAll(jList(local['tag_owned']).whereType<String>());
+    p.tagLiked.addAll(jList(local['tag_liked']).whereType<String>());
     p.recentSearches.addAll(jList(local['recent_searches']).whereType<String>());
     p.searchCounts.addAll(_countsFrom(local['search_counts']));
     p.trash.addAll(_trashFrom(local['trash']));
