@@ -1,4 +1,6 @@
-// 도감 필터 규칙 — 칸 단계 · 등급 · 종류 · 묶음 · 정렬 (순수 Dart)
+// 도감 필터 규칙 — 상태 · 라인 · 시대 · 기체 종류 · 상품 있는 것 · 정렬 (순수 Dart)
+
+import 'kit_filter.dart' show MineState;
 
 // ── 도감 필터 (칸이 켜졌나) ────────────────────────────────────────────────────────
 
@@ -23,8 +25,19 @@ extension LitStateLabel on LitState {
 // 상품 필터와 같은 모양: 아래 시트(60%) · 네모 세그먼트 · 체크 2열(개수) · 펼치는 줄 · "n개 보기".
 // 도감마다 칸 하나를 GuideFacet 으로 바꿔 넘기면, 시트는 그 재료에 있는 값만 보여 준다.
 
-/// 칸 단계 (아직 · 좋아요 · 구매함 · 내 사진)
-enum GuideTier { any, none, liked, owned, photo }
+/// 칸 상태 — 상품 필터 상태(MineState)와 같은 순서 · 같은 말 (전체 · 좋아요 · 구매함 · 아직 없음) + 내 사진
+enum GuideTier { any, liked, owned, none, photo }
+
+extension GuideTierMine on GuideTier {
+  /// 상품 필터의 같은 상태 (내 사진은 도감에만 → null)
+  MineState? get mine => switch (this) {
+    GuideTier.any => MineState.any,
+    GuideTier.liked => MineState.liked,
+    GuideTier.owned => MineState.owned,
+    GuideTier.none => MineState.none,
+    GuideTier.photo => null,
+  };
+}
 
 /// 정렬 (번호 = 데이터 순서)
 enum GuideSort { number, name, kits, recent }

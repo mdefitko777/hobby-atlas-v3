@@ -103,7 +103,7 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
     for (final id in litOnly ? u.litKitIds : u.kitIds) ?_kits[id],
   ];
 
-  /// 기체 칸 → 도감 필터 재료 (단계 · 상품 등급 · 종류 · 상품 수 · 최근 구매)
+  /// 기체 칸 → 도감 필터 재료 (상태 · 상품 라인 · 기체 종류 · 상품 수 · 최근 구매)
   GuideFacet _facet(Marks m, GuideUnit u) {
     final tier = _tierOf(m, u);
     final kits = _kitsOf(u, litOnly: true);
@@ -350,13 +350,7 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
                   // G-4c 화수 · 장마다 그때 나온 기체 (한 기체가 여러 장에 나올 수 있다)
                   for (final c in _chapters)
                     if ([for (final id in c.unitIds) ?byId[id]] case final list when list.isNotEmpty) ...[
-                      SectionHeader(
-                        joinDot([c.episodes, c.name]),
-                        subtitle:
-                            '수집 ${list.where((u) => _tierOf(m, u).index >= CellTier.owned.index).length}'
-                            ' / ${list.length}',
-                        padding: const EdgeInsets.fromLTRB(16, 12, 12, 8),
-                      ),
+                      SectionHeader(joinDot([c.episodes, c.name]), padding: const EdgeInsets.fromLTRB(16, 12, 12, 8)),
                       _grid(box, m, list),
                     ],
               ],
@@ -570,7 +564,7 @@ class _KitLine extends StatelessWidget {
   }
 }
 
-/// G-2 작품 도감 ? — 칸 단계(레벨 시트와 같은 그림) + 찾기 줄 · 기체 시트 아이콘
+/// G-2 작품 도감 ? — 칸 표시(레벨 시트와 같은 그림, 늘 컬러) + 찾기 줄 · 기체 시트 아이콘
 List<HelpItem> workGuideHelp() => [
   ...tierHelpItems(),
   const HelpItem.group('아이콘'),

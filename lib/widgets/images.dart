@@ -9,7 +9,7 @@ import '../data/photo_files.dart';
 import '../theme.dart';
 
 /// 상품·로고 이미지. 경로가 비었거나 못 읽으면 회색 칸 + 글자.
-/// [grayscale] = 도감에서 아직 모으지 않은 칸 (불 꺼짐)
+/// [grayscale] = 흑백 (베이 조합 만들기의 안 가진 부품만 — 도감 칸은 늘 컬러)
 class AppImage extends StatelessWidget {
   const AppImage(this.path, {super.key, this.fit = BoxFit.cover, this.placeholder = '', this.grayscale = false});
 

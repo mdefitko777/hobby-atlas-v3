@@ -348,7 +348,7 @@ class GuideIndex {
   };
 }
 
-/// 도감의 기체 칸 — 구매함이면 컬러로 "점등"
+/// 도감의 기체 칸 — 구매함이면 "점등" (칸 그림은 늘 컬러, 리본 표시)
 class GuideUnit {
   const GuideUnit({
     required this.id,

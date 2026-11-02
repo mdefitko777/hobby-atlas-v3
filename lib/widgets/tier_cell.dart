@@ -1,12 +1,14 @@
 // 도감 칸 한 벌 — 건담 기체 · 베이 · 메자스타 · 프렌다 태그 · 설정의 견본이 같은 틀 · 같은 그림 · 같은 톡 튀기를 쓴다.
-//   단계: 흑백(아직) → 컬러(좋아요) → 민트 테두리(구매함) → 도는 고리 + 내 사진(인증)
+//   그림은 늘 컬러. 상태는 표시로만: ♡(좋아요) · 리본 + 옅은 민트 테두리(구매함) · 도는 고리 + 내 사진(인증)
+//   표시 = 누르는 칸은 MarkOverlay, 보기만 하는 칸은 StatusMarks (상품 사진과 같은 모양 · 색)
 import 'package:flutter/material.dart';
 
 import '../theme.dart';
 import 'images.dart';
+import 'mark_overlay.dart';
 import 'rings.dart';
 
-/// 도감 칸 단계 — 흑백 · 컬러(좋아요) · 초록 테두리(구매) · 도는 고리(사진 인증)
+/// 도감 칸 단계 — 아직 · 좋아요(♡) · 구매함(리본) · 사진 인증(도는 고리). 그림 색은 단계와 상관없이 컬러
 enum CellTier { none, liked, owned, photo }
 
 /// 단계별 칸 틀 (도감 칸 · ? 견본 공통)
@@ -18,7 +20,7 @@ Widget tierFrame(CellTier tier, Widget child, {double radius = Gp.radius}) {
       borderRadius: BorderRadius.circular(photo ? radius - 2 : radius),
       border: switch (tier) {
         CellTier.photo => null,
-        CellTier.owned => Border.all(color: Gp.own, width: 2.2), // 가진 것 = 민트
+        CellTier.owned => Border.all(color: Gp.own, width: 1.5), // 가진 것 = 옅은 민트 (리본이 주인공)
         _ => Border.all(color: Gp.line),
       },
     ),
@@ -28,13 +30,18 @@ Widget tierFrame(CellTier tier, Widget child, {double radius = Gp.radius}) {
   return photo ? AccentRing(radius: radius, spin: true, child: inner) : inner;
 }
 
-/// 칸 안 그림: 내 사진이면 꽉 채우고, 아니면 공식 그림 (없음 = 흑백)
+/// 칸 안 그림: 내 사진이면 꽉 채우고, 아니면 공식 그림 (단계와 상관없이 컬러)
 Widget cellImage(CellTier tier, String image, String? photo) => tier == CellTier.photo && photo != null
     ? AppImage(photo)
     : Padding(
         padding: const EdgeInsets.all(6),
-        child: AppImage(image, fit: BoxFit.contain, grayscale: tier == CellTier.none),
+        child: AppImage(image, fit: BoxFit.contain),
       );
+
+/// 보기만 하는 칸의 표시 — 구매함(사진 인증 포함) = 리본, 좋아요 = ♡ ([liked] 는 단계와 따로 켤 수 있다)
+Widget tierMarks(CellTier tier, {bool liked = false, double size = 22}) => Positioned.fill(
+  child: StatusMarks(liked: liked || tier == CellTier.liked, owned: tier.index >= CellTier.owned.index, size: size),
+);
 
 /// 도감 칸 하나: 틀 + 그림 + 위에 얹는 것([overlays]) + 아래 글자([caption]). 단계가 오르면 톡 튀어 오른다
 class TierCell extends StatefulWidget {
@@ -62,7 +69,7 @@ class TierCell extends StatefulWidget {
   /// 내가 올린 사진 (있으면 칸 그림 대신 보여 준다)
   final String? photo;
 
-  /// 그림 위 꼬리표 · 배지 · 리본 (Positioned)
+  /// 그림 위 꼬리표 · 배지 · 표시 (Positioned) — ♡ · 리본은 MarkOverlay(누름) 나 [tierMarks](보기만)
   final List<Widget> overlays;
 
   /// true = 칸 그림을 정사각형으로 가운데에, false = 남는 높이를 다 쓴다

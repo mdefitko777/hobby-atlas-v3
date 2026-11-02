@@ -111,7 +111,8 @@ void main() {
   });
 
   testWidgets('도감 탭 ? 에 도감 칸 단계 · 컬렉션 ? 에 휴지통 · 편집', (tester) async {
-    expect(searchHelp().map((i) => i.text), containsAll(['구매함 · +10', '검색 결과를 기체별로 묶기']));
+    expect(searchHelp().map((i) => i.text), containsAll(['리본 = 구매함 · +10', '검색 결과를 기체별로 묶기']));
+    expect(searchHelp().map((i) => i.text).join(), isNot(contains('흑백'))); // 도감 칸은 늘 컬러
     expect(collectionHelp().map((i) => i.text), containsAll(['휴지통 (30일 동안 되살리기)', '편집 (골라서 지우기)']));
   });
 

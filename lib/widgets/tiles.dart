@@ -202,10 +202,13 @@ class ThumbRow extends StatelessWidget {
 /// 분류 칸 (도감 · 검색의 종류 · 세대) — 공식 그림(라인 로고 · 작품 로고)과 이름만. 숫자 · 진행 막대는 넣지 않는다.
 /// 칸 너비는 부모 격자가 정한다 ([categoryCols] — 폰에서 한 줄 4칸).
 class CategoryTile extends StatelessWidget {
-  const CategoryTile({super.key, required this.image, required this.name, required this.onTap});
+  const CategoryTile({super.key, required this.image, required this.name, required this.onTap, this.icon});
   final String image;
   final String name;
   final VoidCallback onTap;
+
+  /// 공식 그림이 아직 없을 때 그림 자리 (예: MEZASTAR · Frienda) — 없으면 이름 글자 자리표시
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) => Semantics(
@@ -226,7 +229,9 @@ class CategoryTile extends StatelessWidget {
                 borderRadius: BorderRadius.circular(Gp.radius),
                 border: Border.all(color: Gp.line),
               ),
-              child: AppImage(image, fit: BoxFit.contain, placeholder: name),
+              child: image.isEmpty && icon != null
+                  ? Icon(icon, size: Gp.iXL, color: Gp.accent)
+                  : AppImage(image, fit: BoxFit.contain, placeholder: name),
             ),
           ),
           const SizedBox(height: 4),
@@ -251,3 +256,31 @@ const categoryGridGap = 10.0;
 
 /// 분류 칸 한 칸 높이 비율 (그림 1.25 : 1 + 이름 한 줄)
 const categoryTileAspect = 0.78;
+
+/// 분류 칸 격자 — 목록 안에 넣는 [CategoryTile] 묶음 (폭에 맞춰 [categoryCols] 칸, 안에서 스크롤하지 않음)
+class CategoryGrid extends StatelessWidget {
+  const CategoryGrid({
+    super.key,
+    required this.children,
+    this.padding = const EdgeInsets.symmetric(horizontal: Gp.gutter),
+  });
+  final List<Widget> children;
+  final EdgeInsets padding;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: padding,
+    child: LayoutBuilder(
+      builder: (context, box) => GridView.count(
+        crossAxisCount: categoryCols(box.maxWidth),
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        padding: EdgeInsets.zero,
+        mainAxisSpacing: categoryGridGap,
+        crossAxisSpacing: categoryGridGap,
+        childAspectRatio: categoryTileAspect,
+        children: children,
+      ),
+    ),
+  );
+}

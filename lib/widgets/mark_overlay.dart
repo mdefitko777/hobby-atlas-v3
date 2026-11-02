@@ -1,4 +1,4 @@
-// 사진 위 표시 — 왼쪽 위 책갈피 리본 = 구매함 · 왼쪽 아래 ♡ = 좋아요 (모든 상품 사진 · 도감 칸)
+// 사진 위 표시 — 왼쪽 위 책갈피 리본 = 구매함 · 왼쪽 아래 ♡ = 좋아요 (모든 상품 사진 · 도감 칸). 누르지 않는 칸은 StatusMarks
 import 'package:flutter/material.dart';
 
 import '../marks.dart';
@@ -45,17 +45,7 @@ class MarkOverlay extends StatelessWidget {
                 height: 52,
                 alignment: Alignment.topLeft,
                 padding: EdgeInsets.only(left: inset + 2),
-                child: ClipPath(
-                  clipper: const _RibbonClipper(),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    width: size + 2,
-                    height: size * 1.4,
-                    alignment: const Alignment(0, -0.3),
-                    color: owned ? Gp.own : Gp.scrim,
-                    child: Icon(owned ? Icons.check : Icons.add, size: size * 0.7, color: Colors.white),
-                  ),
-                ),
+                child: _Ribbon(on: owned, size: size),
               ),
             ),
           ),
@@ -76,17 +66,7 @@ class MarkOverlay extends StatelessWidget {
                 height: 44,
                 alignment: Alignment.bottomLeft,
                 padding: EdgeInsets.only(left: inset, bottom: inset),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  width: size,
-                  height: size,
-                  decoration: BoxDecoration(shape: BoxShape.circle, color: liked ? Gp.panel : Gp.scrimLight),
-                  child: Icon(
-                    liked ? Icons.favorite : Icons.favorite_border,
-                    size: size * 0.6,
-                    color: liked ? Gp.accent : Colors.white,
-                  ),
-                ),
+                child: _Heart(on: liked, size: size),
               ),
             ),
           ),
@@ -94,6 +74,80 @@ class MarkOverlay extends StatelessWidget {
       ],
     );
   }
+}
+
+/// 보기만 하는 표시 (누르지 않는 칸 · 도움말 견본) — 켜진 것만, [MarkOverlay] 와 같은 자리 · 모양 · 색:
+/// 왼쪽 위 리본 ✓ = 구매함 · 왼쪽 아래 ♡ = 좋아요. 둘 다 아니면 아무것도 없다 (칸 그림은 늘 컬러)
+class StatusMarks extends StatelessWidget {
+  const StatusMarks({super.key, required this.liked, required this.owned, this.size = 22});
+  final bool liked;
+  final bool owned;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final inset = size * 0.22;
+    return IgnorePointer(
+      child: Stack(
+        children: [
+          if (owned)
+            Positioned(
+              left: inset + 2,
+              top: 0,
+              child: Semantics(
+                label: '구매함',
+                child: _Ribbon(on: true, size: size),
+              ),
+            ),
+          if (liked)
+            Positioned(
+              left: inset,
+              bottom: inset,
+              child: Semantics(
+                label: '좋아요',
+                child: _Heart(on: true, size: size),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 책갈피 리본 (켜짐 = 민트 + ✓, 꺼짐 = 어두운 막 + +)
+class _Ribbon extends StatelessWidget {
+  const _Ribbon({required this.on, required this.size});
+  final bool on;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => ClipPath(
+    clipper: const _RibbonClipper(),
+    child: AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      width: size + 2,
+      height: size * 1.4,
+      alignment: const Alignment(0, -0.3),
+      color: on ? Gp.own : Gp.scrim,
+      child: Icon(on ? Icons.check : Icons.add, size: size * 0.7, color: Colors.white),
+    ),
+  );
+}
+
+/// 동그라미 ♡ (켜짐 = 흰 바탕 파랑 ♥, 꺼짐 = 옅은 막 + 흰 ♡)
+class _Heart extends StatelessWidget {
+  const _Heart({required this.on, required this.size});
+  final bool on;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => AnimatedContainer(
+    duration: const Duration(milliseconds: 180),
+    width: size,
+    height: size,
+    decoration: BoxDecoration(shape: BoxShape.circle, color: on ? Gp.panel : Gp.scrimLight),
+    child: Icon(on ? Icons.favorite : Icons.favorite_border, size: size * 0.6, color: on ? Gp.accent : Colors.white),
+  );
 }
 
 /// 상품 카드용 MarkOverlay — 앱 전체 좋아요 · 구매함(Marks)을 보고 바꾼다 (토스트 + 되돌리기)

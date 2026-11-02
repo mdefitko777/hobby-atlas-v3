@@ -1,11 +1,12 @@
-// 도감 필터 시트 (모든 도감 공통: 건담 작품 · 기체 칸 · 베이 · 세계관) — 상품 필터와 같은 모양.
+// 도감 필터 시트 (모든 도감 공통: 건담 작품 · 기체 칸 · 베이 · 세계관) — 상품 필터와 같은 틀(GpPickSheet) · 같은 조각.
+//   순서: 상태(상품 필터와 같은 줄 + 내 사진) → 라인 → 도감에만: 시대 · 기체 종류 · 상품 있는 것만 · 정렬
 // 거르는 규칙(GuideFilter.matches · apply)은 lib/logic/guide_filter.dart
 import 'package:flutter/material.dart';
 
 import '../logic/guide_filter.dart';
 import '../logic/kit_filter.dart' show valueCounts;
 import '../theme.dart';
-import 'icons.dart';
+import 'kit_filter_sheet.dart' show MineStateLabel;
 import 'sheets.dart';
 
 export '../logic/guide_filter.dart';
@@ -76,7 +77,7 @@ class GuideFilterSheet extends StatefulWidget {
 class _GuideFilterSheetState extends State<GuideFilterSheet> {
   late final GuideFilter _draft = widget.initial.copy();
 
-  /// 펼친 줄 (등급 · 종류 · 시대 · 정렬)
+  /// 펼친 줄 (라인 · 시대 · 기체 종류 · 정렬)
   String _open = '';
 
   int _hits(GuideFilter f) => widget.pool.where(f.matches).length;
@@ -144,20 +145,31 @@ class _GuideFilterSheetState extends State<GuideFilterSheet> {
         _open = '';
       }),
       children: [
-        // 칸 단계: 전체 · 아직 · ♡ · 구매함 · 내 사진
+        // 상태: 상품 필터와 같은 줄 (전체 · ♡ · 리본 · 아직 없음) + 도감만 내 사진
         SquareSegments<GuideTier>(
           values: tiers,
           current: _draft.tier,
-          child: (v) => switch (v) {
-            GuideTier.any => const Text('전체'),
-            GuideTier.none => const Text('아직'),
-            GuideTier.liked => const LikedIcon(),
-            GuideTier.owned => const OwnedIcon(),
-            GuideTier.photo => const Icon(Icons.workspace_premium, size: Gp.iS, color: Gp.own),
+          child: (v) => switch (v.mine) {
+            final m? => MineStateLabel(m),
+            null => const Tooltip(
+              message: '내 사진',
+              child: Icon(Icons.workspace_premium, size: Gp.iS, color: Gp.own),
+            ),
           },
           onPick: (v) => setState(() => _draft.tier = v),
         ),
-        const SizedBox(height: 8),
+        const Divider(height: 20),
+        // 상품 필터와 같은 줄: 라인
+        if (grades.isNotEmpty)
+          _expand('라인', pickSummary(_draft.grades), _checks(grades, _draft.grades, (f) => f.grades)),
+        // 도감에만: 시대 · 기체 종류 · 상품 있는 것만 · 정렬
+        if (groups.length > 1)
+          _expand(
+            widget.groupLabel,
+            pickSummary(_draft.groups),
+            _checks(groups, _draft.groups, (f) => f.groups, columns: 1),
+          ),
+        if (types.length > 1) _expand('기체 종류', pickSummary(_draft.types), _checks(types, _draft.types, (f) => f.types)),
         CheckGrid(
           columns: 1,
           values: const ['상품 있는 것만'],
@@ -165,16 +177,6 @@ class _GuideFilterSheetState extends State<GuideFilterSheet> {
           countOf: (_) => _with((f) => f.withKits = true),
           onToggle: (_) => setState(() => _draft.withKits = !_draft.withKits),
         ),
-        const Divider(height: 20),
-        if (grades.isNotEmpty)
-          _expand('등급 · 라인', pickSummary(_draft.grades), _checks(grades, _draft.grades, (f) => f.grades)),
-        if (types.length > 1) _expand('종류', pickSummary(_draft.types), _checks(types, _draft.types, (f) => f.types)),
-        if (groups.length > 1)
-          _expand(
-            widget.groupLabel,
-            pickSummary(_draft.groups),
-            _checks(groups, _draft.groups, (f) => f.groups, columns: 1),
-          ),
         _expand(
           '정렬',
           _draft.sort.label,

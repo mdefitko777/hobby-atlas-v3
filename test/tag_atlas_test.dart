@@ -431,7 +431,8 @@ void main() {
       expect(find.text('아르세우스'), findsOneWidget);
       await tester.tap(find.byTooltip('필터'));
       await _settle(tester);
-      await tester.tap(find.text('아직'));
+      expect(find.byType(MineStateLabel), findsNWidgets(4)); // 상품 필터와 같은 상태 줄
+      await tester.tap(find.text('아직 없음'));
       await _settle(tester);
       await tester.tap(find.text('1개 보기'));
       await _settle(tester);

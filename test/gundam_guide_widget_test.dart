@@ -117,7 +117,7 @@ void main() {
     await t.pump(const Duration(seconds: 3));
   });
 
-  testWidgets('도감 필터: 작품 → 기체 칸으로 이어지고, 시트에서 단계 · 등급 · 정렬', (t) async {
+  testWidgets('도감 필터: 작품 → 기체 칸으로 이어지고, 시트에서 상태 · 라인 · 정렬', (t) async {
     me.setStatus('ex-archangel', CollectStatus.owned);
     final ctrl = GuideFilterController();
     await _pumpGuide(t, filter: ctrl);
@@ -126,7 +126,7 @@ void main() {
     unawaited(ctrl.openSheet(t.element(find.byType(GuideView)))); // 시트가 닫힐 때 끝난다
     await _settle(t, 3);
     expect(find.text('도감 필터'), findsOneWidget);
-    await t.tap(find.byWidgetPredicate((w) => w is OwnedIcon).first); // 단계: 구매함
+    await t.tap(find.byWidgetPredicate((w) => w is OwnedIcon).first); // 상태: 구매함
     await _settle(t, 2);
     expect(find.text('1개 보기'), findsOneWidget);
     await t.tap(find.text('1개 보기'));
@@ -145,7 +145,7 @@ void main() {
     await t.tap(find.byTooltip('필터').last);
     await _settle(t, 3);
     await t.tap(find.text('초기화'));
-    await t.tap(find.text('등급 · 라인'));
+    await t.tap(find.text('라인'));
     await _settle(t, 2);
     await t.tap(find.text('HG').last);
     await _settle(t, 2);
@@ -166,7 +166,7 @@ void main() {
     await _settle(t);
     expect(find.text('1–3화 · 그 이름은 건담'), findsOneWidget);
     expect(find.text('5화 · 페이즈 시프트 다운'), findsOneWidget);
-    expect(find.text('수집 0 / 2'), findsOneWidget);
+    expect(find.textContaining('수집'), findsOneWidget); // 장 머리엔 숫자 없음 — 앱 바 하나만
   });
 
   testWidgets('화수 데이터가 아직 없으면(404) 화수별 단추가 없다', (t) async {
