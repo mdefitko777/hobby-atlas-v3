@@ -1,4 +1,5 @@
-// 화면 B: 검색 — 이름 · 번호 · 작품, 또는 "말로 설명해서" 찾기
+// 화면 B: 도감 · 검색 (아래 탭 "도감") — 검색어가 없으면 도감으로 둘러보기, 있으면 이름 · 번호 · 작품 · 기체, 또는 "말로 설명해서" 찾기.
+// v3: 검색과 도감을 한 탭으로 합쳤다 (컬렉션의 도감 보기를 이리로 옮김).
 //
 // ┌──────── 디자인 가이드 대응표: B 검색 ──────────────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
@@ -9,7 +10,10 @@
 // │ B-5  │ 예시 문장 칩                        │ 설명으로 찾기 (낱말 표 · AI 아님)        │ P10 · P07     │
 // │ B-6  │ ThumbRow + 일치도 %                 │ 설명과 겹친 상품 (맞은 낱말 = 이유)      │ P01 · P09     │
 // │ B-7  │ SectionListView (O 전체 목록 재사용) │ 검색 결과 · 필터 · 정렬 · 격자/목록      │ P08 · 적응형 │
-// │ B-9  │ 검색어 · 포커스 없을 때 같은 목록      │ 처음 화면 = 전체 상품 (내 채널 상품 전부)  │ P07 · P06     │
+// │ B-9  │ 줄 "전체 상품 n개 ›" → SectionListView │ 내 채널 상품 전부 (옛 처음 화면)          │ P07 · P06     │
+// │ B-14 │ GuideView (g_guide_view.dart)       │ 처음 화면 = 도감 둘러보기 (G-1 … G-9)     │ P06 · P01     │
+// │ B-12 │ GuideHits (guide/guide_search.dart) │ 검색어에 맞는 작품 · 기체 → 도감(그 기체 시트) │ P07 · P06 │
+// │ B-13 │ ToolIcon 기체별 + GroupedResults     │ 결과를 기체별로 묶기 (상품 n · 가짐 m)     │ P01 · P07     │
 // │ B-8  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 결과 없음          │ P01 · P09     │
 // │ B-10 │ TagSearchSection (R 화면 파일)        │ 메자스타 · 프렌다 태그 · 게임 이름 찾기   │ P07 · P06     │
 // │ B-11 │ 위 줄 ? (S-19, searchHelp)          │ 검색창 줄 아이콘 뜻 한 줄씩              │ P10           │
@@ -26,10 +30,13 @@ import '../logic/kit_rules.dart';
 import '../marks.dart';
 import '../models.dart';
 import '../logic/sentence_search.dart';
+import '../level.dart' show tierHelpItems;
 import '../theme.dart';
 import '../widgets.dart';
 import 'c_channel_screen.dart';
 import 'd_kit_detail_screen.dart';
+import 'g_guide_view.dart';
+import 'guide/guide_search.dart';
 import 'o_see_all_screen.dart';
 import 'r_mezastar_screen.dart' show TagSearchSection;
 
@@ -43,6 +50,7 @@ class SearchScreen extends StatefulWidget {
     required this.onMyChannelsChanged,
     required this.onCamera,
     this.focusTick = 0,
+    this.browseTick = 0,
     this.leading,
     this.loaders = const Loaders(),
   });
@@ -55,6 +63,9 @@ class SearchScreen extends StatefulWidget {
 
   /// 값이 바뀌면 검색창에 커서를 둔다 (홈 검색 알약에서 넘어올 때)
   final int focusTick;
+
+  /// 값이 바뀌면 검색어를 지우고 도감 둘러보기로 (내 정보 Lv · 도감 숫자에서 넘어올 때)
+  final int browseTick;
   final Widget? leading;
   final Loaders loaders;
 
@@ -95,6 +106,20 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
   final _tools = ListTools();
   List<Kit>? _all;
 
+  /// B-14 둘러보기(도감)의 필터 — 단계(아직 · ♡ · 구매함 · 내 사진 = 내 진행) · 등급 · 종류 · 시대 · 정렬
+  final _guideFilter = GuideFilterController();
+
+  /// B-9 "전체 상품" 목록을 펼쳤나 (검색어 없이)
+  bool _allProducts = false;
+
+  /// B-13 결과를 기체별로 묶기
+  bool _grouped = false;
+
+  /// B-12 · B-13 건담 도감 표 (처음 쓸 때 한 번)
+  Future<GuideIndex>? _index;
+  Future<GuideIndex> get _guideIndex =>
+      _index ??= widget.loaders.guideIndex().catchError((Object _) => GuideIndex.empty);
+
   @override
   void initState() {
     super.initState();
@@ -108,14 +133,23 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
     super.didUpdateWidget(old);
     syncScope();
     if (widget.focusTick != old.focusTick) _focus.requestFocus();
+    if (widget.browseTick != old.browseTick) {
+      _setQuery(''); // STATE: 내 정보 → 도감 둘러보기
+      _focus.unfocus();
+      _allProducts = false;
+    }
   }
 
   @override
   void dispose() {
     _controller.dispose();
     _focus.dispose();
+    _guideFilter.dispose();
     super.dispose();
   }
+
+  /// 검색어도 포커스도 없고 전체 상품도 안 펼쳤으면 = 도감 둘러보기
+  bool get _browsing => _query.isEmpty && !_focus.hasFocus && !_allProducts;
 
   void _setQuery(String q) {
     _controller.text = q;
@@ -150,11 +184,12 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: !_focus.hasFocus && _query.isEmpty,
+      canPop: _browsing,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
         if (_query.isNotEmpty) _setQuery('');
-        _focus.unfocus(); // 뒤로 = 판 닫고 전체 상품
+        _focus.unfocus(); // 뒤로 = 판 닫고 도감
+        setState(() => _allProducts = false);
       },
       child: _page(),
     );
@@ -180,17 +215,38 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
             onSubmitted: _submit,
             onCamera: widget.onCamera,
           ),
-          tools: [
-            ListToolIcons(
-              tools: _tools,
-              pool: _all == null
-                  ? null
-                  : [
-                      for (final k in _all!)
-                        if (kitMatches(k, _query)) k,
-                    ],
-            ),
-          ],
+          tools: _browsing
+              ? [
+                  FilterButton(
+                    // B-14 도감 필터 ('전체' 채널은 고르기 판이라 없음)
+                    count: _guideFilter.filter.count,
+                    onTap: channel == allChannelId
+                        ? null
+                        : () async {
+                            await _guideFilter.openSheet(context); // STATE: 도감 필터 → 칸
+                            if (mounted) setState(() {});
+                          },
+                  ),
+                ]
+              : [
+                  ListToolIcons(
+                    tools: _tools,
+                    pool: _all == null
+                        ? null
+                        : [
+                            for (final k in _all!)
+                              if (kitMatches(k, _query)) k,
+                          ],
+                  ),
+                  if (_query.isNotEmpty && (channel == allChannelId || channel == 'gundam'))
+                    ToolIcon(
+                      // B-13
+                      icon: Icons.account_tree_outlined,
+                      tip: '기체별로 묶기',
+                      on: _grouped,
+                      onTap: () => setState(() => _grouped = !_grouped), // STATE: 결과 묶기
+                    ),
+                ],
         ),
         Expanded(
           child: FutureBuilder<List<Kit>>(
@@ -202,9 +258,48 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
               if (snap.hasError) {
                 return ErrorView(message: '${snap.error}', onRetry: () => setState(reloadScope)); // B-8 P09
               }
-              // B-9 검색어가 없으면: 검색창을 누른 동안 = 최근 · 자주 찾은 · 설명으로 찾기, 아니면 = 전체 상품
+              // 검색어가 없으면: 검색창을 누른 동안 = 최근 · 자주 찾은 · 설명으로 찾기, 아니면 = 도감(B-14) · 전체 상품(B-9)
+              if (_browsing) return _browse(snap.data!);
               return _query.isEmpty && _focus.hasFocus ? _idle(snap.data!) : _results(snap.data!);
             },
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// B-14 처음 화면: 맨 위 "전체 상품 n개 ›"(B-9) + 도감 (채널 '전체' = IP 고르기)
+  Widget _browse(List<Kit> kits) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        InkWell(
+          key: const ValueKey('all-products'),
+          onTap: () => setState(() => _allProducts = true), // STATE: 전체 상품 펼치기
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
+            child: Row(
+              children: [
+                const Icon(Icons.view_agenda_outlined, size: Gp.iS, color: Gp.muted),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '전체 상품 ${kits.length}개',
+                    style: const TextStyle(fontSize: Gp.t14, color: Gp.muted),
+                  ),
+                ),
+                const Icon(Icons.chevron_right, size: Gp.iM, color: Gp.muted),
+              ],
+            ),
+          ),
+        ),
+        Expanded(
+          child: GuideView(
+            channel: channel,
+            myChannels: widget.myChannels,
+            onPickChannel: selectChannel,
+            loaders: widget.loaders,
+            filter: _guideFilter,
           ),
         ),
       ],
@@ -318,10 +413,21 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
 
     // B-10 메자스타 · 프렌다 태그 (포켓몬 · 전체 채널에서), 게임 이름이면 도감 입구
     final tags = TagSearchSection(query: _query, tags: channel == allChannelId || channel == 'pokemon');
+    // B-12 건담 작품 · 기체 (건담 · 전체 채널에서)
+    final gundam = _query.isNotEmpty && (channel == allChannelId || channel == 'gundam');
+    final guide = !gundam
+        ? const SizedBox.shrink()
+        : FutureBuilder<GuideIndex>(
+            future: _guideIndex,
+            builder: (context, s) => s.data == null
+                ? const SizedBox.shrink()
+                : GuideHits(index: s.data!, query: _query, loaders: widget.loaders),
+          );
     if (results.isEmpty && candidates.isEmpty) {
       return ListView(
         children: [
           tags,
+          guide,
           EmptyView(
             // B-8 P09
             icon: Icons.search_off,
@@ -337,6 +443,36 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
       );
     }
 
+    final header = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        tags,
+        guide,
+        if (candidates.isNotEmpty)
+          SentenceCandidates(
+            hits: candidates,
+            onTap: (k) => openKitDetail(context, k, loaders: widget.loaders, list: [for (final h in candidates) h.kit]),
+          ), // B-6
+      ],
+    );
+    if (_grouped && gundam) {
+      // B-13 기체별 (필터는 위 줄 그대로)
+      return FutureBuilder<GuideIndex>(
+        future: _guideIndex,
+        builder: (context, s) => s.data == null
+            ? const LoadingView()
+            : ListenableBuilder(
+                listenable: _tools,
+                builder: (context, _) => GroupedResults(
+                  kits: results.where(_tools.filter.matches).toList(),
+                  index: s.data!,
+                  loaders: widget.loaders,
+                  header: header,
+                ),
+              ),
+      );
+    }
+
     // B-7 홈 전체 목록과 같은 목록 (필터 · 정렬 · 격자/목록), 설명 후보는 맨 위 머리
     return SectionListView(
       key: const ValueKey('search'),
@@ -344,24 +480,12 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
       title: _query.isEmpty ? '전체 상품' : '검색 결과',
       subtitle: channel == allChannelId ? '' : channelOf(channel).label,
       kits: results,
-      header: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          tags,
-          if (candidates.isNotEmpty)
-            SentenceCandidates(
-              hits: candidates,
-              onTap: (k) =>
-                  openKitDetail(context, k, loaders: widget.loaders, list: [for (final h in candidates) h.kit]),
-            ), // B-6
-        ],
-      ),
-      onBack: _query.isEmpty
-          ? null // 처음 화면(전체 상품)에는 돌아갈 곳이 없음
-          : () {
-              _setQuery(''); // STATE: 돌아가기 → 전체 상품
-              _focus.unfocus();
-            },
+      header: header,
+      onBack: () {
+        _setQuery(''); // STATE: 돌아가기 → 도감 둘러보기
+        _focus.unfocus();
+        setState(() => _allProducts = false);
+      },
       loaders: widget.loaders,
     );
   }
@@ -418,11 +542,16 @@ class SentenceCandidates extends StatelessWidget {
   }
 }
 
-/// B-11 ? 도움말 (위 줄 ? 의 "검색" 묶음 — s_app_shell.dart)
-const searchHelp = <HelpItem>[
-  HelpItem(Icons.photo_camera_outlined, '찍어서 찾기 (사진 · 바코드)'),
-  HelpItem(Icons.tune, '필터'),
-  HelpItem(Icons.grid_view_outlined, '격자로 보기'),
-  HelpItem(Icons.view_list_outlined, '목록으로 보기'),
-  HelpItem(Icons.manage_search, '설명으로 찾기 예'),
+/// B-11 ? 도움말 (위 줄 ? 의 "도감" 묶음 — s_app_shell.dart). 도감 칸 단계는 lib/level.dart 와 같은 그림
+List<HelpItem> searchHelp() => [
+  const HelpItem(Icons.photo_camera_outlined, '찍어서 찾기 (사진 · 바코드)'),
+  const HelpItem(Icons.tune, '필터 (도감: 단계 = 내 진행 · 등급 · 종류 · 시대)'),
+  const HelpItem(Icons.view_agenda_outlined, '전체 상품 목록'),
+  const HelpItem(Icons.grid_view_outlined, '격자로 보기'),
+  const HelpItem(Icons.view_list_outlined, '목록으로 보기'),
+  const HelpItem(Icons.account_tree_outlined, '검색 결과를 기체별로 묶기'),
+  const HelpItem(Icons.manage_search, '설명으로 찾기 예'),
+  const HelpItem(Icons.build_outlined, '베이 조합 만들기 (베이 도감)'),
+  const HelpItem.group('도감 칸'),
+  ...tierHelpItems(),
 ];

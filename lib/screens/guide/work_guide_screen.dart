@@ -23,9 +23,13 @@ class WorkGuideScreen extends StatefulWidget {
     required this.loaders,
     this.initialQuery = '',
     this.initialFilter,
+    this.focusUnit,
   });
   final GuideWork work;
   final Loaders loaders;
+
+  /// 열자마자 이 기체의 시트 (도감 탭 검색의 기체 줄 · 상품 상세 "도감에서 보기")
+  final String? focusUnit;
 
   /// 작품 도감에서 찾던 말 · 도감 필터(시대 빼고)를 이어받는다
   final String initialQuery;
@@ -87,6 +91,11 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
     _units = units;
     _kits = kits;
     _chapters = chapters;
+    if (units.where((u) => u.id == widget.focusUnit).firstOrNull case final u?) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _openUnit(u); // 칸들이 그려진 뒤 그 기체 시트
+      });
+    }
     return units;
   }
 

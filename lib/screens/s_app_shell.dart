@@ -1,10 +1,10 @@
-// 화면 S: 앱 셸 — 위: 아바타 줄 → 채널 바 / 아래: 바닥에 붙은 반투명 탭 바 (홈 · 검색 · (카메라) · 캘린더 · 컬렉션)
+// 화면 S: 앱 셸 — 위: 아바타 줄 → 채널 바 / 아래: 바닥에 붙은 반투명 탭 바 (홈 · 도감 · (카메라) · 캘린더 · 컬렉션)
 //
 // ┌──────── 디자인 가이드 대응표: S 앱 셸 ───────────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                  │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
 // │ S-1  │ MyAvatar (색 고리 + 사진, 채널 바 위)  │ 친구 서랍 열기 → 서랍 머리에서 내 정보    │ P04 · P06     │
 // │ S-2  │ BackdropFilter 바닥 탭 바       │ 반투명 하단 탭 바 (양옆 여백 없음)      │ P08           │
-// │ S-3  │ 하단 탭 4개 (폰 · 반반 화면 왼쪽)      │ 홈 · 검색 · 캘린더 · 컬렉션              │ P06 · P04     │
+// │ S-3  │ 하단 탭 4개 (폰 · 반반 화면 왼쪽)      │ 홈 · 도감(검색과 합침) · 캘린더 · 컬렉션   │ P06 · P04     │
 // │ S-4  │ 가운데 카메라 버튼              │ 찍어서 찾기 (사진 · 바코드 · 앨범)     │ P07           │
 // │ S-5  │ NavigationRail (가로 폰: 높이 <520)    │ 측면 탭 (아바타 / 탭 4개 / 🔔 ⚙)          │ 적응형 · P04  │
 // │ S-6  │ IndexedStack                    │ 탭 상태 유지                           │ P03           │
@@ -72,9 +72,9 @@ class AppShell extends StatefulWidget {
 /// 하단 탭 (가운데 +는 탭이 아니라 동작)
 const _tabs = <(IconData, IconData, String)>[
   (Icons.home_outlined, Icons.home, '홈'),
-  (Icons.search, Icons.search, '검색'),
+  (Icons.auto_awesome_mosaic_outlined, Icons.auto_awesome_mosaic, '도감'), // 검색 + 도감 (b_search_screen.dart)
   (Icons.calendar_today_outlined, Icons.calendar_today, '캘린더'),
-  (Icons.auto_awesome_mosaic_outlined, Icons.auto_awesome_mosaic, '컬렉션'), // 책갈피 리본은 구매함 표시라 겹치지 않게
+  (Icons.shelves, Icons.shelves, '컬렉션'), // 내 선반 — 책갈피 리본은 구매함 표시 · 모자이크는 도감이라 겹치지 않게
 ];
 
 /// S-19 위 줄 아이콘 뜻 (네 탭 공통)
@@ -93,8 +93,11 @@ class _AppShellState extends State<AppShell> {
   /// 하단 탭 바가 보이는지 (아래로 스크롤하면 숨김)
   bool _barShown = true;
 
-  /// 홈 검색 알약 → 검색 탭 검색창에 커서
+  /// 홈 검색 알약 → 도감 탭 검색창에 커서
   int _searchFocusTick = 0;
+
+  /// 내 정보 Lv · 도감 숫자 → 도감 탭 둘러보기
+  int _browseTick = 0;
   List<String> _myChannels = [...defaultMyChannels]; // S-7 P04 — 실제 값은 UserStore(기기 저장)에서
 
   final _scaffold = GlobalKey<ScaffoldState>();
@@ -224,12 +227,17 @@ class _AppShellState extends State<AppShell> {
     );
   }
 
-  /// 내 정보 숫자 · 홈 내 보드 → 컬렉션 탭 + 그 목록(좋아요 · 구매함 · 도감)
+  /// 내 정보 숫자 · 홈 내 보드 → 컬렉션 탭 + 그 목록(좋아요 · 구매함), 도감은 도감 탭 둘러보기
   void _jumpTo(CollectionJump j) => setState(() {
+    _barShown = true;
+    if (j == CollectionJump.guide) {
+      _tab = 1; // STATE: 도감 탭 (검색어 지우고 둘러보기)
+      _browseTick++;
+      return;
+    }
     _tab = 3; // STATE: 컬렉션 탭 + 그 목록
     _jump = j;
     _jumpTick++;
-    _barShown = true;
   });
 
   void _openProfile() => openProfile(
@@ -302,7 +310,7 @@ class _AppShellState extends State<AppShell> {
             HelpItem.group(_tabs[_tab].$3),
             ...switch (_tab) {
               0 => homeHelp,
-              1 => searchHelp,
+              1 => searchHelp(),
               2 => calendarHelp,
               _ => collectionHelp(),
             },
@@ -331,6 +339,7 @@ class _AppShellState extends State<AppShell> {
             onMyChannelsChanged: _setChannels,
             onCamera: _openAdd,
             focusTick: _searchFocusTick,
+            browseTick: _browseTick,
             loaders: widget.loaders,
           )
         : i == 2

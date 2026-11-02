@@ -321,6 +321,28 @@ class GuideWork {
   }
 }
 
+/// 건담 도감 찾아보기 표 — 도감 탭 검색의 작품 · 기체 줄, 결과를 기체별로 묶기, 상품 상세의 "도감에서 보기"
+class GuideIndex {
+  const GuideIndex({this.works = const [], this.units = const {}, this.unitsByKit = const {}});
+  static const empty = GuideIndex();
+
+  final List<GuideWork> works;
+
+  /// 기체 id → 칸 ([GuideUnit.workId] = 처음 나온 작품, 없으면 첫 작품)
+  final Map<String, GuideUnit> units;
+
+  /// 상품 → 연결된 기체 (역할 main 먼저 — 부품 · SD 도 들어간다)
+  final Map<String, List<String>> unitsByKit;
+
+  GuideWork? work(String id) => works.where((w) => w.id == id).firstOrNull;
+
+  /// 이 상품의 대표 기체 (없으면 null)
+  GuideUnit? unitOf(String kitId) => switch (unitsByKit[kitId]) {
+    final ids? when ids.isNotEmpty => units[ids.first],
+    _ => null,
+  };
+}
+
 /// 도감의 기체 칸 — 구매함이면 컬러로 "점등"
 class GuideUnit {
   const GuideUnit({

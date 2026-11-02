@@ -49,6 +49,18 @@ final fakeLoaders = Loaders(
   profile: () async => Profile.fromJson(db['profile'])!,
   notifications: () async =>
       _list<AppNotice>('notifications', AppNotice.fromJson)..sort((a, b) => b.at.compareTo(a.at)),
+  guideChapters: (_) async => const [],
+  guideIndex: () async {
+    final units = _list<GuideUnit>('guideUnits', GuideUnit.fromJson);
+    return GuideIndex(
+      works: _list<GuideWork>('guideWorks', GuideWork.fromJson),
+      units: {for (final u in units) u.id: u},
+      unitsByKit: {
+        for (final u in units)
+          for (final k in u.kitIds) k: [u.id],
+      },
+    );
+  },
 );
 
 /// 작은 폰 · 보통 폰 · 가로 폰 · 태블릿 세로 · 넓은 창
@@ -70,7 +82,10 @@ Future<void> _show(WidgetTester tester, Size size, Widget home) async {
   await tester.pumpWidget(
     MaterialApp(
       theme: buildGpTheme(),
-      builder: (context, child) => MarksHost(store: UserStore.memory(), child: PaneHost(child: child!)),
+      builder: (context, child) => MarksHost(
+        store: UserStore.memory(),
+        child: PaneHost(child: child!),
+      ),
       home: home,
     ),
   );

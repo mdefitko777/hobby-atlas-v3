@@ -25,6 +25,7 @@
 // │ D-13 │ LayoutBuilder ≥720dp                │ 넓은 화면: 사진 왼쪽 · 정보 오른쪽      │ 적응형        │
 // │ D-14 │ 하단 고정 바 왼쪽: 복사 · 공식        │ 상품명 복사 · 공식 상품 페이지(출처)    │ P07 · P10     │
 // │ D-15 │ 오른쪽 위 ? (뒤로 맞은편, 떠 있는 원) │ 아이콘 뜻 한 줄씩 (♡ · 리본 · 수량 · 제보) │ P10        │
+// │ D-16 │ _GuideLink 줄 (기체 그림 · 이름 ›)    │ 도감에서 보기 → 그 작품 도감의 기체 시트   │ P07 · P06     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 홈 · 검색 · 설명 후보 · 바코드에서 쌓기(push, 오른쪽에서). 공식 정보 · 시세 · 구매가 → 덮기(바텀 시트).
 // 좋아요 · 구매함은 화면 아래에 고정 — 길게 내려 읽어도 바로 누를 수 있다 (쇼핑 앱 상세와 같은 위치).
@@ -49,6 +50,7 @@ import '../models.dart';
 import '../report.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'guide/guide_search.dart' show openUnitInGuide;
 import 't_photo_screen.dart' show KitPhotoStrip;
 
 /// 상품 상세 열기 — 폰: 오른쪽에서 밀려 들어옴 / 넓은 화면: 오른쪽 칸 (detail_pane.dart)
@@ -481,6 +483,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
         padding: EdgeInsets.zero,
         child: _SpecStrip(specs: _specs, onTap: _openSpecs), // D-8 P08
       ),
+      if (k.franchiseId == 'gundam') _GuideLink(kit: k, loaders: widget.loaders), // D-16
       // 같은 작품의 다른 상품
       SectionPanel(
         padding: const EdgeInsets.only(bottom: 18),
@@ -1023,6 +1026,42 @@ class _FriendsWithKit extends StatelessWidget {
       ),
     );
   }
+}
+
+/// D-16 도감에서 보기 — 이 상품의 대표 기체 → 그 작품 도감의 기체 시트 (기체가 없으면 아무것도 안 보인다)
+class _GuideLink extends StatefulWidget {
+  const _GuideLink({required this.kit, required this.loaders});
+  final Kit kit;
+  final Loaders loaders;
+
+  @override
+  State<_GuideLink> createState() => _GuideLinkState();
+}
+
+class _GuideLinkState extends State<_GuideLink> {
+  late final Future<GuideIndex> _index = widget.loaders.guideIndex().catchError((Object _) => GuideIndex.empty);
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<GuideIndex>(
+    future: _index,
+    builder: (context, snap) {
+      final index = snap.data;
+      final u = index?.unitOf(widget.kit.id);
+      if (index == null || u == null || index.work(u.workId) == null) return const SizedBox.shrink();
+      return SectionPanel(
+        padding: EdgeInsets.zero,
+        child: ThumbRow(
+          key: const ValueKey('guide-link'),
+          image: u.image,
+          title: '도감에서 보기',
+          subtitle: joinDot([u.name, index.work(u.workId)!.name]),
+          size: 44,
+          trailing: const Icon(Icons.chevron_right, size: Gp.iM, color: Gp.muted),
+          onTap: () => openUnitInGuide(context, index, u.id, loaders: widget.loaders),
+        ),
+      );
+    },
+  );
 }
 
 /// D-15 ? 도움말

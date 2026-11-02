@@ -1,34 +1,31 @@
-// 화면 F: 컬렉션 — 좋아요 · 구매함 (목록 | 도감)
+// 화면 F: 컬렉션 — 좋아요 · 예약 · 구매함 (도감은 아래 탭 "도감" 으로 옮겼다 — b_search_screen.dart)
 //
 // ┌──────── 디자인 가이드 대응표: F 컬렉션 ────────────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
 // │ F-1  │ ChannelHeader                      │ 아바타 줄 + 내 채널 바 (C-0 공용)       │ P04 · P06     │
 // │ F-2  │ 밑줄 탭 2–3개 + 개수                 │ 좋아요 · 예약(있을 때만) · 구매함         │ P06 · P01     │
 // │ F-2b │ SquareSegments (구매함 탭)           │ 조립 상태로 거르기: 전체 · 미조립 n · 조립 중 · 완성 │ P01 · P06 │
-// │ F-3  │ 아이콘 두 개 (목록 · 도감, 검색창 줄) │ 보기 방식 전환                          │ P07           │
 // │ F-4  │ Text(합계)                         │ 좋아요 정가 합계 · 구매함 지출 합계 (× 수량) │ P01         │
 // │ F-5  │ ListView 줄 (사진 · 이름 · 가격)      │ 컬렉션 목록 → 상품 상세                 │ P08           │
 // │ F-5c │ 줄 오른쪽 BuildStatusButton          │ 조립 상태 바로 바꾸기 (누름 = 다음 단계 · 길게 = 도색) │ P03 · P07 │
 // │ F-5d │ 예약 탭 줄: 가게 · 도착 · 낼 돈 + 📥   │ 예약 목록 · 도착하면 구매함으로 (밀기도 같음) │ P01 · P03  │
 // │ F-6  │ 편집 → 체크박스 + 선택 삭제           │ 정리하기 (편집 모드에서만 삭제 보임)     │ P05 · P03     │
 // │ F-7  │ showDialog(확인) → 토스트(되돌리기)   │ 삭제 전 확인 · 바로 되돌리기             │ P05 · P03     │
-// │ F-8  │ GuideView (g_guide_view.dart)       │ 도감 — 모은 만큼 불이 켜지는 칸          │ P01 · P06     │
 // │ F-9  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 빈 컬렉션           │ P01 · P09     │
 // │ F-10 │ 🗑 아이콘(개수 배지) → 바텀 시트      │ 휴지통: 지운 상품 복원 (기기 저장 · 30일)  │ P03 · P05     │
 // │ F-11 │ jumpTick (내 정보 숫자에서)          │ 좋아요 · 구매함 · 도감으로 바로 이동       │ P07           │
-// │ F-12 │ FindBar (채널 바 바로 아래, 탭 위)   │ 이 탭 · 도감에서 찾기 + 필터(도감 = GuideFilterSheet) │ P04 · P07 │
-// │ F-13 │ 위 줄 ? (S-19, collectionHelp)      │ 목록 · 도감 · 휴지통 · 편집 + 도감 칸 단계 │ P10 · P01     │
+// │ F-12 │ FindBar (채널 바 바로 아래, 탭 위)   │ [찾기][필터][휴지통][편집] — 다른 탭과 같은 폭 │ P04 · P07 │
+// │ F-13 │ 위 줄 ? (S-19, collectionHelp)      │ 필터 · 휴지통 · 편집 · 조립 · 예약 아이콘 뜻 │ P10 · P01     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 줄 → D 상품 상세(쌓기). 빈 상태 "검색하러 가기" → 검색 탭(옆으로).
 // 현행 앱 문제: 컬렉션 화면에 빨간 "전체 삭제"가 늘 보임(실수 위험) · 도감이 따로 떨어진 화면
-//              → v2는 편집 모드에서만 삭제, 도감은 컬렉션의 다른 보기.
+//              → v2는 편집 모드에서만 삭제. 도감은 v3 에서 아래 탭 "도감"(검색과 합침)으로 옮겼다.
 import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../logic/build_status.dart';
 import '../logic/collection_rules.dart';
 import '../logic/preorder.dart';
-import '../level.dart' show tierHelpItems;
 import '../marks.dart';
 import '../channels.dart';
 import '../data/catalog.dart';
@@ -37,9 +34,8 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'c_channel_screen.dart';
 import 'd_kit_detail_screen.dart';
-import 'g_guide_view.dart';
 
-/// 내 정보 숫자를 눌렀을 때 열 곳 (backlog = 구매함 탭 · 미조립만)
+/// 내 정보 숫자를 눌렀을 때 열 곳 (backlog = 구매함 탭 · 미조립만, guide = 아래 탭 "도감" — 앱 셸이 탭을 바꾼다)
 enum CollectionJump { liked, owned, guide, backlog }
 
 /// 목록 탭: 좋아요 · 예약(좋아요 중 예약 기록이 있는 것) · 구매함
@@ -82,20 +78,11 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
   /// F-2b 구매함 탭 조립 상태 거르기 (0 = 전체, 1.. = BuildStage)
   int _build = 0;
 
-  /// true = 도감 보기, false = 목록 보기
-  bool _guide = false;
   bool _editing = false;
   final Set<String> _selected = {};
 
-  /// F-12 찾기 · 필터 (목록 = 상품 필터, 도감 = 도감 필터)
+  /// F-12 찾기 · 상품 필터
   final _find = KitFind();
-  final _guideFilter = GuideFilterController();
-
-  @override
-  void dispose() {
-    _guideFilter.dispose();
-    super.dispose();
-  }
 
   /// 휴지통 (UserStore.trash, 기기에 30일): 지운 상품 id → 어느 탭에서 지웠나 (true = 구매함).
   /// 그 사이 다른 화면에서 다시 좋아요 · 구매함에 넣은 상품은 빼고 보여 준다. 지우기 = 앱 전체 Marks 에서 끄기
@@ -126,7 +113,6 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
         _ => _Tab.liked,
       };
       _build = widget.jump == CollectionJump.backlog ? BuildStage.unbuilt.index + 1 : 0;
-      _guide = widget.jump == CollectionJump.guide;
       _editing = false;
       _selected.clear();
       if (channel != allChannelId) selectChannel(allChannelId);
@@ -230,13 +216,8 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
     ];
   }
 
-  /// F-12 필터 시트 — 목록: 상품 필터(검색 화면과 같은 시트), 도감: 도감 필터(단계 · 등급 · 종류 · 시대 · 정렬)
+  /// F-12 필터 시트 — 검색 화면과 같은 상품 필터
   Future<void> _openFilter(List<Kit> all) async {
-    if (_guide) {
-      await _guideFilter.openSheet(context); // STATE: 도감 필터 → 도감 칸 (단계 · 등급 · 종류 · 시대 · 정렬)
-      if (mounted) setState(() {});
-      return;
-    }
     if (await _find.openFilter(context, _inTab(all))) setState(() {}); // STATE: 필터 → 목록
   }
 
@@ -308,29 +289,32 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
               return Column(
                 children: [
                   FindBar(
-                    // F-12 모든 탭과 같은 줄 · 같은 높이(채널 바 바로 아래): [검색창][필터][목록 · 도감]
-                    hint: _guide
-                        ? '도감에서 찾기'
-                        : switch (_tab) {
-                            _Tab.owned => '구매함에서 찾기',
-                            _Tab.preorder => '예약에서 찾기',
-                            _Tab.liked => '좋아요에서 찾기',
-                          },
-                    onQuery: (q) => setState(() => _find.query = q), // STATE: 찾기 → 목록 · 도감
-                    filterCount: _guide ? _guideFilter.filter.count : _find.filter.count,
-                    onFilter: _guide && channel == allChannelId ? null : () => _openFilter(all),
+                    // F-12 모든 탭과 같은 줄 · 같은 높이(채널 바 바로 아래): [검색창][필터]
+                    hint: switch (_tab) {
+                      _Tab.owned => '구매함에서 찾기',
+                      _Tab.preorder => '예약에서 찾기',
+                      _Tab.liked => '좋아요에서 찾기',
+                    },
+                    onQuery: (q) => setState(() => _find.query = q), // STATE: 찾기 → 목록
+                    filterCount: _find.filter.count,
+                    onFilter: () => _openFilter(all),
                     tools: [
-                      ViewIconToggle(
-                        // F-3
-                        mine: _guide,
-                        onChanged: (g) => setState(() {
-                          _guide = g; // STATE: 보기 방식 → 목록 ↔ 도감
-                          _editing = false;
+                      ToolIcon(
+                        // F-10 휴지통 (지운 수 배지)
+                        icon: Icons.delete_outline,
+                        tip: '휴지통',
+                        badge: _removed.length,
+                        onTap: () => _openTrash(all),
+                      ),
+                      ToolIcon(
+                        // F-6 편집 → 체크박스 · 삭제 바
+                        icon: Icons.checklist,
+                        tip: _editing ? '편집 끝내기' : '편집',
+                        on: _editing,
+                        onTap: () => setState(() {
+                          _editing = !_editing; // STATE: 편집 → 체크박스 · 삭제 바
+                          _selected.clear();
                         }),
-                        allIcon: Icons.view_agenda_outlined,
-                        mineIcon: Icons.auto_awesome_mosaic_outlined,
-                        allTip: '목록',
-                        mineTip: '도감',
                       ),
                     ],
                   ),
@@ -338,30 +322,13 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                     // F-2 탭은 검색 줄 아래 (달력의 전체 · 발매 · 예고와 같은 자리)
                     counts: {for (final t in _Tab.values) t: _inTab(all, t).length},
                     tab: _tab,
-                    guide: _guide,
                     onTab: (t) => setState(() {
                       _tab = t; // STATE: 탭 → 목록 내용
                       _selected.clear();
                       _editing = false;
                     }),
-                    onGuide: (g) => setState(() {
-                      _guide = g; // STATE: 보기 방식 → 목록 ↔ 도감
-                      _editing = false;
-                    }),
                   ),
-                  Expanded(
-                    child: _guide
-                        ? GuideView(
-                            // F-8
-                            channel: channel,
-                            myChannels: widget.myChannels,
-                            onPickChannel: selectChannel,
-                            loaders: widget.loaders,
-                            query: _find.query,
-                            filter: _guideFilter,
-                          )
-                        : _list(_visible(all), all),
-                  ),
+                  Expanded(child: _list(_visible(all), all)),
                 ],
               );
             },
@@ -372,17 +339,6 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
   }
 
   Widget _list(List<Kit> kits, List<Kit> all) {
-    final trash = IconButton(
-      // F-10
-      tooltip: '휴지통',
-      onPressed: () => _openTrash(all),
-      icon: Badge(
-        isLabelVisible: _removed.isNotEmpty,
-        backgroundColor: Gp.accent,
-        label: Text('${_removed.length}'),
-        child: const Icon(Icons.delete_outline, color: Gp.muted, size: Gp.iM),
-      ),
-    );
     final stages = _ownedTab ? _stageSegments(all) : null; // F-2b
     if (kits.isEmpty && (_find.active || _build != 0)) {
       if (_build != 0 && !_find.active) {
@@ -451,14 +407,6 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                       }, // F-4 P01
                       style: const TextStyle(color: Gp.muted, fontSize: Gp.t12),
                     ),
-                  ),
-                  trash,
-                  TextButton(
-                    onPressed: () => setState(() {
-                      _editing = !_editing; // STATE: 편집 → 체크박스 · 삭제 바
-                      _selected.clear();
-                    }),
-                    child: Text(_editing ? '완료' : '편집'), // F-6
                   ),
                 ],
               ),
@@ -672,21 +620,13 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
   }
 }
 
-/// F-2 · F-3 좋아요 | 예약 | 구매함 탭 + 목록/도감 전환. 예약 탭은 예약이 있거나 고른 때만
+/// F-2 좋아요 | 예약 | 구매함 탭. 예약 탭은 예약이 있거나 고른 때만
 class _TopRow extends StatelessWidget {
-  const _TopRow({
-    required this.counts,
-    required this.tab,
-    required this.guide,
-    required this.onTab,
-    required this.onGuide,
-  });
+  const _TopRow({required this.counts, required this.tab, required this.onTab});
 
   final Map<_Tab, int> counts;
   final _Tab tab;
-  final bool guide;
   final ValueChanged<_Tab> onTab;
-  final ValueChanged<bool> onGuide;
 
   @override
   Widget build(BuildContext context) {
@@ -696,12 +636,9 @@ class _TopRow extends StatelessWidget {
       label: label,
       count: counts[t] ?? 0,
       fontSize: Gp.t16,
-      selected: !guide && tab == t,
+      selected: tab == t,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      onTap: () {
-        onGuide(false);
-        onTab(t);
-      },
+      onTap: () => onTab(t),
     );
 
     return Padding(
@@ -717,22 +654,11 @@ class _TopRow extends StatelessWidget {
   }
 }
 
-/// F-13 ? 도움말 (위 줄 ? 의 "컬렉션" 묶음 — s_app_shell.dart). 도감 칸 단계는 lib/level.dart 와 같은 그림
+/// F-13 ? 도움말 (위 줄 ? 의 "컬렉션" 묶음 — s_app_shell.dart)
 List<HelpItem> collectionHelp() => [
-  const HelpItem(Icons.view_agenda_outlined, '목록'),
-  const HelpItem(Icons.auto_awesome_mosaic_outlined, '도감'),
   const HelpItem(Icons.tune, '필터'),
   const HelpItem(Icons.delete_outline, '휴지통 (30일 동안 되살리기)'),
-  const HelpItem.widget(
-    Text(
-      '편집',
-      style: TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w600),
-    ),
-    '골라서 지우기',
-  ),
-  const HelpItem(Icons.build_outlined, '베이 조합 만들기 (베이 도감)'),
+  const HelpItem(Icons.checklist, '편집 (골라서 지우기)'),
   const HelpItem.group('구매함 · 예약 (누르면 다음 단계 · 길게 = 도색)'),
   ...kitProgressHelp(),
-  const HelpItem.group('도감 칸'),
-  ...tierHelpItems(),
 ];

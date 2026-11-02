@@ -66,6 +66,9 @@ Future<List<GuideWork>> fetchGuideWorks() => _guard(deriveGuideWorks);
 /// 도감 > 건담 > 작품: 기체 칸
 Future<List<GuideUnit>> fetchGuideUnits(String workId) => _guard(() => deriveGuideUnits(workId));
 
+/// 도감 탭 검색 · 상세 "도감에서 보기": 작품 · 기체 · 상품 → 기체
+Future<GuideIndex> fetchGuideIndex() => _guard(deriveGuideIndex);
+
 /// 도감 > 베이블레이드 X
 Future<List<BbxTop>> fetchBbxTops() => _guard(deriveBbxTops);
 
@@ -110,6 +113,7 @@ class Loaders {
     this.guideChapters = fetchGuideChapters,
     this.kitsByJan = fetchKitsByJan,
     this.restocks = fetchRestocks,
+    this.guideIndex = fetchGuideIndex,
   });
 
   final Future<List<Kit>> Function(List<String> channelIds) kits;
@@ -133,4 +137,7 @@ class Loaders {
 
   /// 재판매 소식 (kit_id 별) — 없으면 빈 묶음
   final Future<RestockIndex> Function() restocks;
+
+  /// 건담 도감 찾아보기 표 (작품 · 기체 · 상품 → 기체)
+  final Future<GuideIndex> Function() guideIndex;
 }

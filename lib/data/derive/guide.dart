@@ -120,6 +120,44 @@ Future<List<GuideUnit>> deriveGuideUnits(String workId) async {
   ];
 }
 
+/// 도감 탭 검색 · 상세 "도감에서 보기" 용 표 — 작품 전부 + 작품에 들어간 기체 전부 + 상품 → 기체
+(GundamAtlas, Map<String, GuideUnit>, Map<String, List<String>>)? _indexCache;
+
+Future<GuideIndex> deriveGuideIndex() async {
+  await _cat.ensureLoaded();
+  final a = await _atlas();
+  final works = await deriveGuideWorks(); // 수집 수는 매번 (내 기록이 바뀐다)
+  // 기체 · 상품 → 기체 표는 도감 데이터가 같으면 그대로 (기체 3,000개)
+  if (_indexCache case (final ca, final cu, final ck) when identical(ca, a)) {
+    return GuideIndex(works: works, units: cu, unitsByKit: ck);
+  }
+  final units = <String, GuideUnit>{};
+  final byKit = <String, List<String>>{};
+  for (final u in a.units.values) {
+    if (u.works.isEmpty) continue;
+    units[u.id] = GuideUnit(
+      id: u.id,
+      workId: u.works.contains(u.debutWork) ? u.debutWork : u.works.first,
+      name: u.name,
+      nameEn: u.sub,
+      image: _unitImage(u),
+      status: _unitStatus(u),
+      kitIds: u.kitIds,
+      kitRoles: {for (final k in u.kits) k.kitId: k.role},
+      ggetIds: u.ggetIds,
+      type: u.type,
+      keywords: u.blob,
+    );
+    for (final k in u.kits) {
+      final list = byKit[k.kitId] ??= [];
+      // 이 상품의 본체(main)인 기체를 앞으로
+      k.role == 'main' ? list.insert(0, u.id) : list.add(u.id);
+    }
+  }
+  _indexCache = (a, units, byKit);
+  return GuideIndex(works: works, units: units, unitsByKit: byKit);
+}
+
 /// 작품 안 화수 · 장 (gundam-chapters.json 이 없으면 빈 목록 → 화수별 보기를 숨긴다)
 Future<List<GuideChapter>> deriveGuideChapters(String workId) async {
   await _cat.ensureLoaded();

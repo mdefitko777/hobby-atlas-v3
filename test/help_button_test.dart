@@ -7,6 +7,7 @@ import 'package:hobby_atlas/detail_pane.dart';
 import 'package:hobby_atlas/marks.dart';
 import 'package:hobby_atlas/models.dart';
 import 'package:hobby_atlas/screens/d_kit_detail_screen.dart';
+import 'package:hobby_atlas/screens/b_search_screen.dart' show searchHelp;
 import 'package:hobby_atlas/screens/f_collection_screen.dart';
 import 'package:hobby_atlas/screens/s_app_shell.dart';
 import 'package:hobby_atlas/theme.dart';
@@ -109,8 +110,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('컬렉션 ? 에 도감 칸 단계', (tester) async {
-    expect(collectionHelp().map((i) => i.text), containsAll(['휴지통 (30일 동안 되살리기)', '구매함 · +10']));
+  testWidgets('도감 탭 ? 에 도감 칸 단계 · 컬렉션 ? 에 휴지통 · 편집', (tester) async {
+    expect(searchHelp().map((i) => i.text), containsAll(['구매함 · +10', '검색 결과를 기체별로 묶기']));
+    expect(collectionHelp().map((i) => i.text), containsAll(['휴지통 (30일 동안 되살리기)', '편집 (골라서 지우기)']));
   });
 
   testWidgets('상품 상세 — 오른쪽 위 ? (뒤로 맞은편)', (tester) async {
