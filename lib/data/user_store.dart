@@ -20,7 +20,6 @@ import 'package:flutter/foundation.dart';
 
 import '../bbx/combo.dart' show Combo, Deck;
 import '../channels.dart' show defaultMyChannels;
-import '../format.dart' show dayKey;
 import '../json_util.dart';
 import '../logic/build_status.dart';
 import '../logic/preorder.dart';
@@ -33,10 +32,17 @@ import 'social_local.dart';
 
 part 'user_store/atlas_local.dart';
 part 'user_store/history.dart';
-part 'user_store/import.dart';
 part 'user_store/kit_progress.dart';
 part 'user_store/profile_local.dart';
 part 'user_store/trash.dart';
+
+/// 옛 항목 하나 → 정리된 모양 (collection-store.js normalizeCollectionEntry 그대로 — lib/sync/collection_merge.dart).
+/// 상태가 owned · wanted · deleted 가 아니면 null (버림)
+Map<String, Object?>? normalizeEntry(Object? raw, String member) {
+  final status = jMap(raw)['status'];
+  if (status is! String || !collectionStatuses.contains(status)) return null;
+  return normalizeCollectionEntry(raw, member: member);
+}
 
 class UserStore extends ChangeNotifier with _AtlasLocal, _History, _ProfileLocal, _Trash, _KitProgress {
   UserStore._() : persist = true;
@@ -390,67 +396,6 @@ class UserStore extends ChangeNotifier with _AtlasLocal, _History, _ProfileLocal
     _fromJson(json);
     revision++;
     notifyListeners();
-  }
-
-  // ── 백업 파일 (설정 › 내보내기 · 가져오기) ──
-  /// 내 기록을 백업 파일로 — 이름 + 글자 (토큰 · 비밀값은 원래 없음). 다시 읽는 쪽은 [ImportPreview]
-  ({String fileName, String text}) backupFile(DateTime now) => (
-    fileName: 'hobby-atlas-backup-${dayKey(now)}.json',
-    text: const JsonEncoder.withIndent(
-      ' ',
-    ).convert({'exported_at': now.toUtc().toIso8601String(), 'app': 'hobby-atlas-v3', ...toJson()}),
-  );
-
-  // ── 옛 Gunpula 에서 가져오기 ──
-  /// [knownKit] = 지금 카탈로그에 있는 kit_id 인지 (없는 것은 "찾을 수 없음"으로 센다)
-  ImportPreview previewImport(String text, bool Function(String kitId) knownKit) => ImportPreview.parse(text, knownKit);
-
-  /// 같은 상품은 updated_at 이 더 새것이 이긴다 (옛 앱 mergeCollectionState 와 같음)
-  void applyImport(ImportPreview p) {
-    if (p.member.isNotEmpty) member = p.member;
-    for (final e in p.items.entries) {
-      final mine = _items[e.key];
-      if (mine == null || jStr(e.value['updated_at']).compareTo(jStr(mine['updated_at'])) > 0) {
-        _items[e.key] = e.value;
-      }
-    }
-    if (p.payloadExtra.isNotEmpty || p.collectionExtra.isNotEmpty) {
-      payloadExtra = {...payloadExtra, ...p.payloadExtra}..remove('appearance');
-      collectionExtra = {...collectionExtra, ...p.collectionExtra};
-      extrasDirty = true;
-    }
-    bbxOwnedParts.addAll(p.bbxOwnedParts);
-    bbxManualMap.addAll(p.bbxManualMap);
-    guideManualLit.addAll(p.guideManualLit);
-    tagOwned.addAll(p.tagOwned);
-    tagLiked.addAll(p.tagLiked.difference(tagOwned)); // 이미 구매함이면 그대로
-    for (final q in p.recentSearches.reversed) {
-      if (!recentSearches.contains(q)) recentSearches.insert(0, q);
-    }
-    if (recentSearches.length > maxRecentSearches) recentSearches.removeRange(maxRecentSearches, recentSearches.length);
-    for (final e in p.searchCounts.entries) {
-      if ((searchCounts[e.key] ?? 0) < e.value) searchCounts[e.key] = e.value;
-    }
-    for (final e in p.trash.entries) {
-      trash.putIfAbsent(e.key, () => e.value);
-    }
-    _purgeTrash(DateTime.now());
-    for (final id in p.recentViewed.reversed) {
-      if (!recentViewed.contains(id)) recentViewed.insert(0, id);
-    }
-    // 베이 조합 · 덱: 없는 id 만 더한다 (기기에 있는 것이 이긴다)
-    for (final c in p.bbxCombos) {
-      if (bbxCombo(c.id) == null) bbxCombos.add(c);
-    }
-    for (final d in p.bbxDecks) {
-      if (!bbxDecks.any((x) => x.id == d.id)) bbxDecks.add(_deck3(d));
-    }
-    if (p.myChannels case final ch? when ch.isNotEmpty) {
-      myChannels
-        ..clear()
-        ..addAll(ch);
-    }
-    _changed(shared: p.items.isNotEmpty || extrasDirty);
   }
 
   // ── 동기화 (lib/sync/sync_service.dart 만 부른다) ──

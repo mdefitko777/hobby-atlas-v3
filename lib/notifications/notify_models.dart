@@ -158,7 +158,6 @@ class NotifyConfig {
     this.enabled = true,
     this.onlyMine = true,
     Map<String, bool>? rules,
-    this.hintShown = false,
     this.permissionAsked = false,
     List<String>? channels,
     Set<String>? wanted,
@@ -182,9 +181,6 @@ class NotifyConfig {
   /// 내 채널의 상품만 (좋아요한 상품은 채널과 상관없이)
   bool onlyMine;
   final Map<String, bool> rules;
-
-  /// 삼성 배터리 안내를 한 번 보여 줬는지
-  bool hintShown;
 
   /// 처음 실행 때 알림 권한을 한 번 물어봤는지
   bool permissionAsked;
@@ -212,7 +208,6 @@ class NotifyConfig {
     'enabled': enabled,
     'only_mine': onlyMine,
     'rules': rules,
-    'hint_shown': hintShown,
     'permission_asked': permissionAsked,
     'channels': channels,
     'wanted': wanted.toList(),
@@ -232,7 +227,6 @@ class NotifyConfig {
         for (final e in jMap(j['rules']).entries)
           if (e.value is bool) e.key: e.value! as bool,
       },
-      hintShown: j['hint_shown'] == true,
       permissionAsked: j['permission_asked'] == true,
       channels: j['channels'] is List ? jList(j['channels']).whereType<String>().toList() : null,
       wanted: jList(j['wanted']).whereType<String>().toSet(),

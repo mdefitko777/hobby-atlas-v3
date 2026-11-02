@@ -5,23 +5,18 @@
 // │ K-0  │ ListTile × 3 (로그인 · 상태 · 로그아웃) │ 계정 · 동기화 (옛 Gunpula 와 같은 계정)   │ P01 · P05 · P10 │
 // │ K-1  │ SwitchListTile × 2                 │ 새 소식 알림(휴대폰) · 내 채널 소식만      │ P03 · P07     │
 // │ K-5  │ FilterChip 묶음 2개                 │ 알림 규칙: 관심 항목 · 세계관 전체          │ P04 · P05     │
-// │ K-6  │ ListTile · 대화상자                  │ 마지막 확인 · 지금 확인 · 삼성 배터리 안내   │ P10           │
+// │ K-6  │ ListTile · 대화상자                  │ 마지막 확인 · 지금 확인                  │ P10           │
 // │ K-2  │ ListTile (고르기 없음)               │ 언어: 화면 한국어 · 상품 이름 한국어 우선 │ P04 · P10     │
-// │ K-3  │ ListTile → 파일 · 붙여넣기 → 확인     │ 옛 Gunpula 에서 가져오기 · 백업          │ P10           │
 // │ K-4  │ ListTile                           │ 상품 데이터 기준일 · 지금 새로 받기 · 버전 │ P10           │
 // │ K-7  │ ListTile → HelpScreen(쌓기)          │ 도움말: 도감 칸(늘 컬러 · ♡ · 리본 · 내 사진) · 색 · 데이터 출처 · 알림 · 업데이트 │ P10 │
 // └──────────────────────────────────────────────────────────────────────────────────┘
-// 전환: 앱 셸 ⚙ → 쌓기(push, 오른쪽에서). 도움말 → 쌓기. 가져오기 → 덮기(시트 · 확인 대화상자).
+// 전환: 앱 셸 ⚙ → 쌓기(push, 오른쪽에서). 도움말 → 쌓기.
 // 언어: 화면 번역은 없다 (한국어만). 상품 이름은 Gunpula 이름 중 한국어 → 일본어 → 영어 순 — 고르는 척하지 않는다.
 // 로그인 → P 로그인 화면(쌓기). 로그아웃 → 확인 대화상자(덮기).
-import 'dart:convert';
-import 'dart:typed_data';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../data/catalog.dart';
-import '../data/user_store.dart';
 import '../detail_pane.dart';
 import '../sync/account.dart';
 import '../sync/sync_service.dart';
@@ -35,28 +30,6 @@ import 'p_sign_in_screen.dart';
 
 void openSettings(BuildContext context) {
   openPage(context, const SettingsScreen());
-}
-
-/// 삼성 갤럭시: 오래 안 연 앱을 재워 12시간 확인이 멈추는 것을 막는 방법 (처음 알림을 켰을 때 한 번 · 설정에서 언제든)
-Future<void> showBatteryHint(BuildContext context, NotifyStore notify) async {
-  notify.markHintShown();
-  await showDialog<void>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('알림이 늦게 오면 (삼성 갤럭시)'),
-      content: const SingleChildScrollView(
-        child: Text(
-          '갤럭시는 한동안 안 연 앱을 "절전 앱"으로 재워서, 12시간마다 하는 새 소식 확인이 멈출 수 있어요.\n\n'
-          '1. 설정 › 배터리 › 백그라운드 사용 제한 › 절전 예외 앱 › + 에서 Hobby Atlas 추가\n'
-          '   ("절전 앱" · "초절전 앱" 목록에 있으면 빼 주세요)\n'
-          '2. 설정 › 애플리케이션 › Hobby Atlas › 배터리 › 제한 없음\n\n'
-          '앱을 열 때도 한 번 더 확인하니, 못 받은 소식은 앱을 열면 알림 화면에 모여요.',
-          style: TextStyle(height: 1.45),
-        ),
-      ),
-      actions: [FilledButton(onPressed: () => Navigator.pop(context), child: const Text('알겠어요'))],
-    ),
-  );
 }
 
 class SettingsScreen extends StatefulWidget {
@@ -87,7 +60,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (mounted && p != _permitted) setState(() => _permitted = p); // STATE: 휴대폰 알림 권한 → 안내 문구
   }
 
-  /// K-1 새 소식 알림: 켜면 안드로이드 13+ 권한 창, 처음 켰으면 삼성 배터리 안내
+  /// K-1 새 소식 알림: 켜면 안드로이드 13+ 권한 창
   Future<void> _setNotify(bool on) async {
     final ok = await _n.setEnabled(on);
     if (!mounted) return;
@@ -95,8 +68,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (!mounted) return;
     if (!ok) {
       showToast(context, '알림 권한이 꺼져 있어요 · 휴대폰 설정 › 애플리케이션 › Hobby Atlas › 알림에서 켤 수 있어요');
-    } else if (on && LocalNotifier.supported && !_n.config.hintShown) {
-      await showBatteryHint(context, _n);
     } else if (on && !LocalNotifier.supported) {
       showToast(context, '웹 미리보기에서는 휴대폰 알림을 보내지 않아요 · 알림 화면에는 모여요');
     }
@@ -120,105 +91,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => _refreshing = false);
     final c = Catalog.instance;
     showToast(context, changed ? '새로 받았어요 · ${c.kits.length}개' : (c.error.isEmpty ? '이미 최신이에요' : c.error));
-  }
-
-  // ── 옛 Gunpula 에서 가져오기 ──
-  Future<void> _import() async {
-    final how = await showGpSheet<String>(
-      context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.file_open_outlined),
-              title: const Text('백업 파일 고르기'),
-              subtitle: const Text('옛 앱 설정 › 数据 › 导出收藏备份 으로 만든 gunpula-backup-….json'),
-              onTap: () => Navigator.pop(context, 'file'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.content_paste),
-              title: const Text('붙여넣기'),
-              subtitle: const Text('복사해 둔 백업 JSON (도감 · 베이 부품 포함 내보내기)'),
-              onTap: () => Navigator.pop(context, 'paste'),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (!mounted || how == null) return;
-    String? text;
-    if (how == 'file') {
-      final files = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: const ['json']);
-      if (files.isEmpty) return;
-      text = utf8.decode(await files.first.readAsBytes(), allowMalformed: true);
-    } else {
-      text = await _askPaste();
-    }
-    if (!mounted || text == null || text.trim().isEmpty) return;
-    await Catalog.instance.ensureLoaded().catchError((Object _) {});
-    final ImportPreview p;
-    try {
-      p = UserStore.instance.previewImport(text, Catalog.instance.byId.containsKey);
-    } on FormatException catch (e) {
-      if (mounted) showToast(context, e.message);
-      return;
-    }
-    if (!mounted) return;
-    if (p.isEmpty) {
-      showToast(context, '가져올 기록이 없어요');
-      return;
-    }
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('이대로 가져올까요?'),
-        content: Text(
-          [
-            if (p.member.isNotEmpty) '내 이름: ${p.member}',
-            '구매함 ${p.owned} · 좋아요 ${p.wanted}${p.deleted > 0 ? ' · 지운 기록 ${p.deleted}' : ''}',
-            if (p.unknown > 0) '지금 카탈로그에 없는 상품 ${p.unknown}개 (기록은 남겨 둬요)',
-            if (p.guideManualLit.isNotEmpty) '도감 손으로 켠 기체 ${p.guideManualLit.length}',
-            if (p.bbxOwnedParts.isNotEmpty) '베이 부품 ${p.bbxOwnedParts.length}',
-            if (p.otherMembers.isNotEmpty) '다른 멤버(${p.otherMembers.keys.join(', ')})의 기록은 가져오지 않아요',
-            '\n같은 상품은 더 최근에 바꾼 쪽을 남겨요.',
-          ].join('\n'),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('취소')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('가져오기')),
-        ],
-      ),
-    );
-    if (ok != true || !mounted) return;
-    UserStore.instance.applyImport(p);
-    setState(() {});
-    final signedIn = AccountScope.read(context).signedIn;
-    showToast(
-      context,
-      '가져왔어요 · 구매함 ${UserStore.instance.ownedCount} · 좋아요 ${UserStore.instance.wantedCount}'
-      '${signedIn ? ' · 계정에도 올려요' : ''}',
-    );
-  }
-
-  Future<String?> _askPaste() {
-    final c = TextEditingController();
-    return showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('백업 JSON 붙여넣기'),
-        content: TextField(
-          controller: c,
-          maxLines: 8,
-          minLines: 4,
-          decoration: const InputDecoration(hintText: '{"collection": …}', border: OutlineInputBorder()),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('취소')),
-          FilledButton(onPressed: () => Navigator.pop(context, c.text), child: const Text('확인')),
-        ],
-      ),
-    ).whenComplete(c.dispose);
   }
 
   Future<void> _signOut() async {
@@ -298,21 +170,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  /// 내 기록을 파일로 (토큰 · 비밀값은 원래 없음)
-  Future<void> _export() async {
-    final backup = UserStore.instance.backupFile(DateTime.now());
-    try {
-      final uri = await FilePicker.saveFile(
-        fileName: backup.fileName,
-        bytes: Uint8List.fromList(utf8.encode(backup.text)),
-        mimeType: 'application/json',
-      );
-      if (mounted && uri != null) showToast(context, '백업을 저장했어요');
-    } on Object catch (e) {
-      if (mounted) showToast(context, '저장하지 못했어요: $e');
-    }
-  }
-
   /// K-1 · K-5 · K-6 알림
   Widget _notifySection() {
     final c = _n.config;
@@ -373,12 +230,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                 : TextButton(onPressed: _checkNow, child: const Text('지금 확인')),
           ),
-          if (LocalNotifier.supported)
-            ListTile(
-              leading: const Icon(Icons.battery_alert_outlined),
-              title: const Text('알림이 늦게 오면 (삼성 갤럭시)'),
-              onTap: () => showBatteryHint(context, _n),
-            ),
         ],
       ),
     );
@@ -413,13 +264,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                       : TextButton(onPressed: _refresh, child: const Text('지금 새로 받기')),
                 ),
-                ListTile(
-                  // K-3 P10
-                  leading: const Icon(Icons.move_down),
-                  title: const Text('옛 Gunpula 에서 가져오기'),
-                  onTap: _import,
-                ),
-                ListTile(leading: const Icon(Icons.save_alt), title: const Text('백업 파일로 내보내기'), onTap: _export),
               ],
             ),
           ),
@@ -553,7 +397,6 @@ class HelpScreen extends StatelessWidget {
                 const SectionHeader('알림'),
                 tip(Icons.schedule, '12시간마다 확인', '앱을 열 때도 한 번 더'),
                 tip(Icons.today_outlined, '좋아요한 상품', '발매 D-7 · D-1 · 당일 (발매일이 정해진 것만)'),
-                tip(Icons.battery_alert_outlined, '늦게 오면', '설정 › 알림 › 삼성 갤럭시 안내'),
               ],
             ),
           ),

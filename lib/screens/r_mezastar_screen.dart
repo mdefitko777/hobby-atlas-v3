@@ -22,7 +22,7 @@
 // │ R-11 │ TagCollectionSection (F 컬렉션 안)  │ 좋아요 · 구매함 탭 끝의 "태그 · 픽" 줄    │ P06 · P01     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 도감 카드 → R(쌓기) → 태그 시트(덮기). 검색 결과 · 컬렉션 줄 → 태그 시트(덮기) → R(쌓기).
-// 구매함 = UserStore.tagOwned · 좋아요 = tagLiked (기기 · 계정 기기 기록 · 백업 파일, payload 밖). 키 = Gunpula atlas 의 인쇄 id · 픽 id.
+// 구매함 = UserStore.tagOwned · 좋아요 = tagLiked (기기 · 계정 기기 기록, payload 밖). 키 = Gunpula atlas 의 인쇄 id · 픽 id.
 // 한 태그에 상태 하나 (상품과 같음): 구매함을 켜면 좋아요에서 빠지고, 좋아요를 켜면 구매함에서 빠진다.
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';

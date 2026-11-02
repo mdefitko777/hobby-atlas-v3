@@ -133,47 +133,4 @@ void main() {
     final again = UserStore.memory()..debugLoadJson(jsonDecode(jsonEncode(s.toJson())));
     expect(_pretty(again.toJson()), _pretty(s.toJson()));
   });
-
-  test('백업 파일 가져오기 결과 모양이 같다', () {
-    final src = UserStore.memory()..debugLoadJson(_input);
-    final p = ImportPreview.parse(jsonEncode(src.toJson()), (id) => id != 'hg-003');
-    expect(
-      [p.member, p.owned, p.wanted, p.deleted, p.unknown, p.otherMembers, p.myChannels, p.isEmpty],
-      [
-        '',
-        1,
-        1,
-        1,
-        0,
-        <String, int>{},
-        ['gundam', 'pokemon'],
-        false,
-      ],
-    );
-    final dst = UserStore.memory()..applyImport(p);
-    final j = dst.toJson();
-    // 가져오기는 기기 계정 · 친구 쪽 · 사진을 옮기지 않는다 (member 도: 내 백업에는 member_items 가 없다)
-    _golden('import', j);
-  });
-
-  test('백업 파일 = 저장 파일 + 내보낸 때 · 앱 이름, 가져오면 저장 파일로 가져온 것과 같다', () {
-    final s = UserStore.memory()..debugLoadJson(_input);
-    final b = s.backupFile(DateTime.utc(2026, 11, 2, 9));
-    expect(b.fileName, startsWith('hobby-atlas-backup-2026-11-0'));
-    final j = jsonDecode(b.text) as Map<String, Object?>;
-    expect(j['exported_at'], '2026-11-02T09:00:00.000Z');
-    expect(j['app'], 'hobby-atlas-v3');
-    expect(
-      _pretty(
-        {...j}
-          ..remove('exported_at')
-          ..remove('app'),
-      ),
-      _pretty(s.toJson()),
-    );
-    final viaBackup = UserStore.memory()..applyImport(ImportPreview.parse(b.text, (id) => id != 'hg-003'));
-    final viaFile = UserStore.memory()
-      ..applyImport(ImportPreview.parse(jsonEncode(s.toJson()), (id) => id != 'hg-003'));
-    expect(_pretty(viaBackup.toJson()), _pretty(viaFile.toJson()));
-  });
 }

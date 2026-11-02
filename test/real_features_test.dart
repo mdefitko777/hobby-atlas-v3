@@ -1,5 +1,4 @@
 // 가짜였던 기능을 진짜로 (검색 기록 · 설명으로 찾기 · 바코드 · 수량 · 휴지통 · 제보 · 같은 IP · 발매 알림 · 도움말)
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -168,20 +167,6 @@ void main() {
       expect(me.recentViewed, isEmpty);
       me.restoreRecentViewed(before);
       expect(me.recentViewed, ['b', 'a']);
-    });
-
-    test('백업 가져오기: 최근 검색 · 횟수 · 휴지통도', () {
-      final src = UserStore.memory()
-        ..addRecentSearch('엑시아')
-        ..addRecentSearch('엑시아')
-        ..trashAdd(['t1'], owned: true);
-      final p = ImportPreview.parse(jsonEncode(src.toJson()), (_) => true);
-      expect(p.recentSearches, ['엑시아']);
-      expect(p.isEmpty, isFalse);
-      final me = UserStore.memory()..applyImport(p);
-      expect(me.recentSearches, ['엑시아']);
-      expect(me.searchCounts['엑시아'], 2);
-      expect(me.trash.keys, ['t1']);
     });
   });
 

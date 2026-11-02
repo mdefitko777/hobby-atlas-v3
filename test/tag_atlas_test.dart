@@ -182,16 +182,13 @@ void main() {
   });
 
   group('좋아요 · 구매함 저장', () {
-    test('UserStore: tag_owned 가 local_state 에 · 백업 가져오기로 돌아온다', () {
+    test('UserStore: tag_owned 가 local_state 에 · 저장 파일에서 돌아온다', () {
       final a = UserStore.memory()..setTagOwned('mz-intl:1-1-001@KR', true);
       a.setTagOwned('frienda:1-1-001', true);
       a.setTagOwned('frienda:1-1-001', false);
       final json = a.toJson();
       expect((json['local_state']! as Map)['tag_owned'], ['mz-intl:1-1-001@KR']);
-      final p = ImportPreview.parse(jsonEncode(json), (_) => true);
-      expect(p.tagOwned, {'mz-intl:1-1-001@KR'});
-      expect(p.isEmpty, isFalse);
-      final b = UserStore.memory()..applyImport(p);
+      final b = UserStore.memory()..debugLoadJson(jsonDecode(jsonEncode(json)) as Map<String, Object?>);
       expect(b.tagOwned, {'mz-intl:1-1-001@KR'});
     });
 
@@ -229,7 +226,7 @@ void main() {
       expect(s.tagLiked, isEmpty);
     });
 
-    test('tag_liked: 저장 파일 · 백업 왕복 · 옛 파일(tag_owned 만)도 그대로 · payload 밖', () {
+    test('tag_liked: 저장 파일 왕복 · 옛 파일(tag_owned 만)도 그대로 · payload 밖', () {
       final a = UserStore.memory()
         ..setTagMark('mz-intl:1-1-001@KR', liked: true)
         ..setTagMark('frienda:1-1-001', owned: true);
@@ -243,25 +240,6 @@ void main() {
       final again = UserStore.memory()..debugLoadJson(jsonDecode(jsonEncode(json)));
       expect(again.tagLiked, {'mz-intl:1-1-001@KR'});
       expect(again.tagOwned, {'frienda:1-1-001'});
-
-      final p = ImportPreview.parse(jsonEncode(json), (_) => true);
-      expect(p.tagLiked, {'mz-intl:1-1-001@KR'});
-      final onlyLiked = ImportPreview.parse(
-        jsonEncode({
-          'schema': 1,
-          'local_state': {
-            'tag_liked': ['x'],
-          },
-        }),
-        (_) => true,
-      );
-      expect(onlyLiked.isEmpty, isFalse);
-      // 가져오기: 이미 구매함인 것은 좋아요로 내리지 않는다
-      final b = UserStore.memory()..setTagOwned('mz-intl:1-1-001@KR', true);
-      b.applyImport(p);
-      expect(b.tagStatus('mz-intl:1-1-001@KR'), CollectStatus.owned);
-      expect(b.tagLiked, isEmpty);
-      expect(b.tagOwned, {'mz-intl:1-1-001@KR', 'frienda:1-1-001'});
 
       // 이 기능 전 저장 파일 (tag_liked 없음) → 구매함 그대로, 좋아요 없음
       final old = UserStore.memory()

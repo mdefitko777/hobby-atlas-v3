@@ -254,11 +254,6 @@ class NotifyStore extends ChangeNotifier {
     if (changed) _scheduleConfig();
   }
 
-  void markHintShown() {
-    config.hintShown = true;
-    _configChanged();
-  }
-
   /// 처음 실행 때 한 번만: 알림 권한 창. 거절하면 알림을 끈다. 허용되면 true.
   Future<bool> askPermissionOnce() async {
     await load();

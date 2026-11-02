@@ -267,17 +267,4 @@ void main() {
       isTrue,
     );
   });
-
-  test('백업 가져오기: 베이 조합 · 덱도 (기기에 있는 id 는 그대로)', () {
-    final src = UserStore.memory()
-      ..saveBbxCombo(_c('a', '드랜', {Slot.blade: swordDran, Slot.ratchet: r360, Slot.bit: bitF}))
-      ..saveBbxDeck(const Deck(id: 'd1', name: '덱', comboIds: ['a']));
-    final text = jsonEncode(src.toJson());
-    final dst = UserStore.memory()..saveBbxCombo(_c('a', '내 것', {Slot.blade: keelShark}));
-    final p = dst.previewImport(text, (_) => true);
-    expect(p.isEmpty, isFalse);
-    dst.applyImport(p);
-    expect(dst.bbxCombos.single.nickname, '내 것');
-    expect(dst.bbxDecks.single.comboIds, ['a', '', '']);
-  });
 }

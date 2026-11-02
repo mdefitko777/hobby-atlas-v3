@@ -192,11 +192,8 @@ class _AppShellState extends State<AppShell> {
     if (item != null) openShared(context, item, loaders: widget.loaders, onGoSearch: _goSearch).ignore();
   }
 
-  /// 처음 실행 때 한 번: 알림 권한(안드로이드 13+) → 허용하면 삼성 배터리 안내
-  Future<void> _askNotifyOnce() async {
-    final ok = await _notify.askPermissionOnce();
-    if (ok && mounted && !_notify.config.hintShown) await showBatteryHint(context, _notify);
-  }
+  /// 처음 실행 때 한 번: 알림 권한(안드로이드 13+)
+  Future<void> _askNotifyOnce() => _notify.askPermissionOnce();
 
   /// 검색 탭으로 + 검색창 커서 (홈 검색창 · 카메라 결과의 "이름으로 검색")
   void _goSearch() => setState(() {
