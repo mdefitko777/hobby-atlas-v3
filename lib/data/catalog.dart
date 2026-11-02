@@ -34,7 +34,8 @@ class Catalog extends ChangeNotifier {
   /// 5: 사진 없는 상품의 참고 그림(imageRef) · 魂 라인 이름(Hi-Resolution Model · 超合金 …)
   /// 6: 세부 시리즈(subline — HGUC · HGCE · ver. A.N.I.M.E. …)
   /// 7: 베이 상품 형태(subline — 스타터 · 부스터 · 랜덤 부스터 · 세트 · 런처 · 도구)
-  static const mapVersion = 7;
+  /// 8: 이름으로 등급 코드 바로잡기(옵션 파츠 · HG · FM · Fate 미니 · 인형) · 이름 HTML 엔티티
+  static const mapVersion = 8;
 
   CatalogPhase phase = CatalogPhase.empty;
   String error = '';

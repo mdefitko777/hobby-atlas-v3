@@ -106,7 +106,7 @@ void main() {
         ..._many('tk', 4, channel: 'fate', line: '굿즈', type: '굿즈', goodsKind: '티켓 · 이벤트'),
         lineKit('bk', channel: 'fate', line: '굿즈', type: '굿즈', goodsKind: '책 · 화보'),
       ]);
-      expect(_shape(s), ['피규어: 스케일 · figma', '굿즈: 굿즈 · 굿즈/기타', '영상 · 책 · 이벤트: 티켓 · 이벤트 · 책 · 화보']);
+      expect(_shape(s), ['피규어 · 인형: 스케일 · figma', '굿즈: 굿즈 · 굿즈/기타', '영상 · 책 · 이벤트: 티켓 · 이벤트 · 책 · 화보']);
       final other = s[1].entries.last;
       expect(other.label, lineOtherKey);
       expect([for (final k in other.kits) k.id]..sort(), ['ac', 'fd']);

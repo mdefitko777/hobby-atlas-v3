@@ -67,6 +67,50 @@ bool deadImage(String url) =>
     url.contains('bandai-hobby.net') ||
     url.contains('pokemon.hgodo.com');
 
+/// 이름에 남은 HTML 엔티티 (포켓몬센터 「Pok&eacute;mon」 · &amp; · &#39; …)
+String unescapeHtml(String s) {
+  if (!s.contains('&')) return s;
+  return s.replaceAllMapped(RegExp(r'&(#x?[0-9a-fA-F]+|[a-zA-Z]+);'), (m) {
+    final e = m.group(1)!;
+    if (e.startsWith('#')) {
+      final v = e.startsWith('#x') || e.startsWith('#X')
+          ? int.tryParse(e.substring(2), radix: 16)
+          : int.tryParse(e.substring(1));
+      return v == null ? m.group(0)! : String.fromCharCode(v);
+    }
+    return _entities[e] ?? m.group(0)!;
+  });
+}
+
+const _entities = {
+  'amp': '&',
+  'lt': '<',
+  'gt': '>',
+  'quot': '"',
+  'apos': "'",
+  'nbsp': ' ',
+  'eacute': 'é',
+  'Eacute': 'É',
+  'egrave': 'è',
+  'aacute': 'á',
+  'iacute': 'í',
+  'oacute': 'ó',
+  'uacute': 'ú',
+  'auml': 'ä',
+  'ouml': 'ö',
+  'uuml': 'ü',
+  'times': '×',
+  'hellip': '…',
+  'ndash': '–',
+  'mdash': '—',
+  'rsquo': '’',
+  'lsquo': '‘',
+  'rdquo': '”',
+  'ldquo': '“',
+  'hearts': '♥',
+  'star': '☆',
+};
+
 /// 4개 언어 이름 중 [order] 순서로 처음 있는 것
 String pickName(Object? names, [List<String> order = const ['ko', 'ja', 'en', 'zh']]) {
   final m = jMap(names);
@@ -82,6 +126,7 @@ const _lineLabels = {
   'GUNDAM_MERCH': '굿즈',
   'ROBOT_SPIRITS': 'ROBOT魂',
   'NG': 'No Grade',
+  'OPTION_PARTS': '옵션 파츠',
   'METAL_BUILD': 'METAL BUILD',
   'METAL_ROBOT': 'METAL ROBOT魂',
   'MSE': 'MS 앙상블',
@@ -103,6 +148,8 @@ const _lineLabels = {
   'GANSO_SD': '元祖 SD',
   'FATE_GOODS': '굿즈',
   'FATE_SCALE': '스케일',
+  'FATE_MINI': '미니 · 트레이딩',
+  'FATE_PLUSH': '인형',
   'NENDOROID': '넨도로이드',
   'FATE_ACTION': '액션 피규어',
   'FATE_PRIZE': '경품',
@@ -159,6 +206,31 @@ String cleanSubline(String subline, String code, String line, {String name = ''}
 /// 베이 상품 형태 (Gunpula subline 'BEYBLADE X Starter' …)
 const _beyForms = {'Starter': '스타터', 'Booster': '부스터', 'Random Booster': '랜덤 부스터', 'Set': '세트', 'Tool': '런처 · 도구'};
 
+/// Gunpula 등급 코드가 상품 이름과 어긋나는 것 바로잡기 (이름이 더 정확하다 — 실제 데이터 점검 2026-11)
+///   No Grade 안의 옵션 파츠(빌더즈 파츠 · BPHD) · 「1/144 HG …」(SEED 시절 HG) · 풀메카닉스 · 하이레조 /
+///   Fate 스케일 안의 미니 · 트레이딩 피규어 / Fate 굿즈 안의 봉제인형
+String correctedCode(String code, String name) {
+  final n = _halfWidth(name);
+  switch (code) {
+    case 'NG':
+      if (_optionParts.hasMatch(n)) return 'OPTION_PARTS';
+      if (n.contains('フルメカニクス')) return 'FM';
+      if (n.contains('ハイレゾリューション')) return 'HIRM';
+      if (RegExp(r'(?:^|[\s/])HG\s').hasMatch(n)) return 'HG';
+    case 'FATE_SCALE':
+      if (_miniFigure.hasMatch(n)) return 'FATE_MINI';
+    case 'FATE_GOODS':
+      if (n.contains('ぬいぐるみ') && !RegExp(r'バッ[グク]|ポーチ|収納').hasMatch(n)) return 'FATE_PLUSH';
+  }
+  return code;
+}
+
+final _optionParts = RegExp(r'ビルダーズパーツ|BPHD|オプションパーツ');
+final _miniFigure = RegExp(
+  r'HELLO! GOOD SMILE|collection figure|collectible fig|trading fig|トレーディング|コレクションフィギュア|Piyokuru|CHILLfigg',
+  caseSensitive: false,
+);
+
 String lineLabel(String code, String subline, String kitId) {
   if (code == 'BEYBLADE_X') {
     // beyblade-x-bx36 → BX · UX · CX
@@ -201,8 +273,12 @@ String typeLabel(String code, String category, [String name = '']) {
   if (_hasAny(name, _cardWords)) return '카드';
   if (code == 'GUNDAM_MERCH' || code.endsWith('_GOODS')) return _hasAny(name, _capsuleWords) ? '가샤폰' : '굿즈';
   switch (code) {
-    case 'POKE_PLUSH':
+    case 'OPTION_PARTS':
+      return '프라모델';
+    case 'POKE_PLUSH' || 'FATE_PLUSH':
       return '인형';
+    case 'FATE_MINI':
+      return '피규어';
     case 'ICHIBAN_KUJI' || 'POKE_KUJI':
       return '제일복권';
     case 'FATE_PRIZE' || 'POKE_PRIZE':
@@ -312,10 +388,10 @@ List<Map<String, Object?>> mapKitsJob(Map<String, String> msg) {
     final r = jMap(raw);
     final id = jStr(r['kit_id']);
     if (id.isEmpty) continue;
-    final names = jMap(r['names']);
+    final names = {for (final e in jMap(r['names']).entries) e.key: unescapeHtml(jStr(e.value))};
     final series = jMap(r['series']);
     final labels = jMap(series['labels']);
-    final code = jStr(r['grade_code']);
+    final code = correctedCode(jStr(r['grade_code']), jStr(names['ja']));
     final subline = jStr(r['subline']);
     final sourceUrls = jList(r['source_urls']).whereType<String>().toList();
     final images = jMap(r['images']);

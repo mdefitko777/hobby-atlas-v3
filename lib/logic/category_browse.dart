@@ -71,7 +71,7 @@ const _typeSectionDefs = <String, List<_Sec>>{
   'gundam': [
     _Sec(
       '프라모델',
-      ['PG', 'PGU', 'MG', 'MGEX', 'RG', 'HG', 'EG', 'RE100', 'FM', 'Hi-Resolution Model', 'MEGA'],
+      ['PG', 'PGU', 'MG', 'MGEX', 'RG', 'HG', 'EG', 'RE100', 'FM', 'Hi-Resolution Model', 'MEGA', '옵션 파츠'],
       types: {'프라모델'},
     ),
     _Sec('옛 등급 · 특수', ['No Grade', 'AG', 'FG', 'BMC', 'EX', 'HY2M', 'UCHG', 'HAROPLA']),
@@ -109,7 +109,7 @@ const _typeSectionDefs = <String, List<_Sec>>{
     _media,
   ],
   'fate': [
-    _Sec('피규어', ['스케일', '넨도로이드', 'figma', '액션 피규어'], types: {'피규어', '액션'}),
+    _Sec('피규어 · 인형', ['스케일', '넨도로이드', 'figma', '액션 피규어', '미니 · 트레이딩', '인형'], types: {'피규어', '액션', '인형'}),
     _Sec('경품 · 가샤폰 · 복권', ['경품', '가샤폰', '제일복권'], types: {'경품', '가샤폰', '식완', '제일복권'}),
     _goods,
     _media,
