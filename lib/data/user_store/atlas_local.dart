@@ -16,17 +16,44 @@ mixin _AtlasLocal on ChangeNotifier {
   /// 3on3 덱 — comboIds 는 늘 3칸, 빈 칸은 ''. 기기에만
   final List<Deck> bbxDecks = [];
 
-  /// 가진 메자스타 태그 · 프렌다 픽 (Gunpula atlas 의 인쇄 id `mz-intl:1-1-001@KR` · 픽 id `frienda:1-1-001`). 기기에만
+  /// 구매함 메자스타 태그 · 프렌다 픽 (Gunpula atlas 의 인쇄 id `mz-intl:1-1-001@KR` · 픽 id `frienda:1-1-001`). 기기에만
   final Set<String> tagOwned = {};
+
+  /// 좋아요 태그 · 픽 (같은 id). 상품처럼 한 태그에 상태 하나 — 둘 다 들어 있으면(두 기기에서 따로) 구매함이 이긴다
+  final Set<String> tagLiked = {};
 
   void setBbxPart(String partId, bool have) {
     if (have ? bbxOwnedParts.add(partId) : bbxOwnedParts.remove(partId)) _changed();
   }
 
-  /// 메자스타 태그 · 프렌다 픽 가짐 표시
-  void setTagOwned(String id, bool have) {
-    if (have ? tagOwned.add(id) : tagOwned.remove(id)) _changed();
+  /// 태그 · 픽 상태 (구매함 > 좋아요 > 없음) — 상품의 statusOf 와 같은 뜻
+  CollectStatus tagStatus(String id) => tagOwned.contains(id)
+      ? CollectStatus.owned
+      : tagLiked.contains(id)
+      ? CollectStatus.wanted
+      : CollectStatus.none;
+
+  /// 상태 통째로 (되돌리기). 구매함이면 좋아요에서 빼고, 좋아요면 구매함에서 뺀다
+  void setTagStatus(String id, CollectStatus s) {
+    final a = s == CollectStatus.owned ? tagOwned.add(id) : tagOwned.remove(id);
+    final b = s == CollectStatus.wanted ? tagLiked.add(id) : tagLiked.remove(id);
+    if (a || b) _changed();
   }
+
+  /// 상품 Marks.set 과 같은 규칙: owned 가 liked 보다 우선, 끄는 쪽은 그 상태일 때만 지운다
+  void setTagMark(String id, {bool? liked, bool? owned}) {
+    final now = tagStatus(id);
+    var next = now;
+    if (liked == true) next = CollectStatus.wanted;
+    if (liked == false && now == CollectStatus.wanted) next = CollectStatus.none;
+    if (owned == true) next = CollectStatus.owned;
+    if (owned == false && now == CollectStatus.owned) next = CollectStatus.none;
+    // 같아도 한 번 정리 (두 기기에서 따로 켜 둘 다 든 것 → 하나로)
+    setTagStatus(id, next);
+  }
+
+  /// 구매함 켜기 · 끄기 (옛 이름 — 테스트 · 동기화 쪽)
+  void setTagOwned(String id, bool have) => setTagMark(id, owned: have);
 
   void setManualLit(int unitId, bool lit) {
     if (lit ? guideManualLit.add(unitId) : guideManualLit.remove(unitId)) _changed();

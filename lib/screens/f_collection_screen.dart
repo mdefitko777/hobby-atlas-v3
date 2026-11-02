@@ -38,6 +38,7 @@ import '../widgets.dart';
 import 'c_channel_screen.dart';
 import 'd_kit_detail_screen.dart';
 import 'g_guide_view.dart';
+import 'r_mezastar_screen.dart' show TagCollectionSection;
 
 /// 내 정보 숫자를 눌렀을 때 열 곳 (backlog = 구매함 탭 · 미조립만)
 enum CollectionJump { liked, owned, guide, backlog }
@@ -533,6 +534,8 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                         ),
                 ),
               ),
+            // R-11 메자스타 · 프렌다 태그 (전체 · 포켓몬 채널, r_mezastar_screen.dart)
+            if (_tab != _Tab.preorder) TagCollectionSection(owned: _ownedTab, query: _find.query, channel: channel),
           ],
         ),
         if (_editing)

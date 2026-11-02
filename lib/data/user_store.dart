@@ -148,6 +148,9 @@ class UserStore extends ChangeNotifier with _AtlasLocal, _History, _ProfileLocal
     tagOwned
       ..clear()
       ..addAll(jList(local['tag_owned']).whereType<String>());
+    tagLiked
+      ..clear()
+      ..addAll(jList(local['tag_liked']).whereType<String>());
     // 키가 없으면(옛 파일) 처음 값. 빈 목록은 "채널 없음"으로 그대로 둔다.
     myChannels
       ..clear()
@@ -191,6 +194,7 @@ class UserStore extends ChangeNotifier with _AtlasLocal, _History, _ProfileLocal
       'bbx_combos': [for (final c in bbxCombos) c.toJson()],
       'bbx_decks': [for (final d in bbxDecks) d.toJson()],
       'tag_owned': tagOwned.toList(),
+      'tag_liked': tagLiked.toList(),
       'my_channels': myChannels,
       'special_friends': specialFriends.toList(),
       ...social.toJson(),
@@ -419,6 +423,7 @@ class UserStore extends ChangeNotifier with _AtlasLocal, _History, _ProfileLocal
     bbxManualMap.addAll(p.bbxManualMap);
     guideManualLit.addAll(p.guideManualLit);
     tagOwned.addAll(p.tagOwned);
+    tagLiked.addAll(p.tagLiked.difference(tagOwned)); // 이미 구매함이면 그대로
     for (final q in p.recentSearches.reversed) {
       if (!recentSearches.contains(q)) recentSearches.insert(0, q);
     }

@@ -82,6 +82,7 @@ const List<DeviceSection> builtInDeviceSections = [
   DeviceSection.records('bbx_decks'),
   DeviceSection.set('guide_manual_lit', intItems: true),
   DeviceSection.set('tag_owned'),
+  DeviceSection.set('tag_liked'),
   DeviceSection.set('special_friends'),
   DeviceSection.value('my_channels', empty: defaultMyChannels),
   DeviceSection.set('dismissed_suggestions'),

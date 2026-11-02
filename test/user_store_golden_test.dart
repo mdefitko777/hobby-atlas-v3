@@ -73,6 +73,7 @@ final Map<String, Object?> _input = {
       },
     ],
     'tag_owned': ['mz-intl:1-1-001@KR', 'frienda:1-1-001'],
+    'tag_liked': ['mz-intl:1-1-002@KR'],
     'my_channels': ['gundam', 'pokemon'],
     'special_friends': ['@bro'],
     'profile_images': {

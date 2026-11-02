@@ -2,7 +2,7 @@
 //   · mezastar-intl.json  : 한국(KR) · 홍콩 영어판(EN) · 대만(TC) — 태그 하나에 지역별 인쇄(printings)
 //   · mezastar-jp.json    : 일본판(JA, 2020–2024 끝남)
 //   · pokemon-frienda.json: 일본 프렌다 픽 (공식 사이트가 이미지 직접 링크를 막아 그림이 없다 → 도감 번호 그림)
-// 칸 하나 = 그 지역에서 나온 인쇄 하나. 가짐 표시는 인쇄 id(메자스타 `…@KR`) · 픽 id(프렌다) 그대로 쓴다.
+// 칸 하나 = 그 지역에서 나온 인쇄 하나. 좋아요 · 구매함 표시는 인쇄 id(메자스타 `…@KR`) · 픽 id(프렌다) 그대로 쓴다.
 import 'catalog.dart';
 import '../json_util.dart';
 
@@ -97,7 +97,7 @@ class TagCard {
     this.variant = '',
   });
 
-  /// 가짐 표시 키 — 데이터의 인쇄 id / 픽 id 그대로
+  /// 좋아요 · 구매함 키 — 데이터의 인쇄 id / 픽 id 그대로
   final String id;
 
   /// 같은 태그의 다른 지역 인쇄를 묶는 id
