@@ -34,6 +34,17 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // 폰은 전부 arm64 — 플러그인(ML Kit · LiteRT)이 가져오는 x86_64 · armeabi-v7a 네이티브 라이브러리(약 40 MB)를 넣지 않는다
+        ndk {
+            abiFilters += listOf("arm64-v8a")
+        }
+    }
+
+    packaging {
+        jniLibs {
+            // LiteRT GPU 위임은 쓰지 않는다 (CPU · XNNPACK 로 충분, lib/ml/visual_engine_io.dart)
+            excludes += "**/libtensorflowlite_gpu_jni.so"
+        }
     }
 
     signingConfigs {
