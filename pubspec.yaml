@@ -58,6 +58,7 @@ dependencies:
   google_mlkit_text_recognition: ^0.17.1
   # 공유 카드 (화면 V): 내 컬렉션 · 도감 진행 그림(PNG)을 안드로이드 공유 창으로
   share_plus: ^13.3.1
+  tflite_flutter: 0.12.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

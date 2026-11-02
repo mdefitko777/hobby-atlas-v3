@@ -1,4 +1,5 @@
-// 화면 E-8 사진 · 공유로 찾기 — 사진의 글자를 기기 안에서 읽어(ML Kit) 상품 후보를 고르고, 구매함 상품에 사진을 붙인다.
+// 화면 E-8 사진 · 공유로 찾기 — 사진의 글자를 기기 안에서 읽어(ML Kit) 상품 후보를 고르고, 생김새가 비슷한 상품도 보여 주고(E-18),
+// 구매함 상품에 사진을 붙인다.
 // 다른 앱에서 "공유 → Hobby Atlas" 로 보낸 스크린숏 · 글 · 주소도 여기로 (lib/share/share_intake.dart).
 //
 // ┌──────── 디자인 가이드 대응표: E-8 사진 · 공유로 찾기 ─────────────────────────────────┐
@@ -12,9 +13,10 @@
 // │ E-15 │ 공유로 받은 글 칸 (🔗)                  │ 공유로 받은 글 · 주소 → 주소 · 글자로 찾기   │ P01 · P07     │
 // │ E-16 │ SentenceCandidates                     │ 후보가 없을 때 낱말 맞추기 (설명과 겹친 상품) │ P09           │
 // │ E-17 │ AppBar 오른쪽 ? (HelpButton)       │ 글자 조각 아이콘 · ♡ · 리본 · 사진 붙이기 뜻 │ P10           │
+// │ E-18 │ VisualMatches (e_visual_matches.dart) │ 생김새가 비슷한 상품 칸 (기기 안 모델, 처음 한 번 받기) │ P01 · P08 │
 // └────────────────────────────────────────────────────────────────────────────────────┘
 // 전환: E-5 사진 · 앨범 / 공유로 받기 → 이 화면(쌓기) → D 상세(쌓기).
-// 사진 속 물건 모양을 알아보는 AI 는 없다 — 상자 · 화면의 "글자"만 읽어 맞춘다. 일치도는 글자가 겹친 정도 그대로다.
+// 글자 후보의 일치도는 글자가 겹친 정도 그대로다. 생김새(E-18)는 점수 없이 비슷한 순서로만 — 같은 기체의 다른 등급이 섞이므로 고르게 한다.
 import 'dart:async';
 import 'dart:typed_data';
 
@@ -38,6 +40,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'b_search_screen.dart' show SentenceCandidates;
 import 'd_kit_detail_screen.dart';
+import 'e_visual_matches.dart';
 
 /// 공유로 받은 것 열기 (앱 셸이 부른다): 사진 → 글자 읽기, 글 · 주소 → 주소 · 글자로 찾기
 Future<void> openShared(
@@ -407,6 +410,14 @@ class _PhotoFindScreenState extends State<PhotoFindScreen> {
                       ],
                     ),
                   ),
+                if (widget.photo case final photo?)
+                  VisualMatches(
+                    // E-18
+                    photo: photo,
+                    kits: kits,
+                    loaders: widget.loaders,
+                    textIds: {for (final k in candKits) k.id},
+                  ),
                 Padding(
                   // E-8 이름으로 찾기
                   padding: const EdgeInsets.fromLTRB(Gp.gutter, 14, Gp.gutter, 0),
@@ -457,6 +468,8 @@ List<HelpItem> photoFindHelp() => [
   const HelpItem.widget(LikedIcon(size: Gp.iL, filled: false, color: Gp.muted), '좋아요'),
   const HelpItem.widget(OwnedIcon(size: Gp.iL, filled: false, color: Gp.muted), '구매함'),
   const HelpItem(Icons.add_photo_alternate_outlined, '이 사진을 구매함 상품에 붙이기'),
+  const HelpItem(Icons.image_search, '생김새가 비슷한 상품 (기기 안 모델 · 처음 한 번 받기 · 사진은 밖으로 안 나감)'),
+  const HelpItem(Icons.delete_outline, '받아 둔 생김새 모델 지우기'),
 ];
 
 /// E-15 공유로 받은 글 (세 줄까지)
