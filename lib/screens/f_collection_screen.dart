@@ -309,9 +309,8 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                       ),
                       ToolIcon(
                         // F-6 편집 → 체크박스 · 삭제 바
-                        icon: Icons.checklist,
+                        icon: _editing ? Icons.done : Icons.checklist,
                         tip: _editing ? '편집 끝내기' : '편집',
-                        on: _editing,
                         onTap: () => setState(() {
                           _editing = !_editing; // STATE: 편집 → 체크박스 · 삭제 바
                           _selected.clear();

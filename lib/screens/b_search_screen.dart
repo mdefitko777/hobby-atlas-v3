@@ -14,7 +14,7 @@
 // │ B-14 │ GuideView (g_guide_view.dart)       │ 처음 화면 = 도감 둘러보기 (G-1 … G-9)     │ P06 · P01     │
 // │ B-15 │ ViewIconToggle 세대 · 종류 (검색창 줄) │ 도감 두 가지: 세대(작품 · 시대 · 게임) / 종류(HG · MG … · 인형 …, G-10) │ P06 · P07 │
 // │ B-12 │ GuideHits (guide/guide_search.dart) │ 검색어에 맞는 작품 · 기체 → 도감(그 기체 시트) │ P07 · P06 │
-// │ B-13 │ ToolIcon 기체별 + GroupedResults     │ 결과를 기체별로 묶기 (상품 n · 가짐 m)     │ P01 · P07     │
+// │ B-13 │ 결과 위 "기체별로 묶기" + GroupedResults │ 결과를 기체별로 묶기 (상품 n · 가짐 m) — 검색창 폭은 그대로 │ P01 · P07 │
 // │ B-8  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 결과 없음          │ P01 · P09     │
 // │ B-10 │ TagSearchSection (R 화면 파일)        │ 메자스타 · 프렌다 태그 · 게임 이름 찾기   │ P07 · P06     │
 // │ B-11 │ 위 줄 ? (S-19, searchHelp)          │ 검색창 줄 아이콘 뜻 한 줄씩              │ P10           │
@@ -270,14 +270,6 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
                               if (kitMatches(k, _query)) k,
                           ],
                   ),
-                  if (_query.isNotEmpty && (channel == allChannelId || channel == 'gundam'))
-                    ToolIcon(
-                      // B-13
-                      icon: Icons.account_tree_outlined,
-                      tip: '기체별로 묶기',
-                      on: _grouped,
-                      onTap: () => setState(() => _grouped = !_grouped), // STATE: 결과 묶기
-                    ),
                 ],
         ),
         Expanded(
@@ -489,6 +481,24 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
       children: [
         tags,
         guide,
+        if (gundam)
+          Align(
+            // B-13 검색창 줄이 아니라 결과 위 (검색창 폭을 다른 탭과 같게)
+            alignment: Alignment.centerRight,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 6, 8, 0),
+              child: TextButton.icon(
+                key: const ValueKey('group-toggle'),
+                style: TextButton.styleFrom(
+                  foregroundColor: _grouped ? Gp.accent : Gp.muted,
+                  visualDensity: VisualDensity.compact,
+                ),
+                onPressed: () => setState(() => _grouped = !_grouped), // STATE: 결과 묶기
+                icon: Icon(_grouped ? Icons.account_tree : Icons.account_tree_outlined, size: Gp.iS),
+                label: Text(_grouped ? '기체별로 묶는 중' : '기체별로 묶기', style: const TextStyle(fontSize: Gp.t12)),
+              ),
+            ),
+          ),
         if (candidates.isNotEmpty)
           SentenceCandidates(
             hits: candidates,

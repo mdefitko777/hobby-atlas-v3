@@ -82,7 +82,7 @@ void main() {
     expect(find.byKey(const ValueKey('guide-hits')), findsOneWidget);
     expect(find.byKey(const ValueKey('guide-hit-g3000u00100')), findsOneWidget);
 
-    await tester.tap(find.byTooltip('기체별로 묶기'));
+    await tester.tap(find.byKey(const ValueKey('group-toggle')));
     await _settle(tester);
     expect(find.byKey(const ValueKey('grouped-results')), findsOneWidget);
     expect(find.byKey(const ValueKey('unit-head-g3000u00100')), findsOneWidget);

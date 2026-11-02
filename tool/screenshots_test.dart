@@ -140,11 +140,21 @@ void main() {
     await _save(t, '05_v2_wide');
   });
 
-  testWidgets('검색 · 전체 상품', (t) async {
+  testWidgets('도감 탭 · 세대 · 종류 · 기체별 검색', (t) async {
     await _open(t, phone, AppShell(loaders: fakeLoaders));
-    await t.tap(find.byIcon(Icons.search).last);
+    await t.tap(find.text('도감').last);
     await _settle(t);
-    await _save(t, '10_search_all');
+    await t.tap(find.text('건담').first);
+    await _settle(t);
+    await _save(t, '10_guide_tab');
+    await t.tap(find.byTooltip('종류별 도감'));
+    await _settle(t);
+    await _save(t, '10b_guide_by_type');
+    await t.enterText(find.byType(TextField).first, '스트라이크');
+    await _settle(t);
+    await t.tap(find.byKey(const ValueKey('group-toggle')));
+    await _settle(t);
+    await _save(t, '10c_search_grouped');
   });
 
   testWidgets('캘린더', (t) async {
@@ -156,7 +166,7 @@ void main() {
 
   testWidgets('컬렉션', (t) async {
     await _open(t, phone, AppShell(loaders: fakeLoaders));
-    await t.tap(find.byIcon(Icons.auto_awesome_mosaic_outlined).last);
+    await t.tap(find.byIcon(Icons.shelves).last);
     await _settle(t);
     await _save(t, '12_collection');
   });
