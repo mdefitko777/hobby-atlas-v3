@@ -140,16 +140,17 @@ void main() {
     await _save(t, '05_v2_wide');
   });
 
-  testWidgets('도감 탭 · 세대 · 종류 · 기체별 검색', (t) async {
+  testWidgets('검색 탭 · 전체 · 종류 · 세대 · 기체별 검색', (t) async {
     await _open(t, phone, AppShell(loaders: fakeLoaders));
-    await t.tap(find.text('도감').last);
+    await t.tap(find.byIcon(Icons.search).last);
     await _settle(t);
-    await t.tap(find.text('건담').first);
+    await _save(t, '10_search_all');
+    await t.tap(find.byKey(const ValueKey('view-1')));
     await _settle(t);
-    await _save(t, '10_guide_tab');
-    await t.tap(find.byTooltip('종류별 도감'));
+    await _save(t, '10b_search_by_type');
+    await t.tap(find.byKey(const ValueKey('view-2')));
     await _settle(t);
-    await _save(t, '10b_guide_by_type');
+    await _save(t, '10d_search_by_era');
     await t.enterText(find.byType(TextField).first, '스트라이크');
     await _settle(t);
     await t.tap(find.byKey(const ValueKey('group-toggle')));
@@ -166,9 +167,12 @@ void main() {
 
   testWidgets('컬렉션', (t) async {
     await _open(t, phone, AppShell(loaders: fakeLoaders));
-    await t.tap(find.byIcon(Icons.shelves).last);
+    await t.tap(find.byIcon(Icons.auto_awesome_mosaic_outlined).last);
     await _settle(t);
     await _save(t, '12_collection');
+    await t.tap(find.byKey(const ValueKey('tab-guide')));
+    await _settle(t);
+    await _save(t, '12b_collection_guide');
   });
 
   testWidgets('친구 서랍', (t) async {

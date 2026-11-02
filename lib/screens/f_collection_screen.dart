@@ -349,20 +349,23 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                             ),
                     ],
                   ),
-                  _TopRow(
-                    // F-2 탭은 검색 줄 아래 (달력의 전체 · 발매 · 예고와 같은 자리)
-                    counts: {for (final t in _Tab.values) t: _inTab(all, t).length},
-                    tab: _guide ? null : _tab,
-                    onTab: (t) => setState(() {
-                      _tab = t; // STATE: 탭 → 목록 내용
-                      _guide = false;
-                      _selected.clear();
-                      _editing = false;
-                    }),
-                    onGuide: () => setState(() {
-                      _guide = true; // STATE: 도감 탭
-                      _editing = false;
-                    }),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: _TopRow(
+                      // F-2 탭은 검색 줄 아래 (달력의 전체 · 발매 · 예고와 같은 자리)
+                      counts: {for (final t in _Tab.values) t: _inTab(all, t).length},
+                      tab: _guide ? null : _tab,
+                      onTab: (t) => setState(() {
+                        _tab = t; // STATE: 탭 → 목록 내용
+                        _guide = false;
+                        _selected.clear();
+                        _editing = false;
+                      }),
+                      onGuide: () => setState(() {
+                        _guide = true; // STATE: 도감 탭
+                        _editing = false;
+                      }),
+                    ),
                   ),
                   Expanded(
                     child: _guide
@@ -703,9 +706,10 @@ class _TopRow extends StatelessWidget {
       onTap: () => onTab(t),
     );
 
-    // 작은 폰(320)에서 탭 네 개 + 개수가 넘치면 옆으로 밀어 본다
+    // 작은 폰(320)에서 탭 네 개 + 개수가 넘치면 옆으로 밀어 본다 (왼쪽 정렬 그대로)
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
+      physics: const ClampingScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(6, 2, 6, 2),
       child: Row(
         children: [
