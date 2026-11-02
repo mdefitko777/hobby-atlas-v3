@@ -198,3 +198,56 @@ class ThumbRow extends StatelessWidget {
     );
   }
 }
+
+/// 분류 칸 (도감 · 검색의 종류 · 세대) — 공식 그림(라인 로고 · 작품 로고)과 이름만. 숫자 · 진행 막대는 넣지 않는다.
+/// 칸 너비는 부모 격자가 정한다 ([categoryCols] — 폰에서 한 줄 4칸).
+class CategoryTile extends StatelessWidget {
+  const CategoryTile({super.key, required this.image, required this.name, required this.onTap});
+  final String image;
+  final String name;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    label: name,
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(Gp.radius),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AspectRatio(
+            aspectRatio: 1.25,
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Gp.panel,
+                borderRadius: BorderRadius.circular(Gp.radius),
+                border: Border.all(color: Gp.line),
+              ),
+              child: AppImage(image, fit: BoxFit.contain, placeholder: name),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: Gp.t12),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+/// 분류 칸 한 줄 수 — 칸이 80dp 아래로 줄지 않게 (폰 390dp = 4칸, 작은 폰 320dp = 3칸)
+int categoryCols(double width) => (width / 88).floor().clamp(3, 8);
+
+/// 분류 칸 격자 사이 (가로 · 세로)
+const categoryGridGap = 10.0;
+
+/// 분류 칸 한 칸 높이 비율 (그림 1.25 : 1 + 이름 한 줄)
+const categoryTileAspect = 0.78;

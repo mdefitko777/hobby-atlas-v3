@@ -69,6 +69,7 @@ class Kit {
     this.goodsKind = '',
     this.sourceUrls = const [],
     this.imageRef = false,
+    this.subline = '',
   });
 
   final String id;
@@ -139,6 +140,9 @@ class Kit {
   /// [image] 가 이 상품 사진이 아니라 같은 기체의 다른 상품 사진 (lib/data/gunpula.dart fillReferenceImages)
   final bool imageRef;
 
+  /// 라인 안의 세부 시리즈 (HGUC · HGCE · HGBF · ROBOT魂 ver. A.N.I.M.E. …). 라인과 같거나 모르면 빈 글자
+  final String subline;
+
   /// lib/data/gunpula.dart mapKitsJob 의 결과 → Kit.
   /// [recentSince] 이후에 처음 들어온 상품 = 최근 추가, [monthPrefix]('yyyy-mm')에 발매 = 이번 달
   static Kit fromSlim(Map<String, Object?> j, {required String recentSince, required String monthPrefix}) {
@@ -178,6 +182,7 @@ class Kit {
       goodsKind: jStr(j['goodsKind']),
       sourceUrls: _strs(j['sourceUrls']),
       imageRef: _b(j, 'imageRef'),
+      subline: jStr(j['subline']),
     );
   }
 

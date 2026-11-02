@@ -122,6 +122,37 @@ const _lineLabels = {
   'AC_SHOKUGAN': '식완',
 };
 
+/// 전각 영숫자 → 반각 (ＨＧＵＣ → HGUC)
+String _halfWidth(String s) =>
+    String.fromCharCodes(s.runes.map((c) => c >= 0xFF01 && c <= 0xFF5E ? c - 0xFEE0 : (c == 0x3000 ? 0x20 : c)));
+
+/// 세부 시리즈 이름 — 세부 시리즈가 실제로 갈리는 라인만 (그 밖의 subline 은 라인 풀네임 · 탄 번호 · 판매처라 버린다)
+///   HG → HGUC · HGCE · HGBF · HGBD:R … / ROBOT魂 · METAL ROBOT魂 → ver. A.N.I.M.E. · Ka signature /
+///   CONVERGE → CORE · SB · # / 超合金 → 超合金の塊 · 超合金魂 …
+String cleanSubline(String subline, String code, String line, {String name = ''}) {
+  final s = subline.trim();
+  switch (code) {
+    case 'HG':
+      // subline 이 그냥 HG · 판매처면 이름 머리(ＨＧＵＣ · HGCE …, 전각도)에서
+      for (final t in [s, _halfWidth(name.trim())]) {
+        final m = RegExp(r'^HG[A-Z]+(?::[A-Z]+)?').firstMatch(t); // HGUC196 → HGUC
+        if (m != null && m.group(0) != 'HG') return m.group(0)!;
+      }
+      return '';
+    case 'ROBOT_SPIRITS' || 'METAL_ROBOT':
+      if (s.contains('プレミアムバンダイ')) return '';
+      if (s.contains('A.N.I.M.E')) return 'ver. A.N.I.M.E.';
+      if (s.contains('Ka signature')) return 'Ka signature';
+      return '';
+    case 'CONVERGE':
+      final rest = s.replaceFirst(RegExp(r'^FW GUNDAM CONVERGE\s*'), '').trim();
+      return rest.isEmpty ? '' : 'CONVERGE $rest';
+    case 'CHOGOKIN':
+      return s == line ? '' : s;
+  }
+  return '';
+}
+
 String lineLabel(String code, String subline, String kitId) {
   if (code == 'BEYBLADE_X') {
     // beyblade-x-bx36 → BX · UX · CX
@@ -324,6 +355,7 @@ List<Map<String, Object?>> mapKitsJob(Map<String, String> msg) {
       'series': seriesLabel,
       'seriesKey': jStr(series['key']),
       'line': line,
+      'subline': cleanSubline(subline, code, line, name: jStr(names['ja'])),
       'type': type,
       'scale': jStr(r['scale']) == 'non-scale' ? '' : jStr(r['scale']),
       'universe': jStr(r['universe']),
