@@ -14,7 +14,7 @@ import 'package:http/http.dart' as http;
 import 'package:workmanager/workmanager.dart';
 
 import '../data/blob_store.dart';
-import '../data/gunpula.dart' show gunpulaBase, gunpulaRawBase;
+import '../data/gunpula.dart' show gunpulaBase, gunpulaRawBase, gunpulaUserAgent;
 import '../notifications/feed_rules.dart';
 import '../notifications/local_notifier.dart';
 import '../notifications/notify_models.dart';
@@ -37,9 +37,6 @@ const atlasGrace = Duration(hours: 2);
 
 /// manifest 와 같은 판의 피드를 이만큼 못 받으면 그만 기다린다 (사진만 다시 받은 날처럼 피드가 안 바뀌는 갱신)
 const pendingLimit = Duration(hours: 6);
-
-/// Gunpula 에 보내는 User-Agent — Hobby Atlas 데이터 작업들과 같은 봇 이름 (브라우저인 척하지 않는다 · 웹은 바꿀 수 없다)
-const gunpulaUserAgent = 'HobbyAtlasDataBot/1.0 (+https://github.com/mdefitko777/Gunpula)';
 
 /// WorkManager 가 앱이 꺼져 있어도 부르는 입구 (반드시 최상위 함수 + entry-point 표시)
 @pragma('vm:entry-point')

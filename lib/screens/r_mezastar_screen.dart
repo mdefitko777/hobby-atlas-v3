@@ -11,6 +11,7 @@
 // │ R-6  │ 바텀 시트 (길게 누르기 · 목록 줄)     │ 태그 정보 · 가짐 버튼                    │ P07 · P10     │
 // │ R-6b │ 시트 그림 누르기 → openImageViewer  │ 공식 그림 크게 (앞 · 뒤 넘기기, 확대)     │ P02 · P08     │
 // │ R-6c │ 시트 ↗ 공식 페이지 (앱 밖 브라우저)  │ 프렌다 픽 목록 · 태그스타 팝업            │ P09           │
+// │ R-5c │ FriendaImages (기기에서 공식 페이지)  │ 프렌다 픽 그림: 탄을 열면 받아 7일 보관     │ P02 · P01     │
 // │ R-7  │ 필터 시트 (가짐 · 등급 · 타입)        │ 네모 세그먼트 + 네모 체크 칸             │ P04 · P08     │
 // │ R-8  │ TagSearchSection (B 검색 결과 위)    │ 검색 탭에서 태그 · 게임 이름 찾기         │ P07 · P06     │
 // │ R-9  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 맞는 태그 없음       │ P01 · P09     │
@@ -21,6 +22,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../data/frienda_images.dart';
 import '../data/tag_atlas.dart';
 import '../detail_pane.dart';
 import '../level.dart';
@@ -326,6 +328,9 @@ class _TagAtlasScreenState extends State<TagAtlasScreen> {
   TagFilter _filter = TagFilter();
   bool _list = false;
 
+  /// R-5c 프렌다 그림을 마지막으로 부탁한 탄 (같은 탄은 한 번만)
+  String? _imagesFor;
+
   @override
   void dispose() {
     _ctrl.dispose();
@@ -385,7 +390,11 @@ class _TagAtlasScreenState extends State<TagAtlasScreen> {
               onRetry: () => setState(() => _future = TagAtlas.book(widget.game, _region)),
             );
           }
-          return _body(snap.data!, owned);
+          // R-5c 프렌다 그림이 도착하면 칸을 다시 그린다
+          return ListenableBuilder(
+            listenable: FriendaImages.instance,
+            builder: (context, _) => _body(snap.data!, owned),
+          );
         },
       ),
     );
@@ -393,7 +402,13 @@ class _TagAtlasScreenState extends State<TagAtlasScreen> {
 
   Widget _body(TagBook book, Set<String> owned) {
     final setId = _setOf(book);
-    final inSet = book.inSet(setId);
+    final images = FriendaImages.instance;
+    final raw = book.inSet(setId);
+    if (book.game == TagGame.frienda && _imagesFor != (setId ?? '')) {
+      _imagesFor = setId ?? '';
+      images.ensureFor(raw); // STATE: 이 탄의 공식 페이지 → 그림 (기기 캐시 7일)
+    }
+    final inSet = [for (final c in raw) images.apply(c)];
     final cards = [
       for (final c in inSet)
         if (c.matches(_query) && _filter.hit(c, owned.contains(c.id))) c,
@@ -868,7 +883,7 @@ class _TagSearchSectionState extends State<TagSearchSection> {
                         ],
                       ),
                     ),
-                    for (final c in shown)
+                    for (final c in shown.map(FriendaImages.instance.apply))
                       () {
                         final b = bookOf(c);
                         final have = owned.contains(c.id);

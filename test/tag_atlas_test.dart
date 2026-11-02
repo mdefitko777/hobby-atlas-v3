@@ -5,9 +5,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hobby_atlas/data/blob_store.dart';
+import 'package:hobby_atlas/data/frienda_images.dart';
 import 'package:hobby_atlas/data/tag_atlas.dart';
 import 'package:hobby_atlas/data/user_store.dart';
 import 'package:hobby_atlas/detail_pane.dart';
+import 'package:hobby_atlas/logic/frienda_page.dart';
 import 'package:hobby_atlas/marks.dart';
 import 'package:hobby_atlas/screens/b_search_screen.dart';
 import 'package:hobby_atlas/screens/r_mezastar_screen.dart';
@@ -34,6 +36,12 @@ Object? _noImages(Object? v) => switch (v) {
   final List<Object?> l => [for (final x in l) _noImages(x)],
   _ => v,
 };
+
+/// 공식 페이지 모양만 흉내 낸 짧은 HTML (실제 페이지는 저장소에 넣지 않는다)
+String _friendaHtml(String section, List<(String no, String file)> items) =>
+    '<html><body><section class="x" id="$section"><h3>トレジャー</h3><ul>'
+    '${items.map((i) => '<li class="grid__item is-vertical"><a href="#" data-img="img/${i.$2}.webp"><img src="img/${i.$2}_thumb.webp" alt=""></a><p>${i.$1}</p><p>이름</p></li>').join()}'
+    '</ul></section></body></html>';
 
 Future<void> _pump(WidgetTester tester, Widget home, UserStore store) async {
   tester.view.physicalSize = const Size(390, 844);
@@ -195,8 +203,30 @@ void main() {
     });
   });
 
+  group('프렌다 그림 (기기에서 공식 페이지 읽기)', () {
+    test('탄 페이지: 인쇄 번호 → id (전각 · ★ → S) · 원더 · 스페셜: 그림 이름 → id', () {
+      final set = friendaPageImages(
+        _friendaHtml('friendapick', [('1-1-001', '1-1-001_kira'), ('１-１-００２★', '1-1-002s'), ('なし', 'x')]),
+        Uri.parse('https://pokemonfrienda.com/new/1.html'),
+      );
+      expect(set.keys, ['frienda:1-1-001', 'frienda:1-1-002S']);
+      expect(set['frienda:1-1-001']!.full, 'https://pokemonfrienda.com/new/img/1-1-001_kira.webp');
+      expect(set['frienda:1-1-001']!.thumb, 'https://pokemonfrienda.com/new/img/1-1-001_kira_thumb.webp');
+      final special = friendaPageImages(
+        _friendaHtml('specialfriendapick', [('P', 'p53-ab12'), ('W', '3-2-W01')]),
+        Uri.parse('https://pokemonfrienda.com/new/special/'),
+      );
+      expect(special.keys, ['frienda:P-053', 'frienda:3-2-W01']);
+      expect(friendaPageImages('<html></html>', Uri.parse('https://pokemonfrienda.com/')), isEmpty);
+    });
+  });
+
   group('화면', () {
-    setUp(() => TagAtlas.source = (file) async => _noImages(_files[file]));
+    setUp(() {
+      TagAtlas.source = (file) async => _noImages(_files[file]);
+      FriendaImages.instance.debugReset();
+      FriendaImages.fetch = (_) async => null; // 기본: 인터넷 없음 → 공식 아트워크
+    });
 
     testWidgets('도감: 찾기가 칸을 거르고 · 칸을 누르면 가짐', (tester) async {
       final store = UserStore.memory();
@@ -247,6 +277,25 @@ void main() {
       await _settle(tester);
       expect(find.text('2 / 2'), findsOneWidget);
       expect(store.tagOwned, isEmpty); // 보기만, 가짐은 그대로
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('프렌다: 탄을 열면 그 탄의 공식 페이지 한 장만 읽어 칸 · 크게 보기에 그림', (tester) async {
+      final asked = <Uri>[];
+      FriendaImages.fetch = (page) async {
+        asked.add(page);
+        return _friendaHtml('friendapick', [('3-2-001', '3-2-001'), ('3-2-002', '3-2-002')]);
+      };
+      await _pump(tester, const TagAtlasScreen(game: TagGame.frienda), UserStore.memory());
+      expect(asked, [Uri.parse('https://pokemonfrienda.com/new/xt2.html')]); // 엑스트레저 2탄만, #friendapick 없이
+      final cell = tester.widget<TagCell>(find.byType(TagCell).first);
+      expect(cell.card.image, 'https://pokemonfrienda.com/new/img/${cell.card.number}_thumb.webp');
+      expect(cell.card.large, ['https://pokemonfrienda.com/new/img/${cell.card.number}.webp']);
+      expect(FriendaImages.instance.of('frienda:1-1-001'), isNull); // 다른 탄은 열 때
+      // 같은 탄을 다시 그려도 다시 받지 않는다 (7일)
+      await tester.tap(find.byTooltip('목록으로 보기'));
+      await _settle(tester);
+      expect(asked, hasLength(1));
       expect(tester.takeException(), isNull);
     });
 

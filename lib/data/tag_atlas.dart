@@ -141,6 +141,27 @@ class TagCard {
   /// 칸 위 짧은 표시: ★6 · 프로모
   String get badge => grade != null ? '★$grade' : rarityLabel;
 
+  /// 그림만 바꾼 카드 (프렌다: 기기에서 받은 공식 그림 — lib/data/frienda_images.dart)
+  TagCard withImages({required String image, required List<String> large}) => TagCard(
+    id: id,
+    tagId: tagId,
+    game: game,
+    region: region,
+    number: number,
+    name: name,
+    setIds: setIds,
+    local: local,
+    searchText: searchText,
+    rarity: rarity,
+    grade: grade,
+    types: types,
+    image: image,
+    large: large,
+    url: url,
+    dex: dex,
+    variant: variant,
+  );
+
   bool matches(String query) {
     final q = normalizeQuery(query);
     return q.isEmpty || searchText.contains(q);
@@ -362,7 +383,7 @@ TagBook parseFrienda(Object? json) {
     final kind = jStr(p['kind']);
     final rarity = jStr(p['rarity']).isNotEmpty ? jStr(p['rarity']) : kind;
     // 데이터엔 그림이 없다 — 공식 사이트 약관이 그림 직링크를 삼가 달라고 해서 Gunpula 가 넣지 않는다
-    // (https://pokemonfrienda.com/policy/). 칸은 포켓몬 공식 아트워크, 시트의 "공식 페이지" 로 사이트에서 본다
+    // (https://pokemonfrienda.com/policy/). 앱이 이 기기에서 공식 페이지를 읽어 입힌다 (lib/data/frienda_images.dart), 그 전엔 포켓몬 공식 아트워크
     final image = [
       p['thumb'],
       p['img_thumb'],
