@@ -26,6 +26,7 @@ import '../notifications/notify_store.dart';
 import '../theme.dart';
 import '../update/update_ui.dart';
 import '../widgets.dart';
+import 'notify_condition_sheet.dart';
 import 'p_sign_in_screen.dart';
 
 void openSettings(BuildContext context) {
@@ -221,6 +222,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // K-5 어떤 새 상품이 나오면 알릴지 (켠 것만)
           chips('이런 새 상품이 나오면 알림', notifyInterestRules),
           chips('이 채널 새 상품은 전부 알림', notifyWorldRules),
+          // 내가 만든 조건: 채널 · 작품(캐릭터) · 종류
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 4, 16, 2),
+            child: Text('골라서 알림 (채널 · 작품 · 종류)', style: TextStyle(fontSize: Gp.t12, color: Gp.muted)),
+          ),
+          for (final x in c.conditions)
+            ListTile(
+              dense: true,
+              leading: const Icon(Icons.notifications_active_outlined, size: 20),
+              title: Text(conditionLabel(x)),
+              trailing: IconButton(
+                tooltip: '지우기',
+                icon: const Icon(Icons.close, size: 18, color: Gp.faint),
+                onPressed: () => _n.removeCondition(x.id), // STATE: 조건 지우기 (저장)
+              ),
+            ),
+          ListTile(
+            dense: true,
+            leading: const Icon(Icons.add, size: 20, color: Gp.accent),
+            title: const Text('조건 추가', style: TextStyle(color: Gp.accent)),
+            onTap: () async {
+              final x = await pickNotifyCondition(context);
+              if (x != null) _n.addCondition(x); // STATE: 조건 추가 (저장)
+            },
+          ),
           ListTile(
             // K-6
             leading: const Icon(Icons.history),

@@ -218,7 +218,9 @@ bool conditionMatches(NotifyCondition x, FeedItem it) {
   if (x.franchise != it.franchise) return false;
   if (x.scope.startsWith('series:') && it.seriesKey != x.scope.substring(7)) return false;
   if (x.scope.startsWith('group:') && !it.groups.contains(x.scope.substring(6))) return false;
-  if (x.line.isNotEmpty && lineLabel(it.gradeCode, '', it.kitId) != x.line) return false;
+  // 피드엔 subline 이 없어 figma 는 액션 피규어 라인 전체로 본다
+  final line = lineLabel(it.gradeCode, '', it.kitId);
+  if (x.line.isNotEmpty && line != x.line && !(x.line == 'figma' && it.gradeCode.endsWith('_ACTION'))) return false;
   return true;
 }
 

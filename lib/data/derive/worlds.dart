@@ -3,6 +3,7 @@ part of '../derive.dart';
 
 Future<List<World>> deriveWorlds(String channelId) async {
   await _cat.ensureLoaded();
+  final atlas = jMap(jMap(await _cat.aux('atlas-groups.json'))['franchises']);
   if (channelId == 'beyblade') {
     final tops = await deriveBbxTops();
     final lines = <String, List<BbxTop>>{};
@@ -20,9 +21,10 @@ Future<List<World>> deriveWorlds(String channelId) async {
           total: e.value.length,
           owned: e.value.where((t) => t.owned > 0).length,
         ),
+      // 블레이더 묶음 (그 캐릭터가 쓰는 블레이드가 든 상품 — Gunpula atlas franchises.beyblade)
+      ..._atlasWorlds('beyblade', atlas),
     ];
   }
-  final atlas = jMap(jMap(await _cat.aux('atlas-groups.json'))['franchises']);
   if (channelId == 'gundam') {
     // 시대 하나 = 묶음 하나 (기체가 여러 작품에 나와도 한 번만 센다)
     final a = await _atlas();
@@ -43,6 +45,10 @@ Future<List<World>> deriveWorlds(String channelId) async {
           }(),
     ];
   }
+  return _atlasWorlds(channelId, atlas);
+}
+
+List<World> _atlasWorlds(String channelId, Map<String, Object?> atlas) {
   return [
     for (final grp in jList(atlas[channelId]))
       () {

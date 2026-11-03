@@ -226,6 +226,18 @@ class NotifyStore extends ChangeNotifier {
     _configChanged();
   }
 
+  /// 내가 만든 알림 조건 — 같은 조건은 한 번만
+  void addCondition(NotifyCondition x) {
+    if (config.conditions.any((y) => y.id == x.id)) return;
+    config.conditions.add(x);
+    _configChanged();
+  }
+
+  void removeCondition(String id) {
+    config.conditions.removeWhere((x) => x.id == id);
+    _configChanged();
+  }
+
   // ── 공식 예고 알림 받기 ──
   bool isFollowing(String annId) => config.followed.containsKey(annId);
 

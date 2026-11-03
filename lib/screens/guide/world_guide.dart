@@ -5,6 +5,7 @@ import '../../api.dart';
 import '../../channels.dart';
 import '../../detail_pane.dart';
 import '../../marks.dart';
+import '../../logic/category_browse.dart' show worldSections;
 import '../../models.dart';
 import '../../theme.dart';
 import '../../widgets.dart';
@@ -76,26 +77,33 @@ class _WorldGuideState extends State<WorldGuide> {
               const SectionHeader('태그', padding: EdgeInsets.fromLTRB(16, 10, 12, 10)),
               const TagGameCards(padding: EdgeInsets.symmetric(horizontal: Gp.gutter)), // G-7b → R 태그 도감
             ],
-            SectionHeader(
-              switch (widget.channel) {
-                'pokemon' => '세대',
-                'fate' => '작품',
-                'madoka' => '캐릭터',
-                _ => '게임 세대',
-              },
-              padding: const EdgeInsets.fromLTRB(16, 14, 12, 10),
-            ),
-            CategoryGrid(
-              children: [
-                for (final w in worlds)
-                  CategoryTile(
-                    // G-7 P06 그림 + 이름만
-                    image: w.image,
-                    name: w.label,
-                    onTap: () => openPage(context, _WorldKitsPage(world: w, loaders: widget.loaders)), // G-7a
-                  ),
-              ],
-            ),
+            // 베이는 라인(BX · UX · CX) · 블레이더 두 묶음, 그 밖은 한 묶음
+            for (final (title, group) in widget.channel == 'beyblade'
+                ? worldSections('beyblade', worlds, (w) => w.id)
+                : [
+                    (
+                      switch (widget.channel) {
+                        'pokemon' => '세대',
+                        'fate' => '작품',
+                        'madoka' => '캐릭터',
+                        _ => '게임 세대',
+                      },
+                      worlds,
+                    ),
+                  ]) ...[
+              SectionHeader(title, padding: const EdgeInsets.fromLTRB(16, 14, 12, 10)),
+              CategoryGrid(
+                children: [
+                  for (final w in group)
+                    CategoryTile(
+                      // G-7 P06 그림 + 이름만
+                      image: w.image,
+                      name: w.label,
+                      onTap: () => openPage(context, _WorldKitsPage(world: w, loaders: widget.loaders)), // G-7a
+                    ),
+                ],
+              ),
+            ],
           ],
         );
       },
