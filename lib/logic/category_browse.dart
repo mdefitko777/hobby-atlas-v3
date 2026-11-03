@@ -286,7 +286,7 @@ String worldSectionOf(String channel, String worldId) {
     'pokemon' => RegExp(r'^gen\d+$').hasMatch(id) ? '본편 세대' : '공통 굿즈',
     'fate' => _fateSection(id),
     'armored_core' => '시리즈',
-    'beyblade' => RegExp(r'^[a-z]x$').hasMatch(id) ? '라인' : '블레이더',
+    'beyblade' => RegExp(r'^[a-z]{1,2}x[a-z]?$').hasMatch(id) ? '라인' : '블레이더', // bx · ux · cx · bxa
     'madoka' => '캐릭터',
     _ => '세대',
   };
@@ -305,7 +305,7 @@ List<(String, List<T>)> worldSections<T>(String channel, Iterable<T> items, Stri
 }
 
 /// 베이 라인 묶음(World id 'beyblade-bx')인가 (블레이더 묶음이 아니라)
-bool isBeyLineWorld(String worldId) => RegExp(r'^beyblade-[a-z]x$').hasMatch(worldId);
+bool isBeyLineWorld(String worldId) => RegExp(r'^beyblade-[a-z]{1,2}x[a-z]?$').hasMatch(worldId);
 
 /// 베이 세대 묶음(World id 'beyblade-bx')의 상품 = 라인이 같은 상품 (World.kitIds 가 비어 있을 때)
 bool beyInWorld(Kit k, String worldId) => worldId == 'beyblade-${k.line.toLowerCase()}';

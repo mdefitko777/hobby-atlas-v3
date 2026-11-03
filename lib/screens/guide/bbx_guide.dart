@@ -1,7 +1,9 @@
-// G-6 베이블레이드 X 도감 — 베이 칸 + n/3 · 부품 시트 · 🔧 조합 만들기(T)
+// G-6 베이블레이드 X 도감 — 블레이더(캐릭터별 베이) · 베이 칸 + n/3 · 부품 시트 · 🔧 조합 만들기(T)
 import 'package:flutter/material.dart';
 
 import '../../api.dart';
+import '../../detail_pane.dart';
+import '../../logic/category_browse.dart' show isBeyLineWorld;
 import '../../level.dart';
 import '../../marks.dart';
 import '../../models.dart';
@@ -22,6 +24,15 @@ class BbxGuide extends StatefulWidget {
 
 class _BbxGuideState extends State<BbxGuide> {
   late Future<List<BbxTop>> _future = widget.loaders.bbxTops(); // STATE: GET /bbxTops
+
+  /// 블레이더 묶음 (그 캐릭터 블레이드가 든 상품) — 베이 세대 묶음 중 라인(BX · UX · CX)이 아닌 것
+  late final Future<List<World>> _bladers = widget.loaders
+      .worlds('beyblade')
+      .then((ws) => [
+            for (final w in ws)
+              if (!isBeyLineWorld(w.id) && w.kitIds.isNotEmpty) w,
+          ])
+      .catchError((Object _) => <World>[]);
 
   @override
   Widget build(BuildContext context) {
@@ -55,6 +66,40 @@ class _BbxGuideState extends State<BbxGuide> {
           builder: (context, box) => ListView(
             padding: EdgeInsets.only(bottom: navClearance(context)),
             children: [
+              // 찾는 중이 아니면 맨 위에 블레이더 (캐릭터 그림 + 이름 → 그 캐릭터 베이)
+              if (!widget.find.active)
+                FutureBuilder<List<World>>(
+                  future: _bladers,
+                  builder: (context, b) {
+                    final bladers = b.data ?? const <World>[];
+                    if (bladers.isEmpty) return const SizedBox.shrink();
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const SectionHeader('블레이더', padding: EdgeInsets.fromLTRB(16, 14, 12, 10)),
+                        CategoryGrid(
+                          children: [
+                            for (final w in bladers)
+                              CategoryTile(
+                                image: w.image,
+                                name: w.label,
+                                onTap: () => openPage(
+                                  context,
+                                  _BladerTops(
+                                    blader: w,
+                                    tops: [
+                                      for (final t in snap.data!)
+                                        if (t.kitIds.any(w.kitIds.contains)) t,
+                                    ],
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
+                    );
+                  },
+                ),
               SectionHeader(
                 '베이',
                 trailing: Row(
@@ -100,6 +145,43 @@ class _BbxGuideState extends State<BbxGuide> {
           ),
         );
       },
+    );
+  }
+}
+
+/// 블레이더 한 명의 베이 (도감 칸과 같은 모양 · 누르면 부품 시트)
+class _BladerTops extends StatelessWidget {
+  const _BladerTops({required this.blader, required this.tops});
+  final World blader;
+  final List<BbxTop> tops;
+
+  @override
+  Widget build(BuildContext context) {
+    final m = Marks.of(context);
+    bool done(BbxTop t) => t.total > 0 && t.owned >= t.total;
+    bool liked(BbxTop t) => t.kitIds.any((id) => m.store.statusOf(id) == CollectStatus.wanted);
+    return Scaffold(
+      appBar: AppBar(title: Text(blader.label)),
+      body: LayoutBuilder(
+        builder: (context, box) => GridView.count(
+          padding: EdgeInsets.fromLTRB(Gp.gutter, 10, Gp.gutter, navClearance(context)),
+          crossAxisCount: guideCols(box.maxWidth, 110),
+          mainAxisSpacing: 10,
+          crossAxisSpacing: 10,
+          childAspectRatio: 0.7,
+          children: [
+            for (final t in tops)
+              GuideCell(
+                image: t.image,
+                name: t.name,
+                tier: done(t) ? CellTier.owned : (liked(t) ? CellTier.liked : CellTier.none),
+                liked: liked(t),
+                badge: '${t.owned}/${t.total}',
+                onTap: () => showGpSheet<void>(context, builder: (_) => _TopSheet(top: t)),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
