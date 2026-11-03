@@ -13,7 +13,7 @@
 //   · 좋아요 · 구매함 상품의 재판매(change_reasons 'restock', 규칙 '재판매') — "재판매 · 「이름」 YYYY.MM"
 //   · 예약한 상품의 도착 달 · 도착 날 (기기에 적은 예약, 규칙 '예약 도착')
 // 이 파일은 Flutter 위젯을 쓰지 않는다 (백그라운드 isolate · 단위 테스트).
-import '../data/gunpula.dart' show pickName;
+import '../data/gunpula.dart' show lineLabel, pickName;
 import 'notify_models.dart';
 import '../json_util.dart';
 
@@ -36,6 +36,8 @@ class FeedItem {
     this.restockDate = '',
     this.restockKind = '',
     this.restockQuiet = false,
+    this.gradeCode = '',
+    this.groups = const [],
   });
 
   final String kitId;
@@ -66,6 +68,12 @@ class FeedItem {
 
   bool get isRestock => reasons.contains('restock') && !restockQuiet;
 
+  /// Gunpula 등급 코드 (HG · NENDOROID …) — 알림 조건의 종류
+  final String gradeCode;
+
+  /// 이 상품이 든 atlas 묶음 id (마도카 캐릭터 · Fate 작품 · 포켓몬 세대 …) — 알림 조건의 작품 · 캐릭터
+  final List<String> groups;
+
   static FeedItem? fromJson(Object? json, String changeType) {
     final j = jMap(json);
     final id = jStr(j['kit_id']);
@@ -88,6 +96,8 @@ class FeedItem {
       restockDate: _ymd(jStr(restock['date']).isEmpty ? j['restock_date'] : restock['date']),
       restockKind: jStr(restock['kind']).isEmpty ? jStr(j['restock_kind']) : jStr(restock['kind']),
       restockQuiet: restock['quiet'] == true,
+      gradeCode: jStr(j['grade_code']),
+      groups: jList(j['groups']).whereType<String>().toList(),
     );
   }
 
@@ -203,10 +213,24 @@ List<FeedEntry> combineFeeds(List<FeedEntry> a, List<FeedEntry> b) {
   return byDate.values.toList()..sort((x, y) => y.date.compareTo(x.date));
 }
 
-/// 이 상품이 걸린 규칙 (좋아요 제외). 내 채널 소식만이면 내 채널 밖은 빈 집합.
+/// 내가 만든 조건에 맞는가 — 채널 · 작품(캐릭터) · 종류, 빈 칸은 전부
+bool conditionMatches(NotifyCondition x, FeedItem it) {
+  if (x.franchise != it.franchise) return false;
+  if (x.scope.startsWith('series:') && it.seriesKey != x.scope.substring(7)) return false;
+  if (x.scope.startsWith('group:') && !it.groups.contains(x.scope.substring(6))) return false;
+  if (x.line.isNotEmpty && lineLabel(it.gradeCode, '', it.kitId) != x.line) return false;
+  return true;
+}
+
+/// 이 상품이 걸린 규칙 (좋아요 제외). 내 채널 소식만이면 내 채널 밖은 내가 만든 조건만.
 Set<String> ruleHits(FeedItem it, NotifyConfig c) {
-  if (c.onlyMine && !c.channels.contains(it.franchise)) return const {};
+  final mine = {
+    for (final x in c.conditions)
+      if (conditionMatches(x, it)) 'cond:${x.id}',
+  };
+  if (c.onlyMine && !c.channels.contains(it.franchise)) return mine;
   return {
+    ...mine,
     if (c.rule('premium_bandai') && it.isPb) 'premium_bandai',
     if (c.rule('seed_00') && it.isSeed00) 'seed_00',
     if (c.rule('bbx') && it.isBbx) 'bbx',
@@ -573,7 +597,7 @@ class SystemAlert {
     required this.payload,
   });
 
-  /// 같은 id 면 앞의 알림을 바꿔 쓴다 (새 상품 요약은 늘 하나)
+  /// 같은 id 면 앞의 알림을 바꿔 쓴다 — 상품마다 · 요약마다 다른 id 라 앞 알림을 지우지 않는다
   final int id;
 
   /// catalog · wanted · pb · ann
@@ -585,7 +609,10 @@ class SystemAlert {
   final String payload;
 }
 
-/// 새로 들어온 줄 → 휴대폰 알림. 새 상품은 요약 하나, 좋아요 · PB 는 3개까지 하나씩(넘으면 요약).
+/// 새 상품 · 변경을 하나씩 보내는 최대 개수 (넘으면 요약 하나)
+const catalogAlertsEach = 5;
+
+/// 새로 들어온 줄 → 휴대폰 알림. 새 상품은 5개까지 하나씩(넘으면 요약), 좋아요 · PB 는 3개까지 하나씩(넘으면 요약).
 List<SystemAlert> buildAlerts(Iterable<NoticeRecord> fresh) {
   final live = [
     for (final r in fresh)
@@ -593,7 +620,19 @@ List<SystemAlert> buildAlerts(Iterable<NoticeRecord> fresh) {
   ];
   final out = <SystemAlert>[];
   final cat = live.where((r) => r.channel == 'catalog').toList();
-  if (cat.isNotEmpty) {
+  if (cat.isNotEmpty && cat.length <= catalogAlertsEach) {
+    for (final r in cat) {
+      out.add(
+        SystemAlert(
+          id: stableId('catalog:${r.id}'),
+          channel: 'catalog',
+          title: r.kind == 'added' ? '새 상품 · ${r.title}' : r.title,
+          body: r.body,
+          payload: 'kit:${r.kitId}',
+        ),
+      );
+    }
+  } else if (cat.isNotEmpty) {
     // 제목: 옛 앱 maybeShowUpdateNotification 과 같은 순서
     final title = cat.any((r) => r.watched)
         ? 'SEED / 00 업데이트'
@@ -606,7 +645,8 @@ List<SystemAlert> buildAlerts(Iterable<NoticeRecord> fresh) {
     final when = dates.length == 1 ? _md(dates.first) : '${_md(dates.first)}–${_md(dates.last)}';
     out.add(
       SystemAlert(
-        id: stableId('catalog'),
+        // 요약마다 다른 id (같은 id 면 아직 안 본 앞 요약을 덮어써 버린다)
+        id: stableId('catalog:${cat.first.id}:${cat.length}'),
         channel: 'catalog',
         title: title,
         body: '$when · 신규 $added · 변경 $changed · ${_names(cat)}',

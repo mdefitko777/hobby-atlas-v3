@@ -172,6 +172,45 @@ void main() {
       expect(ruleHits(item('2026-10-23', 'pokemon-kr-137504096'), c), {'pokemon'});
     });
 
+    test('내가 만든 조건 — 채널 · 작품(캐릭터) · 종류, 내 채널 밖이어도', () {
+      FeedItem it(Map<String, Object?> j) => FeedItem.fromJson(j, 'added')!;
+      final hg = it({'kit_id': 'a', 'franchise': 'gundam', 'series_key': 'seed', 'grade_code': 'HG'});
+      final mg = it({'kit_id': 'b', 'franchise': 'gundam', 'series_key': 'seed', 'grade_code': 'MG'});
+      final homura = it({
+        'kit_id': 'c',
+        'franchise': 'madoka',
+        'grade_code': 'NENDOROID',
+        'groups': ['homura'],
+      });
+      final c = defaults(); // 내 채널 = 건담 · 베이 · 포켓몬 (마도카 아님)
+      c.rules['seed_00'] = false;
+      c.conditions
+        ..add(const NotifyCondition(franchise: 'gundam', scope: 'series:seed', scopeLabel: 'SEED', line: 'HG'))
+        ..add(const NotifyCondition(franchise: 'madoka', scope: 'group:homura', scopeLabel: '호무라'));
+      expect(ruleHits(hg, c), {'cond:gundam|series:seed|HG'});
+      expect(ruleHits(mg, c), isEmpty); // 종류가 다르다
+      expect(ruleHits(homura, c), {'cond:madoka|group:homura|'}); // 내 채널 밖이어도
+      expect(ruleHits(it({'kit_id': 'd', 'franchise': 'madoka', 'groups': ['mami']}), c), isEmpty);
+      // 저장 · 읽기 한 바퀴
+      final back = NotifyConfig.fromJson(c.toJson());
+      expect(back.conditions.map((x) => x.id), ['gundam|series:seed|HG', 'madoka|group:homura|']);
+      expect(back.conditions.last.scopeLabel, '호무라');
+    });
+
+    test('새 상품이 5개를 넘으면 요약 하나 — 요약마다 id 가 달라 앞 요약을 덮지 않는다', () {
+      final at = DateTime.utc(2026, 11, 3);
+      List<NoticeRecord> batch(String p, int n) => [
+        for (var i = 0; i < n; i++)
+          NoticeRecord(id: '$p$i', kind: 'added', kitId: '$p$i', title: '$p$i', body: '', at: at, date: '2026-11-03'),
+      ];
+      final a = buildAlerts(batch('a', 6));
+      final b = buildAlerts(batch('b', 7));
+      expect(a, hasLength(1));
+      expect(a.single.payload, 'inbox');
+      expect(a.single.id, isNot(b.single.id));
+      expect(buildAlerts(batch('c', 5)), hasLength(5));
+    });
+
     test('좋아요한 상품은 채널 · 규칙과 상관없이 (가격 변경)', () {
       final fatePrice = item('2026-10-21', 'hobbysearch-fate-11336822'); // Fate, 내 채널 밖, 규칙 없음
       final c = defaults(wanted: {fatePrice.kitId});
@@ -215,7 +254,7 @@ void main() {
       expect(s.isRead(s.inbox.first.id), isTrue);
     });
 
-    test('새 피드 날짜 → 알림 하나 (SEED/00 제목) · 같은 날짜로 다시 돌면 또 울리지 않는다', () {
+    test('새 피드 날짜 → 상품마다 알림 하나 · 같은 날짜로 다시 돌면 또 울리지 않는다', () {
       final c = defaults();
       var state = firstRun(c);
       final next = parseFeed(withEntry('2026-10-24'));
@@ -226,11 +265,11 @@ void main() {
       ]);
       expect(plan.records.every((r) => !r.seen), isTrue);
       final alerts = buildAlerts(plan.records);
-      expect(alerts, hasLength(1));
-      expect(alerts.single.channel, 'catalog');
-      expect(alerts.single.title, 'SEED / 00 업데이트');
-      expect(alerts.single.body, startsWith('10.24 · 신규 0 · 변경 2 · 「MG 1 / 100 건담아스트레이 느와르」'));
-      expect(alerts.single.payload, 'inbox'); // 둘 이상이면 알림 화면
+      expect(alerts, hasLength(2)); // 5개까지는 하나씩
+      expect(alerts.every((a) => a.channel == 'catalog'), isTrue);
+      expect(alerts.first.title, 'MG 1 / 100 건담아스트레이 느와르');
+      expect(alerts.first.payload, 'kit:mg-mg-1-100-4543112863584000');
+      expect(alerts.map((a) => a.id).toSet(), hasLength(2)); // 서로 덮어쓰지 않는다
       state = plan.applyTo(state);
       expect(state.lastSeen, '2026-10-24');
 
@@ -248,8 +287,8 @@ void main() {
       final plan = planCheck(config: c, state: state, entries: evening, manifestSig: 'b', now: now);
       expect(plan.records.map((r) => r.kitId), ['mgsd-mgsd-4573102743039000']);
       final alert = buildAlerts(plan.records).single;
-      expect(alert.title, '관심 항목 업데이트'); // PB
-      expect(alert.payload, 'kit:mgsd-mgsd-4573102743039000'); // 하나면 그 상품으로
+      expect(alert.title, 'MGSD 크샤트리아');
+      expect(alert.payload, 'kit:mgsd-mgsd-4573102743039000');
     });
 
     test('이미 본 날짜는 규칙을 켜거나 좋아요를 눌러도 다시 울리지 않는다', () {

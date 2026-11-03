@@ -57,6 +57,36 @@ const notifyRuleLabels = <String, String>{
   'madoka': '마도카 마기카 전체',
 };
 
+/// 내가 만든 알림 조건 — 채널 · 작품(또는 캐릭터 · 세대) · 종류. 빈 칸 = 전부.
+///   scope: `series:<series key>` (건담 작품) · `group:<atlas 묶음 id>` (마도카 캐릭터 · Fate 작품 · 포켓몬 세대 · 베이 블레이더)
+///   line : 앱의 라인 이름 (HG · 넨도로이드 … lib/data/gunpula.dart lineLabel)
+class NotifyCondition {
+  const NotifyCondition({required this.franchise, this.scope = '', this.scopeLabel = '', this.line = ''});
+
+  final String franchise;
+  final String scope;
+
+  /// 보이는 이름 (SEED · 호무라) — 고를 때 적어 둔다
+  final String scopeLabel;
+  final String line;
+
+  String get id => '$franchise|$scope|$line';
+
+  Map<String, Object?> toJson() => {
+    'franchise': franchise,
+    if (scope.isNotEmpty) 'scope': scope,
+    if (scopeLabel.isNotEmpty) 'scope_label': scopeLabel,
+    if (line.isNotEmpty) 'line': line,
+  };
+
+  static NotifyCondition? fromJson(Object? json) {
+    final j = jMap(json);
+    final f = jStr(j['franchise']);
+    if (f.isEmpty) return null;
+    return NotifyCondition(franchise: f, scope: jStr(j['scope']), scopeLabel: jStr(j['scope_label']), line: jStr(j['line']));
+  }
+}
+
 /// 좋아요한 PB 상품의 예약 기간 (kits 의 premium_bandai.order_opens_at · order_closes_at, Wayback 에서 읽은 값)
 class PbWindow {
   const PbWindow({required this.id, required this.name, this.franchise = '', this.opens = '', this.closes = ''});
@@ -168,7 +198,9 @@ class NotifyConfig {
     List<PbWindow>? pb,
     List<ReleaseDay>? releases,
     Map<String, FollowedAnn>? followed,
+    List<NotifyCondition>? conditions,
   }) : rules = {...notifyRuleDefaults, ...?rules},
+       conditions = conditions ?? [],
        channels = channels ?? const ['gundam', 'beyblade', 'pokemon'],
        wanted = wanted ?? const {},
        owned = owned ?? const {},
@@ -203,6 +235,9 @@ class NotifyConfig {
   /// 알림 받는 공식 예고 (예고 id → 누를 때의 단계). 단계가 넘어가면 알림 (채널 · 규칙과 상관없이)
   final Map<String, FollowedAnn> followed;
 
+  /// 내가 만든 알림 조건 (내 채널 소식만이어도 채널과 상관없이 본다)
+  final List<NotifyCondition> conditions;
+
   bool rule(String key) => rules[key] ?? notifyRuleDefaults[key] ?? false;
 
   Map<String, Object?> toJson() => {
@@ -218,6 +253,7 @@ class NotifyConfig {
     if (preorders.isNotEmpty) 'preorders': [for (final p in preorders) p.toJson()],
     if (releases.isNotEmpty) 'releases': [for (final r in releases) r.toJson()],
     if (followed.isNotEmpty) 'followed': {for (final e in followed.entries) e.key: e.value.toJson()},
+    if (conditions.isNotEmpty) 'conditions': [for (final x in conditions) x.toJson()],
   };
 
   static NotifyConfig fromJson(Object? json) {
@@ -237,6 +273,7 @@ class NotifyConfig {
       pb: jList(j['pb']).map(PbWindow.fromJson).nonNulls.toList(),
       releases: jList(j['releases']).map(ReleaseDay.fromJson).nonNulls.toList(),
       followed: {for (final e in jMap(j['followed']).entries) e.key: ?FollowedAnn.fromJson(e.value)},
+      conditions: jList(j['conditions']).map(NotifyCondition.fromJson).nonNulls.toList(),
     );
   }
 }
