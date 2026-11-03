@@ -106,13 +106,26 @@ class Catalog extends ChangeNotifier {
     if (meta == null || slim == null) return;
     try {
       // 예전 규칙으로 정리한 캐시 (예: 굿즈가 전부 가샤폰이던 때) → 쓰지 않고 새로 받는다
-      if ((jsonDecode(meta) as Map<String, Object?>)['map_version'] != mapVersion) return;
-      manifest = (jsonDecode(meta) as Map<String, Object?>)['manifest'] as Map<String, Object?>? ?? const {};
+      final m = jsonDecode(meta) as Map<String, Object?>;
+      if (m['map_version'] != mapVersion) return;
+      // 그때 받은 채널 목록이 지금과 다르면(새 채널 — 예: 마도카) 새로 받는다. 옛 앱은 manifest 에 있는 새 채널을
+      // 건너뛰고도 manifest 를 그대로 적어 두어, 새 앱이 "같은 데이터" 로 보고 그 채널을 끝내 받지 않았다
+      if (jList(m['franchises']).join(',') != franchiseIds.join(',')) return;
+      manifest = m['manifest'] as Map<String, Object?>? ?? const {};
       _slim = await compute(_decodeSlim, slim);
       _rebuild();
     } on Object catch (e) {
       debugPrint('[catalog] 캐시를 못 읽음: $e');
     }
+  }
+
+  /// 테스트: 앱을 새로 켠 것처럼 메모리만 비운다 (기기 캐시는 그대로)
+  @visibleForTesting
+  void debugForget() {
+    _slim = [];
+    _loading = null;
+    manifest = const {};
+    _rebuild();
   }
 
   /// 테스트: 네트워크 없이 실제 모양의 데이터를 바로 넣는다
@@ -225,7 +238,12 @@ class Catalog extends ChangeNotifier {
       await BlobStore.write(_kitsKey, slimText);
       await BlobStore.write(
         _metaKey,
-        jsonEncode({'manifest': m, 'map_version': mapVersion, 'fetched_at': DateTime.now().toIso8601String()}),
+        jsonEncode({
+          'manifest': m,
+          'map_version': mapVersion,
+          'franchises': franchiseIds,
+          'fetched_at': DateTime.now().toIso8601String(),
+        }),
       );
       manifest = m;
       _slim = slim;
