@@ -77,7 +77,12 @@ class _WorldGuideState extends State<WorldGuide> {
               const TagGameCards(padding: EdgeInsets.symmetric(horizontal: Gp.gutter)), // G-7b → R 태그 도감
             ],
             SectionHeader(
-              pokemon ? '세대' : (widget.channel == 'fate' ? '작품' : '게임 세대'),
+              switch (widget.channel) {
+                'pokemon' => '세대',
+                'fate' => '작품',
+                'madoka' => '캐릭터',
+                _ => '게임 세대',
+              },
               padding: const EdgeInsets.fromLTRB(16, 14, 12, 10),
             ),
             CategoryGrid(

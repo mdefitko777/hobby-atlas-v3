@@ -189,7 +189,13 @@ class Catalog extends ChangeNotifier {
         _fileDone();
       }
       final slim = <Map<String, Object?>>[];
+      // manifest 에 없는 채널은 아직 Gunpula 에 파일이 없다 (새 채널을 앱이 먼저 알 때) — 건너뛴다
+      final listed = jMap(m['franchises']);
       for (final f in franchiseIds) {
+        if (listed.isNotEmpty && !listed.containsKey(f)) {
+          _fileDone();
+          continue;
+        }
         _step('${_label[f]} 상품 받는 중');
         final raw = await _get('data/split/kits-$f.json', count: true);
         if (raw == null) throw CatalogException('${_label[f]} 상품을 받지 못했어요.');
@@ -367,6 +373,7 @@ class Catalog extends ChangeNotifier {
     'pokemon': '포켓몬',
     'armored_core': '아머드 코어',
     'fate': 'Fate',
+    'madoka': '마도카 마기카',
   };
 
   /// 받기 — Pages 가 안 되면 raw.githubusercontent. [count] = 첫 다운로드 바이트를 센다

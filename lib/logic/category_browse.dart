@@ -114,6 +114,12 @@ const _typeSectionDefs = <String, List<_Sec>>{
     _goods,
     _media,
   ],
+  'madoka': [
+    _Sec('피규어', ['스케일', '넨도로이드', 'figma', '액션 피규어', '미니 · 트레이딩'], types: {'피규어', '액션'}),
+    _Sec('경품 · 인형', ['경품', '제일복권', '인형'], types: {'경품', '제일복권', '인형', '가샤폰', '식완'}),
+    _goods,
+    _media,
+  ],
   'armored_core': [
     _Sec('프라모델', ['V.I.', '30MM', 'SMP'], types: {'프라모델'}),
     _Sec('식완 · 가샤폰', ['식완'], types: {'식완', '가샤폰'}),
@@ -281,6 +287,7 @@ String worldSectionOf(String channel, String worldId) {
     'fate' => _fateSection(id),
     'armored_core' => '시리즈',
     'beyblade' => '라인',
+    'madoka' => '캐릭터',
     _ => '세대',
   };
 }

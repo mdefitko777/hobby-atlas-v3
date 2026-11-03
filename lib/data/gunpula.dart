@@ -16,7 +16,7 @@ const gunpulaUserAgent = 'HobbyAtlasDataBot/1.0 (+https://github.com/mdefitko777
 
 /// 매일 갱신되는 순서대로 받는 파일들 (kits.json · search-index.json 은 받지 않는다).
 /// 새 소식 피드는 여기서 받지 않는다 — 알림 확인(lib/background/catalog_check_worker.dart)이 manifest 가 바뀔 때 한 번만 받는다.
-const franchiseIds = ['gundam', 'beyblade', 'pokemon', 'armored_core', 'fate'];
+const franchiseIds = ['gundam', 'beyblade', 'pokemon', 'armored_core', 'fate', 'madoka'];
 
 /// 예전에 받던 건담 도감 파일 (gget) — 기기 캐시에서 지운다
 const retiredAuxFiles = ['gget-units.json', 'gget-kit-map.json', 'gget-series-sections.json'];
@@ -154,6 +154,11 @@ const _lineLabels = {
   'FATE_ACTION': '액션 피규어',
   'FATE_PRIZE': '경품',
   'FATE_GASHAPON': '가샤폰',
+  'MADOKA_SCALE': '스케일',
+  'MADOKA_ACTION': '액션 피규어',
+  'MADOKA_PRIZE': '경품',
+  'MADOKA_MINI': '미니 · 트레이딩',
+  'MADOKA_PLUSH': '인형',
   'ICHIBAN_KUJI': '제일복권',
   'POKE_PLUSH': '봉제인형',
   'POKE_GASHAPON': '가샤폰',
@@ -208,7 +213,7 @@ const _beyForms = {'Starter': '스타터', 'Booster': '부스터', 'Random Boost
 
 /// Gunpula 등급 코드가 상품 이름과 어긋나는 것 바로잡기 (이름이 더 정확하다 — 실제 데이터 점검 2026-11)
 ///   No Grade 안의 옵션 파츠(빌더즈 파츠 · BPHD) · 「1/144 HG …」(SEED 시절 HG) · 풀메카닉스 · 하이레조 /
-///   Fate 스케일 안의 미니 · 트레이딩 피규어 / Fate 굿즈 안의 봉제인형
+///   Fate · 마도카 스케일 안의 미니 · 트레이딩 피규어 / Fate 굿즈 안의 봉제인형
 String correctedCode(String code, String name) {
   final n = _halfWidth(name);
   switch (code) {
@@ -219,6 +224,8 @@ String correctedCode(String code, String name) {
       if (RegExp(r'(?:^|[\s/])HG\s').hasMatch(n)) return 'HG';
     case 'FATE_SCALE':
       if (_miniFigure.hasMatch(n)) return 'FATE_MINI';
+    case 'MADOKA_SCALE':
+      if (_miniFigure.hasMatch(n)) return 'MADOKA_MINI';
     case 'FATE_GOODS':
       if (n.contains('ぬいぐるみ') && !RegExp(r'バッ[グク]|ポーチ|収納').hasMatch(n)) return 'FATE_PLUSH';
   }
@@ -238,7 +245,7 @@ String lineLabel(String code, String subline, String kitId) {
     if (m != null) return m.group(1)!.toUpperCase();
     return subline.replaceFirst('BEYBLADE X ', '');
   }
-  if (code == 'FATE_ACTION' && subline == 'figma') return 'figma';
+  if ((code == 'FATE_ACTION' || code == 'MADOKA_ACTION') && subline == 'figma') return 'figma';
   return _lineLabels[code] ?? code;
 }
 
@@ -275,17 +282,17 @@ String typeLabel(String code, String category, [String name = '']) {
   switch (code) {
     case 'OPTION_PARTS':
       return '프라모델';
-    case 'POKE_PLUSH' || 'FATE_PLUSH':
+    case 'POKE_PLUSH' || 'FATE_PLUSH' || 'MADOKA_PLUSH':
       return '인형';
-    case 'FATE_MINI':
+    case 'FATE_MINI' || 'MADOKA_MINI':
       return '피규어';
     case 'ICHIBAN_KUJI' || 'POKE_KUJI':
       return '제일복권';
-    case 'FATE_PRIZE' || 'POKE_PRIZE':
+    case 'FATE_PRIZE' || 'POKE_PRIZE' || 'MADOKA_PRIZE':
       return '경품';
     case 'POKE_MONCOLLE' || 'POKE_FIGURE':
       return '피규어';
-    case 'FATE_ACTION':
+    case 'FATE_ACTION' || 'MADOKA_ACTION':
       return '액션';
   }
   return switch (category) {
@@ -321,6 +328,12 @@ const _brandBySource = {
   'pokemon_center_jp': '포켓몬센터',
   'pokemon_store_kr': '포켓몬센터',
   'aniplex_plus_fate_jp': 'Aniplex',
+  'aniplex_plus_madoka_jp': 'Aniplex',
+  'tamashii_web_madoka_jp': 'TAMASHII NATIONS',
+  'banpresto_prize_madoka_jp': 'BANPRESTO',
+  'ichiban_kuji_madoka_jp': 'BANPRESTO',
+  'kotobukiya_madoka_jp': 'KOTOBUKIYA',
+  'good_smile_madoka_en': 'Good Smile',
   'bandai_gashapon_products_jp': '반다이 가샤폰',
   'bandai_gashapon_gundam_jp': '반다이 가샤폰',
   'bandai_candy_gundam_jp': '반다이 캔디',

@@ -187,6 +187,13 @@ const sentenceConcepts = <Concept>[
   ),
   Concept('Fate', ['페이트', 'fate'], field: ConceptField.franchise, needles: ['fate'], weight: 0.5),
   Concept(
+    '마도카 마기카',
+    ['마도카', '마마마', 'madoka', 'まどか', 'まどマギ'],
+    field: ConceptField.franchise,
+    needles: ['madoka'],
+    weight: 0.5,
+  ),
+  Concept(
     '아머드 코어',
     ['아머드 코어', '아머드코어', 'armored core', 'アーマード・コア'],
     field: ConceptField.franchise,

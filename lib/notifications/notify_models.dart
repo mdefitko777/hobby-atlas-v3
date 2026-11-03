@@ -25,6 +25,7 @@ const notifyRuleDefaults = <String, bool>{
   'armored_core': false,
   'pokemon': false,
   'fate': false,
+  'madoka': false,
 };
 
 /// 관심 항목 (켜 두면 그 항목만) · 세계관 전체 (그 채널의 새 상품 전부)
@@ -38,7 +39,7 @@ const notifyInterestRules = [
   'restock',
   'preorder_arrival',
 ];
-const notifyWorldRules = ['gundam', 'armored_core', 'pokemon', 'fate'];
+const notifyWorldRules = ['gundam', 'armored_core', 'pokemon', 'fate', 'madoka'];
 
 const notifyRuleLabels = <String, String>{
   'premium_bandai': 'PB (프리미엄 반다이)',
@@ -53,6 +54,7 @@ const notifyRuleLabels = <String, String>{
   'armored_core': '아머드 코어 전체',
   'pokemon': '포켓몬 전체',
   'fate': 'Fate 전체',
+  'madoka': '마도카 마기카 전체',
 };
 
 /// 좋아요한 PB 상품의 예약 기간 (kits 의 premium_bandai.order_opens_at · order_closes_at, Wayback 에서 읽은 값)
