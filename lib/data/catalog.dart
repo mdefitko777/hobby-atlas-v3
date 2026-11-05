@@ -35,7 +35,8 @@ class Catalog extends ChangeNotifier {
   /// 6: 세부 시리즈(subline — HGUC · HGCE · ver. A.N.I.M.E. …)
   /// 7: 베이 상품 형태(subline — 스타터 · 부스터 · 랜덤 부스터 · 세트 · 런처 · 도구)
   /// 8: 이름으로 등급 코드 바로잡기(옵션 파츠 · HG · FM · Fate 미니 · 인형) · 이름 HTML 엔티티
-  static const mapVersion = 8;
+  /// 9: 레고 이름 앞에 세트 번호 · 상품 번호를 찾기 낱말에
+  static const mapVersion = 9;
 
   CatalogPhase phase = CatalogPhase.empty;
   String error = '';

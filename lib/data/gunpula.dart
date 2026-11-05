@@ -436,8 +436,11 @@ List<Map<String, Object?>> mapKitsJob(Map<String, String> msg) {
       if (pb) '프리미엄 반다이',
     }.toList();
     final pbInfo = jMap(r['premium_bandai']);
-    final name = pickName(names);
-    final nameJa = pickName(names, const ['ja', 'en', 'ko']);
+    // 레고는 세트 번호를 이름 앞에 (공식 · 수집가 표기 "75192 Millennium Falcon")
+    final number = jStr(r['number']);
+    final legoNo = jStr(r['franchise']) == 'lego' && number.isNotEmpty ? '$number ' : '';
+    final name = '$legoNo${pickName(names)}';
+    final nameJa = '$legoNo${pickName(names, const ['ja', 'en', 'ko'])}';
     final seriesLabel = pickName(labels);
     final line = lineLabel(code, subline, id);
     final goodsKind = jStr(r['goods_kind']);
@@ -453,6 +456,8 @@ List<Map<String, Object?>> mapKitsJob(Map<String, String> msg) {
       jStr(r['work_title']),
       code,
       subline,
+      // 상품 번호 · 형번 (레고 세트 번호 75192 …)으로도 찾는다
+      if (number.isNotEmpty) number,
       if (jan.isNotEmpty) jan,
       ...brands,
     }.where((s) => s.isNotEmpty).toList();
