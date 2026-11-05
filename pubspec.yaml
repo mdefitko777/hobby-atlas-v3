@@ -59,6 +59,7 @@ dependencies:
   # 공유 카드 (화면 V): 내 컬렉션 · 도감 진행 그림(PNG)을 안드로이드 공유 창으로
   share_plus: ^13.3.1
   tflite_flutter: 0.12.1
+  flutter_svg: ^2.3.2
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -86,6 +87,8 @@ flutter:
   assets:
     - assets/gp/kits/
     - assets/gp/worlds/
+    # 포켓몬 공식 도감(zukan.pokemon.co.jp)의 타입 아이콘 18종 — 태그 도감의 타입 표시
+    - assets/gp/types/
     - assets/gp/works/
     - assets/gp/units/
     - assets/gp/bbx/

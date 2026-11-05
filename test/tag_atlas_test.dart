@@ -151,6 +151,20 @@ void main() {
     });
   });
 
+  test('서포트 포켓몬 티켓 — 지금 · 이전 묶음, 한국판에만', () {
+    final root = Map<String, Object?>.from(_files[mezastarIntlFile]! as Map)
+      ..['support_tickets'] = [
+        {'id': 'mz-support:KR:a', 'region': 'KR', 'name': '창파나이트', 'image': 'https://x/a.jpg', 'status': 'current'},
+        {'id': 'mz-support:KR:b', 'region': 'KR', 'name': '라프라스', 'image': 'https://x/b.jpg', 'status': 'retired'},
+      ];
+    final kr = parseMezastar(root, _region('KR'));
+    expect(kr.set('mz-support:current')?.name, '서포트 포켓몬 티켓');
+    expect(kr.inSet('mz-support:current').map((c) => c.name), ['창파나이트']);
+    expect(kr.inSet('mz-support:retired').single.variant, '이전 탄');
+    expect(kr.inSet('mz-support:retired').single.large, ['https://x/b.jpg']);
+    expect(parseMezastar(root, _region('TW')).set('mz-support:current'), isNull);
+  });
+
   group('검색', () {
     final books = [
       for (final r in mezastarRegions) parseMezastar(_files[r.file], r),

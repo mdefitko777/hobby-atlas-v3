@@ -25,6 +25,7 @@
 // 구매함 = UserStore.tagOwned · 좋아요 = tagLiked (기기 · 계정 기기 기록, payload 밖). 키 = Gunpula atlas 의 인쇄 id · 픽 id.
 // 한 태그에 상태 하나 (상품과 같음): 구매함을 켜면 좋아요에서 빠지고, 좋아요를 켜면 구매함에서 빠진다.
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../channels.dart' show lineCovers;
@@ -231,6 +232,7 @@ class _TagFilterSheetState extends State<_TagFilterSheet> {
           _SquareChecks(
             values: types,
             label: (t) => typeLabels[t] ?? t,
+            icon: (t) => typeIcon(t, size: 16),
             selected: _draft.types,
             count: (t) => widget.cards.where((c) => c.types.contains(t)).length,
             onToggle: (t) => _toggle(_draft.types, t),
@@ -247,6 +249,30 @@ int _rank(String rarity) {
 }
 
 /// 네모 체크 칸 (글자 + 개수) — 여러 개 고름
+/// 공식 타입 아이콘 (포켓몬 공식 도감 zukan.pokemon.co.jp 의 SVG — assets/gp/types/<영어 타입>.svg)
+Widget typeIcon(String type, {double size = 18}) => SvgPicture.asset(
+  'assets/gp/types/${type.toLowerCase()}.svg',
+  width: size,
+  height: size,
+  placeholderBuilder: (_) => SizedBox.square(dimension: size),
+);
+
+/// 타입 하나 = 공식 아이콘 + 이름
+class TypeBadge extends StatelessWidget {
+  const TypeBadge(this.type, {super.key});
+  final String type;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      typeIcon(type),
+      const SizedBox(width: 4),
+      Text(typeLabels[type] ?? type, style: const TextStyle(fontSize: Gp.t12, color: Gp.ink)),
+    ],
+  );
+}
+
 class _SquareChecks extends StatelessWidget {
   const _SquareChecks({
     required this.values,
@@ -254,9 +280,13 @@ class _SquareChecks extends StatelessWidget {
     required this.selected,
     required this.count,
     required this.onToggle,
+    this.icon,
   });
   final List<String> values;
   final String Function(String) label;
+
+  /// 칸 앞의 그림 (타입 = 공식 아이콘)
+  final Widget Function(String)? icon;
   final Set<String> selected;
   final int Function(String) count;
   final ValueChanged<String> onToggle;
@@ -278,7 +308,11 @@ class _SquareChecks extends StatelessWidget {
             onTap: () => onToggle(v),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-              child: Text.rich(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (icon != null) ...[icon!(v), const SizedBox(width: 5)],
+                  Text.rich(
                 TextSpan(
                   children: [
                     TextSpan(text: label(v)),
@@ -293,6 +327,8 @@ class _SquareChecks extends StatelessWidget {
                   fontWeight: selected.contains(v) ? FontWeight.w700 : FontWeight.w400,
                   color: selected.contains(v) ? Gp.accent : Gp.ink,
                 ),
+              ),
+                ],
               ),
             ),
           ),
@@ -722,24 +758,35 @@ class _TagSheet extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            GestureDetector(
-              // R-6b 크게 보기 (앞 · 뒤)
-              key: const ValueKey('tag-image'),
-              onTap: () =>
-                  openImageViewer(context, card.large.isNotEmpty ? card.large : [card.image], label: card.name),
-              child: SizedBox(
-                height: 240,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    tierFrame(tier, cellImage(tier, card.large.firstOrNull ?? card.image, null)),
-                    const Positioned(
-                      right: 8,
-                      bottom: 8,
-                      child: Icon(Icons.zoom_out_map, size: Gp.iS, color: Gp.muted),
+            // R-6b 앞면 · 뒷면을 나란히 (누르면 크게, 그 면부터)
+            SizedBox(
+              height: 240,
+              child: Row(
+                children: [
+                  for (final (i, src) in (card.large.isNotEmpty ? card.large : [card.image]).indexed) ...[
+                    if (i > 0) const SizedBox(width: 8),
+                    Expanded(
+                      child: GestureDetector(
+                        key: i == 0 ? const ValueKey('tag-image') : null,
+                        onTap: () => openImageViewer(
+                          context,
+                          card.large.isNotEmpty ? card.large : [card.image],
+                          index: i,
+                          label: card.name,
+                        ),
+                        child: Column(
+                          children: [
+                            Expanded(child: tierFrame(tier, cellImage(tier, src, null))),
+                            if (card.large.length > 1) ...[
+                              const SizedBox(height: 4),
+                              Text(i == 0 ? '앞면' : '뒷면', style: const TextStyle(fontSize: Gp.t11, color: Gp.muted)),
+                            ],
+                          ],
+                        ),
+                      ),
                     ),
                   ],
-                ),
+                ],
               ),
             ),
             const SizedBox(height: 12),
@@ -781,7 +828,7 @@ class _TagSheet extends StatelessWidget {
                 SoftTag(where, color: Gp.ink),
                 if (card.badge.isNotEmpty) SoftTag(card.badge, color: Gp.star),
                 if (card.grade != null && card.rarityLabel.isNotEmpty) SoftTag(card.rarityLabel, color: Gp.star),
-                for (final t in card.types) SoftTag(typeLabels[t] ?? t),
+                for (final t in card.types) TypeBadge(t),
               ],
             ),
             const SizedBox(height: 8),
