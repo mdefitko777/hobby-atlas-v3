@@ -359,20 +359,24 @@ TagBook parseMezastar(Object? json, TagRegion region) {
   }
   sets.sort((a, b) => a.ordinal.compareTo(b.ordinal));
   final main = sets.where((s) => !s.extra).toList();
-  // 서포트 포켓몬 티켓 (한국 공식 사이트 htp13 — 지금 탄 · 예전 탄). 태그처럼 좋아요 · 구매함 (id mz-support:KR:…)
-  for (final (status, setId, setName) in const [
-    ('current', 'mz-support:current', '서포트 포켓몬 티켓'),
-    ('retired', 'mz-support:retired', '서포트 포켓몬 티켓 · 이전'),
+  // 서포트 포켓몬 티켓 (한국 — 공식 사이트 htp13 에 지금 있는 것 · 예전 것). 태그처럼 좋아요 · 구매함 (id mz-support:KR:…).
+  // 기술 이름은 그 지역 이름 줄에, 타입은 공식 아이콘으로. 공식 그림이 없는 예전 티켓은 그 포켓몬의 공식 아트워크
+  for (final (statuses, setId, setName) in const [
+    ({'current'}, 'mz-support:current', '서포트 포켓몬 티켓'),
+    ({'past', 'retired'}, 'mz-support:retired', '서포트 포켓몬 티켓 · 이전'),
   ]) {
     final tickets = [
       for (final raw in jList(root['support_tickets']))
-        if (jStr(jMap(raw)['region']) == region.code && jStr(jMap(raw)['status']) == status) jMap(raw),
+        if (jStr(jMap(raw)['region']) == region.code && statuses.contains(jStr(jMap(raw)['status']))) jMap(raw),
     ];
     if (tickets.isEmpty) continue;
     sets.add(TagSet(id: setId, name: setName, extra: true, ordinal: 1000 + sets.length));
     for (final t in tickets) {
       final id = jStr(t['id']);
       final name = jStr(t['name']);
+      final move = jStr(t['move']);
+      final official = jStr(t['image']);
+      final image = official.isNotEmpty ? official : dexArtwork(jInt(t['dex']));
       cards.add(
         TagCard(
           id: id,
@@ -381,17 +385,17 @@ TagBook parseMezastar(Object? json, TagRegion region) {
           region: region.id,
           number: '',
           name: name,
-          local: name,
+          local: move,
           setIds: [setId],
-          searchText: _search([name, '서포트', '티켓']),
+          searchText: _search([name, move, '서포트', '티켓']),
           rarity: '',
           grade: null,
-          types: const [],
-          image: jStr(t['image']),
-          large: [jStr(t['image'])],
+          types: [if (jStr(t['type']).isNotEmpty) jStr(t['type'])],
+          image: image,
+          large: [image],
           url: jStr(t['url']),
-          dex: 0,
-          variant: status == 'current' ? '' : '이전 탄',
+          dex: jInt(t['dex']),
+          variant: statuses.contains('current') ? '' : (official.isEmpty ? '이전 탄 · 그림은 공식 아트워크' : '이전 탄'),
         ),
       );
     }

@@ -22,6 +22,7 @@ import '../bbx/combo.dart' show Combo, Deck;
 import '../channels.dart' show defaultMyChannels;
 import '../json_util.dart';
 import '../logic/build_status.dart';
+import '../logic/lego_scope.dart';
 import '../logic/preorder.dart';
 import '../logic/spend.dart';
 import '../models.dart';
@@ -86,6 +87,9 @@ class UserStore extends ChangeNotifier with _AtlasLocal, _History, _ProfileLocal
 
   /// 내 채널 (채널 바 · 알림 범위). 처음 설치하면 건담 · 베이블레이드 · 포켓몬
   final List<String> myChannels = [...defaultMyChannels];
+
+  /// 레고 보기 범위 (설정 › 데이터) — 처음 값은 최근 정식 세트
+  LegoScope legoScope = LegoScope.recent;
 
   /// 친구 쪽 기기 기록 (아바타 · 배경 · 사진 공개 범위 · 알 수도 있는 친구 닫음 · 서랍 본 시각) — lib/data/social_local.dart
   late final SocialLocal social = SocialLocal(_changed);
@@ -164,6 +168,7 @@ class UserStore extends ChangeNotifier with _AtlasLocal, _History, _ProfileLocal
     specialFriends
       ..clear()
       ..addAll(jList(local['special_friends']).whereType<String>());
+    legoScope = local['lego_scope'] == 'all' ? LegoScope.all : LegoScope.recent;
     social.load(local);
     _photos
       ..clear()
@@ -203,6 +208,7 @@ class UserStore extends ChangeNotifier with _AtlasLocal, _History, _ProfileLocal
       'tag_liked': tagLiked.toList(),
       'my_channels': myChannels,
       'special_friends': specialFriends.toList(),
+      if (legoScope != LegoScope.recent) 'lego_scope': legoScope.name,
       ...social.toJson(),
       'photos': [for (final p in _photos) p.toJson()],
       'profile_tags': profileTags,
@@ -380,6 +386,12 @@ class UserStore extends ChangeNotifier with _AtlasLocal, _History, _ProfileLocal
           : {...e, 'updated_at': now, 'updated_by': member};
     }
     _changed(shared: moved);
+  }
+
+  void setLegoScope(LegoScope v) {
+    if (v == legoScope) return;
+    legoScope = v;
+    _changed();
   }
 
   void setMyChannels(List<String> ids) {

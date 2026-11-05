@@ -6,6 +6,7 @@ import 'package:hobby_atlas/clock.dart';
 import 'package:hobby_atlas/data/derive.dart' show noticeOf;
 import 'package:hobby_atlas/data/user_store.dart';
 import 'package:hobby_atlas/detail_pane.dart';
+import 'package:hobby_atlas/logic/lego_scope.dart';
 import 'package:hobby_atlas/marks.dart';
 import 'package:hobby_atlas/notifications/notify_models.dart';
 import 'package:hobby_atlas/notifications/notify_store.dart';
@@ -159,6 +160,21 @@ void main() {
     await tester.pump();
     expect(store.config.onlyMine, isFalse);
     expect(find.text('아직 확인하지 않았어요'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('설정: 레고 범위 — 전부 · 최근 정식 세트', (tester) async {
+    await pumpApp(tester, SettingsScreen(notify: NotifyStore.memory()), size: const Size(390, 1800));
+    expect(UserStore.instance.legoScope, LegoScope.recent);
+    expect(find.text('${legoRecentFromYear}년부터 나온 정식 세트 · 미니피규어'), findsOneWidget);
+    await tester.tap(find.text('전부'));
+    await tester.pump();
+    expect(UserStore.instance.legoScope, LegoScope.all);
+    expect(find.text('Rebrickable 의 레고 전부 (굿즈 · 책 · 옛 세트까지)'), findsOneWidget);
+    await tester.tap(find.text('최근 정식 세트'));
+    await tester.pump();
+    expect(UserStore.instance.legoScope, LegoScope.recent);
+    await tester.pump(const Duration(seconds: 1)); // 저장 (0.4초 뒤)
     expect(tester.takeException(), isNull);
   });
 

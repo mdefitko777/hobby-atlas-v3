@@ -495,6 +495,9 @@ List<Map<String, Object?>> mapKitsJob(Map<String, String> msg) {
       'firstSeen': jStr(firstSeen[id]),
       'keywords': keywords,
       'blob': [name, nameJa, seriesLabel, line, type, ...keywords].join(' ').toLowerCase(),
+      // 레고 보기 범위 (lib/logic/lego_scope.dart) — 세트 번호 · 등급 코드
+      if (number.isNotEmpty) 'number': number,
+      'gradeCode': code,
     });
   }
   if (msg['kitMs'] != null) {

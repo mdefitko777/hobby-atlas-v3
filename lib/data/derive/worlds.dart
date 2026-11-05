@@ -51,19 +51,30 @@ Future<List<World>> deriveWorlds(String channelId) async {
 List<World> _atlasWorlds(String channelId, Map<String, Object?> atlas) {
   return [
     for (final grp in jList(atlas[channelId]))
-      () {
-        final m = jMap(grp);
-        final ids = jList(m['kit_ids']).whereType<String>().toList();
-        return World(
-          id: '$channelId-${jStr(m['id'])}',
-          franchiseId: channelId,
-          label: pickName(m['labels']),
-          subtitle: pickName(m['subtitle']),
-          image: resolveAsset(m['image']), // ./assets/atlas/covers/… → Pages 주소 (공식 표지)
-          total: ids.length,
-          owned: ids.where((id) => _kitStatus(id) == CollectStatus.owned).length,
-          kitIds: ids,
-        );
-      }(),
+      if (_worldIds(channelId, grp) case final ids when channelId != 'lego' || ids.isNotEmpty)
+        () {
+          final m = jMap(grp);
+          return World(
+            id: '$channelId-${jStr(m['id'])}',
+            franchiseId: channelId,
+            label: pickName(m['labels']),
+            subtitle: pickName(m['subtitle']),
+            image: resolveAsset(m['image']), // ./assets/atlas/covers/… → Pages 주소 (공식 표지)
+            total: ids.length,
+            owned: ids.where((id) => _kitStatus(id) == CollectStatus.owned).length,
+            kitIds: ids,
+          );
+        }(),
   ];
+}
+
+/// 묶음의 상품 id — 레고는 설정 › 레고 범위에서 보이는 것만
+List<String> _worldIds(String channelId, Object? grp) {
+  final ids = jList(jMap(grp)['kit_ids']).whereType<String>();
+  return channelId == 'lego'
+      ? [
+          for (final id in ids)
+            if (_cat.byId.containsKey(id)) id,
+        ]
+      : ids.toList();
 }

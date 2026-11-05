@@ -28,6 +28,8 @@ import '../update/update_ui.dart';
 import '../widgets.dart';
 import 'notify_condition_sheet.dart';
 import 'p_sign_in_screen.dart';
+import '../data/user_store.dart' show UserStore;
+import '../logic/lego_scope.dart';
 
 void openSettings(BuildContext context) {
   openPage(context, const SettingsScreen());
@@ -289,6 +291,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   trailing: _refreshing
                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                       : TextButton(onPressed: _refresh, child: const Text('지금 새로 받기')),
+                ),
+                // 레고: 최근 정식 세트(2015~, 굿즈 · 책 · 폴리백 빼고) · 전부 (Rebrickable 2.8만 개)
+                ListTile(
+                  leading: const Icon(Icons.toys_outlined),
+                  title: const Text('레고 범위'),
+                  subtitle: Text(
+                    UserStore.instance.legoScope == LegoScope.all
+                        ? 'Rebrickable 의 레고 전부 (굿즈 · 책 · 옛 세트까지)'
+                        : '$legoRecentFromYear년부터 나온 정식 세트 · 미니피규어',
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                  child: SquareSegments<LegoScope>(
+                    values: LegoScope.values,
+                    current: UserStore.instance.legoScope,
+                    child: (v) => Text(v == LegoScope.recent ? '최근 정식 세트' : '전부'),
+                    onPick: (v) => setState(() {
+                      UserStore.instance.setLegoScope(v); // STATE: 레고 범위 (저장 · 동기화)
+                      Catalog.instance.refilter();
+                    }),
+                  ),
                 ),
               ],
             ),

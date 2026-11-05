@@ -155,13 +155,16 @@ void main() {
     final root = Map<String, Object?>.from(_files[mezastarIntlFile]! as Map)
       ..['support_tickets'] = [
         {'id': 'mz-support:KR:a', 'region': 'KR', 'name': '창파나이트', 'image': 'https://x/a.jpg', 'status': 'current'},
-        {'id': 'mz-support:KR:b', 'region': 'KR', 'name': '라프라스', 'image': 'https://x/b.jpg', 'status': 'retired'},
+        {'id': 'mz-support:KR:dex9', 'region': 'KR', 'name': '거북왕', 'move': '하이드로펌프', 'type': 'Water', 'dex': 9, 'status': 'past'},
       ];
     final kr = parseMezastar(root, _region('KR'));
     expect(kr.set('mz-support:current')?.name, '서포트 포켓몬 티켓');
     expect(kr.inSet('mz-support:current').map((c) => c.name), ['창파나이트']);
-    expect(kr.inSet('mz-support:retired').single.variant, '이전 탄');
-    expect(kr.inSet('mz-support:retired').single.large, ['https://x/b.jpg']);
+    final past = kr.inSet('mz-support:retired').single;
+    expect(past.local, '하이드로펌프');
+    expect(past.types, ['Water']);
+    expect(past.image, dexArtwork(9)); // 공식 그림이 없어 포켓몬 공식 아트워크
+    expect(past.variant, startsWith('이전 탄'));
     expect(parseMezastar(root, _region('TW')).set('mz-support:current'), isNull);
   });
 

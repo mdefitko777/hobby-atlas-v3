@@ -17,6 +17,7 @@ import 'blob_store.dart';
 import 'gundam_atlas.dart' show atlasBoxartFile, atlasKitMsFile, atlasMsFile;
 import 'gunpula.dart';
 import 'user_store.dart';
+import '../logic/lego_scope.dart';
 
 enum CatalogPhase { empty, loading, ready, error }
 
@@ -36,7 +37,8 @@ class Catalog extends ChangeNotifier {
   /// 7: 베이 상품 형태(subline — 스타터 · 부스터 · 랜덤 부스터 · 세트 · 런처 · 도구)
   /// 8: 이름으로 등급 코드 바로잡기(옵션 파츠 · HG · FM · Fate 미니 · 인형) · 이름 HTML 엔티티
   /// 9: 레고 이름 앞에 세트 번호 · 상품 번호를 찾기 낱말에
-  static const mapVersion = 9;
+  /// 10: 레고 보기 범위용 세트 번호 · 등급 코드
+  static const mapVersion = 10;
 
   CatalogPhase phase = CatalogPhase.empty;
   String error = '';
@@ -118,6 +120,26 @@ class Catalog extends ChangeNotifier {
     } on Object catch (e) {
       debugPrint('[catalog] 캐시를 못 읽음: $e');
     }
+  }
+
+  /// 목록을 만든 때의 레고 범위 — 다른 기기에서 바꿔 동기화되면 다시 거른다
+  LegoScope? _builtScope;
+  bool _watchingUser = false;
+
+  void _watchLegoScope() {
+    if (_watchingUser) return;
+    _watchingUser = true;
+    UserStore.instance.addListener(() {
+      if (_builtScope != null && _builtScope != UserStore.instance.legoScope) refilter();
+    });
+  }
+
+  /// 레고 범위를 바꾸면 받은 데이터로 목록만 다시 만든다
+  void refilter() {
+    if (_slim.isEmpty) return;
+    _rebuild();
+    version++;
+    notifyListeners();
   }
 
   /// 테스트: 앱을 새로 켠 것처럼 메모리만 비운다 (기기 캐시는 그대로)
@@ -291,6 +313,7 @@ class Catalog extends ChangeNotifier {
 
   /// slim → Kit (최근 추가 · 이번 달은 오늘 날짜로 다시 계산)
   void _rebuild() {
+    _watchLegoScope();
     var latest = '';
     for (final s in _slim) {
       final f = s['firstSeen'];
@@ -302,7 +325,14 @@ class Catalog extends ChangeNotifier {
         : DateTime.parse(latest).subtract(const Duration(days: 2)).toIso8601String().substring(0, 10);
     final now = DateTime.now();
     final monthPrefix = monthKey(now);
-    final list = [for (final s in _slim) Kit.fromSlim(s, recentSince: recentSince, monthPrefix: monthPrefix)]
+    // 레고는 설정 › 레고 범위 (최근 정식 세트 · 전부) — 데이터는 다 받아 두고 보이는 것만 거른다
+    _builtScope = UserStore.instance.legoScope;
+    final allLego = _builtScope == LegoScope.all;
+    final list = [
+      for (final s in _slim)
+        if (allLego || s['franchiseId'] != 'lego' || legoRecentSet(s))
+          Kit.fromSlim(s, recentSince: recentSince, monthPrefix: monthPrefix),
+    ]
       // 발매일 새것부터, 발매일 없는 것은 뒤로
       ..sort((a, b) {
         final c = b.date.compareTo(a.date);
