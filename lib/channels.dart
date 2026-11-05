@@ -21,6 +21,7 @@ const allChannels = <Channel>[
   Channel(id: 'armored_core', label: '아머드 코어', image: 'assets/gp/worlds/ar_ac6.jpg'),
   Channel(id: 'fate', label: 'Fate', image: 'assets/gp/worlds/fa_stay_night.jpg'),
   Channel(id: 'madoka', label: '마도카 마기카', image: 'assets/gp/worlds/ma_madoka.jpg'),
+  Channel(id: 'lego', label: '레고', image: 'assets/gp/worlds/le_lego.jpg'),
   Channel(id: 'kamen_rider', label: '가면라이더', hasData: false),
   Channel(id: 'evangelion', label: '에반게리온', hasData: false),
   Channel(id: 'ultraman', label: '울트라맨', hasData: false),

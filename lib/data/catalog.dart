@@ -392,6 +392,7 @@ class Catalog extends ChangeNotifier {
     'armored_core': '아머드 코어',
     'fate': 'Fate',
     'madoka': '마도카 마기카',
+    'lego': '레고',
   };
 
   /// 받기 — Pages 가 안 되면 raw.githubusercontent. [count] = 첫 다운로드 바이트를 센다

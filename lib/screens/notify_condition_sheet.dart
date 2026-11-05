@@ -114,6 +114,7 @@ class _ConditionSheetState extends State<_ConditionSheet> {
                   _step(switch (ch) {
                     'madoka' => '캐릭터',
                     'beyblade' => '블레이더',
+                    'lego' => '시리즈',
                     'pokemon' => '세대',
                     _ => '작품',
                   }, [

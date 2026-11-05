@@ -120,6 +120,12 @@ const _typeSectionDefs = <String, List<_Sec>>{
     _goods,
     _media,
   ],
+  'lego': [
+    _Sec('세트', ['세트'], types: {'세트'}),
+    _Sec('미니피규어 · 부품', ['미니피규어', '부품'], types: {'피규어', '부품'}),
+    _goods,
+    _media,
+  ],
   'armored_core': [
     _Sec('프라모델', ['V.I.', '30MM', 'SMP'], types: {'프라모델'}),
     _Sec('식완 · 가샤폰', ['식완'], types: {'식완', '가샤폰'}),
@@ -288,6 +294,7 @@ String worldSectionOf(String channel, String worldId) {
     'armored_core' => '시리즈',
     'beyblade' => RegExp(r'^[a-z]{1,2}x[a-z]?$').hasMatch(id) ? '라인' : '블레이더', // bx · ux · cx · bxa
     'madoka' => '캐릭터',
+    'lego' => '시리즈',
     _ => '세대',
   };
 }

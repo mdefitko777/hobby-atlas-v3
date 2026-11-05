@@ -16,7 +16,7 @@ const gunpulaUserAgent = 'HobbyAtlasDataBot/1.0 (+https://github.com/mdefitko777
 
 /// 매일 갱신되는 순서대로 받는 파일들 (kits.json · search-index.json 은 받지 않는다).
 /// 새 소식 피드는 여기서 받지 않는다 — 알림 확인(lib/background/catalog_check_worker.dart)이 manifest 가 바뀔 때 한 번만 받는다.
-const franchiseIds = ['gundam', 'beyblade', 'pokemon', 'armored_core', 'fate', 'madoka'];
+const franchiseIds = ['gundam', 'beyblade', 'pokemon', 'armored_core', 'fate', 'madoka', 'lego'];
 
 /// 예전에 받던 건담 도감 파일 (gget) — 기기 캐시에서 지운다
 const retiredAuxFiles = ['gget-units.json', 'gget-kit-map.json', 'gget-series-sections.json'];
@@ -159,6 +159,11 @@ const _lineLabels = {
   'MADOKA_PRIZE': '경품',
   'MADOKA_MINI': '미니 · 트레이딩',
   'MADOKA_PLUSH': '인형',
+  'LEGO_SET': '세트',
+  'LEGO_MINIFIG': '미니피규어',
+  'LEGO_GEAR': '굿즈',
+  'LEGO_BOOK': '책 · 화보',
+  'LEGO_PARTS': '부품',
   'ICHIBAN_KUJI': '제일복권',
   'POKE_PLUSH': '봉제인형',
   'POKE_GASHAPON': '가샤폰',
@@ -282,6 +287,14 @@ String typeLabel(String code, String category, [String name = '']) {
   switch (code) {
     case 'OPTION_PARTS':
       return '프라모델';
+    case 'LEGO_SET':
+      return '세트';
+    case 'LEGO_MINIFIG':
+      return '피규어';
+    case 'LEGO_PARTS':
+      return '부품';
+    case 'LEGO_GEAR' || 'LEGO_BOOK':
+      return '굿즈';
     case 'POKE_PLUSH' || 'FATE_PLUSH' || 'MADOKA_PLUSH':
       return '인형';
     case 'FATE_MINI' || 'MADOKA_MINI':
@@ -334,6 +347,7 @@ const _brandBySource = {
   'ichiban_kuji_madoka_jp': 'BANPRESTO',
   'kotobukiya_madoka_jp': 'KOTOBUKIYA',
   'good_smile_madoka_en': 'Good Smile',
+  'rebrickable_lego': 'LEGO',
   'bandai_gashapon_products_jp': '반다이 가샤폰',
   'bandai_gashapon_gundam_jp': '반다이 가샤폰',
   'bandai_candy_gundam_jp': '반다이 캔디',

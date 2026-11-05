@@ -410,6 +410,7 @@ class HelpScreen extends StatelessWidget {
               children: [
                 const SectionHeader('데이터'),
                 tip(Icons.cloud_download_outlined, '상품 정보', 'Gunpula 가 공식 사이트에서 매일 모아요 (BANDAI SPIRITS · 포켓몬센터 …)'),
+                tip(Icons.toys_outlined, '레고 정보', 'Rebrickable (rebrickable.com) 의 레고 카탈로그 데이터를 써요'),
                 tip(Icons.payments_outlined, '가격', '일본 정가만 · 국내 시세는 상세에서 검색으로'),
                 tip(Icons.flag_outlined, '틀린 정보', '상품 상세 맨 아래 › 제보 (GitHub)'),
               ],
