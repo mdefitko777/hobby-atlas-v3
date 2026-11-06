@@ -85,7 +85,12 @@ class NotifyCondition {
     final j = jMap(json);
     final f = jStr(j['franchise']);
     if (f.isEmpty) return null;
-    return NotifyCondition(franchise: f, scope: jStr(j['scope']), scopeLabel: jStr(j['scope_label']), line: jStr(j['line']));
+    return NotifyCondition(
+      franchise: f,
+      scope: jStr(j['scope']),
+      scopeLabel: jStr(j['scope_label']),
+      line: jStr(j['line']),
+    );
   }
 }
 
@@ -201,6 +206,7 @@ class NotifyConfig {
     List<ReleaseDay>? releases,
     Map<String, FollowedAnn>? followed,
     List<NotifyCondition>? conditions,
+    this.legoAll = false,
   }) : rules = {...notifyRuleDefaults, ...?rules},
        conditions = conditions ?? [],
        channels = channels ?? const ['gundam', 'beyblade', 'pokemon'],
@@ -240,6 +246,9 @@ class NotifyConfig {
   /// 내가 만든 알림 조건 (내 채널 소식만이어도 채널과 상관없이 본다)
   final List<NotifyCondition> conditions;
 
+  /// 설정 › 레고 범위가 "전부"인지 (최근 정식 세트면 그 밖의 레고는 알리지 않는다)
+  bool legoAll;
+
   bool rule(String key) => rules[key] ?? notifyRuleDefaults[key] ?? false;
 
   Map<String, Object?> toJson() => {
@@ -256,6 +265,7 @@ class NotifyConfig {
     if (releases.isNotEmpty) 'releases': [for (final r in releases) r.toJson()],
     if (followed.isNotEmpty) 'followed': {for (final e in followed.entries) e.key: e.value.toJson()},
     if (conditions.isNotEmpty) 'conditions': [for (final x in conditions) x.toJson()],
+    if (legoAll) 'lego_all': true,
   };
 
   static NotifyConfig fromJson(Object? json) {
@@ -276,6 +286,7 @@ class NotifyConfig {
       releases: jList(j['releases']).map(ReleaseDay.fromJson).nonNulls.toList(),
       followed: {for (final e in jMap(j['followed']).entries) e.key: ?FollowedAnn.fromJson(e.value)},
       conditions: jList(j['conditions']).map(NotifyCondition.fromJson).nonNulls.toList(),
+      legoAll: j['lego_all'] == true,
     );
   }
 }

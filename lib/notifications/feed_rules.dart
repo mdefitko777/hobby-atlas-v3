@@ -13,7 +13,8 @@
 //   · 좋아요 · 구매함 상품의 재판매(change_reasons 'restock', 규칙 '재판매') — "재판매 · 「이름」 YYYY.MM"
 //   · 예약한 상품의 도착 달 · 도착 날 (기기에 적은 예약, 규칙 '예약 도착')
 // 이 파일은 Flutter 위젯을 쓰지 않는다 (백그라운드 isolate · 단위 테스트).
-import '../data/gunpula.dart' show lineLabel, pickName;
+import '../data/gunpula.dart' show correctedCode, lineLabel, pickName;
+import '../logic/lego_scope.dart';
 import 'notify_models.dart';
 import '../json_util.dart';
 
@@ -37,6 +38,8 @@ class FeedItem {
     this.restockKind = '',
     this.restockQuiet = false,
     this.gradeCode = '',
+    this.subline = '',
+    this.nameJa = '',
     this.groups = const [],
   });
 
@@ -71,6 +74,13 @@ class FeedItem {
   /// Gunpula 등급 코드 (HG · NENDOROID …) — 알림 조건의 종류
   final String gradeCode;
 
+  /// 피드의 subline · 일본어 이름 (2026-11-06 부터) — 앱의 종류(Kit.line)와 같은 계산에 쓴다
+  final String subline;
+  final String nameJa;
+
+  /// 앱 상품의 종류 이름과 같은 값 (gunpula.dart correctedCode → lineLabel)
+  String get line => lineLabel(correctedCode(gradeCode, nameJa), subline, kitId);
+
   /// 이 상품이 든 atlas 묶음 id (마도카 캐릭터 · Fate 작품 · 포켓몬 세대 …) — 알림 조건의 작품 · 캐릭터
   final List<String> groups;
 
@@ -97,6 +107,8 @@ class FeedItem {
       restockKind: jStr(restock['kind']).isEmpty ? jStr(j['restock_kind']) : jStr(restock['kind']),
       restockQuiet: restock['quiet'] == true,
       gradeCode: jStr(j['grade_code']),
+      subline: jStr(j['subline']),
+      nameJa: jStr(j['name_ja']),
       groups: jList(j['groups']).whereType<String>().toList(),
     );
   }
@@ -218,14 +230,29 @@ bool conditionMatches(NotifyCondition x, FeedItem it) {
   if (x.franchise != it.franchise) return false;
   if (x.scope.startsWith('series:') && it.seriesKey != x.scope.substring(7)) return false;
   if (x.scope.startsWith('group:') && !it.groups.contains(x.scope.substring(6))) return false;
-  // 피드엔 subline 이 없어 figma 는 액션 피규어 라인 전체로 본다
-  final line = lineLabel(it.gradeCode, '', it.kitId);
-  if (x.line.isNotEmpty && line != x.line && !(x.line == 'figma' && it.gradeCode.endsWith('_ACTION'))) return false;
+  if (x.line.isNotEmpty && it.line != x.line) {
+    // 2026-11-06 전 피드엔 subline · 일본어 이름이 없어 figma 는 액션 피규어 라인 전체로 본다
+    final oldFeed = it.subline.isEmpty && it.nameJa.isEmpty;
+    if (!(oldFeed && x.line == 'figma' && it.gradeCode.endsWith('_ACTION'))) return false;
+  }
   return true;
+}
+
+/// 레고 범위가 "최근 정식 세트"면 그 밖의 레고(굿즈 · 책 · 옛 세트)는 규칙 · 조건으로 알리지 않는다 (좋아요한 것은 알린다)
+bool legoFeedInScope(FeedItem it) {
+  // kit_id lego-75192-1 → 세트 번호 75192 (Gunpula import_lego_rebrickable.mjs: number = set_num 에서 "-1" 뺀 것)
+  final number = it.kitId.replaceFirst('lego-', '').replaceFirst(RegExp(r'-1$'), '');
+  return legoRecentSet({
+    'date': it.releaseDate,
+    'seriesKey': it.seriesKey,
+    'gradeCode': it.gradeCode,
+    'number': number,
+  });
 }
 
 /// 이 상품이 걸린 규칙 (좋아요 제외). 내 채널 소식만이면 내 채널 밖은 내가 만든 조건만.
 Set<String> ruleHits(FeedItem it, NotifyConfig c) {
+  if (it.franchise == 'lego' && !c.legoAll && !legoFeedInScope(it)) return const {};
   final mine = {
     for (final x in c.conditions)
       if (conditionMatches(x, it)) 'cond:${x.id}',

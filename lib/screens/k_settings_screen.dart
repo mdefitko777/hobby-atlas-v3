@@ -227,7 +227,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // 내가 만든 조건: 채널 · 작품(캐릭터) · 종류
           const Padding(
             padding: EdgeInsets.fromLTRB(16, 4, 16, 2),
-            child: Text('골라서 알림 (채널 · 작품 · 종류)', style: TextStyle(fontSize: Gp.t12, color: Gp.muted)),
+            child: Text(
+              '골라서 알림 (채널 · 작품 · 종류)',
+              style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
+            ),
           ),
           for (final x in c.conditions)
             ListTile(
@@ -308,10 +311,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     values: LegoScope.values,
                     current: UserStore.instance.legoScope,
                     child: (v) => Text(v == LegoScope.recent ? '최근 정식 세트' : '전부'),
-                    onPick: (v) => setState(() {
-                      UserStore.instance.setLegoScope(v); // STATE: 레고 범위 (저장 · 동기화)
-                      Catalog.instance.refilter();
-                    }),
+                    // STATE: 레고 범위 (저장 · 동기화) — 목록은 Catalog 가 UserStore 를 듣고 다시 거른다
+                    onPick: (v) => setState(() => UserStore.instance.setLegoScope(v)),
                   ),
                 ),
               ],

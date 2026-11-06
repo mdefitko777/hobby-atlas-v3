@@ -190,11 +190,93 @@ void main() {
       expect(ruleHits(hg, c), {'cond:gundam|series:seed|HG'});
       expect(ruleHits(mg, c), isEmpty); // 종류가 다르다
       expect(ruleHits(homura, c), {'cond:madoka|group:homura|'}); // 내 채널 밖이어도
-      expect(ruleHits(it({'kit_id': 'd', 'franchise': 'madoka', 'groups': ['mami']}), c), isEmpty);
+      expect(
+        ruleHits(
+          it({
+            'kit_id': 'd',
+            'franchise': 'madoka',
+            'groups': ['mami'],
+          }),
+          c,
+        ),
+        isEmpty,
+      );
       // 저장 · 읽기 한 바퀴
       final back = NotifyConfig.fromJson(c.toJson());
       expect(back.conditions.map((x) => x.id), ['gundam|series:seed|HG', 'madoka|group:homura|']);
       expect(back.conditions.last.scopeLabel, '호무라');
+    });
+
+    test('조건의 종류 = 앱 상품의 종류 (일본어 이름 · subline 으로 고친 등급)', () {
+      FeedItem it(Map<String, Object?> j) => FeedItem.fromJson(j, 'added')!;
+      final c = defaults();
+      c.conditions
+        ..add(const NotifyCondition(franchise: 'fate', scope: '', scopeLabel: '', line: '미니 · 트레이딩'))
+        ..add(const NotifyCondition(franchise: 'madoka', scope: '', scopeLabel: '', line: 'figma'));
+      // FATE_SCALE 이지만 이름이 트레이딩 피규어 → 앱에선 미니 · 트레이딩
+      final mini = it({
+        'kit_id': 'f1',
+        'franchise': 'fate',
+        'grade_code': 'FATE_SCALE',
+        'name_ja': 'Fate トレーディングフィギュア',
+      });
+      final scale = it({'kit_id': 'f2', 'franchise': 'fate', 'grade_code': 'FATE_SCALE', 'name_ja': 'セイバー 1/7'});
+      expect(ruleHits(mini, c), {'cond:fate||미니 · 트레이딩'});
+      expect(ruleHits(scale, c), isEmpty);
+      // figma 는 subline 으로만 — 같은 액션 피규어라도 BUZZmod. 는 아니다
+      final figma = it({
+        'kit_id': 'm1',
+        'franchise': 'madoka',
+        'grade_code': 'MADOKA_ACTION',
+        'subline': 'figma',
+        'name_ja': 'figma 暁美ほむら',
+      });
+      final buzz = it({
+        'kit_id': 'm2',
+        'franchise': 'madoka',
+        'grade_code': 'MADOKA_ACTION',
+        'subline': 'BUZZmod.',
+        'name_ja': 'BUZZmod. 鹿目まどか',
+      });
+      expect(ruleHits(figma, c), {'cond:madoka||figma'});
+      expect(ruleHits(buzz, c), isEmpty);
+      // subline · 이름이 없는 옛 피드는 전처럼 액션 피규어 전체
+      expect(ruleHits(it({'kit_id': 'm3', 'franchise': 'madoka', 'grade_code': 'MADOKA_ACTION'}), c), {
+        'cond:madoka||figma',
+      });
+    });
+
+    test('레고 범위 "최근 정식 세트" — 범위 밖 레고는 규칙 · 조건으로 알리지 않는다', () {
+      FeedItem it(Map<String, Object?> j) => FeedItem.fromJson(j, 'added')!;
+      final c = defaults()..channels = ['lego'];
+      c.rules['lego'] = true;
+      final set = it({
+        'kit_id': 'lego-75192-1',
+        'franchise': 'lego',
+        'grade_code': 'LEGO_SET',
+        'series_key': 'lego_star_wars',
+        'release_date': '2017-10',
+      });
+      final gear = it({
+        'kit_id': 'lego-853990-1',
+        'franchise': 'lego',
+        'grade_code': 'LEGO_GEAR',
+        'series_key': 'lego_gear',
+        'release_date': '2020',
+      });
+      final old = it({
+        'kit_id': 'lego-6089-1',
+        'franchise': 'lego',
+        'grade_code': 'LEGO_SET',
+        'series_key': 'lego_city',
+        'release_date': '2014',
+      });
+      expect(ruleHits(set, c), contains('lego'));
+      expect(ruleHits(gear, c), isEmpty);
+      expect(ruleHits(old, c), isEmpty);
+      c.legoAll = true; // 설정 › 레고 범위 › 전부
+      expect(ruleHits(gear, c), contains('lego'));
+      expect(NotifyConfig.fromJson(c.toJson()).legoAll, isTrue);
     });
 
     test('새 상품이 5개를 넘으면 요약 하나 — 요약마다 id 가 달라 앞 요약을 덮지 않는다', () {
@@ -680,7 +762,11 @@ void main() {
 
     test('같은 판의 피드가 끝내 안 오면(사진만 다시 받은 날) 6시간 뒤 그만 기다린다', () async {
       await BlobStore.write(notifyConfigKey, jsonEncode(defaults().toJson()));
-      final s0 = NotifyState(lastSeen: '2026-10-23', lastManifest: '2026-10-23|8853', lastCheckAt: '2026-10-24T00:00:00.000Z');
+      final s0 = NotifyState(
+        lastSeen: '2026-10-23',
+        lastManifest: '2026-10-23|8853',
+        lastCheckAt: '2026-10-24T00:00:00.000Z',
+      );
       await BlobStore.write(notifyStateKey, jsonEncode(s0.toJson()));
       final asked = <String>[];
       Future<String?> fetch(String path) async {
@@ -755,7 +841,9 @@ void main() {
       final fromLite = live(lite);
       final fromAtlas = live(atlas);
       expect(fromLite.where((r) => r.wanted), isEmpty);
-      expect(fromLite.where((r) => r.pb).map((r) => r.kitId), ['hg-hg-1-144-specii-4573102688590000']); // lite 에 남은 PB 하나뿐
+      expect(fromLite.where((r) => r.pb).map((r) => r.kitId), [
+        'hg-hg-1-144-specii-4573102688590000',
+      ]); // lite 에 남은 PB 하나뿐
       expect(fromAtlas.where((r) => r.wanted).map((r) => r.kitId).toSet(), {
         'pokemon-kr-137529060',
         'hg-hg-1-144-4580886844531000',
@@ -770,11 +858,14 @@ void main() {
     });
 
     test('loadFeed: 새 소식 파일 → (없거나 옛 판이면) lite', () async {
-      Future<FeedLoad> load({String? atlasBody, String? liteBody, DateTime? at, List<String>? asked}) =>
-          loadFeed((p) async {
-            asked?.add(p);
-            return p == notifyFeedPath ? atlasBody : liteBody;
-          }, manifest as Map<String, Object?>, at ?? DateTime.utc(2026, 11, 1, 5));
+      Future<FeedLoad> load({String? atlasBody, String? liteBody, DateTime? at, List<String>? asked}) => loadFeed(
+        (p) async {
+          asked?.add(p);
+          return p == notifyFeedPath ? atlasBody : liteBody;
+        },
+        manifest as Map<String, Object?>,
+        at ?? DateTime.utc(2026, 11, 1, 5),
+      );
       final asked = <String>[];
       var f = await load(atlasBody: atlasText, liteBody: lite1101Text, asked: asked);
       expect((f.source, f.settled), ('atlas', true));

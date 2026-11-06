@@ -12,6 +12,7 @@ import '../channels.dart' show defaultMyChannels;
 import '../data/blob_store.dart';
 import '../data/catalog.dart';
 import '../data/user_store.dart';
+import '../logic/lego_scope.dart';
 import '../logic/preorder.dart' show Preorder;
 import '../models.dart';
 import 'feed_rules.dart' show annRank, annStageKey;
@@ -304,6 +305,7 @@ class NotifyStore extends ChangeNotifier {
     final byId = Catalog.instance.byId;
     config
       ..channels = [...me.myChannels]
+      ..legoAll = me.legoScope == LegoScope.all
       ..wanted = wanted.toSet()
       ..owned = me
           .idsWith(const {CollectStatus.owned})

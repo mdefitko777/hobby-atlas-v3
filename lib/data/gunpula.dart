@@ -168,6 +168,7 @@ const _lineLabels = {
   'POKE_PLUSH': '봉제인형',
   'POKE_GASHAPON': '가샤폰',
   'POKE_GOODS': '굿즈',
+  'BEYBLADE_GOODS': '굿즈',
   'POKE_MONCOLLE': '몬콜레',
   'POKE_FIGURE': '피규어',
   'POKEPLA': '포켓프라',
@@ -218,9 +219,20 @@ const _beyForms = {'Starter': '스타터', 'Booster': '부스터', 'Random Boost
 
 /// Gunpula 등급 코드가 상품 이름과 어긋나는 것 바로잡기 (이름이 더 정확하다 — 실제 데이터 점검 2026-11)
 ///   No Grade 안의 옵션 파츠(빌더즈 파츠 · BPHD) · 「1/144 HG …」(SEED 시절 HG) · 풀메카닉스 · 하이레조 /
-///   Fate · 마도카 스케일 안의 미니 · 트레이딩 피규어 / Fate 굿즈 안의 봉제인형
+///   Fate · 마도카 스케일 안의 미니 · 트레이딩 피규어 / Fate 굿즈 안의 봉제인형 /
+///   피규어 칸에 들어온 평면 굿즈(아크릴 스탠드 · 스티커 · 브로마이드 · 액자 아트 · 시계)
 String correctedCode(String code, String name) {
   final n = _halfWidth(name);
+  if (_flatGoods.hasMatch(n)) {
+    switch (code) {
+      case 'POKE_FIGURE':
+        return 'POKE_GOODS';
+      case 'FATE_SCALE':
+        return 'FATE_GOODS';
+      case 'BEYBLADE_X':
+        return 'BEYBLADE_GOODS';
+    }
+  }
   switch (code) {
     case 'NG':
       if (_optionParts.hasMatch(n)) return 'OPTION_PARTS';
@@ -236,6 +248,12 @@ String correctedCode(String code, String name) {
   }
   return code;
 }
+
+// 평면 굿즈 — 피규어 이름엔 안 붙는 말만 (シールド · シールダー 는 베이 · 서번트 이름)
+final _flatGoods = RegExp(
+  r'アクリル(?:スタンド|アート|マスコット|パネル|ブロック)|アクスタ|아크릴 스탠드|ステッカー|ブロマイド|フレームアート|額装|'
+  r'描き下ろしイラスト(?!.*(?:フィギュア|立体))|サーヴァントウォッチ|腕時計',
+);
 
 final _optionParts = RegExp(r'ビルダーズパーツ|BPHD|オプションパーツ');
 final _miniFigure = RegExp(

@@ -208,7 +208,8 @@ class UserStore extends ChangeNotifier with _AtlasLocal, _History, _ProfileLocal
       'tag_liked': tagLiked.toList(),
       'my_channels': myChannels,
       'special_friends': specialFriends.toList(),
-      if (legoScope != LegoScope.recent) 'lego_scope': legoScope.name,
+      // 처음 값(recent)도 늘 적는다 — 빠지면 동기화가 '지움'으로 보고 다른 기기의 '전부'가 되살아난다
+      'lego_scope': legoScope.name,
       ...social.toJson(),
       'photos': [for (final p in _photos) p.toJson()],
       'profile_tags': profileTags,

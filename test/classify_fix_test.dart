@@ -25,6 +25,18 @@ void main() {
     expect(lineLabel('FATE_MINI', '', 'x'), '미니 · 트레이딩');
   });
 
+  test('피규어 칸의 평면 굿즈 → 굿즈 (실드 · 실더 · ConoFig 는 그대로)', () {
+    expect(correctedCode('POKE_FIGURE', '포켓몬센터 아크릴 스탠드 POKÉMON TRAINERS 푸름＆꾸왁스'), 'POKE_GOODS');
+    expect(correctedCode('FATE_SCALE', '額装レイヤードアクリルアート（第2部 終章メインビジュアル）'), 'FATE_GOODS');
+    expect(correctedCode('FATE_SCALE', 'Fate / Grand Order オリジナルサーヴァントウォッチ シールダー / マシュ・キリエライト モデル'), 'FATE_GOODS');
+    expect(correctedCode('BEYBLADE_X', 'BX-00 【アプリ・イベント限定】 ベイブレードステッカー 01'), 'BEYBLADE_GOODS');
+    expect(correctedCode('BEYBLADE_X', 'BX-04 ナイトシールド3-80N'), 'BEYBLADE_X');
+    expect(correctedCode('FATE_SCALE', 'ConoFig Fate / Grand Order シールダー / マシュ・キリエライト'), 'FATE_SCALE');
+    expect(correctedCode('POKE_GASHAPON', 'ポケットモンスター アクリルスタンドvol.1'), 'POKE_GASHAPON'); // 캡슐은 가샤폰 그대로
+    expect(lineLabel('BEYBLADE_GOODS', '', 'beyblade-x-bx00-st01'), '굿즈');
+    expect(typeLabel('BEYBLADE_GOODS', ''), '굿즈');
+  });
+
   test('이름의 HTML 엔티티', () {
     expect(unescapeHtml('133 ぬいぐるみ Pok&eacute;mon fit イーブイ'), '133 ぬいぐるみ Pokémon fit イーブイ');
     expect(unescapeHtml('A &amp; B &#39;x&#39; &#x2665; &ndash;'), "A & B 'x' ♥ –");
