@@ -60,10 +60,11 @@ String resolveAsset(Object? url) {
 }
 
 /// 실제로 열어 보면 죽어 있는 이미지 주소 (Gunpula 실측: 403 · 503 · 가짜 도메인 · 만료된 서명)
+/// www.goodsmile.com 은 점검(2026-10-23 ~ 11-06) 동안 넣었다가 뺐다 — 돌아온 뒤 Fate · 마도카 상세 사진
+/// 1,900여 장이 이 규칙에 걸려 대표 사진 한 장만 보였다
 bool deadImage(String url) =>
     url.contains('internal-pbn') ||
     url.contains('Expires=') ||
-    url.contains('www.goodsmile.com') ||
     url.contains('bandai-hobby.net') ||
     url.contains('pokemon.hgodo.com');
 
