@@ -576,29 +576,37 @@ class _GalleryState extends State<_Gallery> {
   int _page = 0;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ValueListenableBuilder<int>(
+    // D-2d 열리지 않는 사진(지워졌거나 없는 번호)은 빼고 점도 그만큼 줄인다
+    valueListenable: BrokenImages.changes,
+    builder: (context, _, _) => _build(context, BrokenImages.keep(widget.images)),
+  );
+
+  Widget _build(BuildContext context, List<String> images) {
+    final page = _page.clamp(0, images.isEmpty ? 0 : images.length - 1);
     return AspectRatio(
       aspectRatio: 1,
       child: Stack(
         children: [
           PageView.builder(
-            itemCount: widget.images.length,
+            allowImplicitScrolling: true, // 옆 장을 미리 불러 열리지 않는 사진을 넘기기 전에 뺀다
+            itemCount: images.length,
             onPageChanged: (i) => setState(() => _page = i), // STATE: 사진 번호 → 점
             itemBuilder: (context, i) => GestureDetector(
               // D-2b 누르면 크게 (확대 · 넘기기)
-              onTap: () => openImageViewer(context, widget.images, index: i, label: widget.label),
+              onTap: () => openImageViewer(context, images, index: i, label: widget.label),
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 56, 16, 28),
-                child: AppImage(widget.images[i], fit: BoxFit.contain, placeholder: widget.label),
+                child: AppImage(images[i], fit: BoxFit.contain, placeholder: widget.label),
               ),
             ),
           ),
-          if (widget.images.length > 1)
+          if (images.length > 1)
             Positioned(
               left: 0,
               right: 0,
               bottom: 12,
-              child: PageDots(count: widget.images.length, index: _page),
+              child: PageDots(count: images.length, index: page),
             ),
           if (widget.reference)
             const Positioned(

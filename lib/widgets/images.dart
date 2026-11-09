@@ -1,4 +1,5 @@
 // 그림 한 곳 — 인터넷(캐시) · 앱 안 그림 · 내 사진(`local:파일`) 경로를 여기서만 가른다
+import 'dart:async' show scheduleMicrotask;
 import 'dart:typed_data';
 import 'dart:ui' show ImageFilter;
 
@@ -30,7 +31,10 @@ class AppImage extends StatelessWidget {
             fit: fit,
             fadeInDuration: const Duration(milliseconds: 150),
             placeholder: (_, _) => const ColoredBox(color: Gp.soft),
-            errorWidget: (_, _, _) => _Placeholder(placeholder),
+            errorWidget: (_, _, _) {
+              BrokenImages.mark(path);
+              return _Placeholder(placeholder);
+            },
           )
         : Image.asset(path, fit: fit, errorBuilder: fallback);
     if (!grayscale) return img;
@@ -63,6 +67,35 @@ class AppImage extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 열리지 않은 인터넷 사진 — 공식 사이트에서 지워졌거나, 번호만 짐작해 만든 주소(반다이 상품 사진 _1 … _10)라 없는 것.
+/// 상세 사진 넘기기 · 크게 보기에서 그 장을 뺀다. 앱을 켜 둔 동안만 기억 (다음에 켜면 다시 한 번 시도)
+abstract final class BrokenImages {
+  static final _urls = <String>{};
+
+  /// 새로 열리지 않은 사진이 생길 때마다 +1
+  static final changes = ValueNotifier<int>(0);
+
+  static bool has(String url) => _urls.contains(url);
+
+  static void mark(String url) {
+    if (!_urls.add(url)) return;
+    // 그리는 도중(errorWidget)에 불리므로, 지금 그리기가 끝난 뒤 알린다
+    scheduleMicrotask(() => changes.value++);
+  }
+
+  /// 열리는 사진만 — 다 안 열리면 첫 장은 남겨 이름 자리표시가 보이게
+  static List<String> keep(List<String> images) {
+    final ok = [
+      for (final u in images)
+        if (!_urls.contains(u)) u,
+    ];
+    return ok.isEmpty && images.isNotEmpty ? [images.first] : ok;
+  }
+
+  @visibleForTesting
+  static void reset() => _urls.clear();
 }
 
 /// AppImage 경로 앞에 붙이면 내 사진 파일 (도감 칸 등 그림 경로 하나만 받는 곳)
@@ -252,27 +285,34 @@ class _ImageViewerScreenState extends State<ImageViewerScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final many = widget.images.length > 1;
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
+  Widget build(BuildContext context) => ValueListenableBuilder<int>(
+    // 열리지 않은 사진은 빠진다
+    valueListenable: BrokenImages.changes,
+    builder: (context, _, _) {
+      final images = BrokenImages.keep(widget.images);
+      final many = images.length > 1;
+      final page = _page.clamp(0, images.isEmpty ? 0 : images.length - 1);
+      return Scaffold(
         backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-        title: many ? Text('${_page + 1} / ${widget.images.length}', style: const TextStyle(fontSize: Gp.t14)) : null,
-      ),
-      body: PageView.builder(
-        key: const ValueKey('image-viewer'),
-        controller: _pages,
-        itemCount: widget.images.length,
-        onPageChanged: (i) => setState(() => _page = i), // STATE: 몇 번째 그림
-        itemBuilder: (_, i) => InteractiveViewer(
-          maxScale: 5,
-          child: Center(
-            child: AppImage(widget.images[i], fit: BoxFit.contain, placeholder: widget.label),
+        appBar: AppBar(
+          backgroundColor: Colors.black,
+          foregroundColor: Colors.white,
+          title: many ? Text('${page + 1} / ${images.length}', style: const TextStyle(fontSize: Gp.t14)) : null,
+        ),
+        body: PageView.builder(
+          key: const ValueKey('image-viewer'),
+          controller: _pages,
+          allowImplicitScrolling: true, // 옆 장을 미리 불러 열리지 않는 사진을 넘기기 전에 뺀다
+          itemCount: images.length,
+          onPageChanged: (i) => setState(() => _page = i), // STATE: 몇 번째 그림
+          itemBuilder: (_, i) => InteractiveViewer(
+            maxScale: 5,
+            child: Center(
+              child: AppImage(images[i], fit: BoxFit.contain, placeholder: widget.label),
+            ),
           ),
         ),
-      ),
-    );
-  }
+      );
+    },
+  );
 }
