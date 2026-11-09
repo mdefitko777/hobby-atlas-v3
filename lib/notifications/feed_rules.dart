@@ -130,7 +130,8 @@ class FeedItem {
 }
 
 /// 알리지 않는 변화 이유 (Gunpula scripts/build_update_feed.mjs changeReasons)
-const quietReasons = {'image', 'name', 'series', 'product_line', 'metadata'};
+/// release_found = 발매일이 처음 생긴 것 (나중에 상품 페이지에서 읽어 채운 날짜 — 바뀐 게 아니라 몰랐던 것)
+const quietReasons = {'image', 'name', 'series', 'product_line', 'metadata', 'release_found'};
 
 /// 옛 앱 app/update-feed.js itemIsPremiumBandai 와 같은 판정
 bool itemIsPremiumBandai(Map<String, Object?> j) {

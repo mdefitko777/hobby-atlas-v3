@@ -167,6 +167,16 @@ void main() {
       expect(ruleHits(ac, c), {'armored_core'});
     });
 
+    test('발매일이 처음 생긴 것(release_found)은 알리지 않고, 바뀐 발매일(release)은 알린다', () {
+      FeedItem it(String id, String reason) => FeedItem.fromJson({
+        'kit_id': id,
+        'franchise': 'fate',
+        'change_reasons': [reason],
+      }, 'changed')!;
+      expect(it('a', 'release_found').meaningful, isFalse);
+      expect(it('b', 'release').meaningful, isTrue);
+    });
+
     test('세계관 전체 규칙을 켜면 그 채널 새 상품 전부', () {
       final c = defaults()..rules['pokemon'] = true;
       expect(ruleHits(item('2026-10-23', 'pokemon-kr-137504096'), c), {'pokemon'});
