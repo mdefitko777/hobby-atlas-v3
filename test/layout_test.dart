@@ -1,6 +1,6 @@
 // 화면 크기별 배치 테스트 — 작은 폰 · 보통 폰 · 가로 폰 · 태블릿 · 넓은 창에서
 // 주요 화면을 그려 보고, 넘침(RenderFlex overflowed) 같은 그리기 오류가 없는지 확인한다.
-// 데이터는 mock_server/db.json 을 직접 읽는 가짜 Loaders (서버 없이 돌아감).
+// 데이터는 test/fixtures/sample-db.json 을 직접 읽는 가짜 Loaders (서버 없이 돌아감).
 import 'dart:convert';
 import 'dart:io';
 
@@ -24,7 +24,8 @@ import 'package:hobby_atlas/screens/n_notifications_screen.dart';
 import 'package:hobby_atlas/screens/s_app_shell.dart';
 import 'package:hobby_atlas/theme.dart';
 
-final Map<String, Object?> db = jsonDecode(File('mock_server/db.json').readAsStringSync()) as Map<String, Object?>;
+final Map<String, Object?> db =
+    jsonDecode(File('test/fixtures/sample-db.json').readAsStringSync()) as Map<String, Object?>;
 
 List<T> _list<T extends Object>(String key, T? Function(Object?) parse) =>
     (db[key]! as List).map(parse).nonNulls.toList();

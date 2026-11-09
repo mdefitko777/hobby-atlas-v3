@@ -50,7 +50,7 @@ class BbxBuilderScreen extends StatefulWidget {
 }
 
 class _BbxBuilderScreenState extends State<BbxBuilderScreen> {
-  late Future<BbxBuilderData> _future = widget.loaders.bbxBuilder(); // STATE: GET /bbxBuilder
+  late Future<BbxBuilderData> _future = widget.loaders.bbxBuilder(); // STATE: 베이 조합 데이터
   int _tab = 0;
 
   /// T-1 가진 부품만

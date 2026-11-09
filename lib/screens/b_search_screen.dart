@@ -21,7 +21,7 @@
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 검색은 기기 안: 받아 둔 Gunpula 목록에서 거른다. 설명으로 찾기 = lib/logic/sentence_search.dart (낱말 맞추기, 서버 · AI 없음).
 // 서버가 없어 "인기 검색어" 순위는 만들지 않는다 → 내 검색 횟수(자주 찾은)와 이번 주 새 상품으로.
-// 현행 앱 문제: 정확한 이름을 모르면 못 찾음 · 필터 입구가 여러 개 → v2는 검색창 하나 + 말로 찾기.
+// 왜 이렇게: 정확한 이름을 몰라도 찾게 — 필터 입구를 여럿 두지 않고 검색창 하나 + 말로 찾기.
 import 'package:flutter/material.dart';
 
 import '../api.dart';
@@ -91,7 +91,7 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
 
   @override
   void loadScope(List<String> ids) {
-    _future = widget.loaders.kits(ids); // STATE: 검색 범위(채널) → GET /kits
+    _future = widget.loaders.kits(ids); // STATE: 검색 범위(채널) → 상품
     _all = null;
     _future.then((k) {
       if (mounted) setState(() => _all = k); // 필터 시트가 셀 상품

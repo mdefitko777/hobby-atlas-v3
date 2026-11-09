@@ -21,7 +21,7 @@ class GundamGuide extends StatefulWidget {
 }
 
 class _GundamGuideState extends State<GundamGuide> {
-  late Future<List<GuideWork>> _future = widget.loaders.guideWorks(); // STATE: GET /guideWorks
+  late Future<List<GuideWork>> _future = widget.loaders.guideWorks(); // STATE: 건담 작품 목록
 
   /// 마지막으로 센 내 기록 버전 — 좋아요 · 구매함 · 손으로 켜기가 바뀌면 필터 재료(상태)를 다시 센다
   int _seen = -1;

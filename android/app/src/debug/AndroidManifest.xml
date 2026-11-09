@@ -4,6 +4,4 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
-    <!-- 중간고사: 로컬 json-server(http://10.0.2.2:3000)는 평문 http라서 디버그 빌드에서만 허용 -->
-    <application android:usesCleartextTraffic="true"/>
 </manifest>

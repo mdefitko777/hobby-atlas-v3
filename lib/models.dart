@@ -1,5 +1,5 @@
-// db.json 레코드 → Dart 객체. 모양이 맞지 않는 레코드는 null로 버린다(화면이 죽지 않게).
-// db.json 최상위 키: kits · worlds · guideWorks · guideUnits · bbxTops · bbxParts · announcements · profile
+// 데이터 레코드 → Dart 객체. 모양이 맞지 않는 레코드는 null로 버린다(화면이 죽지 않게).
+// 레코드 종류: kits · worlds · guideWorks · guideUnits · bbxTops · bbxParts · announcements · profile
 import 'json_util.dart';
 
 enum CollectStatus { owned, wanted, none }

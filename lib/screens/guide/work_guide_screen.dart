@@ -71,7 +71,7 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
   }
 
   Future<List<GuideUnit>> _load() async {
-    // STATE: GET /guideUnits?workId= → 칸, GET /kits?id= → 칸마다 상품
+    // STATE: 작품의 기체 → 칸, 칸마다 상품
     final units = await widget.loaders.guideUnits(widget.work.id);
     final ids = {for (final u in units) ...u.kitIds}.toList();
     var kits = <String, Kit>{};
@@ -84,7 +84,7 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
     }
     var chapters = const <GuideChapter>[];
     try {
-      chapters = await widget.loaders.guideChapters(widget.work.id); // STATE: GET /guideChapters?workId=
+      chapters = await widget.loaders.guideChapters(widget.work.id); // STATE: 작품의 장(챕터)
     } on Object {
       // 화수 데이터가 없으면(404) 화수별 보기만 숨긴다
     }

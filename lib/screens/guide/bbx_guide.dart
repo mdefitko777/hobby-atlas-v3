@@ -23,7 +23,7 @@ class BbxGuide extends StatefulWidget {
 }
 
 class _BbxGuideState extends State<BbxGuide> {
-  late Future<List<BbxTop>> _future = widget.loaders.bbxTops(); // STATE: GET /bbxTops
+  late Future<List<BbxTop>> _future = widget.loaders.bbxTops(); // STATE: 베이 목록
 
   /// 블레이더 묶음 (그 캐릭터 블레이드가 든 상품) — 베이 세대 묶음 중 라인(BX · UX · CX)이 아닌 것
   late final Future<List<World>> _bladers = widget.loaders

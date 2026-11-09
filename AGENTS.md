@@ -1,6 +1,6 @@
-# AGENTS.md — Hobby Atlas v3 (개인용)
+# AGENTS.md — Hobby Atlas
 
-중간고사 제출본은 `mdefitko777/gunpula-flutter` 에 그대로 있다. 이 저장소(`hobby-atlas-v3`, private)는 **내가 실제로 쓰는 앱**이고, 수업 규칙(GET만 · setState만 · 저장 금지 · 패키지 금지)은 적용하지 않는다.
+이 저장소(`hobby-atlas-v3`)는 **내가 매일 쓰는 개인용 앱**이다. 앱 소개 · 설치 · 개발 명령은 [README.md](README.md), 여기는 AI 와 같이 작업할 때 지킬 구조 · 약속.
 
 ## 무엇을 만드나
 - 안드로이드 앱 `com.mdefitko.hobbyatlas`. 옛 Gunpula 앱(`com.mdefitko.gunpula`, Capacitor WebView)을 **대체**한다. 옛 앱과 나란히 설치해 두고, 다 옮긴 뒤에 옛 앱을 지운다.

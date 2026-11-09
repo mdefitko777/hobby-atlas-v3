@@ -18,7 +18,7 @@
 // │ H-12 │ 위 줄 ? (S-19, calendarHelp)        │ 아이콘 뜻 + 점 색 (달력 위 ? 를 합침)      │ P10 · P01     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 발매 줄 → D 상품 상세(쌓기). 예고 줄 → J 공식 예고 상세(쌓기).
-// 현행 앱 문제: 발매 정보가 "최근" 화면 탭 안 "이번 달 발매"에만 있고 날짜로 볼 수 없음.
+// 왜 이렇게: 발매 정보를 목록 한구석이 아니라 날짜로 보게.
 import 'package:flutter/material.dart';
 
 import '../api.dart';
@@ -132,7 +132,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
 
   @override
   void loadScope(List<String> ids) {
-    // STATE: 채널 → GET /kits · /announcements → 달력 점 · 일정 목록
+    // STATE: 채널 → 상품 · 공식 예고 → 달력 점 · 일정 목록
     _future = Future.wait([
       widget.loaders.kits(ids),
       widget.loaders.announcements(ids),

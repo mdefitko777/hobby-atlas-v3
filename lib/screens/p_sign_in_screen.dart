@@ -152,7 +152,7 @@ class _SignInScreenState extends State<SignInScreen> {
             ),
           const SizedBox(height: 24),
           const Text(
-            '메일이 안 오면 스팸함 · 1분 뒤 다시 · 처음 쓰는 메일은 새 계정 (동생 · 친구는 각자 메일)',
+            '메일이 안 오면 스팸함 · 1분 뒤 다시 · 처음 쓰는 메일은 새 계정 (같이 쓰는 사람 · 친구는 각자 메일)',
             style: TextStyle(fontSize: Gp.t12, color: Gp.faint, height: 1.45),
           ),
         ],

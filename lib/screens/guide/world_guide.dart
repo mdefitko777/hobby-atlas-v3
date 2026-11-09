@@ -37,7 +37,7 @@ class _WorldGuideState extends State<WorldGuide> {
   Widget build(BuildContext context) {
     final label = channelOf(widget.channel).label;
     return FutureBuilder<List<World>>(
-      future: _future, // STATE: GET /worlds?franchiseId= → 칸
+      future: _future, // STATE: 채널의 세대 · 작품 → 칸
       builder: (context, snap) {
         if (snap.connectionState != ConnectionState.done) return const LoadingView();
         if (snap.hasError) {
@@ -123,7 +123,7 @@ class _WorldKitsPage extends StatefulWidget {
 }
 
 class _WorldKitsPageState extends State<_WorldKitsPage> {
-  late final Future<List<Kit>> _future = widget.loaders.kitsByIds(widget.world.kitIds); // STATE: GET /kits?id=
+  late final Future<List<Kit>> _future = widget.loaders.kitsByIds(widget.world.kitIds); // STATE: 그 세대 · 작품의 상품
 
   @override
   Widget build(BuildContext context) => Scaffold(

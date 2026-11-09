@@ -76,7 +76,7 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
   late Future<_FriendData> _future = _load();
 
   Future<_FriendData> _load() async {
-    // STATE: GET /kits?id= (친구 좋아요 · 구매함) · /kits?status_ne=none (나) · /guideWorks
+    // STATE: 친구 좋아요 · 구매함 상품 · 내 상품 · 건담 작품
     final f = widget.friend;
     final r = await Future.wait([
       widget.loaders.kitsByIds(f.likedIds),

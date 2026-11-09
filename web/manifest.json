@@ -5,7 +5,7 @@
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "Hobby Atlas — 관심 IP의 새 소식 · 발매일과 내 컬렉션(좋아요 · 구매함 · 도감)을 한 앱에서 (GAI3008 중간고사 UI 프로토타입)",
+    "description": "Hobby Atlas — 관심 IP의 새 소식 · 발매일과 내 컬렉션(좋아요 · 구매함 · 도감)을 한 앱에서 (개인용)",
     "orientation": "any",
     "prefer_related_applications": false,
     "icons": [

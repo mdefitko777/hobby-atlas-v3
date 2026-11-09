@@ -142,7 +142,7 @@ class _CategoryBrowseState extends State<_CategoryBrowse> {
   Future<List<_Block>> _load() async {
     final ids = _channels;
     if (ids.isEmpty) return const [];
-    final kits = await widget.loaders.kits(ids); // STATE: GET /kits?franchiseId=
+    final kits = await widget.loaders.kits(ids); // STATE: 채널 상품
     final byChannel = <String, List<Kit>>{};
     for (final k in kits) {
       (byChannel[k.franchiseId] ??= []).add(k);
@@ -171,7 +171,7 @@ class _CategoryBrowseState extends State<_CategoryBrowse> {
 
     if (channel == 'gundam') {
       // 작품 = 그 작품 기체들에 연결된 상품
-      final works = await widget.loaders.guideWorks(); // STATE: GET /guideWorks
+      final works = await widget.loaders.guideWorks(); // STATE: 건담 작품 목록
       final units = await Future.wait([
         for (final w in works) widget.loaders.guideUnits(w.id).catchError((Object _) => const <GuideUnit>[]),
       ]);
@@ -184,7 +184,7 @@ class _CategoryBrowseState extends State<_CategoryBrowse> {
         for (final (title, ws) in workSections(cats.keys)) (title, [for (final w in ws) cats[w]!]),
       ];
     }
-    final worlds = await widget.loaders.worlds(channel); // STATE: GET /worlds?franchiseId=
+    final worlds = await widget.loaders.worlds(channel); // STATE: 채널의 세대 · 작품
     final cats = <_Cat>[];
     for (final w in worlds) {
       final list = w.kitIds.isNotEmpty || channel != 'beyblade'

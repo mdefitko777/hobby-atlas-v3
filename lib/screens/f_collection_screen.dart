@@ -19,8 +19,7 @@
 // │ F-13 │ 위 줄 ? (S-19, collectionHelp)      │ 필터 · 휴지통 · 편집 · 조립 · 예약 아이콘 뜻 │ P10 · P01     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 줄 → D 상품 상세(쌓기). 빈 상태 "검색하러 가기" → 검색 탭(옆으로).
-// 현행 앱 문제: 컬렉션 화면에 빨간 "전체 삭제"가 늘 보임(실수 위험) · 도감이 따로 떨어진 화면
-//              → v2는 편집 모드에서만 삭제, 도감은 컬렉션의 탭 하나.
+// 왜 이렇게: 빨간 "전체 삭제"를 늘 보이지 않게(실수 위험) 편집 모드에서만 삭제, 도감은 따로 된 화면이 아니라 컬렉션의 탭 하나.
 import 'package:flutter/material.dart';
 
 import '../api.dart';
@@ -110,7 +109,7 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
 
   @override
   void loadScope(List<String> ids) {
-    _future = widget.loaders.kits(ids); // STATE: GET /kits(내 채널) → 좋아요 · 구매함은 Marks 로 거름 (홈에서 누른 ♡ 도 보임)
+    _future = widget.loaders.kits(ids); // STATE: 내 채널 상품 → 좋아요 · 구매함은 Marks 로 거름 (홈에서 누른 ♡ 도 보임)
   }
 
   @override

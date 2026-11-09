@@ -15,7 +15,7 @@
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: A-2 → 검색 탭(옆으로). › → 같은 탭 안에서 O 전체 목록(위쪽 머리 · 검색창은 그대로, 뒤로 = 홈). 상품 카드 → D 상품 상세(쌓기). 배너 · 예고 카드 → J 공식 예고 상세(쌓기).
 // 줄 안에는 날짜·가격을 쓰지 않는다 — 궁금하면 눌러서 상세에서 본다 (P08).
-// 현행 앱 문제: 홈 = 버전 번호·총 개수·IP 입구 카드 → v2 홈 = "내 채널의 새 소식"만.
+// 왜 이렇게: 홈은 버전 번호 · 총 개수 · IP 입구 카드 대신 "내 채널의 새 소식"만.
 import '../logic/kit_rules.dart';
 import 'dart:async' show Timer;
 
@@ -180,7 +180,7 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
 
   @override
   void loadScope(List<String> ids) {
-    // STATE: 선택 채널 → GET /kits · /announcements → 배너 + 가로 줄
+    // STATE: 선택 채널 → 상품 · 공식 예고 → 배너 + 가로 줄
     _future = Future.wait([
       widget.loaders.kits(ids),
       widget.loaders.announcements(ids),

@@ -1,9 +1,9 @@
 // IP 채널 목록 — 하드코딩 상수 (AGENTS.md: 데이터는 상수 또는 GET).
-// "내 채널"은 사람마다 다르므로 앱 셸이 들고 있고, 채널 관리 화면에서 바꾼다. (현행 앱: 상단 5개 IP 고정)
+// "내 채널"은 사람마다 다르므로 앱 셸이 들고 있고, 채널 관리 화면에서 바꾼다 (모두에게 같은 IP 를 고정하지 않는다).
 class Channel {
   const Channel({required this.id, required this.label, this.image = '', this.hasData = true});
 
-  /// db.json kits.franchiseId 와 같은 값
+  /// 카탈로그 kit 의 franchise 와 같은 값
   final String id;
   final String label;
 

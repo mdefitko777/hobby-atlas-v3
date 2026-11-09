@@ -19,7 +19,7 @@
 // └────────────────────────────────────────────────────────────────────────────────┘
 // 전환: S-3 옆으로(탭) · S-4 덮기(bottom sheet) · S-1 덮기(Drawer → M) · S-9 · S-10 쌓기(push, 넓은 화면은 오른쪽 칸).
 // S-8: X · Threads처럼 내용을 내려 읽는 동안 탭 바를 숨겨 화면을 넓히고, 카메라 버튼만 남긴다.
-// 현행 앱 문제: 위 5개 IP + 아래 5개 화면 + 도감 안 탭 → v2는 아래 탭 하나 + 화면 안 채널 바 하나.
+// 왜 이렇게: 위 IP 줄 + 아래 화면 줄 + 도감 안 탭처럼 길을 여럿 두지 않고, 아래 탭 하나 + 화면 안 채널 바 하나.
 import 'dart:ui' show DisplayFeatureType, ImageFilter;
 
 import 'package:flutter/foundation.dart' show listEquals;

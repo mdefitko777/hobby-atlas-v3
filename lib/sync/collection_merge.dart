@@ -246,7 +246,7 @@ Map<String, Object?> mergeCloudPayload(
 ///  1) 서버가 알려 준 내 이름([preferred]) 버킷이 있으면 그것
 ///  2) 없으면 'member' 버킷 (옛 앱에서 이름을 안 정하면 거기에 쓴다 — 그때는 별칭 합치기도 안 함)
 ///  3) 없으면 collection.items 와 같은 상품을 가진 버킷 — 단 [notMine](공유 공간의 다른 멤버 이름)은 빼고.
-///     공유 공간의 items 는 "마지막에 저장한 사람"의 버킷이라 동생 것일 수도 있다.
+///     공유 공간의 items 는 "마지막에 저장한 사람"의 버킷이라 같이 쓰는 사람 것일 수도 있다.
 ///  4) 그것도 없으면 [preferred] (비었으면 'member')
 String resolveSelfBucket(Map<String, Object?> payload, String preferred, {Set<String> notMine = const {}}) {
   final col = jMap(payload['collection']);

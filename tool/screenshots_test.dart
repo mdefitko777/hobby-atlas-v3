@@ -1,4 +1,4 @@
-// README · 발표자료 · 원칙 카드용 스크린샷을 만든다 (서버 · 브라우저 없이, db.json 가짜 Loaders).
+// README 용 스크린샷을 만든다 (서버 · 브라우저 없이, test/fixtures/sample-db.json 가짜 Loaders).
 // 쓰는 법 (Windows, 프로젝트 폴더에서):  flutter test tool/screenshots_test.dart
 // 결과: docs/screenshots/*.png — 한글은 Windows 의 맑은 고딕(malgun.ttf), 아이콘은 Flutter 의 MaterialIcons 를 불러 그린다.
 import 'dart:async';
@@ -101,7 +101,10 @@ Future<void> _open(WidgetTester tester, Size size, Widget home) async {
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: _theme(),
-        builder: (context, child) => MarksHost(store: UserStore.memory(), child: PaneHost(child: child!)),
+        builder: (context, child) => MarksHost(
+          store: UserStore.memory(),
+          child: PaneHost(child: child!),
+        ),
         home: home,
       ),
     ),
@@ -112,7 +115,7 @@ Future<void> _open(WidgetTester tester, Size size, Widget home) async {
 const phone = Size(390, 844);
 
 void main() {
-  fixedNow = DateTime(2026, 10, 25, 21); // 가짜 데이터(db.json)의 오늘
+  fixedNow = DateTime(2026, 10, 25, 21); // 테스트 데이터(sample-db.json)의 오늘
   setUpAll(_loadFonts);
   final kits = [for (final k in db['kits']! as List) Kit.fromJson(k)!];
   final profile = Profile.fromJson(db['profile'])!;
@@ -120,24 +123,24 @@ void main() {
 
   testWidgets('02 홈', (t) async {
     await _open(t, phone, AppShell(loaders: fakeLoaders));
-    await _save(t, '02_v2_a');
+    await _save(t, '02_home');
   });
 
   testWidgets('03 상품 상세', (t) async {
     await _open(t, phone, KitDetailScreen(kit: kits.firstWhere((k) => k.id == 'gu02'), loaders: fakeLoaders));
-    await _save(t, '03_v2_b');
+    await _save(t, '03_detail');
   });
 
   testWidgets('04 도감', (t) async {
     await _open(t, phone, WorkGuideScreen(work: seed, loaders: fakeLoaders));
-    await _save(t, '04_v2_c');
+    await _save(t, '04_guide');
   });
 
   testWidgets('05 넓은 화면 (반반)', (t) async {
     await _open(t, const Size(1280, 800), AppShell(loaders: fakeLoaders));
     t.widget<ProductTile>(find.byType(ProductTile).first).onTap();
     await _settle(t);
-    await _save(t, '05_v2_wide');
+    await _save(t, '05_wide');
   });
 
   testWidgets('검색 탭 · 전체 · 종류 · 세대 · 기체별 검색', (t) async {
@@ -197,12 +200,24 @@ void main() {
   });
 
   testWidgets('알림', (t) async {
-    await _open(t, phone, NotificationsScreen(myChannels: const ['gundam', 'beyblade', 'pokemon'], loaders: fakeLoaders));
+    await _open(
+      t,
+      phone,
+      NotificationsScreen(myChannels: const ['gundam', 'beyblade', 'pokemon'], loaders: fakeLoaders),
+    );
     await _save(t, '16_notifications');
   });
 
   // 화면 비율별 홈 (layout_test 와 같은 7가지 크기)
-  for (final size in const [Size(320, 568), Size(390, 844), Size(844, 390), Size(690, 830), Size(830, 690), Size(768, 1024), Size(1280, 800)]) {
+  for (final size in const [
+    Size(320, 568),
+    Size(390, 844),
+    Size(844, 390),
+    Size(690, 830),
+    Size(830, 690),
+    Size(768, 1024),
+    Size(1280, 800),
+  ]) {
     testWidgets('비율 ${size.width.toInt()}x${size.height.toInt()}', (t) async {
       await _open(t, size, AppShell(loaders: fakeLoaders));
       if (size.width >= 700 && size.height >= 520) {
@@ -227,7 +242,11 @@ void main() {
     await _open(
       t,
       phone,
-      BarcodeScanScreen(loaders: fakeLoaders, onGoSearch: () {}, preview: (_, _) => const ColoredBox(color: Colors.black)),
+      BarcodeScanScreen(
+        loaders: fakeLoaders,
+        onGoSearch: () {},
+        preview: (_, _) => const ColoredBox(color: Colors.black),
+      ),
     );
     await _save(t, '18_barcode_scan');
   });
@@ -244,7 +263,7 @@ void main() {
     await _save(t, '20_fold');
   });
 
-  // 3상태 (발표 부록 B1) — 홈의 GET 이 끝나지 않을 때 · 실패할 때 · 비었을 때
+  // 3상태 — 홈 데이터를 받는 중일 때 · 실패할 때 · 비었을 때
   Loaders homeWith(Future<List<Kit>> Function(List<String>) kits) => Loaders(
     kits: kits,
     collection: fakeLoaders.collection,
@@ -264,7 +283,7 @@ void main() {
   });
 
   testWidgets('상태 · 오류', (t) async {
-    await _open(t, phone, AppShell(loaders: homeWith((_) async => throw 'localhost:3000 서버에 연결할 수 없어요')));
+    await _open(t, phone, AppShell(loaders: homeWith((_) async => throw '서버에 연결할 수 없어요')));
     await _save(t, '22_state_error');
   });
 

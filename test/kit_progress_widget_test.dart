@@ -1,6 +1,6 @@
 // 화면: 조립 상태(컬렉션 F-2b · F-5c, 상세 D-5f) · 예약(상세 D-5g, 컬렉션 예약 탭 F-5d, 캘린더 H-9b · H-9c) ·
 // 재판매(상세 D-5h, 캘린더) · 바코드 겹침 시트(E-6b) · 공유 카드(V)
-// 데이터는 mock_server/db.json (layout_test 의 가짜 Loaders) + 재판매만 가짜 묶음
+// 데이터는 test/fixtures/sample-db.json (layout_test 의 가짜 Loaders) + 재판매만 가짜 묶음
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hobby_atlas/api.dart';
