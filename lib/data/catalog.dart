@@ -39,7 +39,8 @@ class Catalog extends ChangeNotifier {
   /// 9: 레고 이름 앞에 세트 번호 · 상품 번호를 찾기 낱말에
   /// 10: 레고 보기 범위용 세트 번호 · 등급 코드
   /// 11: 피규어 칸의 평면 굿즈(아크릴 스탠드 · 스티커 · 브로마이드 · 액자 아트)를 굿즈로
-  static const mapVersion = 11;
+  /// 12: 베이 상세 사진 맨 앞에 공식 파츠 상세 그림
+  static const mapVersion = 12;
 
   CatalogPhase phase = CatalogPhase.empty;
   String error = '';

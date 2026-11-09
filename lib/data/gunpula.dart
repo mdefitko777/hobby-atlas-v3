@@ -434,6 +434,13 @@ Map<String, BoxArt> parseBoxart(Object? json) => {
   );
 }
 
+/// 베이: 공식 사이트의 「パーツ詳細」 그림(블레이드 · 라쳇 · 비트 설명과 능력치, `_image/detail_BX54.png`)을
+/// 상세 사진 맨 앞에 — 목록의 대표 사진은 그대로 상품 사진
+List<String> partsFirst(List<String> gallery) {
+  bool isParts(String u) => RegExp(r'/_image/detail_[^/]*$', caseSensitive: false).hasMatch(u);
+  return [...gallery.where(isParts), ...gallery.where((u) => !isParts(u))];
+}
+
 /// compute() 작업: `split/kits-<franchise>.json` 한 개 → Kit.fromSlim 이 읽는 Map 목록
 /// msg = {raw, grades, firstSeen, boxart?} (모두 JSON 글자 · boxart 는 건담만)
 List<Map<String, Object?>> mapKitsJob(Map<String, String> msg) {
@@ -511,7 +518,7 @@ List<Map<String, Object?>> mapKitsJob(Map<String, String> msg) {
       'priceJpy': r['price_jpy'] is num ? (r['price_jpy']! as num).toInt() : null,
       'priceKrw': r['price_krw'] is num ? (r['price_krw']! as num).toInt() : null,
       'image': cover,
-      'gallery': pick.gallery,
+      'gallery': jStr(r['franchise']) == 'beyblade' ? partsFirst(pick.gallery) : pick.gallery,
       'limited': r['is_limited'] == true,
       'pb': pb,
       'pbOpens': jStr(pbInfo['order_opens_at']).split('T').first,

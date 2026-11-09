@@ -37,6 +37,16 @@ void main() {
     expect(typeLabel('BEYBLADE_GOODS', ''), '굿즈');
   });
 
+  test('베이 상세 사진: 공식 파츠 상세 그림이 맨 앞 (대표 사진은 그대로)', () {
+    const base = 'https://beyblade.takaratomy.co.jp/beyblade-x/lineup/_image/';
+    expect(partsFirst(['${base}BX54_list.png', '${base}detail_BX54.png', '${base}BX54@1.png']), [
+      '${base}detail_BX54.png',
+      '${base}BX54_list.png',
+      '${base}BX54@1.png',
+    ]);
+    expect(partsFirst(['${base}BX54_list.png', '${base}BX54@1.png']), ['${base}BX54_list.png', '${base}BX54@1.png']);
+  });
+
   test('이름의 HTML 엔티티', () {
     expect(unescapeHtml('133 ぬいぐるみ Pok&eacute;mon fit イーブイ'), '133 ぬいぐるみ Pokémon fit イーブイ');
     expect(unescapeHtml('A &amp; B &#39;x&#39; &#x2665; &ndash;'), "A & B 'x' ♥ –");
