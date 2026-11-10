@@ -10,10 +10,12 @@
 // │ S-20 │ FirstRunGate          │ 처음 설치: 데이터 받는 화면(W) → 앱 셸        │ P01           │
 // └────────────────────────────────────────────────────────────────────────────┘
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'data/catalog.dart';
 import 'data/user_store.dart';
 import 'detail_pane.dart';
+import 'l10n/l10n.dart';
 import 'marks.dart';
 import 'notifications/notify_store.dart';
 import 'screens/s_app_shell.dart';
@@ -23,8 +25,9 @@ import 'sync/account.dart';
 import 'sync/supabase_backend.dart';
 import 'theme.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await L10n.load(); // 화면 언어 (기기 파일 하나 — 첫 화면부터 그 언어로)
   final meLoaded = UserStore.instance.load(); // 내 기록 (기기)
   Catalog.instance.ensureLoaded().ignore(); // 캐시 → 뒤에서 새 데이터 확인
   // 계정: Gunpula Supabase (config/supabase.json). 저장된 세션이 있으면 바로 받아 온다.
@@ -45,10 +48,19 @@ class HobbyAtlasApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 언어를 바꾸면 앱 전체를 그 언어로 다시 만든다 (설정 → 언어). 보던 탭은 처음으로 — 언어를 바꿀 때만이라 괜찮다
+    return ValueListenableBuilder<AppLang>(valueListenable: L10n.notifier, builder: (context, lang, _) => _app(lang));
+  }
+
+  Widget _app(AppLang lang) {
     return MaterialApp(
+      key: ValueKey(lang),
       title: 'Hobby Atlas', // S-14
       debugShowCheckedModeBanner: false,
       theme: buildGpTheme(), // S-15 P08
+      locale: L10n.locale,
+      supportedLocales: L10n.supportedLocales,
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       // S-16 앱 전체 한 벌(setState 를 위로): 계정(AccountScope) · 알림(NotifyScope) · 좋아요 · 구매함(MarksHost) · 반반 화면 오른쪽 칸(PaneHost)
       builder: (context, child) => AccountScope(
         account: Account.instance, // S-17

@@ -15,6 +15,7 @@ import 'package:workmanager/workmanager.dart';
 
 import '../data/blob_store.dart';
 import '../data/gunpula.dart' show gunpulaBase, gunpulaRawBase, gunpulaUserAgent, manifestSignature;
+import '../l10n/l10n.dart';
 import '../notifications/feed_rules.dart';
 import '../notifications/local_notifier.dart';
 import '../notifications/notify_models.dart';
@@ -157,6 +158,8 @@ Object? _decode(String? text) {
 Future<CheckOutcome> runCatalogCheck({bool background = false, DateTime? now, FetchText? fetch}) async {
   final at = now ?? DateTime.now();
   final get = fetch ?? fetchGunpula;
+  // 백그라운드(새 isolate)는 앱이 고른 화면 언어를 모른다 — 알림 글을 그 언어로 쓰려고 기기 파일에서 읽는다
+  if (background) await L10n.load();
   final config = NotifyConfig.fromJson(_decode(await BlobStore.read(notifyConfigKey)));
   final before = NotifyState.fromJson(_decode(await BlobStore.read(notifyStateKey)));
 

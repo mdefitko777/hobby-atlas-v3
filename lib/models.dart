@@ -1,6 +1,7 @@
 // 데이터 레코드 → Dart 객체. 모양이 맞지 않는 레코드는 null로 버린다(화면이 죽지 않게).
 // 레코드 종류: kits · worlds · guideWorks · guideUnits · bbxTops · bbxParts · announcements · profile
 import 'json_util.dart';
+import 'l10n/l10n.dart';
 
 enum CollectStatus { owned, wanted, none }
 
@@ -37,7 +38,7 @@ class Kit {
   const Kit({
     required this.id,
     required this.franchiseId,
-    required this.name,
+    required String name,
     required this.nameJa,
     required this.series,
     required this.line,
@@ -71,11 +72,26 @@ class Kit {
     this.imageRef = false,
     this.subline = '',
     this.manualId = 0,
-  });
+    this.nameZh = '',
+    this.seriesZh = '',
+  }) : nameKo = name;
 
   final String id;
   final String franchiseId;
-  final String name;
+
+  /// 한국어 이름 (Gunpula names.ko …). 화면에는 [name] — 중국어 화면이면 [nameZh] 가 있을 때 그것
+  final String nameKo;
+
+  /// 중국어(간체) 이름 (Gunpula names.zh — data/i18n/names-zh.json · 용어집 번역). 없으면 빈 글자
+  final String nameZh;
+
+  /// 화면에 보이는 이름 — 고른 언어(lib/l10n/l10n.dart)를 따른다
+  String get name => L10n.isZh && nameZh.isNotEmpty ? nameZh : nameKo;
+
+  /// 작품(시리즈) 이름의 중국어판 (Gunpula series.labels.zh). [series] 는 한국어 그대로 — 묶기 · 비교에 쓰인다,
+  /// 화면에는 [seriesLabel]
+  final String seriesZh;
+  String get seriesLabel => L10n.isZh && seriesZh.isNotEmpty ? seriesZh : series;
   final String nameJa;
   final String series;
   final String line;
@@ -156,8 +172,10 @@ class Kit {
       id: jStr(j['id']),
       franchiseId: jStr(j['franchiseId']),
       name: jStr(j['name']),
+      nameZh: jStr(j['nameZh']),
       nameJa: jStr(j['nameJa']),
       series: jStr(j['series']),
+      seriesZh: jStr(j['seriesZh']),
       line: jStr(j['line']),
       type: jStr(j['type']),
       scale: jStr(j['scale']),

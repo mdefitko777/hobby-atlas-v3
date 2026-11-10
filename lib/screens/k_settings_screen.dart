@@ -6,18 +6,20 @@
 // │ K-1  │ SwitchListTile × 2                 │ 새 소식 알림(휴대폰) · 내 채널 소식만      │ P03 · P07     │
 // │ K-5  │ FilterChip 묶음 2개                 │ 알림 규칙: 관심 항목 · 세계관 전체          │ P04 · P05     │
 // │ K-6  │ ListTile · 대화상자                  │ 마지막 확인 · 지금 확인                  │ P10           │
-// │ K-2  │ ListTile (고르기 없음)               │ 언어: 화면 한국어 · 상품 이름 한국어 우선 │ P04 · P10     │
+// │ K-2  │ ListTile → 고르는 시트              │ 언어: 한국어(기본) · 中文                │ P04 · P10     │
 // │ K-4  │ ListTile                           │ 상품 데이터 기준일 · 지금 새로 받기 · 버전 │ P10           │
 // │ K-7  │ ListTile → HelpScreen(쌓기)          │ 도움말: 도감 칸(늘 컬러 · ♡ · 리본 · 내 사진) · 색 · 데이터 출처 · 알림 · 업데이트 │ P10 │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 앱 셸 ⚙ → 쌓기(push, 오른쪽에서). 도움말 → 쌓기.
-// 언어: 화면 번역은 없다 (한국어만). 상품 이름은 Gunpula 이름 중 한국어 → 일본어 → 영어 순 — 고르는 척하지 않는다.
+// 언어: 한국어(기본) · 中文. 중국어면 화면 글(lib/l10n) · 상품 이름(Gunpula names.zh) · 공지 번역(ML Kit 일→중) · 알림이 중국어.
+// 기기마다 따로 고른다 (lang.json, 계정에 맞추지 않음).
 // 로그인 → P 로그인 화면(쌓기). 로그아웃 → 확인 대화상자(덮기).
 
 import 'package:flutter/material.dart';
 
 import '../data/catalog.dart';
 import '../detail_pane.dart';
+import '../l10n/l10n.dart';
 import '../sync/account.dart';
 import '../sync/sync_service.dart';
 import '../notifications/local_notifier.dart';
@@ -94,6 +96,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => _refreshing = false);
     final c = Catalog.instance;
     showToast(context, changed ? '새로 받았어요 · ${c.kits.length}개' : (c.error.isEmpty ? '이미 최신이에요' : c.error));
+  }
+
+  /// K-2 언어 고르기 — 고르면 L10n 이 앱 전체를 그 언어로 다시 만든다 (main.dart)
+  Future<void> _pickLanguage(BuildContext context) async {
+    final picked = await showGpSheet<AppLang>(
+      context,
+      builder: (sheet) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final (lang, label) in const [(AppLang.ko, '한국어'), (AppLang.zh, '中文 (简体)')])
+              ListTile(
+                key: Key('language-${lang.name}'),
+                title: Text(label),
+                trailing: L10n.current == lang ? const Icon(Icons.check, color: Gp.accent) : null,
+                onTap: () => Navigator.pop(sheet, lang),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (picked != null) await L10n.set(picked);
   }
 
   Future<void> _signOut() async {
@@ -329,12 +353,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SectionHeader('앱'),
-                const ListTile(
-                  // K-2 화면 번역 없음 — 있는 그대로
-                  leading: Icon(Icons.language),
-                  title: Text('언어'),
-                  subtitle: Text('상품 이름 한국어 → 日本語 → English'),
-                  trailing: Text('한국어', style: TextStyle(color: Gp.muted)),
+                ListTile(
+                  // K-2 화면 언어 — 한국어(기본) · 中文. 고르면 앱 전체가 그 언어로 다시 열린다 (lib/l10n)
+                  key: const Key('settings-language'),
+                  leading: const Icon(Icons.language),
+                  title: Text(tr('언어')),
+                  subtitle: Text(tr('화면 · 상품 이름 · 공지 번역 · 알림')),
+                  trailing: Text(L10n.isZh ? '中文' : '한국어', style: const TextStyle(color: Gp.muted)),
+                  onTap: () => _pickLanguage(context),
                 ),
                 ListTile(
                   // K-7

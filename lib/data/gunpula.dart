@@ -501,6 +501,9 @@ List<Map<String, Object?>> mapKitsJob(Map<String, String> msg) {
     final name = '$legoNo${pickName(names)}';
     final nameJa = '$legoNo${pickName(names, const ['ja', 'en', 'ko'])}';
     final seriesLabel = pickName(labels);
+    // 중국어 화면 (lib/l10n): Gunpula names.zh (번역이 아직이면 일본어 원문) · series.labels.zh
+    final nameZh = '$legoNo${pickName(names, const ['zh', 'ja', 'en', 'ko'])}';
+    final seriesZh = jStr(labels['zh']);
     final line = lineLabel(code, subline, id);
     final goodsKind = jStr(r['goods_kind']);
     final type = goodsKind.isEmpty
@@ -513,6 +516,8 @@ List<Map<String, Object?>> mapKitsJob(Map<String, String> msg) {
       jStr(labels['en']),
       jStr(labels['zh']),
       jStr(r['work_title']),
+      // 중국어 별명 · 다른 지역 이름 (沙煲 · 海牛 …, Gunpula apply_zh_names.mjs search_zh) — 찾기에만
+      ...jList(r['search_zh']).map(jStr),
       code,
       subline,
       // 상품 번호 · 형번 (레고 세트 번호 75192 …)으로도 찾는다
@@ -524,8 +529,10 @@ List<Map<String, Object?>> mapKitsJob(Map<String, String> msg) {
       'id': id,
       'franchiseId': jStr(r['franchise']),
       'name': name,
+      'nameZh': nameZh == name ? '' : nameZh,
       'nameJa': nameJa == name ? '' : nameJa,
       'series': seriesLabel,
+      'seriesZh': seriesZh == seriesLabel ? '' : seriesZh,
       'seriesKey': jStr(series['key']),
       'line': line,
       'subline': cleanSubline(subline, code, line, name: jStr(names['ja'])),
