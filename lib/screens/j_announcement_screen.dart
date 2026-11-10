@@ -7,7 +7,8 @@
 // │ J-2b │ 요약 화면 (BlurFitImage · 단계 줄)     │ 원문을 열 수 없을 때 · 웹 미리보기       │ P09           │
 // │ J-3  │ 아래 띠: TogglePill(알림 받기)        │ 다음 단계가 되면 휴대폰 알림 (진짜)      │ P03 · P07     │
 // │ J-4  │ 아래 띠: 이 예고 · 상품 n → 시트       │ 4단계 진행 줄 + 제목 「」 으로 찾은 상품  │ P01 · P06     │
-// │ J-5  │ 아래 띠: 브라우저로 (↗)               │ Chrome 등에서 열기 (번역할 때)          │ P10           │
+// │ J-5  │ 아래 띠: 브라우저로 (↗)               │ Chrome 등에서 열기                      │ P10           │
+// │ J-5b │ 아래 띠: 번역 (文A)                   │ 원문 글을 한국어로 · 다시 누르면 원문    │ P02 · P03     │
 // │ J-6  │ PageView (위 띠 · 아래 띠에서)        │ 좌우로 밀어 이전 · 다음 예고            │ P03           │
 // │ J-7  │ 시트 안 가로 ProductTile (최대 12)    │ 같은 IP의 새 상품 (작품 · 없으면 채널)   │ P06 · P08     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
@@ -20,6 +21,8 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart' show AndroidWebViewController;
 
 import '../api.dart';
+import '../data/page_translate.dart';
+import '../logic/page_text.dart';
 import '../detail_pane.dart';
 import '../channels.dart';
 import '../logic/announcement_match.dart';
@@ -100,6 +103,12 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
   /// 원문 안에서 다른 페이지로 갔다 → 뒤로 = 원문 안에서 뒤로
   bool _webBack = false;
 
+  /// J-5b 번역해서 보는 중 (원문 안에서 다른 페이지로 가도 이어서 번역)
+  bool _translateOn = false;
+
+  /// 번역 중 · 모델 받는 중이면 진행 글 (빈 글자 = 쉬는 중)
+  String _translateBusy = '';
+
   /// 이 예고 채널의 상품 (못 받으면 빈 목록)
   late final Future<List<Kit>> _all = widget.loaders
       .kits([widget.item.franchiseId])
@@ -141,7 +150,10 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
         onProgress: (p) {
           if (mounted) setState(() => _progress = p / 100); // STATE: 읽는 중 → 가는 줄
         },
-        onPageFinished: (_) => _syncBack(),
+        onPageFinished: (_) {
+          _syncBack();
+          if (_translateOn) _translatePage();
+        },
         onUrlChange: (_) => _syncBack(),
         onWebResourceError: (e) {
           // 원문 자체를 못 열었을 때만 (사진 · 광고 하나가 안 되는 것은 무시)
@@ -165,7 +177,69 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
     if (mounted && back != _webBack) setState(() => _webBack = back); // STATE: 원문 안 뒤로 가능
   }
 
-  /// J-5 브라우저로 (Chrome 의 번역을 쓰고 싶을 때)
+  /// J-5b 번역 켜고 끄기 — 처음이면 모델(약 60 MB)을 받을지 먼저 묻는다
+  Future<void> _toggleTranslate() async {
+    final web = _web;
+    if (web == null || _translateBusy.isNotEmpty) return;
+    if (_translateOn) {
+      setState(() => _translateOn = false); // STATE: 번역 끔 → 원문
+      await web.runJavaScript(restoreTextsJs);
+      return;
+    }
+    final tr = PageTranslator.instance;
+    if (!await tr.ready()) {
+      if (!mounted) return;
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('번역 모델 받기'),
+          content: const Text('일본어 · 한국어 번역 모델(약 60 MB)을 한 번 받아요. 그다음부터는 인터넷 없이도 이 기기 안에서 번역해요. Wi-Fi 에서 받는 것을 권해요.'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('나중에')),
+            TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('받기')),
+          ],
+        ),
+      );
+      if (ok != true || !mounted) return;
+      setState(() => _translateBusy = '모델 받는 중'); // STATE: 모델 받는 중 → 버튼 옆 글
+      final done = await tr.download();
+      if (!mounted) return;
+      setState(() => _translateBusy = '');
+      if (!done) {
+        showToast(context, '번역 모델을 받지 못했어요 · 인터넷을 확인해 주세요');
+        return;
+      }
+    }
+    setState(() => _translateOn = true); // STATE: 번역 켬
+    await _translatePage();
+  }
+
+  /// 지금 보이는 원문의 일본어 글을 모아 번역해서 바꿔 끼운다
+  Future<void> _translatePage() async {
+    final web = _web;
+    if (web == null || !mounted) return;
+    try {
+      final texts = textsToTranslate(decodeTextList(await web.runJavaScriptReturningResult(collectTextsJs)));
+      if (texts.isEmpty) {
+        if (mounted) showToast(context, '번역할 일본어 글이 없어요 (그림 안 글자는 못 바꿔요)');
+        return;
+      }
+      final map = await PageTranslator.instance.translate(
+        texts,
+        onProgress: (done, total) {
+          if (mounted) setState(() => _translateBusy = '번역 중 $done/$total'); // STATE: 번역 진행
+        },
+      );
+      if (!mounted || !_translateOn) return;
+      await web.runJavaScript(applyTranslationsJs(map));
+    } on Exception {
+      if (mounted) showToast(context, '이 페이지는 번역하지 못했어요 · ↗ 브라우저에서 번역해 보세요');
+    } finally {
+      if (mounted) setState(() => _translateBusy = '');
+    }
+  }
+
+  /// J-5 브라우저로
   Future<void> _openOutside() async {
     final u = _uri;
     if (u == null) {
@@ -227,6 +301,10 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
             onFollow: _toggleFollow,
             onAbout: () => _showAbout(context),
             onOutside: _openOutside,
+            // J-5b 원문을 앱 안에서 보고 있을 때만
+            onTranslate: web == null ? null : _toggleTranslate,
+            translateOn: _translateOn,
+            translateBusy: _translateBusy,
           ),
         ],
       ),
@@ -399,12 +477,18 @@ class _BottomBar extends StatelessWidget {
     required this.onFollow,
     required this.onAbout,
     required this.onOutside,
+    this.onTranslate,
+    this.translateOn = false,
+    this.translateBusy = '',
   });
   final Announcement item;
   final Future<List<Kit>> related;
   final void Function(NotifyStore store) onFollow;
   final VoidCallback onAbout;
   final VoidCallback onOutside;
+  final VoidCallback? onTranslate;
+  final bool translateOn;
+  final String translateBusy;
 
   @override
   Widget build(BuildContext context) {
@@ -448,6 +532,25 @@ class _BottomBar extends StatelessWidget {
                   },
                 ),
               ),
+              if (onTranslate != null)
+                translateBusy.isNotEmpty
+                    ? Tooltip(
+                        message: translateBusy,
+                        triggerMode: TooltipTriggerMode.tap,
+                        child: const SizedBox(
+                          width: 48,
+                          height: 48,
+                          child: Center(
+                            child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                          ),
+                        ),
+                      )
+                    : IconButton(
+                        key: const ValueKey('translate'),
+                        tooltip: translateOn ? '원문으로' : '한국어로 번역',
+                        onPressed: onTranslate,
+                        icon: Icon(Icons.translate, size: Gp.iM, color: translateOn ? Gp.accent : Gp.muted),
+                      ),
               IconButton(
                 tooltip: '브라우저로 열기',
                 onPressed: onOutside,

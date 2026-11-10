@@ -27,6 +27,7 @@
 // │ D-14 │ 하단 고정 바 왼쪽: 복사 · 공식        │ 상품명 복사 · 공식 상품 페이지(출처)    │ P07 · P10     │
 // │ D-15 │ 오른쪽 위 ? (뒤로 맞은편, 떠 있는 원) │ 아이콘 뜻 한 줄씩 (♡ · 리본 · 수량 · 제보) │ P10        │
 // │ D-16 │ _GuideLink 줄 (기체 그림 · 이름 ›)    │ 도감에서 보기 → 그 작품 도감의 기체 시트   │ P07 · P06     │
+// │ D-17 │ _ManualLink 줄 (책 아이콘 · ›)        │ 공식 조립 설명서 → X 화면 (있는 상품만)   │ P10 · P07     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 홈 · 검색 · 설명 후보 · 바코드에서 쌓기(push, 오른쪽에서). 공식 정보 · 시세 · 구매가 → 덮기(바텀 시트).
 // 좋아요 · 구매함은 화면 아래에 고정 — 길게 내려 읽어도 바로 누를 수 있다 (쇼핑 앱 상세와 같은 위치).
@@ -52,6 +53,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'guide/guide_search.dart' show openUnitInGuide;
 import 't_photo_screen.dart' show KitPhotoStrip;
+import 'x_manual_screen.dart' show openManual;
 
 /// 상품 상세 열기 — 폰: 오른쪽에서 밀려 들어옴 / 넓은 화면: 오른쪽 칸 (detail_pane.dart)
 /// [list] 를 주면 그 목록 안에서 좌우로 밀어 이전 · 다음 상품 (최근 추가 · 좋아요 · 검색 결과 …)
@@ -484,6 +486,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
         child: _SpecStrip(specs: _specs, onTap: _openSpecs), // D-8 P08
       ),
       if (k.franchiseId == 'gundam') _GuideLink(kit: k, loaders: widget.loaders), // D-16
+      if (k.manualId > 0) _ManualLink(kit: k), // D-17
       // 같은 작품의 다른 상품
       SectionPanel(
         padding: const EdgeInsets.only(bottom: 18),
@@ -1072,6 +1075,46 @@ class _GuideLinkState extends State<_GuideLink> {
   );
 }
 
+/// D-17 공식 조립 설명서 — 반다이 설명서 사이트에 이 상품의 설명서가 있을 때만
+class _ManualLink extends StatelessWidget {
+  const _ManualLink({required this.kit});
+  final Kit kit;
+
+  @override
+  Widget build(BuildContext context) => SectionPanel(
+    padding: EdgeInsets.zero,
+    child: InkWell(
+      key: const ValueKey('manual-link'),
+      onTap: () => openManual(context, id: kit.manualId, kitName: kit.name),
+      child: const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Icon(Icons.menu_book_outlined, size: Gp.iM, color: Gp.ink),
+            SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '조립 설명서',
+                    style: TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w700),
+                  ),
+                  Text(
+                    'BANDAI HOBBY 공식',
+                    style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, size: Gp.iM, color: Gp.muted),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
 /// D-15 ? 도움말
 final detailHelp = <HelpItem>[
   HelpItem(Icons.favorite_border, '좋아요 (갖고 싶은 것)'),
@@ -1080,6 +1123,7 @@ final detailHelp = <HelpItem>[
   HelpItem(Icons.content_copy_rounded, '상품명 복사'),
   HelpItem(Icons.north_east, '공식 상품 페이지'),
   HelpItem(Icons.assignment_outlined, '공식 정보 전체'),
+  HelpItem(Icons.menu_book_outlined, '공식 조립 설명서 (있는 상품만)'),
   HelpItem(Icons.flag_outlined, '정보 오류 제보'),
   HelpItem(Icons.add_a_photo_outlined, '내 사진 넣기 (구매함)'),
   ...kitProgressHelp(restock: true),

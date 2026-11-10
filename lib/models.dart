@@ -70,6 +70,7 @@ class Kit {
     this.sourceUrls = const [],
     this.imageRef = false,
     this.subline = '',
+    this.manualId = 0,
   });
 
   final String id;
@@ -143,6 +144,9 @@ class Kit {
   /// 라인 안의 세부 시리즈 (HGUC · HGCE · HGBF · ROBOT魂 ver. A.N.I.M.E. …). 라인과 같거나 모르면 빈 글자
   final String subline;
 
+  /// 공식 조립 설명서 (manual.bandai-hobby.net 의 번호, 0 = 없음 — Gunpula import_bandai_manuals.mjs 가 이름으로 이은 것)
+  final int manualId;
+
   /// lib/data/gunpula.dart mapKitsJob 의 결과 → Kit.
   /// [recentSince] 이후에 처음 들어온 상품 = 최근 추가, [monthPrefix]('yyyy-mm')에 발매 = 이번 달
   static Kit fromSlim(Map<String, Object?> j, {required String recentSince, required String monthPrefix}) {
@@ -183,6 +187,7 @@ class Kit {
       sourceUrls: _strs(j['sourceUrls']),
       imageRef: _b(j, 'imageRef'),
       subline: jStr(j['subline']),
+      manualId: _iOrNull(j, 'manualId') ?? 0,
     );
   }
 

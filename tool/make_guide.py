@@ -30,6 +30,7 @@ SCREENS = [
     ('K', '설정', ['lib/screens/k_settings_screen.dart']),
     ('V', '공유 카드 (내 컬렉션 · 도감 진행 그림)', ['lib/screens/v_share_sheet.dart']),
     ('W', '처음 데이터 받기', ['lib/screens/w_first_run_screen.dart']),
+    ('X', '조립 설명서', ['lib/screens/x_manual_screen.dart']),
 ]
 
 
@@ -124,6 +125,7 @@ LIST = [
     ('L', '친구 컬렉션', 'l_friend_collection_screen.dart', '쌓기 (친구 프로필 숫자)', '`/kits?id=` · `/guideWorks`'),
     ('N', '알림', 'n_notifications_screen.dart', '쌓기 (🔔) · 친구 요청 = 덮기', '`/notifications` (+ 누를 때 `/kits?id=` · `/announcements` · `/profile`)'),
     ('K', '설정', 'k_settings_screen.dart', '쌓기 (⚙ · 알림의 ⚙)', '없음'),
+    ('X', '조립 설명서', 'x_manual_screen.dart', '쌓기 (상품 상세 D-17)', ''),
 ]
 for r in LIST:
     w(f'| {r[0]} | {r[1]} | `lib/screens/{r[2].split(" · ")[0]}`{" · `lib/main.dart`" if r[0] == "S" else ""} | {esc(r[3])} |')

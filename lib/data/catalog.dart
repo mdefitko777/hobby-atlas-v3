@@ -41,7 +41,8 @@ class Catalog extends ChangeNotifier {
   /// 11: 피규어 칸의 평면 굿즈(아크릴 스탠드 · 스티커 · 브로마이드 · 액자 아트)를 굿즈로
   /// 12: 베이 상세 사진 맨 앞에 공식 파츠 상세 그림
   /// 13: goodsmile.com 상세 사진을 다시 보이기 (점검이 끝남)
-  static const mapVersion = 13;
+  /// 14: 공식 조립 설명서 번호 (manualId)
+  static const mapVersion = 14;
 
   CatalogPhase phase = CatalogPhase.empty;
   String error = '';
