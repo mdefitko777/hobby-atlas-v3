@@ -16,6 +16,7 @@
 // 전환: A-2 → 검색 탭(옆으로). › → 같은 탭 안에서 O 전체 목록(위쪽 머리 · 검색창은 그대로, 뒤로 = 홈). 상품 카드 → D 상품 상세(쌓기). 배너 · 예고 카드 → J 공식 예고 상세(쌓기).
 // 줄 안에는 날짜·가격을 쓰지 않는다 — 궁금하면 눌러서 상세에서 본다 (P08).
 // 왜 이렇게: 홈은 버전 번호 · 총 개수 · IP 입구 카드 대신 "내 채널의 새 소식"만.
+import '../l10n/l10n.dart';
 import '../logic/kit_rules.dart';
 import 'dart:async' show Timer;
 
@@ -41,12 +42,12 @@ import 'o_see_all_screen.dart';
 List<String> get recentViewedIds => UserStore.instance.recentViewed;
 
 /// 이번 달 발매 줄 제목
-String get currentMonthTitle => '${appNow().month}월 발매';
+String get currentMonthTitle => trf('{m}월 발매', {'m': appNow().month});
 
 /// "최근 추가" 기간 = 데이터에 가장 늦게 들어온 날 기준 3일 (Gunpula 갱신이 멈추면 그 날짜에 머문다)
 String get recentRangeLabel {
   final c = Catalog.instance;
-  if (c.recentSince.isEmpty) return '최근 3일';
+  if (c.recentSince.isEmpty) return tr('최근 3일');
   String md(String d) => '${d.substring(5, 7)}.${d.substring(8, 10)}';
   return '${md(c.recentSince)} – ${md(c.recentUntil)}';
 }
@@ -96,10 +97,10 @@ class _Item {
 
 /// 전체 목록 제목
 String _titleOf(HomeSection s) => switch (s) {
-  HomeSection.recent => '최근 추가',
+  HomeSection.recent => tr('최근 추가'),
   HomeSection.month => currentMonthTitle,
-  HomeSection.announcements => '공식 예고',
-  HomeSection.viewed => '최근 본',
+  HomeSection.announcements => tr('공식 예고'),
+  HomeSection.viewed => tr('최근 본'),
 };
 
 /// 가로 줄 하나
@@ -272,7 +273,7 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
         field: GpSearchBar(
           // O-7 이 목록 안에서만
           controller: _searchCtrl,
-          hint: '${_titleOf(sec)}에서 찾기',
+          hint: trf('{name}에서 찾기', {'name': _titleOf(sec)}),
           onChanged: (v) => setState(() => _query = v), // STATE: 검색어 → 목록 거르기
           onCamera: widget.onCamera,
         ),
@@ -292,7 +293,7 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
       search = FindBar(
         // A-25 My Page 안에서 찾기 + 필터
         key: const ValueKey('mine-find'),
-        hint: '내 것에서 찾기',
+        hint: tr('내 것에서 찾기'),
         onQuery: (q) => setState(() => _mineFind.query = q),
         filterCount: _mineFind.filter.count,
         onFilter: _openMineFilter,
@@ -317,14 +318,14 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
             // A-7 P09
             icon: Icons.auto_awesome_outlined,
             message: ids.isEmpty
-                ? '내 채널이 비어 있어요'
+                ? tr('내 채널이 비어 있어요')
                 : noData
-                ? '${channelOf(ids.first).label}은(는) 아직 수록된 상품이 없어요'
-                : '새 소식이 없어요',
-            detail: ids.isEmpty ? '채널 관리에서 관심 IP를 추가하세요' : '상품이 들어오면 여기에 먼저 보여요',
+                ? trf('{channel}은(는) 아직 수록된 상품이 없어요', {'channel': tr(channelOf(ids.first).label)})
+                : tr('새 소식이 없어요'),
+            detail: ids.isEmpty ? tr('채널 관리에서 관심 IP를 추가하세요') : tr('상품이 들어오면 여기에 먼저 보여요'),
             action: channel == allChannelId
                 ? null
-                : OutlinedButton(onPressed: () => selectChannel(allChannelId), child: const Text('전체 보기')),
+                : OutlinedButton(onPressed: () => selectChannel(allChannelId), child: Text(tr('전체 보기'))),
           ),
         ],
       );
@@ -343,7 +344,7 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
               key: ValueKey(sec),
               title: _titleOf(sec),
               subtitle: joinDot([
-                if (channel != allChannelId) channelOf(channel).label,
+                if (channel != allChannelId) tr(channelOf(channel).label),
                 if (sec == HomeSection.recent) recentRangeLabel,
               ]),
               kits: lists[sec] ?? const [],
@@ -362,22 +363,23 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
 
     final rows = [
       _Row(
-        '최근 추가',
+        tr('최근 추가'),
         [for (final k in recent) kitItem(k)],
         subtitle: joinDot([
           recentRangeLabel,
-          if (Catalog.instance.updatedAt.length >= 10) '데이터 ${dateDot(Catalog.instance.updatedAt.substring(5))}',
+          if (Catalog.instance.updatedAt.length >= 10)
+            trf('데이터 {date}', {'date': dateDot(Catalog.instance.updatedAt.substring(5))}),
         ]),
         onMore: () => _openSection(HomeSection.recent),
       ),
       _Row(currentMonthTitle, [for (final k in month) kitItem(k)], onMore: () => _openSection(HomeSection.month)),
       _Row(
-        '공식 예고',
+        tr('공식 예고'),
         [for (final a in data.announcements) _Item(a.image, a.title, ann: a)],
         wide: true,
         onMore: () => _openSection(HomeSection.announcements),
       ),
-      _Row('최근 본', [for (final k in viewed) kitItem(k)], onMore: () => _openSection(HomeSection.viewed)),
+      _Row(tr('최근 본'), [for (final k in viewed) kitItem(k)], onMore: () => _openSection(HomeSection.viewed)),
     ];
     final heroes = data.announcements.where((a) => a.hero).toList();
 
@@ -516,7 +518,7 @@ class _HeroBannerState extends State<_HeroBanner> {
                                 padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
                                 child: Row(
                                   children: [
-                                    SoftTag(a.status, color: stageColor(a.status)), // A-4 P01 단계 = 다른 꼬리표와 같은 모양
+                                    SoftTag(tr(a.status), color: stageColor(a.status)), // A-4 P01 단계 = 다른 꼬리표와 같은 모양
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
@@ -595,11 +597,11 @@ class _HorizontalRow extends StatelessWidget {
 }
 
 /// A-26 ? 도움말 (위 줄 ? 의 "홈" 묶음 — s_app_shell.dart)
-const homeHelp = <HelpItem>[
-  HelpItem(Icons.photo_camera_outlined, '찍어서 찾기'),
-  HelpItem(Icons.tune, '필터'),
-  HelpItem(Icons.newspaper_outlined, '전체 소식'),
-  HelpItem(Icons.person_outline, 'My Page (내 것 · ★ 친구)'),
-  HelpItem(Icons.ios_share, '공유 카드 (My Page 숫자 줄 끝)'),
-  HelpItem(Icons.grid_view_outlined, '격자 · 목록 (전체 보기 안)'),
+List<HelpItem> get homeHelp => [
+  HelpItem(Icons.photo_camera_outlined, tr('찍어서 찾기')),
+  HelpItem(Icons.tune, tr('필터')),
+  HelpItem(Icons.newspaper_outlined, tr('전체 소식')),
+  HelpItem(Icons.person_outline, tr('My Page (내 것 · ★ 친구)')),
+  HelpItem(Icons.ios_share, tr('공유 카드 (My Page 숫자 줄 끝)')),
+  HelpItem(Icons.grid_view_outlined, tr('격자 · 목록 (전체 보기 안)')),
 ];

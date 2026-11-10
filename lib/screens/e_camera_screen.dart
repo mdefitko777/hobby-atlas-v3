@@ -23,6 +23,7 @@ import 'package:flutter/services.dart' show FilteringTextInputFormatter;
 import 'package:image_picker/image_picker.dart' show ImageSource;
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import '../l10n/l10n.dart';
 import '../api.dart';
 import '../channels.dart';
 import '../logic/kit_rules.dart';
@@ -65,7 +66,7 @@ Future<void> _pickPhoto(
   try {
     bytes = await photoPicker(source); // 사진 벽(T)과 같은 고르기 (줄여서 JPEG)
   } on Object catch (e) {
-    if (context.mounted) showToast(context, '사진을 가져오지 못했어요 ($e)');
+    if (context.mounted) showToast(context, trf('사진을 가져오지 못했어요 ({error})', {'error': e}));
     return;
   }
   if (bytes == null || bytes.isEmpty) return;
@@ -192,7 +193,7 @@ class _BarcodeScanScreenState extends State<BarcodeScanScreen> {
     final code = await showDialog<String>(
       context: context,
       builder: (dialog) => AlertDialog(
-        title: const Text('바코드 번호'),
+        title: Text(tr('바코드 번호')),
         content: TextField(
           controller: c,
           autofocus: true,
@@ -203,14 +204,14 @@ class _BarcodeScanScreenState extends State<BarcodeScanScreen> {
           onSubmitted: (v) => Navigator.pop(dialog, v),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialog), child: const Text('취소')),
-          FilledButton(onPressed: () => Navigator.pop(dialog, c.text), child: const Text('찾기')),
+          TextButton(onPressed: () => Navigator.pop(dialog), child: Text(tr('취소'))),
+          FilledButton(onPressed: () => Navigator.pop(dialog, c.text), child: Text(tr('찾기'))),
         ],
       ),
     ).whenComplete(c.dispose);
     if (code == null || !mounted) return;
     if (normalizeBarcode(code).isEmpty) {
-      showToast(context, '13자리(또는 8 · 12자리) 숫자예요');
+      showToast(context, tr('13자리(또는 8 · 12자리) 숫자예요'));
       return;
     }
     setState(() => _unknown = '');
@@ -264,14 +265,17 @@ class _BarcodeScanScreenState extends State<BarcodeScanScreen> {
                           child: CustomPaint(
                             painter: _FrameCorners(),
                             child: _looking
-                                ? const Center(
+                                ? Center(
                                     child: _Bubble(
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          MiniSpinner(size: 16, color: Gp.accent),
-                                          SizedBox(width: 8),
-                                          Text('찾는 중…', style: TextStyle(fontWeight: FontWeight.w600)), // E-4 P01
+                                          const MiniSpinner(size: 16, color: Gp.accent),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            tr('찾는 중…'),
+                                            style: const TextStyle(fontWeight: FontWeight.w600),
+                                          ), // E-4 P01
                                         ],
                                       ),
                                     ),
@@ -287,14 +291,14 @@ class _BarcodeScanScreenState extends State<BarcodeScanScreen> {
                         child: Row(
                           children: [
                             RaisedCircleButton(
-                              tooltip: '닫기', // P03
+                              tooltip: tr('닫기'), // P03
                               size: 40,
                               onTap: () => Navigator.of(context).maybePop(),
                               child: const Icon(Icons.close, size: Gp.iM, color: Gp.ink),
                             ),
                             const Spacer(),
                             RaisedCircleButton(
-                              tooltip: '번호 입력', // E-3
+                              tooltip: tr('번호 입력'), // E-3
                               size: 40,
                               onTap: _typeCode,
                               child: const Icon(Icons.keyboard_outlined, size: Gp.iM, color: Gp.ink),
@@ -330,14 +334,14 @@ class _BarcodeScanScreenState extends State<BarcodeScanScreen> {
                 child: Row(
                   children: [
                     IconButton(
-                      tooltip: '앨범', // E-5
+                      tooltip: tr('앨범'), // E-5
                       onPressed: _toAlbum,
                       icon: const Icon(Icons.photo_library_outlined, color: Gp.ink),
                     ),
                     const Spacer(),
-                    UnderlineTab(label: '사진', selected: false, onTap: _toPhoto), // E-2 P07
+                    UnderlineTab(label: tr('사진'), selected: false, onTap: _toPhoto), // E-2 P07
                     const SizedBox(width: 10),
-                    UnderlineTab(label: '바코드', selected: true, onTap: () {}),
+                    UnderlineTab(label: tr('바코드'), selected: true, onTap: () {}),
                     const Spacer(),
                     const SizedBox(width: 48),
                   ],
@@ -374,12 +378,12 @@ class _CameraError extends StatelessWidget {
     color: Gp.panel,
     child: EmptyView(
       icon: Icons.no_photography_outlined,
-      message: denied ? '카메라 권한이 꺼져 있어요' : '카메라를 열지 못했어요',
-      detail: denied ? '휴대폰 설정 › 애플리케이션 › Hobby Atlas › 권한' : '',
+      message: denied ? tr('카메라 권한이 꺼져 있어요') : tr('카메라를 열지 못했어요'),
+      detail: denied ? tr('휴대폰 설정 › 애플리케이션 › Hobby Atlas › 권한') : '',
       action: OutlinedButton.icon(
         onPressed: onType,
         icon: const Icon(Icons.keyboard_outlined, size: Gp.iM),
-        label: const Text('번호 입력'),
+        label: Text(tr('번호 입력')),
       ),
     ),
   );
@@ -409,7 +413,7 @@ class _UnknownBarcode extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('이 바코드의 상품이 아직 없어요', style: TextStyle(fontWeight: FontWeight.w700)),
+                Text(tr('이 바코드의 상품이 아직 없어요'), style: const TextStyle(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 2),
                 Text(
                   code,
@@ -418,9 +422,9 @@ class _UnknownBarcode extends StatelessWidget {
               ],
             ),
           ),
-          act(Icons.flag_outlined, '제보', onReport),
-          act(Icons.search, '이름으로 찾기', onSearch),
-          act(Icons.refresh, '다시 찍기', onRetry),
+          act(Icons.flag_outlined, tr('제보'), onReport),
+          act(Icons.search, tr('이름으로 찾기'), onSearch),
+          act(Icons.refresh, tr('다시 찍기'), onRetry),
         ],
       ),
     );
@@ -450,7 +454,7 @@ class BarcodeResultScreen extends StatelessWidget {
               image: k.image,
               title: k.name,
               titleLines: 2,
-              subtitle: joinDot([channelOf(k.franchiseId).label, k.line, dateDot(k.date)]),
+              subtitle: joinDot([tr(channelOf(k.franchiseId).label), tr(k.line), dateDot(k.date)]),
               onTap: () => openKitDetail(context, k, loaders: loaders, list: kits),
             ),
         ],

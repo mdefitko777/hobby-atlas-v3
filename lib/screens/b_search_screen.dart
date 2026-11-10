@@ -24,6 +24,7 @@
 // 왜 이렇게: 정확한 이름을 몰라도 찾게 — 필터 입구를 여럿 두지 않고 검색창 하나 + 말로 찾기.
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../api.dart';
 import '../data/user_store.dart';
 import '../channels.dart';
@@ -160,12 +161,12 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
   void _removeRecent(UserStore me, String q) {
     final i = me.removeRecentSearch(q);
     if (i < 0) return;
-    showToast(context, '「$q」을(를) 지웠어요', onUndo: () => me.insertRecentSearch(i, q));
+    showToast(context, trf('「{q}」을(를) 지웠어요', {'q': q}), onUndo: () => me.insertRecentSearch(i, q));
   }
 
   void _clearRecent(UserStore me) {
     final before = me.clearRecentSearches();
-    showToast(context, '검색 기록을 지웠어요', onUndo: () => me.restoreRecentSearches(before));
+    showToast(context, tr('검색 기록을 지웠어요'), onUndo: () => me.restoreRecentSearches(before));
   }
 
   @override
@@ -242,7 +243,7 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
         for (final (i, label) in const ['전체', '종류', '세대'].indexed)
           UnderlineTab(
             key: ValueKey('view-$i'),
-            label: label,
+            label: tr(label),
             fontSize: Gp.t16,
             selected: _view == i,
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -280,8 +281,8 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
       // B-9 전체 상품
       key: const ValueKey('all'),
       tools: _tools,
-      title: '전체 상품',
-      subtitle: channel == allChannelId ? '' : channelOf(channel).label,
+      title: tr('전체 상품'),
+      subtitle: channel == allChannelId ? '' : tr(channelOf(channel).label),
       kits: kits,
       loaders: widget.loaders,
     ),
@@ -343,10 +344,10 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
       children: [
         if (recent.isNotEmpty) ...[
           SectionHeader(
-            '최근 검색',
+            tr('최근 검색'),
             padding: const EdgeInsets.fromLTRB(16, 16, 4, 10),
             trailing: IconButton(
-              tooltip: '전체 삭제',
+              tooltip: tr('전체 삭제'),
               visualDensity: VisualDensity.compact,
               onPressed: () => _clearRecent(me),
               icon: const Icon(Icons.delete_sweep_outlined, size: Gp.iM, color: Gp.muted),
@@ -357,7 +358,7 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
           ]),
         ],
         if (frequent.isNotEmpty) ...[
-          const SectionHeader('자주 찾은', padding: EdgeInsets.fromLTRB(16, 24, 12, 10)), // B-4 내 검색 횟수
+          SectionHeader(tr('자주 찾은'), padding: const EdgeInsets.fromLTRB(16, 24, 12, 10)), // B-4 내 검색 횟수
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: Gp.gutter),
             child: Row(
@@ -367,18 +368,18 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
           ),
         ],
         if (fresh.isNotEmpty) ...[
-          const SectionHeader('새로 들어온', subtitle: '이번 주', padding: EdgeInsets.fromLTRB(16, 24, 12, 4)), // B-4
+          SectionHeader(tr('새로 들어온'), subtitle: tr('이번 주'), padding: const EdgeInsets.fromLTRB(16, 24, 12, 4)), // B-4
           for (final k in fresh)
             ThumbRow(
               image: k.image,
               title: k.name,
               size: 44,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
-              subtitle: joinDot([channelOf(k.franchiseId).label, k.line]),
+              subtitle: joinDot([tr(channelOf(k.franchiseId).label), tr(k.line)]),
               onTap: () => openKitDetail(context, k, loaders: widget.loaders, list: fresh),
             ),
         ],
-        const SectionHeader('설명으로 찾기', padding: EdgeInsets.fromLTRB(16, 24, 12, 10)), // B-5 P10
+        SectionHeader(tr('설명으로 찾기'), padding: const EdgeInsets.fromLTRB(16, 24, 12, 10)), // B-5 P10
         wrap([
           for (final example in sentenceExamples)
             _chip(example, icon: Icons.manage_search, onTap: () => _search(example)),
@@ -412,13 +413,13 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
           EmptyView(
             // B-8 P09
             icon: Icons.search_off,
-            message: '「$_query」와 일치하는 상품이 없어요',
+            message: trf('「{q}」와 일치하는 상품이 없어요', {'q': _query}),
             detail: channel == allChannelId
-                ? '이름 대신 생김새·작품을 문장으로 적어 보세요'
-                : '지금은 ${channelOf(channel).label} 안에서만 찾고 있어요',
+                ? tr('이름 대신 생김새·작품을 문장으로 적어 보세요')
+                : trf('지금은 {channel} 안에서만 찾고 있어요', {'channel': tr(channelOf(channel).label)}),
             action: channel == allChannelId
-                ? OutlinedButton(onPressed: () => _setQuery(''), child: const Text('검색어 지우기'))
-                : OutlinedButton(onPressed: () => selectChannel(allChannelId), child: const Text('전체 채널에서 찾기')),
+                ? OutlinedButton(onPressed: () => _setQuery(''), child: Text(tr('검색어 지우기')))
+                : OutlinedButton(onPressed: () => selectChannel(allChannelId), child: Text(tr('전체 채널에서 찾기'))),
           ),
         ],
       );
@@ -443,7 +444,7 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
                 ),
                 onPressed: () => setState(() => _grouped = !_grouped), // STATE: 결과 묶기
                 icon: Icon(_grouped ? Icons.account_tree : Icons.account_tree_outlined, size: Gp.iS),
-                label: Text(_grouped ? '기체별로 묶는 중' : '기체별로 묶기', style: const TextStyle(fontSize: Gp.t12)),
+                label: Text(_grouped ? tr('기체별로 묶는 중') : tr('기체별로 묶기'), style: const TextStyle(fontSize: Gp.t12)),
               ),
             ),
           ),
@@ -476,8 +477,8 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
     return SectionListView(
       key: const ValueKey('search'),
       tools: _tools,
-      title: _query.isEmpty ? '전체 상품' : '검색 결과',
-      subtitle: channel == allChannelId ? '' : channelOf(channel).label,
+      title: _query.isEmpty ? tr('전체 상품') : tr('검색 결과'),
+      subtitle: channel == allChannelId ? '' : tr(channelOf(channel).label),
       kits: results,
       header: header,
       onBack: () {
@@ -514,11 +515,11 @@ class SentenceCandidates extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.manage_search, size: Gp.iM, color: Gp.accent),
-              SizedBox(width: 6),
-              Text('설명과 겹친 상품', style: TextStyle(fontWeight: FontWeight.w700)),
+              const Icon(Icons.manage_search, size: Gp.iM, color: Gp.accent),
+              const SizedBox(width: 6),
+              Text(tr('설명과 겹친 상품'), style: const TextStyle(fontWeight: FontWeight.w700)),
             ],
           ),
           const SizedBox(height: 6),
@@ -541,11 +542,11 @@ class SentenceCandidates extends StatelessWidget {
 }
 
 /// B-11 ? 도움말 (위 줄 ? 의 "검색" 묶음 — s_app_shell.dart)
-List<HelpItem> searchHelp() => const [
-  HelpItem(Icons.photo_camera_outlined, '찍어서 찾기 (사진 · 바코드)'),
-  HelpItem(Icons.tune, '필터 (상태 · 종류 · 작품 · 발매 · 가격) — 전체 · 종류 · 세대 · 검색 결과가 같이 쓴다'),
-  HelpItem(Icons.grid_view_outlined, '격자로 보기'),
-  HelpItem(Icons.view_list_outlined, '목록으로 보기'),
-  HelpItem(Icons.account_tree_outlined, '검색 결과를 기체별로 묶기'),
-  HelpItem(Icons.manage_search, '설명으로 찾기 예'),
+List<HelpItem> searchHelp() => [
+  HelpItem(Icons.photo_camera_outlined, tr('찍어서 찾기 (사진 · 바코드)')),
+  HelpItem(Icons.tune, tr('필터 (상태 · 종류 · 작품 · 발매 · 가격) — 전체 · 종류 · 세대 · 검색 결과가 같이 쓴다')),
+  HelpItem(Icons.grid_view_outlined, tr('격자로 보기')),
+  HelpItem(Icons.view_list_outlined, tr('목록으로 보기')),
+  HelpItem(Icons.account_tree_outlined, tr('검색 결과를 기체별로 묶기')),
+  HelpItem(Icons.manage_search, tr('설명으로 찾기 예')),
 ];

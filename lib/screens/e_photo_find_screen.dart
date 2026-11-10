@@ -22,6 +22,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../api.dart';
 import '../channels.dart';
 import '../data/photo_files.dart';
@@ -56,7 +57,7 @@ Future<void> openShared(
       try {
         bytes = await readSharedFile(path);
       } on Object {
-        if (context.mounted) showToast(context, '공유한 사진을 열지 못했어요');
+        if (context.mounted) showToast(context, tr('공유한 사진을 열지 못했어요'));
         return;
       }
       // 스크린숏 · 원본 크기 사진이라 내 사진으로 붙이지 않는다 (붙이기는 찍기 · 앨범에서)
@@ -77,12 +78,12 @@ Future<void> openShared(
       try {
         kits = await loaders.kitsByIds([kitId]);
       } on Object {
-        if (context.mounted) showToast(context, '상품 정보를 불러오지 못했어요');
+        if (context.mounted) showToast(context, tr('상품 정보를 불러오지 못했어요'));
         return;
       }
       if (!context.mounted) return;
       if (kits.isEmpty) {
-        showToast(context, '이 상품을 찾지 못했어요 · 데이터를 새로 받은 뒤 다시 열어 보세요');
+        showToast(context, tr('이 상품을 찾지 못했어요 · 데이터를 새로 받은 뒤 다시 열어 보세요'));
         return;
       }
       openKitDetail(context, kits.first, loaders: loaders);
@@ -238,7 +239,7 @@ class _PhotoFindScreenState extends State<PhotoFindScreen> {
     setState(() => _attached.add(k.id)); // STATE: 붙임 → ✓
     showToast(
       context,
-      '「${k.name}」에 사진을 붙였어요',
+      trf('「{name}」에 사진을 붙였어요', {'name': k.name}),
       onUndo: () {
         store.removePhoto(p.id);
         share.syncSoon();
@@ -259,7 +260,7 @@ class _PhotoFindScreenState extends State<PhotoFindScreen> {
             child: Icon(Icons.check_circle, size: Gp.iM, color: Gp.accent),
           )
         : IconButton(
-            tooltip: '사진 붙이기',
+            tooltip: tr('사진 붙이기'),
             visualDensity: VisualDensity.compact,
             onPressed: () => _attach(k),
             icon: const Icon(Icons.add_photo_alternate_outlined, size: Gp.iM, color: Gp.ink),
@@ -271,7 +272,7 @@ class _PhotoFindScreenState extends State<PhotoFindScreen> {
     title: k.name,
     tag: tag,
     tagStrong: strong,
-    subtitle: reason.isNotEmpty ? reason : joinDot([channelOf(k.franchiseId).label, k.line]),
+    subtitle: reason.isNotEmpty ? reason : joinDot([tr(channelOf(k.franchiseId).label), tr(k.line)]),
     onTap: () => openKitDetail(context, k, loaders: widget.loaders, list: list),
     trailing: _marks(k),
   );
@@ -279,9 +280,9 @@ class _PhotoFindScreenState extends State<PhotoFindScreen> {
   /// E-11 · E-14 상태 한 줄 ([found] = 주소로 이미 찾음)
   Widget _status({bool found = false}) {
     final (icon, text) = switch (_read) {
-      _Read.reading => (null, '글자 읽는 중…'),
-      _Read.failed => (Icons.text_fields, '글자를 읽지 못했어요 · 이름으로 찾기'),
-      _Read.done when _tokens.isEmpty && !found => (Icons.text_fields, '글자를 찾지 못했어요 · 이름으로 찾기'),
+      _Read.reading => (null, tr('글자 읽는 중…')),
+      _Read.failed => (Icons.text_fields, tr('글자를 읽지 못했어요 · 이름으로 찾기')),
+      _Read.done when _tokens.isEmpty && !found => (Icons.text_fields, tr('글자를 찾지 못했어요 · 이름으로 찾기')),
       _Read.done => (null, ''),
     };
     if (text.isEmpty) return const SizedBox.shrink();
@@ -310,9 +311,9 @@ class _PhotoFindScreenState extends State<PhotoFindScreen> {
     final shared = widget.photo == null;
     return Scaffold(
       appBar: AppBar(
-        title: Text(shared ? '공유로 찾기' : '사진으로 찾기'),
+        title: Text(shared ? tr('공유로 찾기') : tr('사진으로 찾기')),
         actions: [
-          HelpButton(title: shared ? '공유로 찾기' : '사진으로 찾기', items: photoFindHelp()), // E-17
+          HelpButton(title: shared ? tr('공유로 찾기') : tr('사진으로 찾기'), items: photoFindHelp()), // E-17
           const SizedBox(width: 6),
         ],
       ),
@@ -391,14 +392,14 @@ class _PhotoFindScreenState extends State<PhotoFindScreen> {
               if (loading || preparing)
                 _read == _Read.reading
                     ? const SizedBox(height: 120)
-                    : const SizedBox(height: 120, child: LoadingView(label: '찾는 중…')) // E-10
+                    : SizedBox(height: 120, child: LoadingView(label: tr('찾는 중…'))) // E-10
               else if (snap.hasError)
                 ErrorView(message: '${snap.error}', onRetry: () => setState(() => _future = _load()))
               else ...[
                 if (candKits.isNotEmpty) ...[
                   SectionHeader(
-                    '후보',
-                    subtitle: '${candKits.length}개',
+                    tr('후보'),
+                    subtitle: trf('{n}개', {'n': candKits.length}),
                     padding: const EdgeInsets.fromLTRB(Gp.gutter, 14, 12, 4),
                   ),
                   for (final h in urlHits) _row(h.kit, candKits, tag: '100%', strong: true, reason: h.how), // E-13
@@ -412,15 +413,15 @@ class _PhotoFindScreenState extends State<PhotoFindScreen> {
                     onTap: (k) => openKitDetail(context, k, loaders: widget.loaders),
                   )
                 else if (candKits.isEmpty && _tokens.isNotEmpty && _read == _Read.done)
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(Gp.gutter, 8, Gp.gutter, 0),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(Gp.gutter, 8, Gp.gutter, 0),
                     child: Row(
                       children: [
-                        Icon(Icons.search_off, size: Gp.iS, color: Gp.faint),
-                        SizedBox(width: 6),
+                        const Icon(Icons.search_off, size: Gp.iS, color: Gp.faint),
+                        const SizedBox(width: 6),
                         Text(
-                          '맞는 상품을 못 찾았어요 · 이름으로 찾기',
-                          style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                          tr('맞는 상품을 못 찾았어요 · 이름으로 찾기'),
+                          style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
                         ),
                       ],
                     ),
@@ -439,7 +440,7 @@ class _PhotoFindScreenState extends State<PhotoFindScreen> {
                   child: GpSearchBar(
                     // 다른 화면과 같은 검색창
                     controller: _search,
-                    hint: '이름으로 찾기',
+                    hint: tr('이름으로 찾기'),
                     onChanged: (q) => setState(() => _query = q.trim()), // STATE: 찾기 → 결과
                   ),
                 ),
@@ -450,19 +451,19 @@ class _PhotoFindScreenState extends State<PhotoFindScreen> {
                   ),
                 if (_query.isEmpty && byName.isNotEmpty)
                   SectionHeader(
-                    '구매함',
-                    subtitle: '${owned.length}개',
+                    tr('구매함'),
+                    subtitle: trf('{n}개', {'n': owned.length}),
                     padding: const EdgeInsets.fromLTRB(Gp.gutter, 18, 12, 4),
                   ),
                 for (final k in byName) _row(k, byName),
                 if (_query.isNotEmpty && byName.isEmpty && hits.isEmpty)
                   EmptyView(
                     icon: Icons.search_off,
-                    message: '「$_query」와 일치하는 상품이 없어요',
+                    message: trf('「{q}」와 일치하는 상품이 없어요', {'q': _query}),
                     action: OutlinedButton.icon(
                       onPressed: () => reportDataIssue(context, kind: ReportKind.missingKit, unitName: _query),
                       icon: const Icon(Icons.flag_outlined, size: Gp.iM),
-                      label: const Text('없는 상품 제보'),
+                      label: Text(tr('없는 상품 제보')),
                     ),
                   ),
               ],
@@ -476,15 +477,15 @@ class _PhotoFindScreenState extends State<PhotoFindScreen> {
 
 /// E-17 ? 도움말 — 글자 조각 아이콘 · 줄 오른쪽 아이콘
 List<HelpItem> photoFindHelp() => [
-  const HelpItem(Icons.touch_app_outlined, '누르면 끄기 · 길게 = 이름으로 찾기'),
+  HelpItem(Icons.touch_app_outlined, tr('누르면 끄기 · 길게 = 이름으로 찾기')),
   for (final k in OcrKind.values)
     if (_TokenChip._icon(k) case final icon?) HelpItem(icon, _TokenChip._label(k), color: Gp.accent),
-  const HelpItem(Icons.link, '공유로 받은 주소 (100%)'),
-  const HelpItem.widget(LikedIcon(size: Gp.iL, filled: false, color: Gp.muted), '좋아요'),
-  const HelpItem.widget(OwnedIcon(size: Gp.iL, filled: false, color: Gp.muted), '구매함'),
-  const HelpItem(Icons.add_photo_alternate_outlined, '이 사진을 구매함 상품에 붙이기'),
-  const HelpItem(Icons.image_search, '생김새가 비슷한 상품 (기기 안 모델 · 처음 한 번 받기 · 사진은 밖으로 안 나감)'),
-  const HelpItem(Icons.delete_outline, '받아 둔 생김새 모델 지우기'),
+  HelpItem(Icons.link, tr('공유로 받은 주소 (100%)')),
+  HelpItem.widget(const LikedIcon(size: Gp.iL, filled: false, color: Gp.muted), tr('좋아요')),
+  HelpItem.widget(const OwnedIcon(size: Gp.iL, filled: false, color: Gp.muted), tr('구매함')),
+  HelpItem(Icons.add_photo_alternate_outlined, tr('이 사진을 구매함 상품에 붙이기')),
+  HelpItem(Icons.image_search, tr('생김새가 비슷한 상품 (기기 안 모델 · 처음 한 번 받기 · 사진은 밖으로 안 나감)')),
+  HelpItem(Icons.delete_outline, tr('받아 둔 생김새 모델 지우기')),
 ];
 
 /// E-15 공유로 받은 글 (세 줄까지)
@@ -533,12 +534,12 @@ class _TokenChip extends StatelessWidget {
   };
 
   static String _label(OcrKind k) => switch (k) {
-    OcrKind.jan => 'JAN (바코드 숫자)',
-    OcrKind.grade => '등급',
-    OcrKind.scale => '축척',
-    OcrKind.model => '형식번호',
-    OcrKind.bbx => '베이 부품 번호',
-    OcrKind.word => '낱말',
+    OcrKind.jan => tr('JAN (바코드 숫자)'),
+    OcrKind.grade => tr('등급'),
+    OcrKind.scale => tr('축척'),
+    OcrKind.model => tr('형식번호'),
+    OcrKind.bbx => tr('베이 부품 번호'),
+    OcrKind.word => tr('낱말'),
   };
 
   @override

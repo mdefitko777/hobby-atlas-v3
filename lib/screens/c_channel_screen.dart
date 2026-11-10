@@ -15,6 +15,7 @@
 import 'package:flutter/cupertino.dart' show CupertinoPageRoute;
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../channels.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -142,7 +143,7 @@ class ChannelBar extends StatelessWidget {
                 children: [
                   for (final id in ids)
                     UnderlineTab(
-                      label: id == allChannelId ? '전체' : channelOf(id).label,
+                      label: id == allChannelId ? tr('전체') : tr(channelOf(id).label),
                       selected: id == selected,
                       onTap: () => onSelect(id), // STATE: 선택 채널 → 아래 목록 다시 거름
                     ),
@@ -151,7 +152,7 @@ class ChannelBar extends StatelessWidget {
             ),
           ),
           IconButton(
-            tooltip: '채널 관리',
+            tooltip: tr('채널 관리'),
             icon: const ChannelGlyph(), // C-2 P07
             onPressed: () => Navigator.of(context).push(
               CupertinoPageRoute<void>(
@@ -195,7 +196,7 @@ class _ChannelManagerScreenState extends State<ChannelManagerScreen> {
   Widget build(BuildContext context) {
     final more = allChannels.where((c) => !_mine.contains(c.id)).toList();
     return Scaffold(
-      appBar: AppBar(title: const Text('채널')),
+      appBar: AppBar(title: Text(tr('채널'))),
       body: LayoutBuilder(
         builder: (context, box) {
           // 창 너비에 맞춰 3~6열
@@ -203,14 +204,14 @@ class _ChannelManagerScreenState extends State<ChannelManagerScreen> {
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
             children: [
-              const _GroupTitle(title: '내 채널', hint: '길게 눌러 순서 변경'),
+              _GroupTitle(title: tr('내 채널'), hint: tr('길게 눌러 순서 변경')),
               if (_mine.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 24),
                   child: Text(
-                    '아래에서 + 를 눌러 채널을 추가하세요',
+                    tr('아래에서 + 를 눌러 채널을 추가하세요'),
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Gp.muted),
+                    style: const TextStyle(color: Gp.muted),
                   ),
                 )
               else
@@ -247,7 +248,7 @@ class _ChannelManagerScreenState extends State<ChannelManagerScreen> {
                   ],
                 ),
               const SizedBox(height: 20),
-              const _GroupTitle(title: '더 많은 채널'),
+              _GroupTitle(title: tr('더 많은 채널')),
               _Grid(
                 cols: cols,
                 children: [
@@ -260,9 +261,9 @@ class _ChannelManagerScreenState extends State<ChannelManagerScreen> {
                 ],
               ),
               const SizedBox(height: 12),
-              const Text(
-                '회색 = 아직 상품 없음 · 추가해 두면 새 상품이 홈에 먼저 떠요', // C-6 P10
-                style: TextStyle(color: Gp.muted, fontSize: Gp.t12),
+              Text(
+                tr('회색 = 아직 상품 없음 · 추가해 두면 새 상품이 홈에 먼저 떠요'), // C-6 P10
+                style: const TextStyle(color: Gp.muted, fontSize: Gp.t12),
               ),
             ],
           );
@@ -350,12 +351,12 @@ class _ChannelTile extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircleThumb(image: channel.image, label: channel.label),
+                  CircleThumb(image: channel.image, label: tr(channel.label)),
                   const SizedBox(height: 8),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: Text(
-                      channel.label,
+                      tr(channel.label),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(fontSize: Gp.t12, color: channel.hasData ? Gp.ink : Gp.faint),

@@ -7,6 +7,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../api.dart';
 import '../ml/visual_search.dart';
 import '../models.dart';
@@ -79,11 +80,11 @@ class _VisualMatchesState extends State<VisualMatches> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('생김새 모델 지우기'),
-        content: const Text('받아 둔 모델과 표(약 105 MB)를 지워요. 다시 쓰려면 또 받아야 해요.'),
+        title: Text(tr('생김새 모델 지우기')),
+        content: Text(tr('받아 둔 모델과 표(약 105 MB)를 지워요. 다시 쓰려면 또 받아야 해요.')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('그대로')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('지우기')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr('그대로'))),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: Text(tr('지우기'))),
         ],
       ),
     );
@@ -93,20 +94,20 @@ class _VisualMatchesState extends State<VisualMatches> {
   }
 
   String get _size => switch (_vs.downloadBytes) {
-    final b? when b > 0 => '약 ${(b / 1e6).round()} MB',
-    _ => '약 105 MB',
+    final b? when b > 0 => trf('약 {mb} MB', {'mb': (b / 1e6).round()}),
+    _ => trf('약 {mb} MB', {'mb': 105}),
   };
 
   @override
   Widget build(BuildContext context) {
     final head = SectionHeader(
-      '생김새가 비슷한 상품',
-      subtitle: _vs.state == VisualState.ready && _hits != null ? '고르세요' : '',
+      tr('생김새가 비슷한 상품'),
+      subtitle: _vs.state == VisualState.ready && _hits != null ? tr('고르세요') : '',
       padding: const EdgeInsets.fromLTRB(Gp.gutter, 18, 4, 8),
       trailing: _vs.state == VisualState.ready
           ? IconButton(
               key: const ValueKey('visual-remove'),
-              tooltip: '생김새 모델 지우기',
+              tooltip: tr('생김새 모델 지우기'),
               visualDensity: VisualDensity.compact,
               onPressed: _remove,
               icon: const Icon(Icons.delete_outline, size: Gp.iM, color: Gp.faint),
@@ -119,15 +120,15 @@ class _VisualMatchesState extends State<VisualMatches> {
       VisualState.downloading => _Progress(value: _vs.progress),
       VisualState.failed => _Note(
         icon: Icons.cloud_off,
-        text: '모델을 받지 못했어요 · ${_vs.error}',
-        action: TextButton(onPressed: _vs.install, child: const Text('다시')),
+        text: trf('모델을 받지 못했어요 · {error}', {'error': _vs.error}),
+        action: TextButton(onPressed: _vs.install, child: Text(tr('다시'))),
       ),
       VisualState.ready when _error.isNotEmpty => _Note(
         icon: Icons.error_outline,
-        text: '생김새를 비교하지 못했어요',
-        action: TextButton(onPressed: _run, child: const Text('다시')),
+        text: tr('생김새를 비교하지 못했어요'),
+        action: TextButton(onPressed: _run, child: Text(tr('다시'))),
       ),
-      VisualState.ready when _hits == null => const _Note(icon: null, text: '생김새 비교 중…'),
+      VisualState.ready when _hits == null => _Note(icon: null, text: tr('생김새 비교 중…')),
       VisualState.ready => _grid(context, _hits!),
     };
     if (body == null) return const SizedBox.shrink();
@@ -142,7 +143,7 @@ class _VisualMatchesState extends State<VisualMatches> {
       ...found.where((k) => widget.textIds.contains(k.id)),
       ...found.where((k) => !widget.textIds.contains(k.id)),
     ];
-    if (kits.isEmpty) return const _Note(icon: Icons.image_not_supported_outlined, text: '비슷한 상품을 못 찾았어요');
+    if (kits.isEmpty) return _Note(icon: Icons.image_not_supported_outlined, text: tr('비슷한 상품을 못 찾았어요'));
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: Gp.gutter),
       child: GridView.builder(
@@ -187,12 +188,12 @@ class _Offer extends StatelessWidget {
         const SizedBox(width: 10),
         Expanded(
           child: Text(
-            '사진 속 모양으로도 찾기 · 처음 한 번 모델 받기 ($size, 와이파이 권장)',
+            trf('사진 속 모양으로도 찾기 · 처음 한 번 모델 받기 ({size}, 와이파이 권장)', {'size': size}),
             style: const TextStyle(fontSize: Gp.t12, color: Gp.muted, height: 1.4),
           ),
         ),
         const SizedBox(width: 6),
-        FilledButton.tonal(key: const ValueKey('visual-install'), onPressed: onTap, child: const Text('받기')),
+        FilledButton.tonal(key: const ValueKey('visual-install'), onPressed: onTap, child: Text(tr('받기'))),
       ],
     ),
   );
@@ -214,7 +215,7 @@ class _Progress extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text(
-          '모델 받는 중… ${(value * 100).round()}%',
+          trf('모델 받는 중… {p}%', {'p': (value * 100).round()}),
           style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
         ),
       ],

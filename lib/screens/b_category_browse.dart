@@ -15,6 +15,7 @@
 //   세대 = 건담 Loaders.guideWorks + guideUnits(작품 기체의 상품) · 그 밖 Loaders.worlds(World.kitIds, 베이는 라인).
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../api.dart';
 import '../channels.dart';
 import '../logic/category_browse.dart';
@@ -215,11 +216,11 @@ class _CategoryBrowseState extends State<_CategoryBrowse> {
   @override
   Widget build(BuildContext context) {
     if (_all && widget.myChannels.isEmpty) {
-      return const EmptyView(
+      return EmptyView(
         // B-24
         icon: Icons.auto_awesome_mosaic_outlined,
-        message: '내 채널이 비어 있어요',
-        detail: '채널 관리에서 IP를 추가하면 둘러볼 수 있어요',
+        message: tr('내 채널이 비어 있어요'),
+        detail: tr('채널 관리에서 IP를 추가하면 둘러볼 수 있어요'),
       );
     }
     // B-20b 조건이 있을 때만 거른다 (내 상태는 Marks 로)
@@ -243,14 +244,16 @@ class _CategoryBrowseState extends State<_CategoryBrowse> {
         ];
         if (blocks.isEmpty) {
           return f != null
-              ? const EmptyView(icon: Icons.search_off, message: '이 조건의 상품이 없어요') // B-24
+              ? EmptyView(icon: Icons.search_off, message: tr('이 조건의 상품이 없어요')) // B-24
               : EmptyView(
                   icon: Icons.auto_awesome_mosaic_outlined,
-                  message: _all ? '아직 수록된 상품이 없어요' : '${channelOf(widget.channel).label} 상품이 아직 없어요',
+                  message: _all
+                      ? tr('아직 수록된 상품이 없어요')
+                      : trf('{channel} 상품이 아직 없어요', {'channel': tr(channelOf(widget.channel).label)}),
                 );
         }
         final help = HelpButton(
-          title: widget.era ? '세대' : '종류',
+          title: widget.era ? tr('세대') : tr('종류'),
           items: categoryBrowseHelp(era: widget.era),
         ); // B-22
         var first = true;
@@ -268,14 +271,14 @@ class _CategoryBrowseState extends State<_CategoryBrowse> {
                   SliverToBoxAdapter(
                     child: SectionHeader(
                       // B-20a
-                      channelOf(ch).label,
+                      tr(channelOf(ch).label),
                       trailing: helpOnce(),
                       onMore: widget.onPickChannel == null ? null : () => widget.onPickChannel!(ch), // STATE: 채널 고르기
                       padding: const EdgeInsets.fromLTRB(16, 12, 4, 0),
                     ),
                   ),
                 for (final (title, cats) in sections) ...[
-                  SliverToBoxAdapter(child: _SubHead(title, trailing: helpOnce())),
+                  SliverToBoxAdapter(child: _SubHead(tr(title), trailing: helpOnce())),
                   SliverPadding(
                     padding: const EdgeInsets.symmetric(horizontal: Gp.gutter),
                     sliver: SliverGrid(
@@ -291,7 +294,7 @@ class _CategoryBrowseState extends State<_CategoryBrowse> {
                           // B-20 · B-21 공식 그림 + 이름만
                           key: ValueKey('cat-$ch-${c.key}'),
                           image: c.image,
-                          name: c.name,
+                          name: tr(c.name),
                           onTap: () => _open(ch, c, f),
                         );
                       }),
@@ -334,13 +337,13 @@ class _SubHead extends StatelessWidget {
 /// B-22 종류 · 세대 ? — 칸 · 묶음 · 필터
 List<HelpItem> categoryBrowseHelp({required bool era}) => [
   if (era) ...[
-    const HelpItem(Icons.auto_awesome_mosaic_outlined, '건담 = 시대별 작품 (공식 작품 로고)'),
-    const HelpItem(Icons.layers_outlined, '포켓몬 세대 · Fate 작품 · 아머드 코어 시리즈 · 베이 라인'),
+    HelpItem(Icons.auto_awesome_mosaic_outlined, tr('건담 = 시대별 작품 (공식 작품 로고)')),
+    HelpItem(Icons.layers_outlined, tr('포켓몬 세대 · Fate 작품 · 아머드 코어 시리즈 · 베이 라인')),
   ] else ...[
-    const HelpItem(Icons.category_outlined, '공식 라인 · 상품 종류마다 한 칸 (그림 = 공식 로고, 없으면 최근 상품)'),
-    const HelpItem(Icons.view_module_outlined, '묶음: 프라모델 · SD · 완성품 피규어 · 식완 · 가샤폰 · 굿즈 …'),
-    const HelpItem(Icons.more_horiz, '$lineOtherKey = 상품 $lineMinGroup개가 안 되는 굿즈 종류'),
+    HelpItem(Icons.category_outlined, tr('공식 라인 · 상품 종류마다 한 칸 (그림 = 공식 로고, 없으면 최근 상품)')),
+    HelpItem(Icons.view_module_outlined, tr('묶음: 프라모델 · SD · 완성품 피규어 · 식완 · 가샤폰 · 굿즈 …')),
+    HelpItem(Icons.more_horiz, trf('{other} = 상품 {n}개가 안 되는 굿즈 종류', {'other': tr(lineOtherKey), 'n': lineMinGroup})),
   ],
-  const HelpItem(Icons.tune, '필터를 고르면 맞는 상품이 있는 칸만 · 연 화면도 그 필터로'),
-  const HelpItem(Icons.chevron_right, '칸을 누르면 그 상품 전부 (♡ · 리본 = 내 상태)'),
+  HelpItem(Icons.tune, tr('필터를 고르면 맞는 상품이 있는 칸만 · 연 화면도 그 필터로')),
+  HelpItem(Icons.chevron_right, tr('칸을 누르면 그 상품 전부 (♡ · 리본 = 내 상태)')),
 ];
