@@ -2,24 +2,25 @@
 // 화면 없이 테스트할 수 있는 순수 Dart.
 import '../bbx/bbx.dart';
 import '../data/user_store.dart';
+import '../l10n/l10n.dart';
 
 String bbxSlotLabel(Slot s) => switch (s) {
-  Slot.blade => '블레이드',
-  Slot.ratchet => '래칫',
-  Slot.bit => '비트',
-  Slot.lockChip => '락 칩',
-  Slot.mainBlade => '메인 블레이드',
-  Slot.assistBlade => '어시스트 블레이드',
-  Slot.metalBlade => '메탈 블레이드',
-  Slot.overBlade => '오버 블레이드',
+  Slot.blade => tr('블레이드'),
+  Slot.ratchet => tr('래칫'),
+  Slot.bit => tr('비트'),
+  Slot.lockChip => tr('락 칩'),
+  Slot.mainBlade => tr('메인 블레이드'),
+  Slot.assistBlade => tr('어시스트 블레이드'),
+  Slot.metalBlade => tr('메탈 블레이드'),
+  Slot.overBlade => tr('오버 블레이드'),
 };
 
 const bbxStatLabels = {'attack': '공격', 'defense': '방어', 'stamina': '지구력', 'dash': '대시', 'burst': '버스트 저항'};
 const bbxStatShort = {'attack': '공', 'defense': '방', 'stamina': '지', 'dash': '대', 'burst': '버'};
 
 String bbxSpinLabel(String? r) => switch (r) {
-  'right' => '오른쪽 회전',
-  'left' => '왼쪽 회전',
+  'right' => tr('오른쪽 회전'),
+  'left' => tr('왼쪽 회전'),
   _ => '',
 };
 
@@ -27,14 +28,14 @@ String bbxGrams(double? g) => g == null ? '' : '${g.toStringAsFixed(1)}g';
 
 String bbxProfileLabel(String id) => switch (id) {
   'wbo' => 'WBO 3on3',
-  'free' => '자유',
+  'free' => tr('자유'),
   _ => 'TT 3on3',
 };
 
 String bbxProfileHint(String id) => switch (id) {
-  'wbo' => '같은 부품은 덱에 한 번만 (락 칩 포함)',
-  'free' => '부품이 겹쳐도 돼요',
-  _ => '같은 부품은 덱에 한 번만 · 플라스틱 락 칩은 겹쳐도 돼요',
+  'wbo' => tr('같은 부품은 덱에 한 번만 (락 칩 포함)'),
+  'free' => tr('부품이 겹쳐도 돼요'),
+  _ => tr('같은 부품은 덱에 한 번만 · 플라스틱 락 칩은 겹쳐도 돼요'),
 };
 
 /// 엔진의 이유(영어 · 코드) → 한국어 한 줄
@@ -43,24 +44,36 @@ String bbxIssueText(RuleIssue i, BbxCatalog cat) {
   final n = mold?.name('ko') ?? '';
   final s = i.slot == null ? '' : bbxSlotLabel(i.slot!);
   return switch (i.code) {
-    IssueCode.unknownPart => '$s: 데이터에 없는 부품이에요',
-    IssueCode.wrongSlot => '$n: ${mold == null ? '' : bbxSlotLabel(mold.slot)} 부품이라 $s 칸에 못 끼워요',
-    IssueCode.notAPart => '$s: 실제 부품이 아닌 기록이에요',
-    IssueCode.compositeMainBlade => '$n: 메탈 블레이드 + 오버 블레이드라 CX 확장으로 만들어요',
-    IssueCode.extraSlot => '$s 칸이 없는 구성이에요',
-    IssueCode.missingSlot => '$s 칸이 비었어요',
-    IssueCode.integratedBladeNeedsIntegratedArch => '$n: 래칫이 붙은 블레이드라 래칫을 따로 끼울 수 없어요',
-    IssueCode.notAnIntegratedBlade => '$n: 래칫이 따로 필요한 블레이드예요',
-    IssueCode.integratedBitOnIntegratedBlade => '래칫이 붙은 블레이드에는 래칫이 붙은 비트($n)를 끼울 수 없어요',
-    IssueCode.ratchetWithIntegratedBit => '$n: 래칫이 붙은 비트라 래칫을 빼야 해요',
-    IssueCode.simpleOnlyNeedsSimpleRatchet => '이 블레이드는 단순 래칫(${simpleRatchetCodes.join(' · ')})만 맞아요 — $n 은 안 돼요',
-    IssueCode.simpleOnlyWithIntegratedBit => '이 블레이드는 단순 래칫만 맞아요 — 래칫이 붙은 비트($n)는 안 돼요',
-    IssueCode.deckSize => '덱은 조합 3개예요',
-    IssueCode.unknownCombo => '지운 조합이 덱에 남아 있어요',
-    IssueCode.beyIncomplete => '${_beyNo(i)}번 조합이 덜 만들어졌어요',
-    IssueCode.beyIllegal => '${_beyNo(i)}번 조합이 규칙에 안 맞아요',
-    IssueCode.notEnoughParts => '$n: 가진 개수로는 동시에 못 만들어요',
-    IssueCode.repeatedMold => '$n — ${[for (final b in i.beys) '${b + 1}번'].join(' · ')} 조합에 겹쳐요',
+    IssueCode.unknownPart => trf('{slot}: 데이터에 없는 부품이에요', {'slot': s}),
+    IssueCode.wrongSlot => trf('{name}: {kind} 부품이라 {slot} 칸에 못 끼워요', {
+      'name': n,
+      'kind': mold == null ? '' : bbxSlotLabel(mold.slot),
+      'slot': s,
+    }),
+    IssueCode.notAPart => trf('{slot}: 실제 부품이 아닌 기록이에요', {'slot': s}),
+    IssueCode.compositeMainBlade => trf('{name}: 메탈 블레이드 + 오버 블레이드라 CX 확장으로 만들어요', {'name': n}),
+    IssueCode.extraSlot => trf('{slot} 칸이 없는 구성이에요', {'slot': s}),
+    IssueCode.missingSlot => trf('{slot} 칸이 비었어요', {'slot': s}),
+    IssueCode.integratedBladeNeedsIntegratedArch => trf('{name}: 래칫이 붙은 블레이드라 래칫을 따로 끼울 수 없어요', {'name': n}),
+    IssueCode.notAnIntegratedBlade => trf('{name}: 래칫이 따로 필요한 블레이드예요', {'name': n}),
+    IssueCode.integratedBitOnIntegratedBlade => trf('래칫이 붙은 블레이드에는 래칫이 붙은 비트({name})를 끼울 수 없어요', {'name': n}),
+    IssueCode.ratchetWithIntegratedBit => trf('{name}: 래칫이 붙은 비트라 래칫을 빼야 해요', {'name': n}),
+    IssueCode.simpleOnlyNeedsSimpleRatchet => trf('이 블레이드는 단순 래칫({codes})만 맞아요 — {name} 은 안 돼요', {
+      'codes': simpleRatchetCodes.join(' · '),
+      'name': n,
+    }),
+    IssueCode.simpleOnlyWithIntegratedBit => trf('이 블레이드는 단순 래칫만 맞아요 — 래칫이 붙은 비트({name})는 안 돼요', {'name': n}),
+    IssueCode.deckSize => tr('덱은 조합 3개예요'),
+    IssueCode.unknownCombo => tr('지운 조합이 덱에 남아 있어요'),
+    IssueCode.beyIncomplete => trf('{n}번 조합이 덜 만들어졌어요', {'n': _beyNo(i)}),
+    IssueCode.beyIllegal => trf('{n}번 조합이 규칙에 안 맞아요', {'n': _beyNo(i)}),
+    IssueCode.notEnoughParts => trf('{name}: 가진 개수로는 동시에 못 만들어요', {'name': n}),
+    IssueCode.repeatedMold => trf('{name} — {slots} 조합에 겹쳐요', {
+      'name': n,
+      'slots': [
+        for (final b in i.beys) trf('{n}번', {'n': b + 1}),
+      ].join(' · '),
+    }),
   };
 }
 
@@ -71,7 +84,7 @@ String bbxComboTitle(Combo c, BbxCatalog cat) {
   final nick = c.nickname?.trim() ?? '';
   if (nick.isNotEmpty) return nick;
   final box = boxName(c, cat, lang: 'ko');
-  return box.isEmpty ? '빈 조합' : box;
+  return box.isEmpty ? tr('빈 조합') : box;
 }
 
 /// 맨 위 부품의 사진 (블레이드 · 메인 · 메탈)
@@ -96,7 +109,7 @@ extension BbxFrameLabel on BbxFrame {
   String get label => switch (this) {
     BbxFrame.bx => 'BX · UX',
     BbxFrame.cx => 'CX',
-    BbxFrame.cxExpand => 'CX 확장',
+    BbxFrame.cxExpand => tr('CX 확장'),
   };
 }
 
@@ -147,7 +160,7 @@ class DeckCheck {
       if (id.isEmpty) continue;
       final c = store.bbxCombo(id);
       if (c == null) {
-        lines.add((true, '${i + 1}번: 지운 조합이에요'));
+        lines.add((true, trf('{n}번: 지운 조합이에요', {'n': i + 1})));
         continue;
       }
       positions.add(i);
@@ -158,9 +171,9 @@ class DeckCheck {
     for (final (n, c) in beys.indexed) {
       final pos = positions[n] + 1;
       if (!isCompleteBey(c, cat)) {
-        lines.add((true, '$pos번: 덜 만들어진 조합이에요'));
+        lines.add((true, trf('{n}번: 덜 만들어진 조합이에요', {'n': pos})));
       } else if (bbxRuleErrors(c, cat).firstOrNull case final e?) {
-        lines.add((true, '$pos번: ${bbxIssueText(e, cat)}'));
+        lines.add((true, trf('{n}번: {issue}', {'n': pos, 'issue': bbxIssueText(e, cat)})));
       }
     }
     for (final i in report.issues) {
@@ -171,15 +184,17 @@ class DeckCheck {
     }
     final full = beys.length == 3 && !lines.any((l) => l.$1);
     final legal = full && report.legal;
-    if (beys.length < 3) lines.add((false, '조합 ${beys.length} / 3'));
+    if (beys.length < 3) lines.add((false, trf('조합 {n} / 3', {'n': beys.length})));
     if (legal) {
-      lines.add((false, '규칙에 맞는 덱이에요'));
+      lines.add((false, tr('규칙에 맞는 덱이에요')));
       final short = shortfall(beys, inv);
       lines.add((
         false,
         short.isEmpty
-            ? '내 부품으로 셋 다 만들 수 있어요'
-            : '동시에 만들려면 모자라요: ${short.map((m) => '${cat.molds[m.moldKey]!.name('ko')} ${m.have}/${m.need}').join(' · ')}',
+            ? tr('내 부품으로 셋 다 만들 수 있어요')
+            : trf('동시에 만들려면 모자라요: {parts}', {
+                'parts': short.map((m) => '${cat.molds[m.moldKey]!.name('ko')} ${m.have}/${m.need}').join(' · '),
+              }),
       ));
     }
     return DeckCheck._(lines, conflicts, legal);

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../api.dart';
 import '../../data/catalog.dart';
 import '../../detail_pane.dart';
+import '../../l10n/l10n.dart';
 import '../../marks.dart';
 import '../../models.dart';
 import '../../theme.dart';
@@ -75,13 +76,13 @@ class GuideHits extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(14, 0, 14, 4),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 4),
             child: Row(
               children: [
-                Icon(Icons.auto_awesome_mosaic_outlined, size: Gp.iM, color: Gp.accent),
-                SizedBox(width: 6),
-                Text('도감', style: TextStyle(fontWeight: FontWeight.w700)),
+                const Icon(Icons.auto_awesome_mosaic_outlined, size: Gp.iM, color: Gp.accent),
+                const SizedBox(width: 6),
+                Text(tr('도감'), style: const TextStyle(fontWeight: FontWeight.w700)),
               ],
             ),
           ),
@@ -89,7 +90,11 @@ class GuideHits extends StatelessWidget {
             ThumbRow(
               image: w.image,
               title: w.name,
-              subtitle: joinDot(['작품', w.section, '수집 ${w.owned} / ${w.total}']),
+              subtitle: joinDot([
+                tr('작품'),
+                tr(w.section),
+                trf('수집 {owned} / {total}', {'owned': w.owned, 'total': w.total}),
+              ]),
               size: 48,
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
               onTap: () => openPage(context, WorkGuideScreen(work: w, loaders: loaders)),
@@ -102,8 +107,8 @@ class GuideHits extends StatelessWidget {
               subtitle: joinDot([
                 u.nameEn,
                 index.work(u.workId)?.name ?? '',
-                '상품 ${u.kitIds.length}',
-                if (_ownedOf(m, u) case final n when n > 0) '가짐 $n',
+                trf('상품 {n}', {'n': u.kitIds.length}),
+                if (_ownedOf(m, u) case final n when n > 0) trf('가짐 {n}', {'n': n}),
               ]),
               size: 48,
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
@@ -156,13 +161,13 @@ class GroupedResults extends StatelessWidget {
           final Kit k => ThumbRow(
             image: k.image,
             title: k.name,
-            subtitle: joinDot([k.line, k.date]),
+            subtitle: joinDot([tr(k.line), k.date]),
             size: 48,
             padding: const EdgeInsets.fromLTRB(28, 4, 8, 4),
             trailing: KitMarkButtons(kit: k),
             onTap: () => openKitDetail(context, k, loaders: loaders, list: kits),
           ),
-          _ => const SectionHeader('기타', padding: EdgeInsets.fromLTRB(16, 18, 16, 6)),
+          _ => SectionHeader(tr('기타'), padding: const EdgeInsets.fromLTRB(16, 18, 16, 6)),
         };
       },
     );
@@ -197,7 +202,11 @@ class _UnitHead extends StatelessWidget {
                   style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w700),
                 ),
                 Text(
-                  joinDot([unit.nameEn, '상품 $count', if (owned > 0) '가짐 $owned']),
+                  joinDot([
+                    unit.nameEn,
+                    trf('상품 {n}', {'n': count}),
+                    if (owned > 0) trf('가짐 {n}', {'n': owned}),
+                  ]),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
@@ -205,9 +214,9 @@ class _UnitHead extends StatelessWidget {
               ],
             ),
           ),
-          const Text(
-            '도감',
-            style: TextStyle(fontSize: Gp.t12, color: Gp.accent),
+          Text(
+            tr('도감'),
+            style: const TextStyle(fontSize: Gp.t12, color: Gp.accent),
           ),
           const Icon(Icons.chevron_right, size: Gp.iM, color: Gp.accent),
         ],

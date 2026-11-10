@@ -33,6 +33,7 @@ import '../data/frienda_images.dart';
 import '../data/tag_atlas.dart';
 import '../data/user_store.dart' show UserStore;
 import '../detail_pane.dart';
+import '../l10n/l10n.dart';
 import '../level.dart';
 import '../marks.dart';
 import '../models.dart' show CollectStatus;
@@ -66,10 +67,10 @@ void toggleTagLike(BuildContext context, TagCard c) {
   showToast(
     context,
     before == CollectStatus.wanted
-        ? '좋아요를 취소했어요'
+        ? tr('좋아요를 취소했어요')
         : before == CollectStatus.owned
-        ? '「${c.name}」 구매함 → 좋아요로 옮겼어요'
-        : '「${c.name}」 좋아요',
+        ? trf('「{name}」 구매함 → 좋아요로 옮겼어요', {'name': c.name})
+        : trf('「{name}」 좋아요', {'name': c.name}),
     onUndo: () => store.setTagStatus(c.id, before),
   );
 }
@@ -81,7 +82,7 @@ void toggleTagOwn(BuildContext context, TagCard c) {
   store.setTagMark(c.id, owned: before != CollectStatus.owned); // STATE: 구매함 → 칸 리본 · 수집 수
   showToast(
     context,
-    before == CollectStatus.owned ? '구매함에서 뺐어요' : '「${c.name}」 구매함에 넣었어요',
+    before == CollectStatus.owned ? tr('구매함에서 뺐어요') : trf('「{name}」 구매함에 넣었어요', {'name': c.name}),
     onUndo: () => store.setTagStatus(c.id, before),
   );
 }
@@ -202,9 +203,9 @@ class _TagFilterSheetState extends State<_TagFilterSheet> {
       ),
     );
     return GpPickSheet(
-      title: '필터',
+      title: tr('필터'),
       hits: hits,
-      noHitLabel: '맞는 태그 없음',
+      noHitLabel: tr('맞는 태그 없음'),
       onApply: () => Navigator.pop(context, _draft),
       onReset: () => setState(() {
         _draft
@@ -219,19 +220,19 @@ class _TagFilterSheetState extends State<_TagFilterSheet> {
           child: (v) => MineStateLabel(v.mine), // 상품 필터와 같은 줄
           onPick: (v) => setState(() => _draft.mark = v),
         ),
-        title('등급'),
+        title(tr('등급')),
         _SquareChecks(
           values: rarities,
-          label: (r) => rarityLabels[r] ?? r,
+          label: (r) => tr(rarityLabels[r] ?? r),
           selected: _draft.rarities,
           count: (r) => widget.cards.where((c) => c.rarity == r).length,
           onToggle: (r) => _toggle(_draft.rarities, r),
         ),
         if (types.isNotEmpty) ...[
-          title('타입'),
+          title(tr('타입')),
           _SquareChecks(
             values: types,
-            label: (t) => typeLabels[t] ?? t,
+            label: (t) => tr(typeLabels[t] ?? t),
             icon: (t) => typeIcon(t, size: 16),
             selected: _draft.types,
             count: (t) => widget.cards.where((c) => c.types.contains(t)).length,
@@ -268,7 +269,10 @@ class TypeBadge extends StatelessWidget {
     children: [
       typeIcon(type),
       const SizedBox(width: 4),
-      Text(typeLabels[type] ?? type, style: const TextStyle(fontSize: Gp.t12, color: Gp.ink)),
+      Text(
+        tr(typeLabels[type] ?? type),
+        style: const TextStyle(fontSize: Gp.t12, color: Gp.ink),
+      ),
     ],
   );
 }
@@ -313,21 +317,21 @@ class _SquareChecks extends StatelessWidget {
                 children: [
                   if (icon != null) ...[icon!(v), const SizedBox(width: 5)],
                   Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(text: label(v)),
                     TextSpan(
-                      text: ' ${count(v)}',
-                      style: const TextStyle(fontSize: Gp.t11, color: Gp.faint),
+                      children: [
+                        TextSpan(text: label(v)),
+                        TextSpan(
+                          text: ' ${count(v)}',
+                          style: const TextStyle(fontSize: Gp.t11, color: Gp.faint),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                style: TextStyle(
-                  fontSize: Gp.t12,
-                  fontWeight: selected.contains(v) ? FontWeight.w700 : FontWeight.w400,
-                  color: selected.contains(v) ? Gp.accent : Gp.ink,
-                ),
-              ),
+                    style: TextStyle(
+                      fontSize: Gp.t12,
+                      fontWeight: selected.contains(v) ? FontWeight.w700 : FontWeight.w400,
+                      color: selected.contains(v) ? Gp.accent : Gp.ink,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -407,7 +411,12 @@ class _TagAtlasScreenState extends State<TagAtlasScreen> {
             final b = snap.data;
             return BarTitle(
               widget.game == TagGame.mezastar ? '${widget.game.label} ${_region.id}' : widget.game.label,
-              count: b == null ? '' : '수집 ${b.cards.where((c) => owned.contains(c.id)).length} / ${b.cards.length}',
+              count: b == null
+                  ? ''
+                  : trf('수집 {owned} / {total}', {
+                      'owned': b.cards.where((c) => owned.contains(c.id)).length,
+                      'total': b.cards.length,
+                    }),
             );
           },
         ),
@@ -465,7 +474,7 @@ class _TagAtlasScreenState extends State<TagAtlasScreen> {
                 // R-2
                 values: widget.game.regions,
                 current: _region,
-                child: (r) => Tooltip(message: r.label, child: Text(r.id)),
+                child: (r) => Tooltip(message: tr(r.label), child: Text(r.id)),
                 onPick: _pickRegion,
               ),
             ),
@@ -475,7 +484,7 @@ class _TagAtlasScreenState extends State<TagAtlasScreen> {
             // R-3 다른 탭과 같은 줄: [검색창][필터][격자 · 목록]
             field: GpSearchBar(
               controller: _ctrl,
-              hint: '이름 · 번호로 찾기',
+              hint: tr('이름 · 번호로 찾기'),
               onChanged: (v) => setState(() => _query = v.trim()), // STATE: 찾기 → 칸 거르기
             ),
             tools: [
@@ -491,8 +500,8 @@ class _TagAtlasScreenState extends State<TagAtlasScreen> {
                 onChanged: (v) => setState(() => _list = v), // STATE: 보기 방식
                 allIcon: Icons.grid_view_outlined,
                 mineIcon: Icons.view_list_outlined,
-                allTip: '격자로 보기',
-                mineTip: '목록으로 보기',
+                allTip: tr('격자로 보기'),
+                mineTip: tr('목록으로 보기'),
               ),
             ],
           ),
@@ -511,10 +520,10 @@ class _TagAtlasScreenState extends State<TagAtlasScreen> {
         ),
         SliverToBoxAdapter(
           child: SectionHeader(
-            s?.name ?? '전체',
+            s?.name ?? tr('전체'),
             subtitle: joinDot([
-              '수집 $haveInSet / ${inSet.length}',
-              if (likedInSet > 0) '좋아요 $likedInSet',
+              trf('수집 {owned} / {total}', {'owned': haveInSet, 'total': inSet.length}),
+              if (likedInSet > 0) trf('좋아요 {n}', {'n': likedInSet}),
               if (s != null && s.date.isNotEmpty) dateDot(s.date),
               if (s != null && s.local != s.name) s.local,
             ]),
@@ -526,14 +535,14 @@ class _TagAtlasScreenState extends State<TagAtlasScreen> {
             child: EmptyView(
               // R-9 P09
               icon: Icons.search_off,
-              message: '이 조건의 태그가 없어요',
+              message: tr('이 조건의 태그가 없어요'),
               action: setId != null && _query.isNotEmpty
                   ? OutlinedButton(
                       onPressed: () => setState(() {
                         _setChosen = true;
                         _set = null;
                       }),
-                      child: const Text('전체 탄에서 찾기'),
+                      child: Text(tr('전체 탄에서 찾기')),
                     )
                   : null,
             ),
@@ -549,7 +558,7 @@ class _TagAtlasScreenState extends State<TagAtlasScreen> {
                   // R-8b 상품 줄과 같은 ♡ · 리본
                   card: c,
                   title: c.name,
-                  subtitle: joinDot([c.number, c.badge, if (c.local != c.name) c.local]),
+                  subtitle: joinDot([c.number, tr(c.badge), if (c.local != c.name) c.local]),
                   size: 56,
                   onTap: () => showTagSheet(context, c, book: book), // R-6
                 );
@@ -655,7 +664,7 @@ class _SetStrip extends StatelessWidget {
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: Gp.gutter),
-        children: [tile(null, '전체'), for (final s in sets) tile(s.id, s.name)],
+        children: [tile(null, tr('전체')), for (final s in sets) tile(s.id, s.name)],
       ),
     );
   }
@@ -697,7 +706,7 @@ class TagCell extends StatelessWidget {
       onLongPress: onLongPress,
       overlays: [
         // 등급은 오른쪽 위 (왼쪽은 리본 · ♡ 자리 — GuideCell 과 같음)
-        if (card.badge.isNotEmpty) Positioned(right: 4, top: 4, child: TagPill(card.badge, filled: true)),
+        if (card.badge.isNotEmpty) Positioned(right: 4, top: 4, child: TagPill(tr(card.badge), filled: true)),
         if (onLike != null && onOwn != null)
           Positioned.fill(
             child: MarkOverlay(size: 22, liked: liked, owned: owned, onLike: onLike!, onOwn: onOwn!),
@@ -779,7 +788,10 @@ class _TagSheet extends StatelessWidget {
                             Expanded(child: tierFrame(tier, cellImage(tier, src, null))),
                             if (card.large.length > 1) ...[
                               const SizedBox(height: 4),
-                              Text(i == 0 ? '앞면' : '뒷면', style: const TextStyle(fontSize: Gp.t11, color: Gp.muted)),
+                              Text(
+                                i == 0 ? tr('앞면') : tr('뒷면'),
+                                style: const TextStyle(fontSize: Gp.t11, color: Gp.muted),
+                              ),
                             ],
                           ],
                         ),
@@ -805,11 +817,11 @@ class _TagSheet extends StatelessWidget {
                 if (card.url.isNotEmpty)
                   IconButton(
                     // R-6c
-                    tooltip: '공식 페이지',
+                    tooltip: tr('공식 페이지'),
                     visualDensity: VisualDensity.compact,
                     onPressed: () async {
                       final ok = await launchUrl(Uri.parse(card.url), mode: LaunchMode.externalApplication);
-                      if (!ok && context.mounted) showToast(context, '열지 못했어요');
+                      if (!ok && context.mounted) showToast(context, tr('열지 못했어요'));
                     },
                     icon: const Icon(Icons.open_in_new, size: Gp.iM, color: Gp.muted),
                   ),
@@ -826,14 +838,14 @@ class _TagSheet extends StatelessWidget {
               runSpacing: 6,
               children: [
                 SoftTag(where, color: Gp.ink),
-                if (card.badge.isNotEmpty) SoftTag(card.badge, color: Gp.star),
-                if (card.grade != null && card.rarityLabel.isNotEmpty) SoftTag(card.rarityLabel, color: Gp.star),
+                if (card.badge.isNotEmpty) SoftTag(tr(card.badge), color: Gp.star),
+                if (card.grade != null && card.rarityLabel.isNotEmpty) SoftTag(tr(card.rarityLabel), color: Gp.star),
                 for (final t in card.types) TypeBadge(t),
               ],
             ),
             const SizedBox(height: 8),
             Text(
-              joinDot([...sets, card.variant]),
+              joinDot([...sets, tr(card.variant)]),
               style: const TextStyle(fontSize: Gp.t12, color: Gp.faint),
             ),
             const SizedBox(height: 14),
@@ -842,7 +854,7 @@ class _TagSheet extends StatelessWidget {
                 Expanded(
                   child: TogglePill(
                     // R-6a 상품 상세와 같은 두 버튼
-                    label: '좋아요',
+                    label: tr('좋아요'),
                     icon: Icons.favorite_border,
                     activeIcon: Icons.favorite,
                     active: status == CollectStatus.wanted,
@@ -852,7 +864,7 @@ class _TagSheet extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: TogglePill(
-                    label: '구매함',
+                    label: tr('구매함'),
                     icon: Icons.bookmark_add_outlined, // 리본 + = 구매함 (칸 위 리본과 같은 모양)
                     activeIcon: Icons.bookmark_added,
                     color: Gp.own,
@@ -874,7 +886,7 @@ class _TagSheet extends StatelessWidget {
                   onOpenBook!();
                 },
                 icon: const Icon(Icons.grid_view_outlined, size: Gp.iM),
-                label: const Text('도감에서 보기'),
+                label: Text(tr('도감에서 보기')),
               ),
             ],
           ],
@@ -900,13 +912,13 @@ class TagMarkButtons extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         IconButton(
-          tooltip: '좋아요',
+          tooltip: tr('좋아요'),
           visualDensity: VisualDensity.compact,
           onPressed: () => toggleTagLike(context, card),
           icon: LikedIcon(filled: liked, size: Gp.iM, color: liked ? Gp.accent : Gp.muted),
         ),
         IconButton(
-          tooltip: '구매함',
+          tooltip: tr('구매함'),
           visualDensity: VisualDensity.compact,
           onPressed: () => toggleTagOwn(context, card),
           icon: OwnedIcon(filled: owned, size: Gp.iM, color: owned ? Gp.own : Gp.muted),
@@ -950,7 +962,7 @@ class TagRow extends StatelessWidget {
 String _tagWhere(TagCard c, TagBook? b) => joinDot([
   c.game == TagGame.mezastar ? '${c.game.label} ${c.region}' : c.game.label,
   c.setIds.isEmpty ? '' : (b?.set(c.setIds.first)?.name ?? ''),
-  c.badge,
+  tr(c.badge),
 ]);
 
 /// 이 카드가 든 도감 (게임 · 지역이 같은 것)
@@ -989,7 +1001,7 @@ class _TagBox extends StatelessWidget {
             children: [
               const Icon(Icons.style_outlined, size: Gp.iM, color: Gp.accent),
               const SizedBox(width: 6),
-              const Text('태그 · 픽', style: TextStyle(fontWeight: FontWeight.w700)),
+              Text(tr('태그 · 픽'), style: const TextStyle(fontWeight: FontWeight.w700)),
               const Spacer(),
               Text(
                 count,
@@ -1051,7 +1063,7 @@ class _TagSearchSectionState extends State<TagSearchSection> {
             if (game != null) TagGameCards(only: game.$1),
             if (hits.isNotEmpty)
               _TagBox(
-                count: '${hits.length}${hits.length >= 40 ? '+' : ''}개',
+                count: trf('{n}개', {'n': '${hits.length}${hits.length >= 40 ? '+' : ''}'}),
                 children: [
                   for (final c in shown.map(FriendaImages.instance.apply))
                     TagRow(
@@ -1064,7 +1076,10 @@ class _TagSearchSectionState extends State<TagSearchSection> {
                   if (hits.length > _few && !_more)
                     TextButton(
                       onPressed: () => setState(() => _more = true), // STATE: 태그 결과 더 보기
-                      child: Text('${hits.length - _few}개 더 보기', style: const TextStyle(fontSize: Gp.t12)),
+                      child: Text(
+                        trf('{n}개 더 보기', {'n': hits.length - _few}),
+                        style: const TextStyle(fontSize: Gp.t12),
+                      ),
                     ),
                 ],
               ),
@@ -1124,7 +1139,7 @@ class _TagCollectionSectionState extends State<TagCollectionSection> {
         return Padding(
           padding: const EdgeInsets.only(bottom: 10),
           child: _TagBox(
-            count: '${cards.length}개',
+            count: trf('{n}개', {'n': cards.length}),
             children: [
               for (final c in shown)
                 TagRow(
@@ -1137,7 +1152,7 @@ class _TagCollectionSectionState extends State<TagCollectionSection> {
               if (cards.length > _few && !_more)
                 TextButton(
                   onPressed: () => setState(() => _more = true), // STATE: 컬렉션 태그 더 보기
-                  child: Text('${cards.length - _few}개 더 보기', style: const TextStyle(fontSize: Gp.t12)),
+                  child: Text(trf('{n}개 더 보기', {'n': cards.length - _few}), style: const TextStyle(fontSize: Gp.t12)),
                 ),
             ],
           ),
@@ -1149,15 +1164,15 @@ class _TagCollectionSectionState extends State<TagCollectionSection> {
 
 /// R-10 ? 도움말 — 칸 색 (상품 도감 칸과 같은 그림) · 누르기 · 찾기 줄 아이콘
 List<HelpItem> tagHelp() => [
-  HelpItem.widget(tierHelpCell(CellTier.none), '그림 그대로 = 아직 (칸은 늘 컬러)'),
-  HelpItem.widget(tierHelpCell(CellTier.liked), '♡ = 좋아요'),
-  HelpItem.widget(tierHelpCell(CellTier.owned), '리본 = 구매함 (수집 수)'),
-  const HelpItem(Icons.bookmark_add_outlined, '칸 왼쪽 위 리본 = 구매함 켜고 끄기', color: Gp.own),
-  const HelpItem(Icons.favorite_border, '칸 왼쪽 아래 ♡ = 좋아요 켜고 끄기', color: Gp.accent),
-  const HelpItem(Icons.touch_app_outlined, '칸 누르기 = 태그 상세 (좋아요 · 구매함 버튼)'),
-  const HelpItem(Icons.zoom_out_map, '상세의 그림 누르기 = 크게 보기 (앞 · 뒤)'),
-  const HelpItem(Icons.open_in_new, '공식 페이지 (브라우저)'),
-  const HelpItem(Icons.tune, '필터 (상품 필터와 같은 상태 줄 · 등급 · 타입)'),
-  const HelpItem(Icons.grid_view_outlined, '격자로 보기'),
-  const HelpItem(Icons.view_list_outlined, '목록으로 보기 (줄 오른쪽 ♡ · 리본)'),
+  HelpItem.widget(tierHelpCell(CellTier.none), tr('그림 그대로 = 아직 (칸은 늘 컬러)')),
+  HelpItem.widget(tierHelpCell(CellTier.liked), tr('♡ = 좋아요')),
+  HelpItem.widget(tierHelpCell(CellTier.owned), tr('리본 = 구매함 (수집 수)')),
+  HelpItem(Icons.bookmark_add_outlined, tr('칸 왼쪽 위 리본 = 구매함 켜고 끄기'), color: Gp.own),
+  HelpItem(Icons.favorite_border, tr('칸 왼쪽 아래 ♡ = 좋아요 켜고 끄기'), color: Gp.accent),
+  HelpItem(Icons.touch_app_outlined, tr('칸 누르기 = 태그 상세 (좋아요 · 구매함 버튼)')),
+  HelpItem(Icons.zoom_out_map, tr('상세의 그림 누르기 = 크게 보기 (앞 · 뒤)')),
+  HelpItem(Icons.open_in_new, tr('공식 페이지 (브라우저)')),
+  HelpItem(Icons.tune, tr('필터 (상품 필터와 같은 상태 줄 · 등급 · 타입)')),
+  HelpItem(Icons.grid_view_outlined, tr('격자로 보기')),
+  HelpItem(Icons.view_list_outlined, tr('목록으로 보기 (줄 오른쪽 ♡ · 리본)')),
 ];

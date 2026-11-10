@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../api.dart';
 import '../../channels.dart';
 import '../../detail_pane.dart';
+import '../../l10n/l10n.dart';
 import '../../marks.dart';
 import '../../logic/category_browse.dart' show worldSections;
 import '../../models.dart';
@@ -35,7 +36,7 @@ class _WorldGuideState extends State<WorldGuide> {
 
   @override
   Widget build(BuildContext context) {
-    final label = channelOf(widget.channel).label;
+    final label = tr(channelOf(widget.channel).label);
     return FutureBuilder<List<World>>(
       future: _future, // STATE: 채널의 세대 · 작품 → 칸
       builder: (context, snap) {
@@ -65,8 +66,8 @@ class _WorldGuideState extends State<WorldGuide> {
           return EmptyView(
             // G-8 P09
             icon: Icons.auto_awesome_mosaic_outlined,
-            message: '$label 도감은 아직 준비 중이에요',
-            detail: '상품이 수록되면 도감 칸이 생겨요',
+            message: trf('{name} 도감은 아직 준비 중이에요', {'name': label}),
+            detail: tr('상품이 수록되면 도감 칸이 생겨요'),
           );
         }
         final pokemon = widget.channel == 'pokemon';
@@ -74,25 +75,26 @@ class _WorldGuideState extends State<WorldGuide> {
           padding: EdgeInsets.only(bottom: navClearance(context)),
           children: [
             if (pokemon) ...[
-              const SectionHeader('태그', padding: EdgeInsets.fromLTRB(16, 10, 12, 10)),
+              SectionHeader(tr('태그'), padding: const EdgeInsets.fromLTRB(16, 10, 12, 10)),
               const TagGameCards(padding: EdgeInsets.symmetric(horizontal: Gp.gutter)), // G-7b → R 태그 도감
             ],
             // 베이는 라인(BX · UX · CX) · 블레이더 두 묶음, 그 밖은 한 묶음
-            for (final (title, group) in widget.channel == 'beyblade'
-                ? worldSections('beyblade', worlds, (w) => w.id)
-                : [
-                    (
-                      switch (widget.channel) {
-                        'pokemon' => '세대',
-                        'fate' => '작품',
-                        'madoka' => '캐릭터',
-                        'lego' => '시리즈',
-                        _ => '게임 세대',
-                      },
-                      worlds,
-                    ),
-                  ]) ...[
-              SectionHeader(title, padding: const EdgeInsets.fromLTRB(16, 14, 12, 10)),
+            for (final (title, group)
+                in widget.channel == 'beyblade'
+                    ? worldSections('beyblade', worlds, (w) => w.id)
+                    : [
+                        (
+                          switch (widget.channel) {
+                            'pokemon' => '세대',
+                            'fate' => '작품',
+                            'madoka' => '캐릭터',
+                            'lego' => '시리즈',
+                            _ => '게임 세대',
+                          },
+                          worlds,
+                        ),
+                      ]) ...[
+              SectionHeader(tr(title), padding: const EdgeInsets.fromLTRB(16, 14, 12, 10)),
               CategoryGrid(
                 children: [
                   for (final w in group)
