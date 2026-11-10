@@ -1,13 +1,15 @@
 // 불러오는 중 · 오류 · 빈 목록 — GET 을 쓰는 화면은 모두 이 세 상태를 그린다 (P01 · P09)
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../theme.dart';
 
 /// 로딩 상태
 class LoadingView extends StatelessWidget {
-  const LoadingView({super.key, this.label = '불러오는 중…'});
+  const LoadingView({super.key, this.label});
 
-  final String label;
+  /// 없으면 '불러오는 중…'
+  final String? label;
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +21,7 @@ class LoadingView extends StatelessWidget {
           children: [
             const MiniSpinner(),
             const SizedBox(height: 12),
-            Text(label, style: const TextStyle(color: Gp.muted)),
+            Text(label ?? tr('불러오는 중…'), style: const TextStyle(color: Gp.muted)),
           ],
         ),
       ),
@@ -29,9 +31,10 @@ class LoadingView extends StatelessWidget {
 
 /// 오류 상태: 무엇이 잘못됐는지 + 다시 시도 버튼
 class ErrorView extends StatelessWidget {
-  const ErrorView({super.key, this.title = '정보를 불러오지 못했어요', this.message = '', required this.onRetry});
+  const ErrorView({super.key, this.title, this.message = '', required this.onRetry});
 
-  final String title;
+  /// 없으면 '정보를 불러오지 못했어요'
+  final String? title;
   final String message;
   final VoidCallback onRetry;
 
@@ -46,7 +49,7 @@ class ErrorView extends StatelessWidget {
             const Icon(Icons.cloud_off_outlined, size: Gp.iXL, color: Gp.ink),
             const SizedBox(height: 12),
             Text(
-              title,
+              title ?? tr('정보를 불러오지 못했어요'),
               style: const TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w700),
             ),
             if (message.isNotEmpty) ...[
@@ -61,7 +64,7 @@ class ErrorView extends StatelessWidget {
             FilledButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh, size: Gp.iM),
-              label: const Text('다시 시도'),
+              label: Text(tr('다시 시도')),
             ),
           ],
         ),
@@ -72,15 +75,10 @@ class ErrorView extends StatelessWidget {
 
 /// 빈 상태: 왜 비었는지 + (있으면) 다음에 할 일 버튼
 class EmptyView extends StatelessWidget {
-  const EmptyView({
-    super.key,
-    this.message = '표시할 항목이 없어요',
-    this.detail = '',
-    this.icon = Icons.inbox_outlined,
-    this.action,
-  });
+  const EmptyView({super.key, this.message, this.detail = '', this.icon = Icons.inbox_outlined, this.action});
 
-  final String message;
+  /// 없으면 '표시할 항목이 없어요'
+  final String? message;
   final String detail;
   final IconData icon;
 
@@ -98,7 +96,7 @@ class EmptyView extends StatelessWidget {
             Icon(icon, size: Gp.iXL, color: Gp.faint),
             const SizedBox(height: 12),
             Text(
-              message,
+              message ?? tr('표시할 항목이 없어요'),
               textAlign: TextAlign.center,
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),

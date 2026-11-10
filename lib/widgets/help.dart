@@ -2,6 +2,7 @@
 // 자리는 모든 화면이 같다: 머리 줄(아바타 줄 · AppBar · 서랍 머리)의 오른쪽 끝. 크기는 ToolIcon 한 칸.
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../theme.dart';
 import 'buttons.dart';
 import 'sections.dart';
@@ -43,7 +44,7 @@ class HelpButton extends StatelessWidget {
   final WidgetBuilder? builder;
   final bool raised;
 
-  static const tip = '도움말';
+  static String get tip => tr('도움말');
 
   void _open(BuildContext context) => showGpSheet<void>(
     context,

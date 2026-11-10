@@ -1,6 +1,7 @@
 // 사진 위 표시 — 왼쪽 위 책갈피 리본 = 구매함 · 왼쪽 아래 ♡ = 좋아요 (모든 상품 사진 · 도감 칸). 누르지 않는 칸은 StatusMarks
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../marks.dart';
 import '../models.dart';
 import '../theme.dart';
@@ -35,7 +36,7 @@ class MarkOverlay extends StatelessWidget {
           child: Semantics(
             button: true,
             selected: owned,
-            label: '구매함',
+            label: tr('구매함'),
             child: GestureDetector(
               onTap: onOwn,
               behavior: HitTestBehavior.opaque,
@@ -56,7 +57,7 @@ class MarkOverlay extends StatelessWidget {
           child: Semantics(
             button: true,
             selected: liked,
-            label: '좋아요',
+            label: tr('좋아요'),
             child: GestureDetector(
               onTap: onLike,
               behavior: HitTestBehavior.opaque,
@@ -95,7 +96,7 @@ class StatusMarks extends StatelessWidget {
               left: inset + 2,
               top: 0,
               child: Semantics(
-                label: '구매함',
+                label: tr('구매함'),
                 child: _Ribbon(on: true, size: size),
               ),
             ),
@@ -104,7 +105,7 @@ class StatusMarks extends StatelessWidget {
               left: inset,
               bottom: inset,
               child: Semantics(
-                label: '좋아요',
+                label: tr('좋아요'),
                 child: _Heart(on: true, size: size),
               ),
             ),
@@ -186,13 +187,13 @@ class KitMarkButtons extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         IconButton(
-          tooltip: '좋아요',
+          tooltip: tr('좋아요'),
           visualDensity: VisualDensity.compact,
           onPressed: () => Marks.read(context).toggleLike(context, kit),
           icon: LikedIcon(filled: liked, size: Gp.iM, color: liked ? Gp.accent : Gp.muted),
         ),
         IconButton(
-          tooltip: '구매함',
+          tooltip: tr('구매함'),
           visualDensity: VisualDensity.compact,
           onPressed: () => Marks.read(context).toggleOwn(context, kit),
           icon: OwnedIcon(filled: owned, size: Gp.iM, color: owned ? Gp.own : Gp.muted),

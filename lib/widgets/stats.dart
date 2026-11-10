@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 
 import '../format.dart';
+import '../l10n/l10n.dart';
 import '../logic/build_status.dart' show BuildStage;
 import '../theme.dart';
 import 'icons.dart';
@@ -92,21 +93,25 @@ class CollectionStats extends StatelessWidget {
   Widget build(BuildContext context) => StatGroups(
     groups: [
       [
-        StatCell(const LikedIcon(), '$liked', '좋아요', onTap: onLiked),
-        StatCell(const OwnedIcon(), '$owned', '구매함', onTap: onOwned),
+        StatCell(const LikedIcon(), '$liked', tr('좋아요'), onTap: onLiked),
+        StatCell(const OwnedIcon(), '$owned', tr('구매함'), onTap: onOwned),
         StatCell(
           Icon(buildStageIcon(BuildStage.unbuilt), size: Gp.iS, color: Gp.muted),
           '$backlog',
-          '미조립',
+          tr('미조립'),
           onTap: onBacklog,
         ),
       ],
       [
-        StatCell(const Icon(Icons.calendar_month_outlined, size: Gp.iS, color: Gp.muted), wonShort(month), '이번 달 지출'),
+        StatCell(
+          const Icon(Icons.calendar_month_outlined, size: Gp.iS, color: Gp.muted),
+          wonShort(month),
+          tr('이번 달 지출'),
+        ),
         StatCell(
           const Icon(Icons.account_balance_wallet_outlined, size: Gp.iS, color: Gp.muted),
           wonShort(total),
-          '총 지출',
+          tr('총 지출'),
         ),
       ],
     ],
@@ -114,7 +119,7 @@ class CollectionStats extends StatelessWidget {
         ? null
         : IconButton(
             key: const ValueKey('mypage-share'),
-            tooltip: '공유 카드',
+            tooltip: tr('공유 카드'),
             visualDensity: VisualDensity.compact,
             onPressed: onShare,
             icon: const Icon(Icons.ios_share, size: Gp.iM, color: Gp.muted),

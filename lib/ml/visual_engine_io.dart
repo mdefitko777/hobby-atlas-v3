@@ -11,6 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 
 import '../data/gunpula.dart' show gunpulaUserAgent;
+import '../l10n/l10n.dart';
 import 'visual_index.dart';
 import 'visual_search.dart' show visualManifestUrl;
 
@@ -51,9 +52,9 @@ Future<Map<String, Object?>> _remote() async {
   final r = await http
       .get(Uri.parse(visualManifestUrl), headers: {'User-Agent': gunpulaUserAgent})
       .timeout(const Duration(seconds: 20));
-  if (r.statusCode != 200) throw HttpException('안내 파일을 받지 못했어요 (${r.statusCode})');
+  if (r.statusCode != 200) throw HttpException(trf('안내 파일을 받지 못했어요 ({code})', {'code': r.statusCode}));
   final m = jsonDecode(utf8.decode(r.bodyBytes)) as Map<String, Object?>;
-  if (m['schema'] != 1) throw const FormatException('앱을 업데이트해야 받을 수 있어요');
+  if (m['schema'] != 1) throw FormatException(tr('앱을 업데이트해야 받을 수 있어요'));
   return _remoteMemo = m;
 }
 
@@ -87,7 +88,7 @@ Future<void> _download(String url, File dest, int expected, void Function(int go
   try {
     final req = http.Request('GET', Uri.parse(url))..headers['User-Agent'] = gunpulaUserAgent;
     final res = await client.send(req).timeout(const Duration(seconds: 30));
-    if (res.statusCode != 200) throw HttpException('내려받지 못했어요 (${res.statusCode})');
+    if (res.statusCode != 200) throw HttpException(trf('내려받지 못했어요 ({code})', {'code': res.statusCode}));
     final sink = part.openWrite();
     var got = 0;
     try {
@@ -100,7 +101,7 @@ Future<void> _download(String url, File dest, int expected, void Function(int go
     } finally {
       await sink.close();
     }
-    if (expected > 0 && got != expected) throw const HttpException('받은 파일 크기가 맞지 않아요');
+    if (expected > 0 && got != expected) throw HttpException(tr('받은 파일 크기가 맞지 않아요'));
     await part.rename(dest.path);
   } finally {
     client.close();
@@ -171,7 +172,7 @@ Future<void> _closeModel() async {
 Future<IsolateInterpreter> _open() async {
   if (_runner case final r?) return r;
   final m = await _local();
-  if (m == null) throw StateError('모델을 아직 받지 않았어요');
+  if (m == null) throw StateError(tr('모델을 아직 받지 않았어요'));
   final file = File('${(await _dir()).path}/${_part(m, 'model')['file']}');
   final it = Interpreter.fromFile(file, options: InterpreterOptions()..threads = 4);
   _interpreter = it;
@@ -188,7 +189,7 @@ Future<Float32List> _prepare(Uint8List photo) async {
   final image = frame.image;
   try {
     final data = await image.toByteData(); // rawRgba (곱해진 알파)
-    if (data == null) throw StateError('사진을 풀지 못했어요');
+    if (data == null) throw StateError(tr('사진을 풀지 못했어요'));
     return cropToInput(data.buffer.asUint8List(), image.width, image.height);
   } finally {
     image.dispose();
