@@ -22,6 +22,7 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../clock.dart';
 import '../data/user_store.dart';
+import '../l10n/l10n.dart';
 import '../logic/friends.dart';
 import '../logic/level_math.dart';
 import '../models.dart';
@@ -178,19 +179,19 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
         children: [
           Row(
             children: [
-              const Text(
-                '친구',
-                style: TextStyle(fontSize: Gp.t19, fontWeight: FontWeight.w700),
+              Text(
+                tr('친구'),
+                style: const TextStyle(fontSize: Gp.t19, fontWeight: FontWeight.w700),
               ),
               const Spacer(),
               IconButton(
-                tooltip: '아이디로 친구 추가',
+                tooltip: tr('아이디로 친구 추가'),
                 onPressed: () => showAddFriend(context),
                 icon: const Icon(Icons.person_add_alt_1_outlined, color: Gp.ink),
               ),
-              const HelpButton(title: '친구', items: friendsHelp), // M-9
+              HelpButton(title: tr('친구'), items: friendsHelp()), // M-9
               IconButton(
-                tooltip: '닫기',
+                tooltip: tr('닫기'),
                 onPressed: () => Navigator.pop(context),
                 icon: const Icon(Icons.close, color: Gp.ink),
               ),
@@ -217,7 +218,7 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
                           style: const TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w700),
                         ),
                         Text(
-                          handle.isNotEmpty ? '@$handle' : (signedIn ? '아이디 없음' : '로그인 전'),
+                          handle.isNotEmpty ? '@$handle' : tr(signedIn ? '아이디 없음' : '로그인 전'),
                           style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
                         ),
                         const SizedBox(height: 5),
@@ -248,14 +249,14 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
                     chip(
                       const ValueKey('chip-requests'),
                       Icons.notifications_none,
-                      '친구 요청 $incoming건',
+                      trf('친구 요청 {n}건', {'n': incoming}),
                       () => showFriendRequests(context),
                     ),
                   if (newPhotos > 0)
                     chip(
                       const ValueKey('chip-new-photos'),
                       Icons.photo_library_outlined,
-                      '새 사진 $newPhotos',
+                      trf('새 사진 {n}', {'n': newPhotos}),
                       () => _close(() => widget.onOpenFriend(fresh.first.$1)),
                     ),
                 ],
@@ -273,11 +274,11 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
       padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
       child: Row(
         children: [
-          const Expanded(
-            child: Text('로그인하면 친구를 볼 수 있어요', style: TextStyle(fontSize: Gp.t12, height: 1.4)),
+          Expanded(
+            child: Text(tr('로그인하면 친구를 볼 수 있어요'), style: const TextStyle(fontSize: Gp.t12, height: 1.4)),
           ),
           const SizedBox(width: 8),
-          FilledButton(onPressed: () => openSignIn(context), child: const Text('로그인')),
+          FilledButton(onPressed: () => openSignIn(context), child: Text(tr('로그인'))),
         ],
       ),
     );
@@ -288,7 +289,7 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       child: GpSearchBar(
-        hint: '친구 검색', // 홈 · 검색과 같은 검색창 (카메라 없음)
+        hint: tr('친구 검색'), // 홈 · 검색과 같은 검색창 (카메라 없음)
         onChanged: (v) => setState(() => _query = v.trim()), // STATE: 검색어 → 아래 목록 거르기
       ),
     );
@@ -304,7 +305,14 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
         children: [
           ListTile(
             leading: const Icon(Icons.person_add_alt_outlined, color: Gp.ink),
-            title: Text(waiting == 0 ? '친구 요청' : '친구 요청 ${f.incoming.length} · 보냄 ${f.outgoing.length}'),
+            title: Text(
+              waiting == 0
+                  ? tr('친구 요청')
+                  : trf('친구 요청 {incoming} · 보냄 {outgoing}', {
+                      'incoming': f.incoming.length,
+                      'outgoing': f.outgoing.length,
+                    }),
+            ),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -360,13 +368,19 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
               event: signedIn
                   ? latestFriendEvent(account.friends.collections[m.handle], account.photos.walls[m.handle])
                   : null,
-              fallback: m.liked + m.owned > 0 ? '@${m.handle} · 좋아요 ${m.liked} · 구매함 ${m.owned}' : '@${m.handle}',
+              fallback: m.liked + m.owned > 0
+                  ? trf('@{handle} · 좋아요 {liked} · 구매함 {owned}', {
+                      'handle': m.handle,
+                      'liked': m.liked,
+                      'owned': m.owned,
+                    })
+                  : '@${m.handle}',
             ),
       // ★ 특별 관심 — My Page ★ 에 이 친구 소식이 뜬다 (기기에만)
       trailing: m.handle.isEmpty
           ? null
           : IconButton(
-              tooltip: '특별 관심',
+              tooltip: tr('특별 관심'),
               onPressed: () => setState(
                 () => UserStore.instance.setSpecialFriend(
                   m.handle,
@@ -397,14 +411,14 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
               child: Row(
                 children: [
                   UnderlineTab(
-                    label: '친구',
+                    label: tr('친구'),
                     count: all.length,
                     selected: !space,
                     onTap: () => setState(() => _spaceTab = false), // STATE: 탭 → 친구
                   ),
                   UnderlineTab(
                     key: const ValueKey('tab-space'),
-                    label: '공유 공간',
+                    label: tr('공유 공간'),
                     count: workspace.members.length,
                     selected: space,
                     onTap: () => setState(() => _spaceTab = true), // STATE: 탭 → 공유 공간
@@ -426,7 +440,7 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
                       duration: const Duration(milliseconds: 150),
                       child: const Icon(Icons.arrow_right, color: Gp.muted),
                     ),
-                    const Text('친구', style: TextStyle(fontWeight: FontWeight.w600)),
+                    Text(tr('친구'), style: const TextStyle(fontWeight: FontWeight.w600)),
                     const Spacer(),
                     Text(
                       '${shown.length}/${all.length}',
@@ -437,11 +451,11 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
               ),
             ),
             if (open && all.isEmpty && signedIn)
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                 child: Text(
-                  '아직 친구가 없어요',
-                  style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                  tr('아직 친구가 없어요'),
+                  style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
                 ),
               ),
             if (open)
@@ -454,10 +468,10 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
 }
 
 /// M-9 ? 도움말
-const friendsHelp = <HelpItem>[
-  HelpItem(Icons.person_add_alt_1_outlined, '아이디로 친구 추가'),
-  HelpItem(Icons.notifications_none, '받은 친구 요청'),
-  HelpItem(Icons.photo_library_outlined, '지난번 뒤 새 사진'),
-  HelpItem(Icons.star_rounded, '특별 관심 (My Page ★ 에 소식)', color: Gp.star),
-  HelpItem(Icons.close, '닫기'),
+List<HelpItem> friendsHelp() => [
+  HelpItem(Icons.person_add_alt_1_outlined, tr('아이디로 친구 추가')),
+  HelpItem(Icons.notifications_none, tr('받은 친구 요청')),
+  HelpItem(Icons.photo_library_outlined, tr('지난번 뒤 새 사진')),
+  HelpItem(Icons.star_rounded, tr('특별 관심 (My Page ★ 에 소식)'), color: Gp.star),
+  HelpItem(Icons.close, tr('닫기')),
 ];

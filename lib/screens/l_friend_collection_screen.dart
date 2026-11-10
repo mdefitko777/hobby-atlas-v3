@@ -19,6 +19,7 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../marks.dart';
 import '../channels.dart';
+import '../l10n/l10n.dart';
 import '../models.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -104,10 +105,10 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
     final f = widget.friend;
     return Scaffold(
       appBar: AppBar(
-        title: Text('${f.name}의 컬렉션'),
-        actions: const [
-          HelpButton(title: '친구 컬렉션', items: friendCollectionHelp), // L-6
-          SizedBox(width: 6),
+        title: Text(trf('{name}의 컬렉션', {'name': f.name})),
+        actions: [
+          HelpButton(title: tr('친구 컬렉션'), items: friendCollectionHelp()), // L-6
+          const SizedBox(width: 6),
         ],
       ),
       body: FutureBuilder<_FriendData>(
@@ -131,9 +132,9 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
                 padding: const EdgeInsets.fromLTRB(8, 4, 8, 6),
                 child: Row(
                   children: [
-                    tab('좋아요', CollectionJump.liked, count: d.liked.length), // L-1
-                    tab('구매함', CollectionJump.owned, count: d.owned.length),
-                    tab('도감', CollectionJump.guide),
+                    tab(tr('좋아요'), CollectionJump.liked, count: d.liked.length), // L-1
+                    tab(tr('구매함'), CollectionJump.owned, count: d.owned.length),
+                    tab(tr('도감'), CollectionJump.guide),
                   ],
                 ),
               ),
@@ -154,7 +155,9 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
   Widget _kits(List<Kit> kits, List<Kit> mine, {required bool liked}) {
     final f = widget.friend;
     if (kits.isEmpty) {
-      return EmptyView(message: liked ? '${f.name}의 좋아요가 비어 있어요' : '${f.name}의 구매함이 비어 있어요');
+      return EmptyView(
+        message: liked ? trf('{name}의 좋아요가 비어 있어요', {'name': f.name}) : trf('{name}의 구매함이 비어 있어요', {'name': f.name}),
+      );
     }
     final m = Marks.of(context); // 앱 전체 한 벌 — 방금 누른 ♡ 도 반영
     String mark(Kit k) => m.owned(k) ? '나도 있음' : (m.liked(k) ? '내 좋아요' : '');
@@ -170,8 +173,8 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
             title: k.name,
             titleLines: 2,
             size: 64,
-            subtitle: joinDot([channelOf(k.franchiseId).label, k.line, k.series]),
-            tag: mark(k),
+            subtitle: joinDot([tr(channelOf(k.franchiseId).label), tr(k.line), k.seriesLabel]),
+            tag: tr(mark(k)),
             tagStrong: mark(k) == '내 좋아요' && !liked, // 친구가 이미 샀는데 나도 원함 → 겹쳐 사기 주의
             trailing: Text(yen(k.priceJpy), style: const TextStyle(fontSize: Gp.t12)),
             onTap: () => openKitDetail(context, k, loaders: widget.loaders),
@@ -184,7 +187,7 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
     final f = widget.friend;
     final shown = works.where((w) => (f.guide[w.id] ?? 0) > 0 || (photos[w.id] ?? 0) > 0).toList()
       ..sort((a, b) => (f.guide[b.id] ?? 0).compareTo(f.guide[a.id] ?? 0));
-    if (shown.isEmpty) return EmptyView(message: '${f.name}의 도감이 아직 비어 있어요');
+    if (shown.isEmpty) return EmptyView(message: trf('{name}의 도감이 아직 비어 있어요', {'name': f.name}));
     Widget bar(String who, int n, int total, {bool accent = false}) => Row(
       children: [
         SizedBox(
@@ -215,7 +218,10 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
             const VerifiedBadge(size: 18),
             Expanded(
               child: Text(
-                '  ${f.verified > 0 ? '인증 ${f.verified}개 · ' : ''}점등 ${f.lit}칸 (산 상품 기준)',
+                '  ${joinDot([
+                  if (f.verified > 0) trf('인증 {n}개', {'n': f.verified}),
+                  trf('점등 {n}칸 (산 상품 기준)', {'n': f.lit}),
+                ])}',
                 style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
               ),
             ),
@@ -223,7 +229,7 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
               Tooltip(
                 // 친구가 보이기로 둔 사진
                 key: const ValueKey('friend-photo-count'),
-                message: '사진',
+                message: tr('사진'),
                 child: Row(
                   children: [
                     const Icon(Icons.photo_library_outlined, size: Gp.iS, color: Gp.muted),
@@ -276,7 +282,7 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
                       const SizedBox(height: 6),
                       bar(f.name.characters.take(2).toString(), f.guide[w.id] ?? 0, w.total, accent: true),
                       const SizedBox(height: 4),
-                      bar('나', w.owned, w.total),
+                      bar(tr('나'), w.owned, w.total),
                     ],
                   ),
                 ),
@@ -289,8 +295,8 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
 }
 
 /// L-6 ? 도움말 — 줄 앞 꼬리표 (겹침 표시)
-const friendCollectionHelp = <HelpItem>[
-  HelpItem.widget(TagPill('나도 있음'), '나도 가진 상품'),
-  HelpItem.widget(TagPill('내 좋아요'), '내가 좋아요한 상품 (선물 참고)'),
-  HelpItem.widget(TagPill('내 좋아요', strong: true), '친구가 이미 산 내 좋아요 — 겹쳐 사기 주의'),
+List<HelpItem> friendCollectionHelp() => [
+  HelpItem.widget(TagPill(tr('나도 있음')), tr('나도 가진 상품')),
+  HelpItem.widget(TagPill(tr('내 좋아요')), tr('내가 좋아요한 상품 (선물 참고)')),
+  HelpItem.widget(TagPill(tr('내 좋아요'), strong: true), tr('친구가 이미 산 내 좋아요 — 겹쳐 사기 주의')),
 ];

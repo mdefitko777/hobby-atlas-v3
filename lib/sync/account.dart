@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 
 import '../data/photo_files.dart';
 import '../data/user_store.dart';
+import '../l10n/l10n.dart';
 import 'device_state_sync.dart';
 import 'friends_service.dart';
 import 'photo_restore.dart';
@@ -147,13 +148,13 @@ class Account extends ChangeNotifier {
     ]) {
       if (n.trim().isNotEmpty) return n.trim();
     }
-    return '나';
+    return tr('나');
   }
 
   /// 아바타 한 글자
   String get initial {
     final n = displayName;
-    return n.isEmpty ? '나' : String.fromCharCode(n.runes.first).toUpperCase();
+    return n.isEmpty ? tr('나') : String.fromCharCode(n.runes.first).toUpperCase();
   }
 
   /// 받은 친구 요청 수 (🔔 배지)

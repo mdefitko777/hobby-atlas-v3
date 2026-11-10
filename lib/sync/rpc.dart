@@ -5,6 +5,8 @@ library;
 
 import 'package:flutter/foundation.dart';
 
+import '../l10n/l10n.dart';
+
 /// 서버 함수 호출 실패. [code] = Postgres SQLSTATE (예: '40001' 리비전 충돌, '42501' 권한 · 로그인 없음)
 class RpcException implements Exception {
   const RpcException(this.code, this.message);
@@ -44,7 +46,7 @@ class NoBackendRpc implements RpcClient {
 
   @override
   Future<Object?> call(String fn, [Map<String, Object?> params = const {}]) =>
-      Future.error(const RpcException('42501', '로그인이 필요해요'));
+      Future.error(RpcException('42501', tr('로그인이 필요해요')));
 }
 
 /// 로그인 (Supabase GoTrue 이메일 코드 OTP — 옛 앱 app/auth.js 와 같은 방식)
@@ -81,7 +83,7 @@ class NoAuth extends ChangeNotifier implements AuthService {
   @override
   String get userId => '';
   @override
-  Future<void> sendCode(String email) => Future.error(const AuthFailure('계정 연결 설정이 없어요 (config/supabase.json)'));
+  Future<void> sendCode(String email) => Future.error(AuthFailure(tr('계정 연결 설정이 없어요 (config/supabase.json)')));
   @override
   Future<void> verifyCode(String email, String code) => sendCode(email);
   @override

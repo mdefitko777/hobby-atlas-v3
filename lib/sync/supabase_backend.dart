@@ -16,6 +16,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../l10n/l10n.dart';
 import 'photo_share.dart';
 import 'rpc.dart';
 
@@ -136,7 +137,7 @@ class SupabaseAuthService extends ChangeNotifier implements AuthService {
 
   GoTrueClient get _auth {
     final c = _client;
-    if (c == null) throw const AuthFailure('계정 연결 설정이 없어요 (config/supabase.json)');
+    if (c == null) throw AuthFailure(tr('계정 연결 설정이 없어요 (config/supabase.json)'));
     return c.auth;
   }
 
@@ -172,9 +173,9 @@ Future<void> _guard(Future<void> Function() f) async {
   } on AuthException catch (e) {
     throw AuthFailure(authMessage(e.code, e.message, e.statusCode));
   } on http.ClientException {
-    throw const AuthFailure('인터넷에 연결되지 않았어요');
+    throw AuthFailure(tr('인터넷에 연결되지 않았어요'));
   } on TimeoutException {
-    throw const AuthFailure('인터넷에 연결되지 않았어요');
+    throw AuthFailure(tr('인터넷에 연결되지 않았어요'));
   }
 }
 
@@ -183,22 +184,23 @@ Future<void> _guard(Future<void> Function() f) async {
 String authMessage(String? code, String message, String? status) {
   final m = message.toLowerCase();
   if (code == 'otp_expired' || m.contains('expired') || (m.contains('invalid') && m.contains('token'))) {
-    return '코드가 틀렸거나 시간이 지났어요. 새 코드를 받아 주세요';
+    return tr('코드가 틀렸거나 시간이 지났어요. 새 코드를 받아 주세요');
   }
   if (code == 'over_request_rate_limit' || m.contains('only request this after')) {
     final s = RegExp(r'after (\d+) second').firstMatch(m)?.group(1);
-    return s == null ? '조금 뒤에 다시 보낼 수 있어요' : '$s초 뒤에 다시 보낼 수 있어요';
+    return s == null ? tr('조금 뒤에 다시 보낼 수 있어요') : trf('{n}초 뒤에 다시 보낼 수 있어요', {'n': s});
   }
   if (code == 'over_email_send_rate_limit' || m.contains('rate limit')) {
-    return '메일을 너무 자주 보냈어요. 한 시간쯤 뒤에 다시 해 주세요 (Supabase 기본 메일은 시간당 몇 통만 보내요)';
+    return tr('메일을 너무 자주 보냈어요. 한 시간쯤 뒤에 다시 해 주세요 (Supabase 기본 메일은 시간당 몇 통만 보내요)');
   }
   if (code == 'email_address_not_authorized' || m.contains('not authorized') || m.contains('error sending')) {
-    return '메일을 보내지 못했어요. Supabase 기본 메일은 프로젝트 팀원 주소로만 가요 — '
-        'Supabase › Authentication › SMTP 에 메일 서비스를 연결해야 다른 사람도 받을 수 있어요';
+    return tr(
+      '메일을 보내지 못했어요. Supabase 기본 메일은 프로젝트 팀원 주소로만 가요 — Supabase › Authentication › SMTP 에 메일 서비스를 연결해야 다른 사람도 받을 수 있어요',
+    );
   }
-  if (code == 'email_address_invalid' || code == 'validation_failed') return '메일 주소를 확인해 주세요';
-  if (code == 'signup_disabled' || m.contains('signups not allowed')) return '이 프로젝트는 새 계정 만들기가 꺼져 있어요';
-  if (status == null) return '인터넷에 연결되지 않았어요';
+  if (code == 'email_address_invalid' || code == 'validation_failed') return tr('메일 주소를 확인해 주세요');
+  if (code == 'signup_disabled' || m.contains('signups not allowed')) return tr('이 프로젝트는 새 계정 만들기가 꺼져 있어요');
+  if (status == null) return tr('인터넷에 연결되지 않았어요');
   return message;
 }
 
@@ -211,8 +213,8 @@ class SupabaseRpc implements RpcClient {
   Future<Object?> call(String fn, [Map<String, Object?> params = const {}]) async {
     await _auth.whenReady;
     final client = _auth.client;
-    if (client == null) throw const RpcException('42501', '계정 연결 설정이 없어요');
-    if (client.auth.currentSession == null) throw const RpcException('42501', '로그인이 필요해요');
+    if (client == null) throw RpcException('42501', tr('계정 연결 설정이 없어요'));
+    if (client.auth.currentSession == null) throw RpcException('42501', tr('로그인이 필요해요'));
     try {
       final Object? r = await client.rpc<Object?>(fn, params: params).timeout(const Duration(seconds: 25));
       return r;
@@ -220,12 +222,12 @@ class SupabaseRpc implements RpcClient {
       throw RpcException(e.code ?? '', e.message);
     } on AuthException catch (e) {
       // 토큰 새로 받기 실패: 네트워크면 오프라인, 아니면 로그인 풀림
-      if (e is AuthRetryableFetchException || e.statusCode == null) throw const OfflineException('인터넷에 연결되지 않았어요');
+      if (e is AuthRetryableFetchException || e.statusCode == null) throw OfflineException(tr('인터넷에 연결되지 않았어요'));
       throw RpcException('42501', e.message);
     } on http.ClientException {
-      throw const OfflineException('인터넷에 연결되지 않았어요');
+      throw OfflineException(tr('인터넷에 연결되지 않았어요'));
     } on TimeoutException {
-      throw const OfflineException('서버가 답하지 않아요');
+      throw OfflineException(tr('서버가 답하지 않아요'));
     }
   }
 }
@@ -240,7 +242,7 @@ class SupabasePhotoStorage implements PhotoStorage {
   Future<StorageFileApi> _api() async {
     await _auth.whenReady;
     final client = _auth.client;
-    if (client == null || client.auth.currentSession == null) throw const OfflineException('로그인이 필요해요');
+    if (client == null || client.auth.currentSession == null) throw OfflineException(tr('로그인이 필요해요'));
     return client.storage.from(bucket);
   }
 
@@ -250,9 +252,9 @@ class SupabasePhotoStorage implements PhotoStorage {
     } on StorageException catch (e) {
       throw PhotoStorageException(e.message, status: e.statusCode ?? '');
     } on http.ClientException {
-      throw const OfflineException('인터넷에 연결되지 않았어요');
+      throw OfflineException(tr('인터넷에 연결되지 않았어요'));
     } on TimeoutException {
-      throw const OfflineException('서버가 답하지 않아요');
+      throw OfflineException(tr('서버가 답하지 않아요'));
     }
   }
 

@@ -11,6 +11,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData, FilteringTextInputFormatter;
 
+import '../l10n/l10n.dart';
 import '../sync/account.dart';
 import '../sync/friends_service.dart';
 import '../theme.dart';
@@ -28,14 +29,16 @@ bool ensureSignedIn(BuildContext context) {
 /// Q-4 아이디 정하기 · 바꾸기 — 정했으면 true
 Future<bool> askHandle(BuildContext context) async {
   final ok = await showDialog<bool>(context: context, builder: (_) => const _TextAskDialog(handle: true));
-  if (ok == true && context.mounted) showToast(context, '아이디를 정했어요 · @${AccountScope.read(context).handle}');
+  if (ok == true && context.mounted) {
+    showToast(context, trf('아이디를 정했어요 · @{handle}', {'handle': AccountScope.read(context).handle}));
+  }
   return ok == true;
 }
 
 /// Q-4 친구에게 보이는 이름 바꾸기
 Future<void> askDisplayName(BuildContext context) async {
   final ok = await showDialog<bool>(context: context, builder: (_) => const _TextAskDialog(handle: false));
-  if (ok == true && context.mounted) showToast(context, '이름을 바꿨어요');
+  if (ok == true && context.mounted) showToast(context, tr('이름을 바꿨어요'));
 }
 
 /// 글자 하나 묻는 대화상자 (컨트롤러를 대화상자가 갖고 있어 닫히는 애니메이션 중에도 안전)
@@ -52,7 +55,7 @@ class _TextAskDialog extends StatefulWidget {
 class _TextAskDialogState extends State<_TextAskDialog> {
   late final Account _account = AccountScope.read(context);
   late final TextEditingController _c = TextEditingController(
-    text: widget.handle ? _account.handle : (_account.displayName == '나' ? '' : _account.displayName),
+    text: widget.handle ? _account.handle : (_account.displayName == tr('나') ? '' : _account.displayName),
   );
   String _error = '';
   bool _busy = false;
@@ -86,13 +89,13 @@ class _TextAskDialogState extends State<_TextAskDialog> {
   Widget build(BuildContext context) {
     final h = widget.handle;
     return AlertDialog(
-      title: Text(h ? (_account.handle.isEmpty ? '내 아이디 정하기' : '아이디 바꾸기') : '이름 바꾸기'),
+      title: Text(tr(h ? (_account.handle.isEmpty ? '내 아이디 정하기' : '아이디 바꾸기') : '이름 바꾸기')),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            h ? '친구가 이 아이디로 나를 찾아요. 영문 소문자 · 숫자 · _ 3–20자.' : '친구 목록에 보이는 이름이에요.',
+            tr(h ? '친구가 이 아이디로 나를 찾아요. 영문 소문자 · 숫자 · _ 3–20자.' : '친구 목록에 보이는 이름이에요.'),
             style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
           ),
           const SizedBox(height: 10),
@@ -113,8 +116,8 @@ class _TextAskDialogState extends State<_TextAskDialog> {
         ],
       ),
       actions: [
-        TextButton(onPressed: _busy ? null : () => Navigator.pop(context, false), child: const Text('취소')),
-        FilledButton(onPressed: _busy ? null : _save, child: Text(h ? '정하기' : '저장')),
+        TextButton(onPressed: _busy ? null : () => Navigator.pop(context, false), child: Text(tr('취소'))),
+        FilledButton(onPressed: _busy ? null : _save, child: Text(tr(h ? '정하기' : '저장'))),
       ],
     );
   }
@@ -191,32 +194,32 @@ class _AddFriendSheetState extends State<_AddFriendSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SectionHeader('아이디로 친구 추가', padding: EdgeInsets.fromLTRB(0, 0, 0, 10)),
+            SectionHeader(tr('아이디로 친구 추가'), padding: const EdgeInsets.fromLTRB(0, 0, 0, 10)),
             Container(
               // Q-1
               padding: const EdgeInsets.fromLTRB(14, 4, 4, 4),
               decoration: BoxDecoration(color: Gp.bg, borderRadius: BorderRadius.circular(Gp.radius)),
               child: Row(
                 children: [
-                  const Text(
-                    '내 아이디',
-                    style: TextStyle(color: Gp.muted, fontSize: Gp.t12),
+                  Text(
+                    tr('내 아이디'),
+                    style: const TextStyle(color: Gp.muted, fontSize: Gp.t12),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      mine.isEmpty ? '아직 없어요' : '@$mine',
+                      mine.isEmpty ? tr('아직 없어요') : '@$mine',
                       style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                   ),
                   if (mine.isEmpty)
-                    TextButton(onPressed: () => askHandle(context), child: const Text('정하기'))
+                    TextButton(onPressed: () => askHandle(context), child: Text(tr('정하기')))
                   else
                     IconButton(
-                      tooltip: '아이디 복사', // P07
+                      tooltip: tr('아이디 복사'), // P07
                       onPressed: () {
                         Clipboard.setData(ClipboardData(text: '@$mine'));
-                        showToast(context, '아이디를 복사했어요 · 친구에게 보내 주세요');
+                        showToast(context, tr('아이디를 복사했어요 · 친구에게 보내 주세요'));
                       },
                       icon: const Icon(Icons.content_copy_rounded, size: Gp.iM, color: Gp.muted),
                     ),
@@ -234,16 +237,16 @@ class _AddFriendSheetState extends State<_AddFriendSheet> {
                     textInputAction: TextInputAction.search,
                     inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9_@]'))],
                     onSubmitted: (_) => _search(),
-                    decoration: const InputDecoration(
-                      hintText: '친구 아이디',
+                    decoration: InputDecoration(
+                      hintText: tr('친구 아이디'),
                       prefixText: '@',
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
                       isDense: true,
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
-                FilledButton(onPressed: _busy ? null : _search, child: const Text('찾기')),
+                FilledButton(onPressed: _busy ? null : _search, child: Text(tr('찾기'))),
               ],
             ),
             if (_error.isNotEmpty)
@@ -252,9 +255,9 @@ class _AddFriendSheetState extends State<_AddFriendSheet> {
                 child: Text(_error, style: const TextStyle(color: Gp.danger)),
               ),
             if (_searched && _found == null && _error.isEmpty)
-              const Padding(
-                padding: EdgeInsets.only(top: 12),
-                child: Text('그 아이디를 가진 사람이 없어요', style: TextStyle(color: Gp.muted)),
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Text(tr('그 아이디를 가진 사람이 없어요'), style: const TextStyle(color: Gp.muted)),
               ),
             if (_found case final f?) _result(f),
           ],
@@ -266,19 +269,23 @@ class _AddFriendSheetState extends State<_AddFriendSheet> {
   Widget _result(FriendSearch f) {
     final p = f.profile;
     final Widget action = switch (f.relation) {
-      'self' => const TagPill('나예요'),
-      'friends' => const TagPill('이미 친구'),
+      'self' => TagPill(tr('나예요')),
+      'friends' => TagPill(tr('이미 친구')),
       'outgoing' => OutlinedButton(
-        onPressed: _busy ? null : () => _act((s) => s.remove(p.handle), '요청을 취소했어요'),
-        child: const Text('요청 취소'),
+        onPressed: _busy ? null : () => _act((s) => s.remove(p.handle), tr('요청을 취소했어요')),
+        child: Text(tr('요청 취소')),
       ),
       'incoming' => FilledButton(
-        onPressed: _busy ? null : () => _act((s) => s.respond(p.handle, accept: true), '${p.name}님과 친구가 됐어요'),
-        child: const Text('수락'),
+        onPressed: _busy
+            ? null
+            : () => _act((s) => s.respond(p.handle, accept: true), trf('{name}님과 친구가 됐어요', {'name': p.name})),
+        child: Text(tr('수락')),
       ),
       _ => FilledButton(
-        onPressed: _busy ? null : () => _act((s) => s.request(p.handle), '${p.name}님에게 친구 요청을 보냈어요'),
-        child: const Text('친구 요청'),
+        onPressed: _busy
+            ? null
+            : () => _act((s) => s.request(p.handle), trf('{name}님에게 친구 요청을 보냈어요', {'name': p.name})),
+        child: Text(tr('친구 요청')),
       ),
     };
     return Padding(
@@ -348,13 +355,13 @@ class _RequestsSheetState extends State<_RequestsSheet> {
           shrinkWrap: true,
           padding: const EdgeInsets.only(bottom: 16),
           children: [
-            const SectionHeader('받은 친구 요청', padding: EdgeInsets.fromLTRB(16, 0, 16, 4)),
+            SectionHeader(tr('받은 친구 요청'), padding: const EdgeInsets.fromLTRB(16, 0, 16, 4)),
             if (incoming.isEmpty)
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
                 child: Text(
-                  '받은 요청이 없어요',
-                  style: TextStyle(color: Gp.muted, fontSize: Gp.t12),
+                  tr('받은 요청이 없어요'),
+                  style: const TextStyle(color: Gp.muted, fontSize: Gp.t12),
                 ),
               ),
             for (final p in incoming)
@@ -362,23 +369,27 @@ class _RequestsSheetState extends State<_RequestsSheet> {
                 TextButton(
                   onPressed: _busy.contains(p.handle)
                       ? null
-                      : () => _do(p.handle, (f) => f.respond(p.handle, accept: false), '요청을 거절했어요'),
-                  child: const Text('거절'),
+                      : () => _do(p.handle, (f) => f.respond(p.handle, accept: false), tr('요청을 거절했어요')),
+                  child: Text(tr('거절')),
                 ),
                 FilledButton(
                   onPressed: _busy.contains(p.handle)
                       ? null
-                      : () => _do(p.handle, (f) => f.respond(p.handle, accept: true), '${p.name}님과 친구가 됐어요'),
-                  child: const Text('수락'),
+                      : () => _do(
+                          p.handle,
+                          (f) => f.respond(p.handle, accept: true),
+                          trf('{name}님과 친구가 됐어요', {'name': p.name}),
+                        ),
+                  child: Text(tr('수락')),
                 ),
               ]),
-            const SectionHeader('보낸 요청', padding: EdgeInsets.fromLTRB(16, 18, 16, 4)),
+            SectionHeader(tr('보낸 요청'), padding: const EdgeInsets.fromLTRB(16, 18, 16, 4)),
             if (outgoing.isEmpty)
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
                 child: Text(
-                  '기다리는 요청이 없어요',
-                  style: TextStyle(color: Gp.muted, fontSize: Gp.t12),
+                  tr('기다리는 요청이 없어요'),
+                  style: const TextStyle(color: Gp.muted, fontSize: Gp.t12),
                 ),
               ),
             for (final p in outgoing)
@@ -386,8 +397,8 @@ class _RequestsSheetState extends State<_RequestsSheet> {
                 OutlinedButton(
                   onPressed: _busy.contains(p.handle)
                       ? null
-                      : () => _do(p.handle, (f) => f.remove(p.handle), '요청을 취소했어요'),
-                  child: const Text('취소'),
+                      : () => _do(p.handle, (f) => f.remove(p.handle), tr('요청을 취소했어요')),
+                  child: Text(tr('취소')),
                 ),
               ]),
           ],

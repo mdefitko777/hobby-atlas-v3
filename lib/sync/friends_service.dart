@@ -5,6 +5,7 @@ library;
 
 import 'package:flutter/foundation.dart';
 
+import '../l10n/l10n.dart';
 import 'rpc.dart';
 import '../json_util.dart';
 
@@ -205,14 +206,14 @@ class FriendsService extends ChangeNotifier {
   /// 아이디 정하기 · 바꾸기 (영문 소문자 · 숫자 · _ 3–20자)
   Future<void> claimHandle(String handle) {
     final h = normalizeHandle(handle);
-    if (!validHandle(h)) return Future.error(const FriendsFailure('아이디는 영문 소문자 · 숫자 · _ 로 3–20자예요'));
+    if (!validHandle(h)) return Future.error(FriendsFailure(tr('아이디는 영문 소문자 · 숫자 · _ 로 3–20자예요')));
     return _act('gunpula_v3_claim_handle', {'p_handle': h});
   }
 
   /// 친구에게 보이는 이름
   Future<void> setDisplayName(String name) {
     final n = name.trim();
-    if (n.isEmpty) return Future.error(const FriendsFailure('이름을 적어 주세요'));
+    if (n.isEmpty) return Future.error(FriendsFailure(tr('이름을 적어 주세요')));
     return _act('gunpula_v3_update_profile', {'p_display_name': n.length > 40 ? n.substring(0, 40) : n});
   }
 
@@ -254,7 +255,7 @@ class FriendsService extends ChangeNotifier {
   /// 아이디로 찾기 (정확히 같은 아이디만) — 없으면 null
   Future<FriendSearch?> search(String handle) async {
     final h = normalizeHandle(handle);
-    if (!validHandle(h)) throw const FriendsFailure('아이디는 영문 소문자 · 숫자 · _ 로 3–20자예요');
+    if (!validHandle(h)) throw FriendsFailure(tr('아이디는 영문 소문자 · 숫자 · _ 로 3–20자예요'));
     try {
       final r = await _rpc()('gunpula_v3_search_user', {'p_handle': h});
       final p = PublicProfile.parse(r);
@@ -326,13 +327,13 @@ bool validHandle(String h) => RegExp(r'^[a-z0-9_]{3,20}$').hasMatch(h);
 /// v3 SQL 의 오류 문장 → 한국어
 String friendlyError(RpcException e) {
   final m = e.message.toLowerCase();
-  if (e.isMissingFunction) return '서버에 친구 기능(Gunpula v3 SQL)이 아직 없어요';
-  if (m.contains('handle taken')) return '이미 누가 쓰는 아이디예요';
-  if (m.contains('handle must be')) return '아이디는 영문 소문자 · 숫자 · _ 로 3–20자예요';
-  if (m.contains('user not found')) return '그 아이디를 찾지 못했어요';
-  if (m.contains('cannot add yourself')) return '나 자신은 친구로 추가할 수 없어요';
-  if (m.contains('already friends')) return '이미 친구예요';
-  if (m.contains('not friends')) return '친구가 아니라서 볼 수 없어요';
-  if (m.contains('not signed in') || e.isAuth) return '로그인이 필요해요';
+  if (e.isMissingFunction) return tr('서버에 친구 기능(Gunpula v3 SQL)이 아직 없어요');
+  if (m.contains('handle taken')) return tr('이미 누가 쓰는 아이디예요');
+  if (m.contains('handle must be')) return tr('아이디는 영문 소문자 · 숫자 · _ 로 3–20자예요');
+  if (m.contains('user not found')) return tr('그 아이디를 찾지 못했어요');
+  if (m.contains('cannot add yourself')) return tr('나 자신은 친구로 추가할 수 없어요');
+  if (m.contains('already friends')) return tr('이미 친구예요');
+  if (m.contains('not friends')) return tr('친구가 아니라서 볼 수 없어요');
+  if (m.contains('not signed in') || e.isAuth) return tr('로그인이 필요해요');
   return e.message;
 }

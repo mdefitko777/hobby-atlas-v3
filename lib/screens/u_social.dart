@@ -26,6 +26,7 @@ import '../clock.dart';
 import '../data/catalog.dart';
 import '../data/photo_files.dart';
 import '../data/social_local.dart';
+import '../l10n/l10n.dart';
 import '../logic/friends.dart';
 import '../sync/account.dart';
 import '../sync/friends_service.dart';
@@ -59,7 +60,7 @@ class MyAvatar extends StatelessWidget {
     return ListenableBuilder(
       listenable: account.store,
       builder: (context, _) {
-        final text = account.signedIn ? account.initial : fallback;
+        final text = account.signedIn ? account.initial : (fallback == '나' ? tr('나') : fallback);
         final img = account.store.social.image(ProfileImageKind.avatar);
         return RingAvatar(
           text: text,
@@ -196,11 +197,11 @@ Future<void> editProfileImage(BuildContext context, ProfileImageKind kind) async
     final bytes = await photoPicker(choice == PhotoChoice.camera ? ImageSource.camera : ImageSource.gallery);
     if (bytes == null || bytes.isEmpty) return;
     await account.profileImages.setMine(kind, bytes);
-    if (context.mounted && account.profileImages.warn) showToast(context, '기기에만 저장했어요');
+    if (context.mounted && account.profileImages.warn) showToast(context, tr('기기에만 저장했어요'));
   } on FriendsFailure catch (e) {
     if (context.mounted) showToast(context, e.message);
   } on Object catch (e) {
-    if (context.mounted) showToast(context, '사진을 가져오지 못했어요 ($e)');
+    if (context.mounted) showToast(context, trf('사진을 가져오지 못했어요 ({error})', {'error': e}));
   }
 }
 
@@ -242,14 +243,14 @@ class _PrivacySheet extends StatelessWidget {
                   secondary: Icon(pub ? Icons.photo_library_outlined : Icons.lock_outline, color: Gp.ink),
                   title: Row(
                     children: [
-                      const Text('사진 공개'),
+                      Text(tr('사진 공개')),
                       if (unguarded) ...[
                         const SizedBox(width: 6),
-                        const Tooltip(
-                          key: ValueKey('privacy-warn'),
-                          message: '서버에 공개 범위가 아직 없어요 (docs/supabase-v3-social.sql)',
+                        Tooltip(
+                          key: const ValueKey('privacy-warn'),
+                          message: tr('서버에 공개 범위가 아직 없어요 (docs/supabase-v3-social.sql)'),
                           triggerMode: TooltipTriggerMode.tap,
-                          child: Icon(Icons.warning_amber_rounded, size: Gp.iS, color: Gp.star),
+                          child: const Icon(Icons.warning_amber_rounded, size: Gp.iS, color: Gp.star),
                         ),
                       ],
                     ],
@@ -289,9 +290,9 @@ class _PrivacySheet extends StatelessWidget {
 
 /// 역할 → 아이콘 · 뜻 (v2 gunpula_v2_members.role)
 (IconData, String) roleIcon(String role) => switch (role) {
-  'owner' => (Icons.workspace_premium_outlined, '관리자'),
-  'viewer' => (Icons.visibility_outlined, '보기만'),
-  _ => (Icons.edit_outlined, '편집'),
+  'owner' => (Icons.workspace_premium_outlined, tr('관리자')),
+  'viewer' => (Icons.visibility_outlined, tr('보기만')),
+  _ => (Icons.edit_outlined, tr('편집')),
 };
 
 /// U-6 공유 공간 (I-5 · M-6) — 이름 · 멤버 · 역할. 읽기만 (초대 코드 만들기는 서버 함수가 없어 없음)
@@ -317,16 +318,16 @@ class WorkspaceMembers extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  w.name.isEmpty ? '공유 공간' : w.name,
+                  w.name.isEmpty ? tr('공유 공간') : w.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w700),
                 ),
               ),
               if (!w.canEdit)
-                const Tooltip(
-                  message: '읽기 전용',
-                  child: Icon(Icons.lock_outline, size: Gp.iS, color: Gp.muted),
+                Tooltip(
+                  message: tr('읽기 전용'),
+                  child: const Icon(Icons.lock_outline, size: Gp.iS, color: Gp.muted),
                 ),
             ],
           ),
@@ -335,7 +336,11 @@ class WorkspaceMembers extends StatelessWidget {
           ListTile(
             dense: true,
             leading: m.isSelf
-                ? MyAvatar(fallback: m.name.characters.isEmpty ? '나' : m.name.characters.first, size: 32, ringWidth: 2)
+                ? MyAvatar(
+                    fallback: m.name.characters.isEmpty ? tr('나') : m.name.characters.first,
+                    size: 32,
+                    ringWidth: 2,
+                  )
                 : CircleThumb(image: '', label: m.name.isEmpty ? '?' : m.name, size: 36),
             title: Text(
               m.name,
@@ -380,11 +385,11 @@ class SuggestionsPanel extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 2, 16, 2),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 2, 16, 2),
                 child: Tooltip(
-                  message: '알 수도 있는 친구',
-                  child: Icon(Icons.person_search_outlined, size: Gp.iM, color: Gp.ink),
+                  message: tr('알 수도 있는 친구'),
+                  child: const Icon(Icons.person_search_outlined, size: Gp.iM, color: Gp.ink),
                 ),
               ),
               for (final s in list.take(5))
@@ -393,7 +398,7 @@ class SuggestionsPanel extends StatelessWidget {
                   leading: CircleThumb(image: '', label: s.profile.name, size: 40),
                   title: Text(s.profile.name, maxLines: 1, overflow: TextOverflow.ellipsis),
                   subtitle: Text(
-                    '함께 아는 친구 ${s.mutual}명',
+                    trf('함께 아는 친구 {n}명', {'n': s.mutual}),
                     style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
                   ),
                   trailing: Row(
@@ -401,11 +406,13 @@ class SuggestionsPanel extends StatelessWidget {
                     children: [
                       IconButton(
                         key: ValueKey('suggest-add-${s.profile.handle}'),
-                        tooltip: '친구 요청',
+                        tooltip: tr('친구 요청'),
                         onPressed: () async {
                           try {
                             await f.request(s.profile.handle);
-                            if (context.mounted) showToast(context, '${s.profile.name}님에게 친구 요청을 보냈어요');
+                            if (context.mounted) {
+                              showToast(context, trf('{name}님에게 친구 요청을 보냈어요', {'name': s.profile.name}));
+                            }
                           } on FriendsFailure catch (e) {
                             if (context.mounted) showToast(context, e.message);
                           }
@@ -414,7 +421,7 @@ class SuggestionsPanel extends StatelessWidget {
                       ),
                       IconButton(
                         key: ValueKey('suggest-dismiss-${s.profile.handle}'),
-                        tooltip: '닫기',
+                        tooltip: tr('닫기'),
                         onPressed: () => account.store.social.dismissSuggestion(s.profile.handle), // 기기에만
                         icon: const Icon(Icons.close, size: Gp.iM, color: Gp.faint),
                       ),
