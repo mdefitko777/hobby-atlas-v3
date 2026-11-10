@@ -110,6 +110,15 @@ void main() {
     expect(store.unreadCount(mine), 3); // AC 도
   });
 
+  test('? 도움말: 가격 알림은 일본 정가 변경 (앱에서 「시세」는 국내 시세만)', () {
+    // 알림 둘째 줄과 같은 말 (lib/notifications/feed_rules.dart 'price' → "가격 변경 ¥…")
+    final texts = [for (final h in notificationsHelp) h.text];
+    expect(texts, contains('가격 변경 (일본 정가)'));
+    expect(texts, everyElement(isNot(contains('시세'))));
+    // 🛍 예약 묶음 = PB 예약 기간 · 재판매 · 예약 도착 (lib/data/derive/notifications.dart)
+    expect(texts, contains('PB 예약 · 재판매 · 예약 도착'));
+  });
+
   testWidgets('알림 화면: 모두 읽음 → 🔔 0, 되돌리기 → 다시 3', (tester) async {
     final store = NotifyStore.memory(records: records);
     await pumpApp(tester, NotificationsScreen(myChannels: mine, loaders: loadersFor(store), notify: store));
@@ -166,7 +175,7 @@ void main() {
   testWidgets('설정: 레고 범위 — 전부 · 최근 정식 세트', (tester) async {
     await pumpApp(tester, SettingsScreen(notify: NotifyStore.memory()), size: const Size(390, 1800));
     expect(UserStore.instance.legoScope, LegoScope.recent);
-    expect(find.text('${legoRecentFromYear}년부터 나온 정식 세트 · 미니피규어'), findsOneWidget);
+    expect(find.text('$legoRecentFromYear년부터 나온 정식 세트 · 미니피규어'), findsOneWidget);
     await tester.tap(find.text('전부'));
     await tester.pump();
     expect(UserStore.instance.legoScope, LegoScope.all);
@@ -202,7 +211,10 @@ void main() {
         store: store,
         child: MaterialApp(
           theme: buildGpTheme(),
-          builder: (context, child) => MarksHost(store: UserStore.memory(), child: PaneHost(child: child!)),
+          builder: (context, child) => MarksHost(
+            store: UserStore.memory(),
+            child: PaneHost(child: child!),
+          ),
           home: NotificationsScreen(myChannels: mine, loaders: loadersFor(store)), // notify 를 넘기지 않는다
         ),
       ),

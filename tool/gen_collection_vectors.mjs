@@ -9,7 +9,7 @@ const { normalizeCollection, mergeCollectionState, mergeTimestampedMap } = await
 let seed = 42;
 const rnd = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
 const pick = (a) => a[Math.floor(rnd() * a.length)];
-const members = ["me", "member", "ttungyimu", "ttungyimungyi", "냐아", "동생", " me ", "other"];
+const members = ["me", "member", "ttungyimu", "ttungyimungyi", "냐아", "곰돌", " me ", "other"];
 const kits = ["k1", "k2", "k3", "k4", "k5"];
 const statuses = ["owned", "wanted", "deleted", "bogus", undefined];
 const times = ["2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z", "2026-01-02T00:00:00.000Z", "2025-12-31T23:59:59Z", "2026-03-01T10:00:00+09:00"];
@@ -21,7 +21,7 @@ function entry() {
   const p = pick(price); if (p !== undefined) e.purchase_price = p;
   if (rnd() < 0.3) e.note = pick(["메모", "", "box"]);
   if (rnd() < 0.3) e.storage = pick(["선반", ""]);
-  if (rnd() < 0.5) e.updated_by = pick(["me", "동생", ""]);
+  if (rnd() < 0.5) e.updated_by = pick(["me", "곰돌", ""]);
   return e;
 }
 function collection() {
@@ -36,7 +36,7 @@ function collection() {
 }
 const cases = [];
 for (let i = 0; i < 60; i++) {
-  const self = pick(["me", "member", "동생"]);
+  const self = pick(["me", "member", "곰돌"]);
   const options = { statuses: ["owned", "wanted", "deleted"], self, droppedMembers: new Set(["냐아"]),
     memberMerges: self === "member" ? {} : Object.fromEntries(["member", "ttungyimungyi", "ttungyimu"].map((a) => [a, self])) };
   const local = collection(), remote = collection();

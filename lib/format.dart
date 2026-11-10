@@ -10,6 +10,11 @@ String yen(int? v) => v == null ? '가격 미정' : '¥${_comma(v)}';
 /// 날짜 한 가지 모양: "2026-10-05" → "2026.10.05", "2027-07" → "2027.07" (상세 · 목록 · 공고 공통)
 String dateDot(String d) => d.replaceAll('-', '.');
 
+/// 전각 영숫자 · 기호 → 반각 (ＨＧＵＣ → HGUC, Ｖｅｒ．Ｋａ → Ver.Ka, 전각 빈칸 → 빈칸). 【】「」 같은 CJK 괄호는 그대로
+/// 상품 이름 정리(lib/data/gunpula.dart) · 검색 글자(blob)와 검색어(lib/logic/kit_rules.dart)가 같이 쓴다
+String halfWidth(String s) =>
+    String.fromCharCodes(s.runes.map((c) => c >= 0xFF01 && c <= 0xFF5E ? c - 0xFEE0 : (c == 0x3000 ? 0x20 : c)));
+
 String _two(int n) => n.toString().padLeft(2, '0');
 
 /// 달 열쇠 "2026-10" (그 DateTime 의 시간대 그대로 — 발매월 · 이번 달 지출 비교)

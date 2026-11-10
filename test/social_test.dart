@@ -62,8 +62,8 @@ void main() {
     files = MemoryPhotoFiles();
     PhotoFiles.instance = files;
     server = FakeServer(v2Payload: null, handle: 'bbang', displayName: '빵빵한빵디');
-    server.users['dongsaeng'] = (
-      name: '동생',
+    server.users['gomdol'] = (
+      name: '곰돌',
       collection: {
         'items': {
           'a': {'status': 'wanted', 'updated_at': '2026-02-01T00:00:00Z'},
@@ -71,7 +71,7 @@ void main() {
       },
     );
     server.users['cousin'] = (name: '사촌', collection: const {});
-    server.friends.add('dongsaeng');
+    server.friends.add('gomdol');
     auth = FakeAuth(signedIn: true);
     storage = FakePhotoStorage();
     store = UserStore.memory();
@@ -211,21 +211,21 @@ void main() {
     });
 
     test('친구 아바타: 사진 벽의 avatar_path 를 기기에 받아 두고, 오프라인이면 받아 둔 것 그대로', () async {
-      server.friendPrefs['dongsaeng'] = {'avatar': 'uid-d/profile/avatar.jpg', 'avatar_at': 't1'};
+      server.friendPrefs['gomdol'] = {'avatar': 'uid-d/profile/avatar.jpg', 'avatar_at': 't1'};
       storage.objects['uid-d/profile/avatar.jpg'] = _jpeg;
       await account.friends.refresh();
-      await account.photos.loadAllWalls(['dongsaeng']);
+      await account.photos.loadAllWalls(['gomdol']);
       await account.profileImages.cacheFriendAvatars();
-      final f = store.social.friendAvatars['dongsaeng']!;
+      final f = store.social.friendAvatars['gomdol']!;
       expect(files.files[f], _jpeg);
 
       // 바뀌었는데 오프라인 → 옛것 그대로
-      server.friendPrefs['dongsaeng'] = {'avatar': 'uid-d/profile/avatar.jpg', 'avatar_at': 't2'};
+      server.friendPrefs['gomdol'] = {'avatar': 'uid-d/profile/avatar.jpg', 'avatar_at': 't2'};
       account.photos.clear();
-      await account.photos.loadAllWalls(['dongsaeng']);
+      await account.photos.loadAllWalls(['gomdol']);
       storage.offline = true;
       await account.profileImages.cacheFriendAvatars();
-      expect(store.social.friendAvatars['dongsaeng'], f);
+      expect(store.social.friendAvatars['gomdol'], f);
 
       // 친구를 끊으면 지운다
       await account.profileImages.forgetFriendsExcept({});
@@ -242,38 +242,38 @@ void main() {
       await account.photos.sync();
       expect(server.myPhotos.keys, ['p1']);
 
-      await account.photos.setPrivacy(public: true, hidden: {'dongsaeng'});
-      expect(server.privacyOf['bbang']!.hidden, {'dongsaeng'});
+      await account.photos.setPrivacy(public: true, hidden: {'gomdol'});
+      expect(server.privacyOf['bbang']!.hidden, {'gomdol'});
       expect(store.social.privacyDirty, isFalse);
       expect(account.photos.privacy, PrivacyState.synced);
-      expect(server.myWallAs('dongsaeng'), isEmpty);
+      expect(server.myWallAs('gomdol'), isEmpty);
       expect(server.myWallAs('cousin'), ['p1']);
       final photoPath = PhotoShareService.pathOf(uid(), 'p1');
-      expect(server.canReadObject(owner: 'bbang', viewer: 'dongsaeng', path: photoPath), isFalse);
-      expect(server.canReadObject(owner: 'bbang', viewer: 'dongsaeng', path: '${uid()}/profile/avatar.jpg'), isTrue);
+      expect(server.canReadObject(owner: 'bbang', viewer: 'gomdol', path: photoPath), isFalse);
+      expect(server.canReadObject(owner: 'bbang', viewer: 'gomdol', path: '${uid()}/profile/avatar.jpg'), isTrue);
       // 사진은 내리지 않는다 (서버가 지킨다)
       expect(storage.objects.containsKey(photoPath), isTrue);
 
       // 전체 끄기
-      await account.photos.setPrivacy(public: false, hidden: {'dongsaeng'});
+      await account.photos.setPrivacy(public: false, hidden: {'gomdol'});
       expect(server.myWallAs('cousin'), isEmpty);
       final local = store.toJson()['local_state']! as Map;
       expect(local['photo_privacy'], {
         'public': false,
-        'hidden_from': ['dongsaeng'],
+        'hidden_from': ['gomdol'],
         'dirty': false,
       });
     });
 
     test('친구가 나를 숨겼으면 그 친구 벽은 비어 있다', () async {
-      server.friendPhotos['dongsaeng'] = [
+      server.friendPhotos['gomdol'] = [
         {'id': 'f1', 'path': 'uid-d/f1.jpg', 'created_at': '2026-11-01T00:00:00Z'},
       ];
-      server.privacyOf['dongsaeng'] = (public: true, hidden: {'bbang'});
-      final wall = await account.photos.friendWall('dongsaeng', force: true);
+      server.privacyOf['gomdol'] = (public: true, hidden: {'bbang'});
+      final wall = await account.photos.friendWall('gomdol', force: true);
       expect(wall.photos, isEmpty);
-      server.privacyOf.remove('dongsaeng');
-      expect((await account.photos.friendWall('dongsaeng', force: true)).photos, hasLength(1));
+      server.privacyOf.remove('gomdol');
+      expect((await account.photos.friendWall('gomdol', force: true)).photos, hasLength(1));
     });
 
     test('서버에 공개 범위가 없으면: 전체 끄기는 올린 사진을 내려서 지키고, 다시 켜면 올린다', () async {
@@ -303,16 +303,16 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('photo-privacy')));
       await settle(tester);
       expect(find.text('사진 공개'), findsOneWidget);
-      await tester.tap(find.byKey(const ValueKey('privacy-dongsaeng')));
+      await tester.tap(find.byKey(const ValueKey('privacy-gomdol')));
       await settle(tester);
-      expect(store.social.hiddenFrom, {'dongsaeng'});
-      expect(server.privacyOf['bbang']!.hidden, {'dongsaeng'});
+      expect(store.social.hiddenFrom, {'gomdol'});
+      expect(server.privacyOf['bbang']!.hidden, {'gomdol'});
       expect(find.byKey(const ValueKey('privacy-warn')), findsNothing);
 
       await tester.tap(find.byKey(const ValueKey('privacy-public')));
       await settle(tester);
       expect(store.social.photosPublic, isFalse);
-      final box = tester.widget<CheckboxListTile>(find.byKey(const ValueKey('privacy-dongsaeng')));
+      final box = tester.widget<CheckboxListTile>(find.byKey(const ValueKey('privacy-gomdol')));
       expect(box.onChanged, isNull);
       expect(box.value, isFalse);
 
@@ -333,7 +333,7 @@ void main() {
       'can_edit': true,
       'members': [
         {'name': '빵빵한빵디', 'role': 'owner', 'is_self': true},
-        {'name': '동생', 'role': 'viewer', 'is_self': false},
+        {'name': '곰돌', 'role': 'viewer', 'is_self': false},
       ],
     })!;
 
@@ -367,7 +367,7 @@ void main() {
   group('M-5 알 수도 있는 친구', () {
     testWidgets('친구의 친구 · 함께 아는 친구 수 · 요청 보내면 사라짐 · ×는 기기에 남는다', (tester) async {
       server.users['aunt'] = (name: '이모', collection: const {});
-      server.friendsOf['dongsaeng'] = {'bbang', 'cousin', 'aunt'};
+      server.friendsOf['gomdol'] = {'bbang', 'cousin', 'aunt'};
       await openDrawer(tester);
       expect(find.byKey(const ValueKey('suggestions')), findsOneWidget);
       expect(find.text('사촌'), findsOneWidget);
@@ -386,12 +386,12 @@ void main() {
     });
 
     testWidgets('서버에 suggest_friends 가 없으면 칸을 숨긴다', (tester) async {
-      server.friendsOf['dongsaeng'] = {'cousin'};
+      server.friendsOf['gomdol'] = {'cousin'};
       server.missing.add('gunpula_v3_suggest_friends');
       await openDrawer(tester);
       expect(account.friends.suggestionsMissing, isTrue);
       expect(find.byKey(const ValueKey('suggestions')), findsNothing);
-      expect(find.text('동생'), findsOneWidget); // 나머지는 그대로
+      expect(find.text('곰돌'), findsOneWidget); // 나머지는 그대로
       expect(tester.takeException(), isNull);
     });
   });
@@ -400,13 +400,13 @@ void main() {
     testWidgets('지난번 연 뒤 올라온 친구 사진 = 새 사진 n · 친구 줄에 점 · 상태 줄은 가장 최근 일', (tester) async {
       fixedNow = DateTime.utc(2026, 11, 2, 12);
       store.social.setFriendsSeenAt('2026-11-01T00:00:00Z');
-      server.friendPhotos['dongsaeng'] = [
+      server.friendPhotos['gomdol'] = [
         {'id': 'f2', 'path': 'uid-d/f2.jpg', 'kit_id': '', 'created_at': '2026-11-01T12:00:00Z'},
         {'id': 'f1', 'path': 'uid-d/f1.jpg', 'kit_id': '', 'created_at': '2026-10-30T00:00:00Z'},
       ];
       await openDrawer(tester);
       expect(find.text('새 사진 1'), findsOneWidget);
-      expect(tester.widget<Badge>(find.byKey(const ValueKey('friend-new-dongsaeng'))).isLabelVisible, isTrue);
+      expect(tester.widget<Badge>(find.byKey(const ValueKey('friend-new-gomdol'))).isLabelVisible, isTrue);
       final status = tester.widget<FriendStatusLine>(find.byType(FriendStatusLine));
       expect(status.event?.kind, 'photo'); // 사진(11/1)이 좋아요(2/1)보다 늦다
       expect(store.social.friendsSeenAt, '2026-11-02T12:00:00.000Z'); // 이번에 연 시각
@@ -418,7 +418,7 @@ void main() {
     });
 
     testWidgets('처음 여는 서랍엔 새 사진 표시가 없다', (tester) async {
-      server.friendPhotos['dongsaeng'] = [
+      server.friendPhotos['gomdol'] = [
         {'id': 'f1', 'path': 'uid-d/f1.jpg', 'created_at': '2026-11-01T12:00:00Z'},
       ];
       await openDrawer(tester);
@@ -440,8 +440,8 @@ void main() {
 
   testWidgets('L-3 도감 비교: 친구 사진 수 · 작품별 사진 수', (tester) async {
     const friend = Member(
-      name: '동생',
-      handle: 'dongsaeng',
+      name: '곰돌',
+      handle: 'gomdol',
       role: '친구',
       self: false,
       liked: 0,
@@ -473,7 +473,7 @@ void main() {
         const ProfileImage(file: 'a.jpg', at: 't', uploadedTo: 'uid:other@example.com'),
       )
       ..setPrivacy(public: false, hidden: {'x'})
-      ..setFriendAvatar('dongsaeng', 'friend-d-1.jpg');
+      ..setFriendAvatar('gomdol', 'friend-d-1.jpg');
     await account.friends.refresh();
     await account.profileImages.sync();
     expect(store.social.image(ProfileImageKind.avatar), isNull);
@@ -490,18 +490,18 @@ void main() {
   test('SocialLocal: 저장 → 다시 읽기, 위험한 파일 이름은 버린다', () {
     store.social
       ..setImage(ProfileImageKind.avatar, const ProfileImage(file: 'profile-avatar-x.jpg', at: 't', uploadedTo: 'u'))
-      ..setPrivacy(public: false, hidden: {'dongsaeng'})
+      ..setPrivacy(public: false, hidden: {'gomdol'})
       ..dismissSuggestion('cousin')
       ..setFriendsSeenAt('2026-11-01T00:00:00Z')
-      ..setFriendAvatar('dongsaeng', 'friend-dongsaeng-1.jpg');
+      ..setFriendAvatar('gomdol', 'friend-gomdol-1.jpg');
     final again = UserStore.memory()..debugLoadJson(store.toJson());
     final s = again.social;
     expect(s.image(ProfileImageKind.avatar)?.uploadedTo, 'u');
     expect((s.photosPublic, s.privacyDirty), (false, true));
-    expect(s.hiddenFrom, {'dongsaeng'});
+    expect(s.hiddenFrom, {'gomdol'});
     expect(s.dismissedSuggestions, {'cousin'});
     expect(s.friendsSeenAt, '2026-11-01T00:00:00Z');
-    expect(s.friendAvatars, {'dongsaeng': 'friend-dongsaeng-1.jpg'});
+    expect(s.friendAvatars, {'gomdol': 'friend-gomdol-1.jpg'});
     final bad = UserStore.memory()
       ..debugLoadJson({
         'local_state': {

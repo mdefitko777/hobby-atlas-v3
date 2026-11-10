@@ -6,26 +6,61 @@ import 'dart:ui' show ImageFilter;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
+import '../data/catalog.dart' show Catalog;
 import '../data/photo_files.dart';
+import '../models.dart' show Kit;
 import '../theme.dart';
 
 /// 상품·로고 이미지. 경로가 비었거나 못 읽으면 회색 칸 + 글자.
 /// [grayscale] = 흑백 (베이 조합 만들기의 안 가진 부품만 — 도감 칸은 늘 컬러)
+/// [nextOnError] = 못 열면 그 상품의 다음 사진으로 (목록 사진 [PhotoThumb] — 대표 사진 주소가 막혀도 회색 칸 대신 공식 사진.
+/// 상세 사진 넘기기 · 크게 보기는 [BrokenImages.keep] 이 장을 빼니 켜지 않는다)
 class AppImage extends StatelessWidget {
-  const AppImage(this.path, {super.key, this.fit = BoxFit.cover, this.placeholder = '', this.grayscale = false});
+  const AppImage(
+    this.path, {
+    super.key,
+    this.fit = BoxFit.cover,
+    this.placeholder = '',
+    this.grayscale = false,
+    this.nextOnError = false,
+  }) : _rest = null;
+
+  /// 앞 사진이 열리지 않아 이어 그리는 다음 사진 — [rest] = 그다음 후보들
+  const AppImage._next(this.path, List<String> rest, {required this.fit, required this.placeholder})
+    : grayscale = false,
+      nextOnError = true,
+      _rest = rest;
 
   final String path;
   final BoxFit fit;
   final String placeholder;
   final bool grayscale;
+  final bool nextOnError;
+  final List<String>? _rest;
+
+  /// 이 사진 다음 후보 중 아직 열리지 않은 적 없는 것 (앱을 켠 동안 [BrokenImages] 가 기억)
+  List<String> _alive() => [
+    for (final u in _rest ?? (nextOnError ? ImageAlternates.of(path) : const <String>[]))
+      if (u != path && !BrokenImages.has(u)) u,
+  ];
+
+  /// 못 열었을 때 — 다음 후보가 있으면 그것, 없으면 이름 글자 자리표시
+  Widget _failed() {
+    if (!nextOnError) return _Placeholder(placeholder);
+    final rest = _alive();
+    if (rest.isEmpty) return _Placeholder(placeholder);
+    return AppImage._next(rest.first, rest.sublist(1), fit: fit, placeholder: placeholder);
+  }
 
   @override
   Widget build(BuildContext context) {
-    Widget fallback(BuildContext _, Object _, StackTrace? _) => _Placeholder(placeholder);
     if (path.isEmpty) return _Placeholder(placeholder);
     if (path.startsWith(localPhotoPrefix)) return LocalPhotoImage(path.substring(localPhotoPrefix.length), fit: fit);
-    // 인터넷 사진은 기기에 남겨 두고(비행기 모드에서도 본 것은 보인다), 실패하면 이름 글자 자리표시
-    final Widget img = path.startsWith('http')
+    // 이미 열리지 않은 사진이면 다시 받지 않고 바로 다음 후보 (목록을 내렸다 올릴 때마다 막힌 주소를 또 부르지 않게)
+    final Widget img = nextOnError && BrokenImages.has(path) && _alive().isNotEmpty
+        ? _failed()
+        // 인터넷 사진은 기기에 남겨 두고(비행기 모드에서도 본 것은 보인다), 실패하면 다음 후보 · 이름 글자 자리표시
+        : path.startsWith('http')
         ? CachedNetworkImage(
             imageUrl: path,
             fit: fit,
@@ -33,10 +68,17 @@ class AppImage extends StatelessWidget {
             placeholder: (_, _) => const ColoredBox(color: Gp.soft),
             errorWidget: (_, _, _) {
               BrokenImages.mark(path);
-              return _Placeholder(placeholder);
+              return _failed();
             },
           )
-        : Image.asset(path, fit: fit, errorBuilder: fallback);
+        : Image.asset(
+            path,
+            fit: fit,
+            errorBuilder: (_, _, _) {
+              if (nextOnError) BrokenImages.mark(path);
+              return _failed();
+            },
+          );
     if (!grayscale) return img;
     return Opacity(
       opacity: 0.55,
@@ -66,6 +108,40 @@ class AppImage extends StatelessWidget {
         child: img,
       ),
     );
+  }
+}
+
+/// 목록 사진의 다음 후보 — 대표 사진 주소 → 그 상품의 나머지 사진 (Kit.gallery, 대표 사진이 맨 앞).
+/// 점검(2026-11-11): 건담 박스 아트 253장이 Fandom(static.wikia.nocookie.net)이라 Cloudflare 가 앱 요청을 막을 수 있는데,
+/// 그중 252개는 반다이 공식 사진이 두 번째에 있다. 사진이 열리지 않을 때만 처음 만들고, 목록이 바뀌면 다시 만든다.
+abstract final class ImageAlternates {
+  /// 상품 목록 (테스트는 바꿔 끼운다)
+  static Map<String, Kit> Function() source = () => Catalog.instance.byId;
+
+  static Object? _builtFrom;
+  static Map<String, List<String>> _byCover = const {};
+
+  /// [url] 다음에 그릴 사진들 (없으면 빈 목록). 같은 상품 사진만, 최대 3장
+  static List<String> of(String url) {
+    final kits = source();
+    if (!identical(kits, _builtFrom)) {
+      _builtFrom = kits;
+      _byCover = {
+        for (final k in kits.values)
+          if (k.image.isNotEmpty && k.gallery.length > 1) k.image: k.gallery,
+      };
+    }
+    return [
+      for (final u in _byCover[url] ?? const <String>[])
+        if (u.isNotEmpty && u != url) u,
+    ].take(3).toList();
+  }
+
+  @visibleForTesting
+  static void reset() {
+    _builtFrom = null;
+    _byCover = const {};
+    source = () => Catalog.instance.byId;
   }
 }
 
@@ -215,7 +291,7 @@ class PhotoThumb extends StatelessWidget {
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius),
-      child: ColoredBox(color: Gp.soft, child: AppImage(image)),
+      child: ColoredBox(color: Gp.soft, child: AppImage(image, nextOnError: true)),
     );
   }
 }

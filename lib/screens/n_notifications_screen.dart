@@ -2,7 +2,7 @@
 //
 // ┌──────── 디자인 가이드 대응표: N 알림 ──────────────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
-// │ N-1  │ 밑줄 탭 4개 + 안 읽은 수             │ 전체 · 상품(발매·예약·시세) · 예고 · 친구 │ P06 · P01     │
+// │ N-1  │ 밑줄 탭 4개 + 안 읽은 수             │ 전체 · 상품(발매·예약·가격) · 예고 · 친구 │ P06 · P01     │
 // │ N-2  │ 날짜 묶음 머리                       │ 오늘 · 이번 주 · 이전                   │ P08           │
 // │ N-3  │ 알림 줄: 사진 · 제목 · 한 줄 · 시간 · 점 │ 안 읽음 = 굵은 제목 + 하늘색 점          │ P01 · P04     │
 // │ N-4  │ 줄 누르기 → 읽음 + 이동               │ 상품 상세 · 공고 · 친구 프로필 · 친구 요청 │ P07          │
@@ -69,8 +69,8 @@ extension on NoticeType {
   /// ? 도움말 한 줄
   String get helpLabel => switch (this) {
     NoticeType.release => '발매 (내 채널 · 좋아요한 상품)',
-    NoticeType.reserve => 'PB 예약 시작',
-    NoticeType.price => '시세 변화',
+    NoticeType.reserve => 'PB 예약 · 재판매 · 예약 도착', // derive/notifications.dart: isPbWindow · isRestock · isPreorder
+    NoticeType.price => '가격 변경 (일본 정가)', // 국내 시세가 아니라 공식 엔화 정가 (feed_rules.dart 'price')
     NoticeType.announce => '공식 예고 · 공지',
     NoticeType.friend => '친구 소식',
     NoticeType.request => '친구 요청',

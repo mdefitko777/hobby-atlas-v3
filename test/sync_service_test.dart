@@ -35,7 +35,7 @@ Map<String, Object?> oldAppPayload() => {
         'kit-b': entry('wanted', '2026-10-02T00:00:00.000Z'),
         'kit-gone': entry('deleted', '2026-10-03T00:00:00.000Z'),
       },
-      '동생': {
+      '곰돌': {
         'kit-z': {'status': 'owned', 'purchase_price': '12,000', 'updated_at': '2026-09-01T00:00:00Z'},
       },
     },
@@ -143,7 +143,7 @@ void main() {
       final col = after['collection']! as Map;
       final beforeCol = before['collection']! as Map;
       expect(col['custom_items'], beforeCol['custom_items']);
-      expect((col['member_items'] as Map)['동생'], (beforeCol['member_items'] as Map)['동생']); // 정리도 안 함
+      expect((col['member_items'] as Map)['곰돌'], (beforeCol['member_items'] as Map)['곰돌']); // 정리도 안 함
       expect(v2Mine()['kit-new']?['status'], 'wanted');
       expect(v2Mine()['kit-new']?['updated_by'], me);
       expect((col['items'] as Map).keys, contains('kit-new'));
@@ -213,7 +213,7 @@ void main() {
       make().start();
       await account.sync.idle;
       final saved = v2Collection()['member_items']! as Map;
-      expect(saved.keys.toSet(), {me, '동생'});
+      expect(saved.keys.toSet(), {me, '곰돌'});
       expect(v2Mine().keys, contains('kit-m'));
       expect(store.statusOf('kit-m'), CollectStatus.wanted);
     });
@@ -231,31 +231,31 @@ void main() {
       store.setStatus('kit-x', CollectStatus.owned);
       await settle();
       final saved = v2Collection()['member_items']! as Map;
-      expect(saved.keys.toSet(), {'member', '동생'});
+      expect(saved.keys.toSet(), {'member', '곰돌'});
       expect((saved['member'] as Map).keys, contains('kit-x'));
     });
 
-    test('공유 공간에서 동생이 마지막에 저장했어도 동생 버킷은 건드리지 않는다', () async {
+    test('공유 공간에서 곰돌이 마지막에 저장했어도 곰돌 버킷은 건드리지 않는다', () async {
       final p = oldAppPayload();
       final col = p['collection']! as Map<String, Object?>;
       final members = col['member_items']! as Map<String, Object?>;
       members.remove(me); // 내 버킷이 아직 없음
-      col['items'] = members['동생']; // 마지막 저장 = 동생
+      col['items'] = members['곰돌']; // 마지막 저장 = 곰돌
       server = FakeServer(
         v2Payload: p,
         members: [
-          {'name': '동생', 'email': 'bro@example.com', 'role': 'editor', 'is_self': false},
+          {'name': '곰돌', 'email': 'bro@example.com', 'role': 'editor', 'is_self': false},
         ],
       );
       make().start();
       await account.sync.idle;
       expect(store.member, me);
       expect(store.ownedCount, 0);
-      final before = roundTrip((v2Collection()['member_items']! as Map)['동생']);
+      final before = roundTrip((v2Collection()['member_items']! as Map)['곰돌']);
       store.setStatus('kit-mine', CollectStatus.owned);
       await settle();
       final saved = v2Collection()['member_items']! as Map;
-      expect(saved['동생'], before);
+      expect(saved['곰돌'], before);
       expect((saved[me] as Map).keys, ['kit-mine']);
     });
 
@@ -310,20 +310,20 @@ void main() {
     });
   });
 
-  group('공유 공간이 없는 계정 (동생 · 친구) → v3 내 행이 원본', () {
+  group('공유 공간이 없는 계정 (친구) → v3 내 행이 원본', () {
     test('v3 에 저장, 40001 이면 합쳐서 다시', () async {
-      server = FakeServer(handle: 'dongsaeng', displayName: '동생');
+      server = FakeServer(handle: 'gomdol', displayName: '곰돌');
       make().start();
       await account.sync.idle;
       expect(account.sync.workspace, isNull);
       store.setStatus('kit-1', CollectStatus.owned);
       server.otherDeviceV3Writes.add((payload) {
         final col = payload['collection']! as Map<String, Object?>;
-        (col['member_items']! as Map<String, Object?>)['동생'] = {'kit-2': entry('wanted', '2026-10-31T00:00:00.000Z')};
+        (col['member_items']! as Map<String, Object?>)['곰돌'] = {'kit-2': entry('wanted', '2026-10-31T00:00:00.000Z')};
       });
       await settle();
       final col = server.v3Payload['collection']! as Map;
-      final bucket = (col['member_items'] as Map)['동생'] as Map;
+      final bucket = (col['member_items'] as Map)['곰돌'] as Map;
       expect(bucket.keys.toSet(), {'kit-1', 'kit-2'});
       expect((col['items'] as Map).keys.toSet(), {'kit-1', 'kit-2'});
       expect(store.statusOf('kit-2'), CollectStatus.wanted); // 다른 기기 것이 이 기기로
@@ -414,11 +414,11 @@ void main() {
   group('로그아웃', () {
     test('기기의 기록은 남고 친구 · 공유 공간 정보는 지운다', () async {
       server = FakeServer(v2Payload: oldAppPayload(), handle: 'bbang');
-      server.users['dongsaeng'] = (name: '동생', collection: const {});
-      server.friends.add('dongsaeng');
+      server.users['gomdol'] = (name: '곰돌', collection: const {});
+      server.friends.add('gomdol');
       make().start();
       await account.sync.idle;
-      expect(account.friends.friends.single.handle, 'dongsaeng');
+      expect(account.friends.friends.single.handle, 'gomdol');
       await account.signOut();
       expect(account.signedIn, isFalse);
       expect(account.friends.friends, isEmpty);
@@ -430,7 +430,7 @@ void main() {
     });
   });
 
-  group('다른 계정으로 로그인 (형 폰에서 동생이)', () {
+  group('다른 계정으로 로그인 (내 폰에서 친구가)', () {
     late SwitchRpc rpc;
 
     Account makeSwitchable() {
@@ -455,15 +455,15 @@ void main() {
       expect(store.ownedCount, 1);
       await account.signOut();
       store.setStatus('kit-while-out', CollectStatus.owned); // 로그아웃 동안 바꾼 것도 앞 계정 기기 기록
-      // 동생 계정: 공유 공간 없음, v3 에 자기 기록
+      // 곰돌 계정: 공유 공간 없음, v3 에 자기 기록
       final bro = FakeServer(
-        handle: 'dongsaeng',
-        displayName: '동생',
+        handle: 'gomdol',
+        displayName: '곰돌',
         v3Payload: {
           'schema_version': 1,
           'collection': {
             'member_items': {
-              '동생': {'kit-bro': entry('owned', '2026-10-20T00:00:00.000Z', by: '동생')},
+              '곰돌': {'kit-bro': entry('owned', '2026-10-20T00:00:00.000Z', by: '곰돌')},
             },
           },
         },
@@ -477,7 +477,7 @@ void main() {
       expect(store.statusOf('kit-a'), isNull); // 형 기록 없음
       expect(store.statusOf('kit-while-out'), isNull);
       expect(store.statusOf('kit-bro'), CollectStatus.owned);
-      expect(store.member, '동생');
+      expect(store.member, '곰돌');
       expect(store.cloudDirty, isFalse);
       final text = bro.v3Payload.toString();
       expect(text, isNot(contains('kit-a')));

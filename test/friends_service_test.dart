@@ -10,14 +10,14 @@ void main() {
 
   setUp(() {
     server = FakeServer(handle: null, displayName: '나');
-    server.users['dongsaeng'] = (
-      name: '동생',
+    server.users['gomdol'] = (
+      name: '곰돌',
       collection: {
         'items': {
           'x': {'status': 'owned', 'updated_at': '2026-01-01T00:00:00Z'},
         },
         'member_items': {
-          '동생': {
+          '곰돌': {
             'a': {'status': 'wanted', 'updated_at': '2026-02-01T00:00:00Z'},
             'b': {'status': 'wanted', 'updated_at': '2026-03-01T00:00:00Z'},
             'c': {'status': 'owned', 'updated_at': '2026-01-15T00:00:00Z'},
@@ -48,39 +48,39 @@ void main() {
 
   test('이미 쓰는 아이디', () async {
     await expectLater(
-      friends.claimHandle('dongsaeng'),
+      friends.claimHandle('gomdol'),
       throwsA(isA<FriendsFailure>().having((e) => e.message, 'message', '이미 누가 쓰는 아이디예요')),
     );
   });
 
   test('찾기 → 요청 → (상대가 수락) → 친구 → 컬렉션 → 끊기', () async {
     expect(await friends.search('nobody_here'), isNull);
-    final found = await friends.search('@DongSaeng');
-    expect(found?.profile.name, '동생');
+    final found = await friends.search('@GomDol');
+    expect(found?.profile.name, '곰돌');
     expect(found?.relation, 'none');
 
-    await friends.request('dongsaeng');
-    expect(friends.outgoing.single.handle, 'dongsaeng');
-    expect((await friends.search('dongsaeng'))?.relation, 'outgoing');
+    await friends.request('gomdol');
+    expect(friends.outgoing.single.handle, 'gomdol');
+    expect((await friends.search('gomdol'))?.relation, 'outgoing');
 
     await expectLater(
-      friends.collection('dongsaeng'),
+      friends.collection('gomdol'),
       throwsA(isA<FriendsFailure>().having((e) => e.message, 'message', '친구가 아니라서 볼 수 없어요')),
     );
 
-    // 동생이 수락
-    server.outgoing.remove('dongsaeng');
-    server.friends.add('dongsaeng');
+    // 곰돌이 수락
+    server.outgoing.remove('gomdol');
+    server.friends.add('gomdol');
     await friends.refresh();
-    expect(friends.friends.single.name, '동생');
+    expect(friends.friends.single.name, '곰돌');
 
-    final c = await friends.collection('dongsaeng');
+    final c = await friends.collection('gomdol');
     // member_items[이름] 이 items 보다 먼저 (옛 앱 openFriendProfile 과 같음), 최근 것부터, 지운 것은 뺌
     expect(c.likedIds, ['b', 'a']);
     expect(c.ownedIds, ['c']);
-    expect(friends.collections.keys, ['dongsaeng']);
+    expect(friends.collections.keys, ['gomdol']);
 
-    await friends.remove('dongsaeng');
+    await friends.remove('gomdol');
     expect(friends.friends, isEmpty);
     expect(friends.collections, isEmpty);
   });
@@ -92,20 +92,20 @@ void main() {
   });
 
   test('받은 요청: 수락 · 거절', () async {
-    server.incoming.addAll(['dongsaeng', 'friend_b']);
+    server.incoming.addAll(['gomdol', 'friend_b']);
     await friends.refresh();
     expect(friends.incoming.length, 2);
-    await friends.respond('dongsaeng', accept: true);
+    await friends.respond('gomdol', accept: true);
     await friends.respond('friend_b', accept: false);
-    expect(friends.friends.map((f) => f.handle), ['dongsaeng']);
+    expect(friends.friends.map((f) => f.handle), ['gomdol']);
     expect(friends.incoming, isEmpty);
-    expect(server.paramsOf('gunpula_v3_respond_friend').first, {'p_handle': 'dongsaeng', 'p_accept': true});
+    expect(server.paramsOf('gunpula_v3_respond_friend').first, {'p_handle': 'gomdol', 'p_accept': true});
   });
 
   test('상대가 먼저 요청했으면 내 요청이 곧 수락', () async {
-    server.incoming.add('dongsaeng');
-    await friends.request('dongsaeng');
-    expect(friends.friends.single.handle, 'dongsaeng');
+    server.incoming.add('gomdol');
+    await friends.request('gomdol');
+    expect(friends.friends.single.handle, 'gomdol');
   });
 
   test('서버에 v3 함수가 없으면 unavailable', () async {
