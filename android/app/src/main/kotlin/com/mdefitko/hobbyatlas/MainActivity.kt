@@ -3,6 +3,7 @@ package com.mdefitko.hobbyatlas
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -15,9 +16,21 @@ class MainActivity : FlutterActivity() {
     private var channel: MethodChannel? = null
     private var pending: Map<String, String>? = null
 
+    /** 앱이 꺼졌다 되살아났거나(저장된 상태) 최근 앱 목록에서 다시 열었다 → 처음 켠 intent 는 이미 처리한 것 */
+    private var restored = false
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        // super.onCreate 안에서 configureFlutterEngine 을 부르니 그 전에 정한다.
+        // 시스템은 되살릴 때 처음 받은 intent(VIEW · SEND)를 다시 준다 — setIntent 는 이 프로세스 안에서만 바뀐다
+        restored = savedInstanceState != null ||
+            (intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0
+        super.onCreate(savedInstanceState)
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        pending = readShare(intent)
+        // 되살아난 때는 예전 링크 · 공유를 다시 열지 않는다 (새 링크 · 공유는 onNewIntent 로 온다)
+        pending = if (restored) null else readShare(intent)
         channel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "hobbyatlas/share").also { ch ->
             ch.setMethodCallHandler { call, result ->
                 when (call.method) {

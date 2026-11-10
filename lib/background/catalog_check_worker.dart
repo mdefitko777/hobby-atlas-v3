@@ -1,5 +1,5 @@
 // 새 소식 확인 — 12시간마다 WorkManager(인터넷 연결 시) + 앱을 열 때 · 돌아올 때 같은 함수.
-//   1) data/split/manifest.json (176 B) 의 updated_at|total 이 지난번과 같으면 피드는 받지 않는다
+//   1) data/split/manifest.json (176 B) 의 updated_at|total(+ content_hash) 이 지난번과 같으면 피드는 받지 않는다
 //   2) 다르면 data/atlas/notify-feed.json (날짜마다 알릴 만한 변화 전부) 을 받는다. 아직 없거나 manifest 보다 옛 판이면
 //      data/update-feed-lite.json (날짜마다 20개까지) 으로 채운다 — 지난번 본 날짜 이후만 거른다 (lib/notifications/feed_rules.dart)
 //   3) 같은 판의 피드를 못 받았으면(Pages · Gunpula Atlas 작업이 늦음) manifest 를 "다 봤다"고 적지 않는다 → 다음 확인에서 다시
@@ -14,7 +14,7 @@ import 'package:http/http.dart' as http;
 import 'package:workmanager/workmanager.dart';
 
 import '../data/blob_store.dart';
-import '../data/gunpula.dart' show gunpulaBase, gunpulaRawBase, gunpulaUserAgent;
+import '../data/gunpula.dart' show gunpulaBase, gunpulaRawBase, gunpulaUserAgent, manifestSignature;
 import '../notifications/feed_rules.dart';
 import '../notifications/local_notifier.dart';
 import '../notifications/notify_models.dart';
@@ -169,7 +169,7 @@ Future<CheckOutcome> runCatalogCheck({bool background = false, DateTime? now, Fe
   if (manifest is! Map<String, Object?>) {
     error = '인터넷에 연결하지 못했어요';
   } else {
-    sig = '${manifest['updated_at']}|${manifest['total']}';
+    sig = manifestSignature(manifest); // updated_at|total (+ |content_hash)
     if (sig != before.lastManifest || before.lastSeen.isEmpty) {
       final f = await loadFeed(get, manifest, at);
       entries = f.entries;

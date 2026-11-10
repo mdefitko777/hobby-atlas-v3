@@ -50,11 +50,17 @@ Future<List<Kit>> fetchKitsByJan(String code) => _guard(() async {
   return kitsWithBarcode(Catalog.instance.kits, code);
 });
 
-/// 도감 대화상자의 대응 모델
+/// 도감 대화상자의 대응 모델 · 받은 상품 링크 · 알림
 Future<List<Kit>> fetchKitsByIds(List<String> ids) => _guard(() async {
   if (ids.isEmpty) return const <Kit>[];
-  await Catalog.instance.ensureLoaded();
-  return [for (final id in ids) ?Catalog.instance.byId[id]];
+  final cat = Catalog.instance;
+  await cat.ensureLoaded();
+  // 앱을 막 켠 때는 옛 id(Gunpula 가 합친 상품)가 아직 안 붙었을 수 있다 — 못 찾은 id 가 있을 때만 기다린다
+  // (기기 파일이 없어 인터넷으로 받는 중이면 오래 걸릴 수 있어 5초까지만)
+  if (ids.any((id) => cat.byId[id] == null)) {
+    await cat.aliasesReady.timeout(const Duration(seconds: 5), onTimeout: () {});
+  }
+  return [for (final id in ids) ?cat.byId[id]];
 });
 
 /// 도감(포켓몬 세대 · Fate 작품 · AC 세대 · BBX 라인 · 건담 시대) · 홈 진행도

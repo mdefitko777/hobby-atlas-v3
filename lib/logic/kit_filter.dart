@@ -80,6 +80,27 @@ extension PeriodPresetLabel on PeriodPreset {
   }
 }
 
+/// 지금 기간 [from]–[to] 가 어느 빠른 고르기인가 (없으면 null). 12월엔 올해 = 최근 1년이라 앞의 것(올해)
+PeriodPreset? periodPresetOf(String from, String to, String today) {
+  for (final p in PeriodPreset.values) {
+    final r = p.range(today);
+    if (r.$1 == from && r.$2 == to) return p;
+  }
+  return null;
+}
+
+/// 달 고르기에서 갈 수 있는 가장 이른 해 = [dates](발매일 'YYYY…') 중 가장 이른 해, 없으면 [fallback]
+/// (레고는 1949년 세트부터 있다)
+int earliestYear(Iterable<String> dates, {int fallback = 1980}) {
+  int? first;
+  for (final d in dates) {
+    if (d.length < 4) continue;
+    final y = int.tryParse(d.substring(0, 4));
+    if (y != null && y >= 1900 && (first == null || y < first)) first = y;
+  }
+  return first ?? fallback;
+}
+
 /// 'YYYY-MM' → 'YYYY.MM' (빈 글자는 그대로)
 String monthDot(String ym) => ym.replaceAll('-', '.');
 

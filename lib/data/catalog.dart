@@ -1,5 +1,5 @@
 // Gunpula 상품 카탈로그 — 기기 캐시를 먼저 보여 주고, 뒤에서 GitHub Pages 의 새 데이터를 받는다.
-//   1) split/manifest.json (176 B) 의 updated_at · total 이 같으면 아무것도 받지 않는다
+//   1) split/manifest.json (176 B) 의 updated_at · total · content_hash 가 같으면 아무것도 받지 않는다 (manifestSignature)
 //   2) 다르면 보조 파일(auxFiles) → split/kits-<채널>.json 5개를 받아 compute() 에서 가벼운 모양으로 바꿔 저장
 // 처음 설치(캐시 없음)면 [firstDownload] — 앱은 셸 대신 받는 화면(lib/screens/w_first_run_screen.dart)을 보인다.
 //   진행 = 받은 파일 [filesDone] / [filesTotal] · 받은 바이트 [bytesReceived]
@@ -237,7 +237,8 @@ class Catalog extends ChangeNotifier {
       if (mText == null) throw const CatalogException('인터넷에 연결하지 못했어요.');
       _fileDone();
       final m = jsonDecode(mText) as Map<String, Object?>;
-      final same = m['updated_at'] == manifest['updated_at'] && m['total'] == manifest['total'];
+      // updated_at · total (+ content_hash — 같은 날 파일만 바뀐 갱신도 받는다)
+      final same = manifestSignature(m) == manifestSignature(manifest);
       if (same && kits.isNotEmpty && !force) return false;
 
       final aux = <String, String>{};
@@ -367,7 +368,8 @@ class Catalog extends ChangeNotifier {
     phase = CatalogPhase.ready;
     if (list.isNotEmpty) firstDownload = false;
     error = '';
-    _applyAliases().ignore();
+    // 기다리는 쪽(받은 링크 · 알림 → fetchKitsByIds)이 오류를 받지 않게 여기서 삼킨다 (네트워크로 받은 파일이 깨졌을 때 등)
+    _aliasesLoad = _applyAliases().catchError((Object e) => debugPrint('[catalog] 옛 id 를 못 붙임: $e'));
     _loadRates().ignore();
     _loadChannelCovers().ignore();
   }
@@ -417,6 +419,12 @@ class Catalog extends ChangeNotifier {
 
   /// 합쳐진 kit_id → 남은 kit_id (data/kit-aliases.json). 옛 id 로도 찾히게 하고, 내 기록을 옮긴다
   Map<String, String> aliases = const {};
+
+  Future<void> _aliasesLoad = Future.value();
+
+  /// 옛 id 가 byId 에 붙으면 끝난다 (오류를 내지 않는다). 캐시를 읽은 뒤 따로 붙어서, 앱을 막 켠 때
+  /// 받은 링크 · 알림의 옛 id 는 이것을 기다린 뒤에 찾는다
+  Future<void> get aliasesReady => _aliasesLoad;
 
   Future<void> _applyAliases() async {
     final raw = await aux('kit-aliases.json');

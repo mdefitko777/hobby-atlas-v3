@@ -14,6 +14,15 @@ const gunpulaRawBase = 'https://raw.githubusercontent.com/mdefitko777/Gunpula/ma
 /// Gunpula · 공식 페이지(프렌다 그림)에 보내는 User-Agent — Hobby Atlas 데이터 작업들과 같은 봇 이름 (브라우저인 척하지 않는다 · 웹은 바꿀 수 없다)
 const gunpulaUserAgent = 'HobbyAtlasDataBot/1.0 (+https://github.com/mdefitko777/Gunpula)';
 
+/// split/manifest.json 의 판 — `updated_at|total`, Gunpula 가 넣는 `content_hash`(split 파일 내용의 지문)가 있으면
+/// `|hash` 를 붙인다. 같은 날 · 같은 상품 수로 파일만 바뀐 갱신(예: 조립 설명서 번호)도 다른 판으로 본다.
+/// content_hash 가 양쪽 다 없으면 예전 모양 그대로라 같은 판 (알림 확인이 적어 둔 옛 판 표시와도 맞는다)
+String manifestSignature(Object? manifest) {
+  final m = jMap(manifest);
+  final hash = '${m['content_hash'] ?? ''}';
+  return '${m['updated_at']}|${m['total']}${hash.isEmpty ? '' : '|$hash'}';
+}
+
 /// 매일 갱신되는 순서대로 받는 파일들 (kits.json · search-index.json 은 받지 않는다).
 /// 새 소식 피드는 여기서 받지 않는다 — 알림 확인(lib/background/catalog_check_worker.dart)이 manifest 가 바뀔 때 한 번만 받는다.
 const franchiseIds = ['gundam', 'beyblade', 'pokemon', 'armored_core', 'fate', 'madoka', 'lego'];

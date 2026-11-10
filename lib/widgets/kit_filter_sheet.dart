@@ -97,6 +97,9 @@ class _FilterSheetState extends State<FilterSheet> {
   /// 펼친 줄 (라인 · 작품 · 가격)
   String _open = '';
 
+  /// 기간 달 고르기의 가장 이른 해 — 이 목록에서 가장 오래된 발매일 (레고 전부면 1949)
+  late final int _minYear = earliestYear(widget.kits.map((k) => k.date));
+
   int _hits(KitFilter f) => widget.kits.where(f.matches).length;
 
   int _with(void Function(KitFilter) change) {
@@ -218,6 +221,7 @@ class _FilterSheetState extends State<FilterSheet> {
           _PeriodPicker(
             from: _draft.from,
             to: _draft.to,
+            minYear: _minYear,
             onChanged: (from, to) => setState(() {
               _draft.from = from; // STATE: 기간 → 맞는 상품 수 · 「n개 보기」
               _draft.to = to;
@@ -243,25 +247,26 @@ class _FilterSheetState extends State<FilterSheet> {
 
 /// 필터 「기간」 — 빠른 고르기(전체 · 올해 · 작년 · 최근 1년) + 시작 · 끝 달 (발매일 기준, 달 단위)
 class _PeriodPicker extends StatelessWidget {
-  const _PeriodPicker({required this.from, required this.to, required this.onChanged});
+  const _PeriodPicker({required this.from, required this.to, required this.minYear, required this.onChanged});
   final String from;
   final String to;
+
+  /// 달 고르기의 ‹ 가 멈추는 해
+  final int minYear;
   final void Function(String from, String to) onChanged;
 
   @override
   Widget build(BuildContext context) {
     final today = dayKey(appNow());
-    PeriodPreset? preset;
-    for (final p in PeriodPreset.values) {
-      final r = p.range(today);
-      if (r.$1 == from && r.$2 == to) preset = p;
-    }
+    // 12월엔 올해 = 최근 1년 — 앞의 것(올해)에 불을 켠다
+    final preset = periodPresetOf(from, to, today);
     Future<void> pick({required bool start}) async {
       final now = start ? from : to;
       final v = await pickMonth(
         context,
         title: start ? '시작 달' : '끝 달',
         initial: now.isEmpty ? today.substring(0, 7) : now,
+        minYear: minYear,
       );
       if (v == null) return;
       var f = start ? v : from;
@@ -341,17 +346,19 @@ class _MonthButton extends StatelessWidget {
   );
 }
 
-/// 달 고르기 시트 — 위에 ‹ 해 ›, 아래 1–12월, 「정하지 않기」= 빈 글자. 그냥 닫으면 null
-Future<String?> pickMonth(BuildContext context, {required String title, required String initial}) =>
+/// 달 고르기 시트 — 위에 ‹ 해 ›, 아래 1–12월, 「정하지 않기」= 빈 글자. 그냥 닫으면 null.
+/// ‹ 는 [minYear] 에서 멈춘다 (처음 해 [initial] 가 더 이르면 그 해)
+Future<String?> pickMonth(BuildContext context, {required String title, required String initial, int minYear = 1980}) =>
     showGpSheet<String>(
       context,
-      builder: (_) => _MonthSheet(title: title, initial: initial),
+      builder: (_) => _MonthSheet(title: title, initial: initial, minYear: minYear),
     );
 
 class _MonthSheet extends StatefulWidget {
-  const _MonthSheet({required this.title, required this.initial});
+  const _MonthSheet({required this.title, required this.initial, required this.minYear});
   final String title;
   final String initial;
+  final int minYear;
 
   @override
   State<_MonthSheet> createState() => _MonthSheetState();
@@ -361,11 +368,13 @@ class _MonthSheetState extends State<_MonthSheet> {
   late int _year = int.parse(widget.initial.substring(0, 4));
   late final int _month = int.parse(widget.initial.substring(5, 7));
   late final int _initialYear = _year;
+  late final int _minYear = widget.minYear < _initialYear ? widget.minYear : _initialYear;
 
   @override
   Widget build(BuildContext context) {
     final thisYear = appNow().year;
-    return Padding(
+    // 가로 화면 · 아주 작은 화면에선 시트(화면 높이의 9/16)보다 길다 → 넘치지 않고 밀어 본다
+    return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(Gp.gutter, 16, Gp.gutter, 20),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -380,7 +389,7 @@ class _MonthSheetState extends State<_MonthSheet> {
             children: [
               IconButton(
                 tooltip: '작년',
-                onPressed: _year > 1980 ? () => setState(() => _year--) : null, // STATE: 해 → 달 칸
+                onPressed: _year > _minYear ? () => setState(() => _year--) : null, // STATE: 해 → 달 칸
                 icon: const Icon(Icons.chevron_left, size: Gp.iL),
               ),
               SizedBox(

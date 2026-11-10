@@ -13,6 +13,8 @@
 // │ J-7  │ 시트 안 가로 ProductTile (최대 12)    │ 같은 IP의 새 상품 (작품 · 없으면 채널)   │ P06 · P08     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 홈 배너 · 홈 공식 예고 줄 · 캘린더 예고 줄 · 예고 목록 · 알림에서 쌓기(push, 오른쪽에서).
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show Factory;
 import 'package:flutter/gestures.dart' show EagerGestureRecognizer, OneSequenceGestureRecognizer;
 import 'package:flutter/material.dart';
@@ -109,6 +111,15 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
   /// 번역 중 · 모델 받는 중이면 진행 글 (빈 글자 = 쉬는 중)
   String _translateBusy = '';
 
+  /// J-5b 번역 차례 — 새로 번역을 시작하면 +1. 옛 차례(다른 페이지로 감 · 화면을 닫음)는 멈추고 화면을 건드리지 않는다
+  int _trRun = 0;
+
+  /// J-5b 켜는 중 (모델 확인 · 묻기 · 받기) — 빨리 두 번 눌러도 한 번만
+  bool _toggling = false;
+
+  /// 원문 안에서 주소만 바뀜(SPA — 유튜브 등) → 새 글이 그려질 때쯤 다시 번역
+  Timer? _urlTr;
+
   /// 이 예고 채널의 상품 (못 받으면 빈 목록)
   late final Future<List<Kit>> _all = widget.loaders
       .kits([widget.item.franchiseId])
@@ -128,6 +139,12 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
     super.initState();
     final u = _uri;
     if (u != null && articleViewSupported) _web = _makeWeb(u);
+  }
+
+  @override
+  void dispose() {
+    _urlTr?.cancel();
+    super.dispose();
   }
 
   static Uri? _webUri(String url) {
@@ -150,11 +167,27 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
         onProgress: (p) {
           if (mounted) setState(() => _progress = p / 100); // STATE: 읽는 중 → 가는 줄
         },
+        onPageStarted: (_) {
+          // 다른 페이지로 넘어가기 시작 — 앞 페이지 번역은 끝낸다 (새 페이지는 onPageFinished 가 다시 번역)
+          _trRun++;
+          _urlTr?.cancel();
+          if (mounted && _translateBusy.isNotEmpty) setState(() => _translateBusy = ''); // STATE: 번역 멈춤 → 버튼
+        },
         onPageFinished: (_) {
+          _urlTr?.cancel(); // 페이지를 다시 읽었으면 여기서 한 번만
           _syncBack();
           if (_translateOn) _translatePage();
         },
-        onUrlChange: (_) => _syncBack(),
+        onUrlChange: (_) {
+          _syncBack();
+          // 페이지를 다시 읽지 않고 주소만 바꾸는 곳은 onPageFinished 가 안 온다 → 조금 기다렸다 새 글을 번역
+          _urlTr?.cancel();
+          if (!_translateOn) return;
+          _urlTr = Timer(const Duration(milliseconds: 800), () {
+            // 아직 읽는 중이면 onPageFinished 가 번역한다
+            if (mounted && _translateOn && _progress >= 1) _translatePage();
+          });
+        },
         onWebResourceError: (e) {
           // 원문 자체를 못 열었을 때만 (사진 · 광고 하나가 안 되는 것은 무시)
           if ((e.isForMainFrame ?? false) && mounted) setState(() => _failed = true); // STATE: 실패 → 요약 + 브라우저로
@@ -180,62 +213,80 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
   /// J-5b 번역 켜고 끄기 — 처음이면 모델(약 60 MB)을 받을지 먼저 묻는다
   Future<void> _toggleTranslate() async {
     final web = _web;
-    if (web == null || _translateBusy.isNotEmpty) return;
+    if (web == null || _translateBusy.isNotEmpty || _toggling) return;
     if (_translateOn) {
+      _urlTr?.cancel();
       setState(() => _translateOn = false); // STATE: 번역 끔 → 원문
       await web.runJavaScript(restoreTextsJs);
       return;
     }
-    final tr = PageTranslator.instance;
-    if (!await tr.ready()) {
-      if (!mounted) return;
-      final ok = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('번역 모델 받기'),
-          content: const Text('일본어 · 한국어 번역 모델(약 60 MB)을 한 번 받아요. 그다음부터는 인터넷 없이도 이 기기 안에서 번역해요. Wi-Fi 에서 받는 것을 권해요.'),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('나중에')),
-            TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('받기')),
-          ],
-        ),
-      );
-      if (ok != true || !mounted) return;
-      setState(() => _translateBusy = '모델 받는 중'); // STATE: 모델 받는 중 → 버튼 옆 글
-      final done = await tr.download();
-      if (!mounted) return;
-      setState(() => _translateBusy = '');
-      if (!done) {
-        showToast(context, '번역 모델을 받지 못했어요 · 인터넷을 확인해 주세요');
-        return;
+    _toggling = true; // 첫 await 전에 — 모델 확인 중에 또 눌러도 대화상자 · 번역이 두 번 뜨지 않게
+    try {
+      final tr = PageTranslator.instance;
+      if (!await tr.ready()) {
+        if (!mounted) return;
+        final ok = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('번역 모델 받기'),
+            content: const Text('일본어 · 한국어 번역 모델(약 60 MB)을 한 번 받아요. 그다음부터는 인터넷 없이도 이 기기 안에서 번역해요. Wi-Fi 에서 받는 것을 권해요.'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('나중에')),
+              TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('받기')),
+            ],
+          ),
+        );
+        if (ok != true || !mounted) return;
+        setState(() => _translateBusy = '모델 받는 중'); // STATE: 모델 받는 중 → 버튼 옆 글
+        final done = await tr.download(); // 멈춘 받기는 5분 뒤 false
+        if (!mounted) return;
+        setState(() => _translateBusy = '');
+        if (!done) {
+          showToast(context, '번역 모델을 받지 못했어요 · 인터넷을 확인해 주세요');
+          return;
+        }
       }
+      if (!mounted) return; // 모델 확인 중에 화면을 넘겼다
+      setState(() => _translateOn = true); // STATE: 번역 켬
+    } finally {
+      _toggling = false;
     }
-    setState(() => _translateOn = true); // STATE: 번역 켬
     await _translatePage();
   }
 
-  /// 지금 보이는 원문의 일본어 글을 모아 번역해서 바꿔 끼운다
+  /// 지금 보이는 원문의 일본어 글을 모아 번역해서 바꿔 끼운다. 새로 부르면 하던 번역은 멈춘다 ([_trRun])
   Future<void> _translatePage() async {
     final web = _web;
     if (web == null || !mounted) return;
+    _urlTr?.cancel();
+    final run = ++_trRun;
+    // 더 새 번역이 시작됐거나 · 껐거나 · 화면을 닫았다
+    bool stale() => !mounted || run != _trRun || !_translateOn;
+    // 글을 모으는 동안에도 버튼 대신 도는 표시 (그 사이 눌러 끄면 번역만 남아 돌았다)
+    setState(() => _translateBusy = '번역 준비 중'); // STATE: 번역 시작
     try {
-      final texts = textsToTranslate(decodeTextList(await web.runJavaScriptReturningResult(collectTextsJs)));
+      // 원문이 멈춰 답하지 않으면 도는 표시가 남지 않게 15초까지만 (TimeoutException → 아래 알림)
+      final raw = await web.runJavaScriptReturningResult(collectTextsJs).timeout(const Duration(seconds: 15));
+      final texts = textsToTranslate(decodeTextList(raw));
+      if (!mounted || stale()) return;
       if (texts.isEmpty) {
-        if (mounted) showToast(context, '번역할 일본어 글이 없어요 (그림 안 글자는 못 바꿔요)');
+        showToast(context, '번역할 일본어 글이 없어요 (그림 안 글자는 못 바꿔요)');
         return;
       }
       final map = await PageTranslator.instance.translate(
         texts,
+        shouldStop: stale,
         onProgress: (done, total) {
-          if (mounted) setState(() => _translateBusy = '번역 중 $done/$total'); // STATE: 번역 진행
+          if (!stale()) setState(() => _translateBusy = '번역 중 $done/$total'); // STATE: 번역 진행
         },
       );
-      if (!mounted || !_translateOn) return;
+      if (stale()) return;
       await web.runJavaScript(applyTranslationsJs(map));
     } on Exception {
-      if (mounted) showToast(context, '이 페이지는 번역하지 못했어요 · ↗ 브라우저에서 번역해 보세요');
+      if (mounted && !stale()) showToast(context, '이 페이지는 번역하지 못했어요 · ↗ 브라우저에서 번역해 보세요');
     } finally {
-      if (mounted) setState(() => _translateBusy = '');
+      // 이 차례가 마지막일 때만 — 옛 차례가 새 차례의 도는 표시를 지우지 않게
+      if (mounted && run == _trRun) setState(() => _translateBusy = '');
     }
   }
 
