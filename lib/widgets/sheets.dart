@@ -2,6 +2,7 @@
 // · 하나 고르기 · 네모 세그먼트 · 체크 칸 · 펼치는 줄
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../theme.dart';
 import 'buttons.dart';
 import 'sections.dart';
@@ -68,7 +69,7 @@ class GpPickSheet extends StatelessWidget {
           trailing: TextButton(
             onPressed: onReset,
             style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
-            child: const Text('초기화', style: TextStyle(color: Gp.muted)),
+            child: Text(tr('초기화'), style: const TextStyle(color: Gp.muted)),
           ),
         ),
         Expanded(
@@ -76,15 +77,21 @@ class GpPickSheet extends StatelessWidget {
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
-          child: GradientButton(label: hits == 0 ? noHitLabel : '$hits개 보기', onPressed: hits == 0 ? null : onApply),
+          child: GradientButton(
+            label: hits == 0 ? noHitLabel : trf('{n}개 보기', {'n': hits}),
+            onPressed: hits == 0 ? null : onApply,
+          ),
         ),
       ],
     ),
   );
 }
 
-/// 고른 값 한 줄 요약 — 없으면 '전체', 하나면 그것, 여럿이면 "첫 것 외 n"
-String pickSummary(Set<String> s) => s.isEmpty ? '전체' : (s.length == 1 ? s.first : '${s.first} 외 ${s.length - 1}');
+/// 고른 값 한 줄 요약 — 없으면 '전체', 하나면 그것, 여럿이면 "첫 것 외 n".
+/// 고른 값은 한국어 자료 값이라 [label] 로 보이는 이름을 만든다 (기본 tr — 작품처럼 따로 이름이 있으면 넘긴다)
+String pickSummary(Set<String> s, {String Function(String) label = tr}) => s.isEmpty
+    ? tr('전체')
+    : (s.length == 1 ? label(s.first) : trf('{first} 외 {n}', {'first': label(s.first), 'n': s.length - 1}));
 
 /// 하나 고르기 바텀 시트 — 제목 + 줄마다 이름, 고른 줄은 브랜드 색 글자 + ✓ (정렬 · 언어 공통)
 Future<T?> showPickSheet<T>(
@@ -198,12 +205,18 @@ class CheckGrid extends StatelessWidget {
     required this.countOf,
     required this.onToggle,
     this.columns = 2,
+    this.label = tr,
   });
+
+  /// 한국어 자료 값 (고른 것 · 개수 셈에 그대로 쓴다)
   final List<String> values;
   final Set<String> selected;
   final int Function(String) countOf;
   final ValueChanged<String> onToggle;
   final int columns;
+
+  /// 값 → 보이는 이름 (기본 tr — 작품처럼 따로 이름이 있으면 넘긴다)
+  final String Function(String) label;
 
   @override
   Widget build(BuildContext context) {
@@ -238,7 +251,7 @@ class CheckGrid extends StatelessWidget {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              v,
+                              label(v),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(fontSize: Gp.t14),
@@ -285,7 +298,7 @@ class ExpandRow extends StatelessWidget {
             const Spacer(),
             Text(
               summary,
-              style: TextStyle(fontSize: Gp.t12, color: summary == '전체' ? Gp.faint : Gp.accent),
+              style: TextStyle(fontSize: Gp.t12, color: summary == '전체' || summary == tr('전체') ? Gp.faint : Gp.accent),
             ),
             const SizedBox(width: 4),
             AnimatedRotation(

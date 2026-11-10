@@ -2,6 +2,7 @@
 // 모든 탭이 같은 줄: 검색창 높이 · 길이, 아이콘 크기 · 자리가 같다
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../theme.dart';
 
 /// 검색창 — 홈과 검색 화면이 같은 것을 쓴다 (크기 · 글자 · 아이콘 통일, P04).
@@ -11,7 +12,7 @@ class GpSearchBar extends StatelessWidget {
   const GpSearchBar({
     super.key,
     this.onCamera,
-    this.hint = defaultHint,
+    this.hint,
     this.onTap,
     this.controller,
     this.focusNode,
@@ -21,14 +22,15 @@ class GpSearchBar extends StatelessWidget {
 
   /// 오른쪽 카메라 → 찍어서 찾기 (하단 카메라 버튼과 같은 동작). 없으면 카메라를 숨긴다(친구 검색)
   final VoidCallback? onCamera;
-  final String hint;
+
+  /// 없으면 기본 안내 (이름 · 번호 · 생김새로 찾기)
+  final String? hint;
   final VoidCallback? onTap;
   final TextEditingController? controller;
   final FocusNode? focusNode;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
 
-  static const defaultHint = '이름 · 번호 · 생김새로 찾기';
   static const _textStyle = TextStyle(fontSize: Gp.t14, color: Gp.ink);
   static const _hintStyle = TextStyle(fontSize: Gp.t14, color: Gp.faint);
 
@@ -48,7 +50,7 @@ class GpSearchBar extends StatelessWidget {
       textInputAction: TextInputAction.search,
       style: _textStyle,
       decoration: InputDecoration(
-        hintText: hint,
+        hintText: hint ?? tr('이름 · 번호 · 생김새로 찾기'),
         hintStyle: _hintStyle,
         filled: false,
         isDense: true,
@@ -58,7 +60,7 @@ class GpSearchBar extends StatelessWidget {
     );
     return Semantics(
       button: onTap != null,
-      label: onTap != null ? '검색 열기' : null,
+      label: onTap != null ? tr('검색 열기') : null,
       child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
@@ -77,7 +79,7 @@ class GpSearchBar extends StatelessWidget {
                   builder: (context, v, _) => v.text.isEmpty
                       ? const SizedBox.shrink()
                       : IconButton(
-                          tooltip: '지우기', // P03
+                          tooltip: tr('지우기'), // P03
                           icon: const Icon(Icons.cancel, size: Gp.iM, color: Gp.faint),
                           onPressed: () {
                             c.clear();
@@ -87,7 +89,7 @@ class GpSearchBar extends StatelessWidget {
                 ),
               if (onCamera != null)
                 IconButton(
-                  tooltip: '찍어서 찾기',
+                  tooltip: tr('찍어서 찾기'),
                   icon: const Icon(Icons.photo_camera_outlined, size: Gp.iM, color: Gp.ink),
                   onPressed: onCamera,
                 )
@@ -149,23 +151,25 @@ class ViewIconToggle extends StatelessWidget {
     required this.onChanged,
     this.allIcon = Icons.newspaper_outlined,
     this.mineIcon = Icons.person_outline,
-    this.allTip = '전체 소식',
-    this.mineTip = 'My Page',
+    this.allTip,
+    this.mineTip,
   });
 
   final bool mine;
   final ValueChanged<bool> onChanged;
   final IconData allIcon;
   final IconData mineIcon;
-  final String allTip;
-  final String mineTip;
+
+  /// 없으면 '전체 소식' · 'My Page'
+  final String? allTip;
+  final String? mineTip;
 
   @override
   Widget build(BuildContext context) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      ToolIcon(icon: allIcon, tip: allTip, on: !mine, onTap: () => onChanged(false)),
-      ToolIcon(icon: mineIcon, tip: mineTip, on: mine, onTap: () => onChanged(true)),
+      ToolIcon(icon: allIcon, tip: allTip ?? tr('전체 소식'), on: !mine, onTap: () => onChanged(false)),
+      ToolIcon(icon: mineIcon, tip: mineTip ?? 'My Page', on: mine, onTap: () => onChanged(true)),
     ],
   );
 }
@@ -179,7 +183,7 @@ class FilterButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ToolIcon(
     icon: Icons.tune,
-    tip: '필터',
+    tip: tr('필터'),
     onTap: onTap,
     on: onTap != null,
     color: count > 0 ? Gp.accent : null,

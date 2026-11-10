@@ -6,6 +6,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show RenderRepaintBoundary;
 
+import '../l10n/l10n.dart';
 import '../theme.dart';
 import '../logic/build_status.dart' show BuildStage;
 import 'icons.dart';
@@ -156,10 +157,10 @@ class CollectionShareCard extends StatelessWidget {
             decoration: BoxDecoration(color: Gp.bg, borderRadius: BorderRadius.circular(Gp.radius)),
             child: Row(
               children: [
-                stat(const LikedIcon(size: Gp.iM), liked, '좋아요'),
-                stat(const OwnedIcon(size: Gp.iM), owned, '구매함'),
-                stat(const Icon(preorderIcon, size: Gp.iM, color: Gp.reserve), preorders, '예약'),
-                stat(Icon(buildStageIcon(BuildStage.unbuilt), size: Gp.iM, color: Gp.muted), backlog, '미조립'),
+                stat(const LikedIcon(size: Gp.iM), liked, tr('좋아요')),
+                stat(const OwnedIcon(size: Gp.iM), owned, tr('구매함')),
+                stat(const Icon(preorderIcon, size: Gp.iM, color: Gp.reserve), preorders, tr('예약')),
+                stat(Icon(buildStageIcon(BuildStage.unbuilt), size: Gp.iM, color: Gp.muted), backlog, tr('미조립')),
               ],
             ),
           ),
