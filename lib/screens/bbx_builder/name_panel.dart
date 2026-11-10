@@ -34,12 +34,12 @@ class _NameDialogState extends State<_NameDialog> {
       controller: _ctrl,
       autofocus: true,
       maxLength: 40,
-      decoration: const InputDecoration(hintText: '이름'),
+      decoration: InputDecoration(hintText: tr('이름')),
       onSubmitted: (v) => Navigator.pop(context, v.trim()),
     ),
     actions: [
-      TextButton(onPressed: () => Navigator.pop(context), child: const Text('취소')),
-      FilledButton(onPressed: () => Navigator.pop(context, _ctrl.text.trim()), child: const Text('확인')),
+      TextButton(onPressed: () => Navigator.pop(context), child: Text(tr('취소'))),
+      FilledButton(onPressed: () => Navigator.pop(context, _ctrl.text.trim()), child: Text(tr('확인'))),
     ],
   );
 }
@@ -96,7 +96,7 @@ class _NamePanel extends StatelessWidget {
               style: const TextStyle(fontSize: Gp.t12, color: Gp.accent, fontWeight: FontWeight.w600),
             ),
           Text(
-            ko.isEmpty ? '부품을 골라 주세요' : ko,
+            ko.isEmpty ? tr('부품을 골라 주세요') : ko,
             key: const Key('bbx-box-name'),
             style: TextStyle(fontSize: Gp.t19, fontWeight: FontWeight.w800, color: ko.isEmpty ? Gp.faint : Gp.ink),
           ),
@@ -111,14 +111,15 @@ class _NamePanel extends StatelessWidget {
           if (combo.parts.isNotEmpty) ...[
             for (final e in errors)
               line(Icons.block, Gp.danger, bbxIssueText(e, cat), key: Key('bbx-issue-${e.code.name}')),
-            if (missing.isNotEmpty) line(Icons.more_horiz, Gp.muted, '남은 칸: ${missing.join(' · ')}'),
-            if (legal) line(Icons.check_circle, Gp.own, '규칙에 맞는 조합이에요', key: const Key('bbx-legal')),
-            if (legal && short.isEmpty) line(Icons.bookmark, Gp.own, '내 부품으로 만들 수 있어요'),
+            if (missing.isNotEmpty)
+              line(Icons.more_horiz, Gp.muted, trf('남은 칸: {slots}', {'slots': missing.join(' · ')})),
+            if (legal) line(Icons.check_circle, Gp.own, tr('규칙에 맞는 조합이에요'), key: const Key('bbx-legal')),
+            if (legal && short.isEmpty) line(Icons.bookmark, Gp.own, tr('내 부품으로 만들 수 있어요')),
             if (short.isNotEmpty)
               line(
                 Icons.bookmark_border,
                 Gp.muted,
-                '없는 부품: ${short.map((m) => cat.molds[m.moldKey]!.name('ko')).join(' · ')}',
+                trf('없는 부품: {parts}', {'parts': short.map((m) => cat.molds[m.moldKey]!.name('ko')).join(' · ')}),
               ),
           ],
         ],

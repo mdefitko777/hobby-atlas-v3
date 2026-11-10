@@ -56,21 +56,21 @@ class _SavedRow extends StatelessWidget {
               ),
             ),
             Tooltip(
-              message: legal ? '규칙에 맞음' : '규칙에 안 맞음',
+              message: legal ? tr('규칙에 맞음') : tr('규칙에 안 맞음'),
               child: Icon(legal ? Icons.check_circle : Icons.block, size: Gp.iS, color: legal ? Gp.own : Gp.danger),
             ),
             if (buildable)
-              const Padding(
-                padding: EdgeInsets.only(left: 4),
-                child: Tooltip(message: '내 부품으로 만들 수 있음', child: OwnedIcon()),
+              Padding(
+                padding: const EdgeInsets.only(left: 4),
+                child: Tooltip(message: tr('내 부품으로 만들 수 있음'), child: const OwnedIcon()),
               ),
             IconButton(
-              tooltip: '이름 바꾸기',
+              tooltip: tr('이름 바꾸기'),
               onPressed: onRename,
               icon: const Icon(Icons.edit_outlined, size: Gp.iM, color: Gp.muted),
             ),
             IconButton(
-              tooltip: '지우기',
+              tooltip: tr('지우기'),
               onPressed: onDelete,
               icon: const Icon(Icons.delete_outline, size: Gp.iM, color: Gp.muted),
             ),
@@ -93,15 +93,15 @@ class _DeckTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final add = ToolIcon(
       icon: Icons.add,
-      tip: '덱 만들기',
+      tip: tr('덱 만들기'),
       onTap: () => store.saveBbxDeck(
-        Deck(id: bbxNewId('d'), name: '덱 ${store.bbxDecks.length + 1}', comboIds: const ['', '', '']),
+        Deck(id: bbxNewId('d'), name: trf('덱 {n}', {'n': store.bbxDecks.length + 1}), comboIds: const ['', '', '']),
       ),
     );
     if (store.bbxDecks.isEmpty) {
       return EmptyView(
-        message: '덱이 없어요',
-        detail: '저장한 조합 3개로 3on3 덱을 짜요 · 같은 부품은 한 번만',
+        message: tr('덱이 없어요'),
+        detail: tr('저장한 조합 3개로 3on3 덱을 짜요 · 같은 부품은 한 번만'),
         icon: Icons.layers_outlined,
         action: add,
       );
@@ -110,8 +110,8 @@ class _DeckTab extends StatelessWidget {
       padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + 24),
       children: [
         SectionHeader(
-          '덱',
-          subtitle: '조합 3개 · 같은 부품은 한 번만',
+          tr('덱'),
+          subtitle: tr('조합 3개 · 같은 부품은 한 번만'),
           trailing: add,
           padding: const EdgeInsets.fromLTRB(16, 14, 8, 0),
         ),
@@ -146,7 +146,7 @@ class _DeckCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  deck.name.isEmpty ? '덱' : deck.name,
+                  deck.name.isEmpty ? tr('덱') : deck.name,
                   style: const TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w700),
                 ),
               ),
@@ -156,9 +156,9 @@ class _DeckCard extends StatelessWidget {
                 color: check.legal ? Gp.own : (check.lines.any((l) => l.$1) ? Gp.danger : Gp.faint),
               ),
               IconButton(
-                tooltip: '이름 바꾸기',
+                tooltip: tr('이름 바꾸기'),
                 onPressed: () async {
-                  final name = await _askName(context, title: '덱 이름', initial: deck.name);
+                  final name = await _askName(context, title: tr('덱 이름'), initial: deck.name);
                   if (name == null) return;
                   store.saveBbxDeck(
                     Deck(id: deck.id, name: name, rulesProfile: deck.rulesProfile, comboIds: deck.comboIds),
@@ -167,11 +167,11 @@ class _DeckCard extends StatelessWidget {
                 icon: const Icon(Icons.edit_outlined, size: Gp.iM, color: Gp.muted),
               ),
               IconButton(
-                tooltip: '덱 지우기',
+                tooltip: tr('덱 지우기'),
                 onPressed: () {
                   final combos = List.of(store.bbxCombos), decks = List.of(store.bbxDecks);
                   store.deleteBbxDeck(deck.id);
-                  showToast(context, '덱을 지웠어요', onUndo: () => store.restoreBbx(combos, decks));
+                  showToast(context, tr('덱을 지웠어요'), onUndo: () => store.restoreBbx(combos, decks));
                 },
                 icon: const Icon(Icons.delete_outline, size: Gp.iM, color: Gp.muted),
               ),
@@ -235,15 +235,15 @@ class _DeckCard extends StatelessWidget {
           key: Key('bbx-deck-${deck.id}-$i'),
           onTap: () async {
             if (store.bbxCombos.isEmpty) {
-              showToast(context, '먼저 조합을 저장해 주세요');
+              showToast(context, tr('먼저 조합을 저장해 주세요'));
               return;
             }
             final picked = await showPickSheet<String>(
               context,
-              title: '${i + 1}번 조합',
+              title: trf('{n}번 조합', {'n': i + 1}),
               values: ['', for (final x in store.bbxCombos) x.id],
               current: id,
-              label: (v) => v.isEmpty ? '비우기' : bbxComboTitle(store.bbxCombo(v)!, cat),
+              label: (v) => v.isEmpty ? tr('비우기') : bbxComboTitle(store.bbxCombo(v)!, cat),
             );
             if (picked != null) _put(i, picked);
           },
@@ -266,7 +266,7 @@ class _DeckCard extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    c == null ? '조합 고르기' : bbxComboTitle(c, cat),
+                    c == null ? tr('조합 고르기') : bbxComboTitle(c, cat),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(fontWeight: FontWeight.w600, color: c == null ? Gp.faint : Gp.ink),

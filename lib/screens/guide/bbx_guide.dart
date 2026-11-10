@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../api.dart';
 import '../../detail_pane.dart';
+import '../../l10n/l10n.dart';
 import '../../logic/category_browse.dart' show isBeyLineWorld;
 import '../../level.dart';
 import '../../marks.dart';
@@ -28,10 +29,12 @@ class _BbxGuideState extends State<BbxGuide> {
   /// 블레이더 묶음 (그 캐릭터 블레이드가 든 상품) — 베이 세대 묶음 중 라인(BX · UX · CX)이 아닌 것
   late final Future<List<World>> _bladers = widget.loaders
       .worlds('beyblade')
-      .then((ws) => [
-            for (final w in ws)
-              if (!isBeyLineWorld(w.id) && w.kitIds.isNotEmpty) w,
-          ])
+      .then(
+        (ws) => [
+          for (final w in ws)
+            if (!isBeyLineWorld(w.id) && w.kitIds.isNotEmpty) w,
+        ],
+      )
       .catchError((Object _) => <World>[]);
 
   @override
@@ -43,7 +46,7 @@ class _BbxGuideState extends State<BbxGuide> {
         if (snap.hasError) {
           return ErrorView(message: '${snap.error}', onRetry: () => setState(() => _future = widget.loaders.bbxTops()));
         }
-        if (snap.data!.isEmpty) return const EmptyView(message: '베이 도감이 아직 없어요');
+        if (snap.data!.isEmpty) return EmptyView(message: tr('베이 도감이 아직 없어요'));
         final m = Marks.of(context);
         bool done(BbxTop t) => t.total > 0 && t.owned >= t.total; // 부품 다 모음 = 구매함
         bool liked(BbxTop t) => t.kitIds.any((id) => m.store.statusOf(id) == CollectStatus.wanted);
@@ -76,7 +79,7 @@ class _BbxGuideState extends State<BbxGuide> {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const SectionHeader('블레이더', padding: EdgeInsets.fromLTRB(16, 14, 12, 10)),
+                        SectionHeader(tr('블레이더'), padding: const EdgeInsets.fromLTRB(16, 14, 12, 10)),
                         CategoryGrid(
                           children: [
                             for (final w in bladers)
@@ -101,14 +104,14 @@ class _BbxGuideState extends State<BbxGuide> {
                   },
                 ),
               SectionHeader(
-                '베이',
+                tr('베이'),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     ToolIcon(
                       // G-6a → T 조합 만들기
                       icon: Icons.build_outlined,
-                      tip: '조합 만들기',
+                      tip: tr('조합 만들기'),
                       onTap: () => Navigator.of(
                         context,
                       ).push(MaterialPageRoute<void>(builder: (_) => BbxBuilderScreen(loaders: widget.loaders))),
@@ -204,7 +207,7 @@ class _TopSheet extends StatelessWidget {
               style: const TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w600),
             ),
             Text(
-              '부품 ${top.owned} / ${top.total} 보유',
+              trf('부품 {owned} / {total} 보유', {'owned': top.owned, 'total': top.total}),
               style: const TextStyle(fontSize: Gp.t12, color: Gp.own, fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 12),
@@ -223,7 +226,7 @@ class _TopSheet extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            p.typeLabel,
+                            tr(p.typeLabel),
                             style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
                           ),
                           Text(p.name, style: const TextStyle(fontWeight: FontWeight.w500)),
@@ -231,7 +234,7 @@ class _TopSheet extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      p.have ? '보유' : '미보유',
+                      p.have ? tr('보유') : tr('미보유'),
                       style: TextStyle(fontWeight: FontWeight.w600, color: p.have ? Gp.own : Gp.faint),
                     ),
                   ],

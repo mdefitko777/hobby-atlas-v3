@@ -33,6 +33,7 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../channels.dart';
+import '../l10n/l10n.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'c_channel_screen.dart';
@@ -92,18 +93,18 @@ class _ChannelPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (myChannels.isEmpty) {
-      return const EmptyView(
+      return EmptyView(
         icon: Icons.auto_awesome_mosaic_outlined,
-        message: '내 채널이 비어 있어요',
-        detail: '채널 관리에서 IP를 추가하면 도감을 볼 수 있어요',
+        message: tr('내 채널이 비어 있어요'),
+        detail: tr('채널 관리에서 IP를 추가하면 도감을 볼 수 있어요'),
       );
     }
     return ListView(
       padding: EdgeInsets.only(top: 8, bottom: navClearance(context)),
       children: [
-        const Padding(
-          padding: EdgeInsets.fromLTRB(Gp.gutter, 0, Gp.gutter, 12),
-          child: Text('어느 도감을 볼까요?', style: TextStyle(color: Gp.muted)),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(Gp.gutter, 0, Gp.gutter, 12),
+          child: Text(tr('어느 도감을 볼까요?'), style: const TextStyle(color: Gp.muted)),
         ),
         CategoryGrid(
           children: [
@@ -111,7 +112,7 @@ class _ChannelPicker extends StatelessWidget {
               CategoryTile(
                 // G-1 P06 채널 공식 그림 + 이름만
                 image: channelOf(id).image,
-                name: channelOf(id).label,
+                name: tr(channelOf(id).label),
                 onTap: () => onPick(id), // STATE: 채널 선택 → 그 IP 도감
               ),
           ],

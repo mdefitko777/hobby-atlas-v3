@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../api.dart';
 import '../../data/gundam_atlas.dart' show roleLabels;
+import '../../l10n/l10n.dart';
 import '../../level.dart';
 import '../../logic/collection_rules.dart' show bestStatus;
 import '../../marks.dart';
@@ -163,7 +164,7 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
 
     apply(on); // STATE: 손으로 켜기 → 칸 단계 (Marks 가 다시 그린다)
     if (!on) setState(() => _photos.remove(u.id)); // 안 가진 기체에 인증 사진은 남기지 않는다
-    showToast(context, on ? '「${u.name}」 칸을 켰어요' : '손으로 켠 칸을 껐어요', onUndo: () => apply(!on));
+    showToast(context, on ? trf('「{name}」 칸을 켰어요', {'name': u.name}) : tr('손으로 켠 칸을 껐어요'), onUndo: () => apply(!on));
   }
 
   /// G-4b 칸의 리본: 손으로 켠 칸이면 끄기 · 상품이 하나면 그 상품 · 없으면 손으로 켜기 · 여럿이면 시트
@@ -191,7 +192,7 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
     for (final p in Marks.read(context).store.photos.where((p) => p.unitId == u.id)) {
       deleteMyPhoto(context, p).ignore();
     }
-    showToast(context, '「${u.name}」의 내 사진을 내렸어요');
+    showToast(context, trf('「{name}」의 내 사진을 내렸어요', {'name': u.name}));
   }
 
   /// G-5c 내 사진 올리기: 카메라 · 갤러리 → 기기에 저장 (사진 벽 · 칸이 같이 바뀐다). 사진이 있으면 가진 것
@@ -204,7 +205,7 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
     final p = await addMyPhoto(context, unitId: u.id, kitId: kit ?? u.kitIds.firstOrNull ?? '');
     if (p == null || !mounted) return;
     setState(() {}); // STATE: 내 사진 → 도는 고리
-    showToast(context, '「${u.name}」 내 사진');
+    showToast(context, trf('「{name}」 내 사진', {'name': u.name}));
   }
 
   /// G-4d 작품 진행 카드 — 칸을 다 받은 뒤 지금 단계로
@@ -273,16 +274,16 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
     final ownedNow = _units.isEmpty ? w.owned : _units.where((u) => _tierOf(m, u).index >= CellTier.owned.index).length;
     return Scaffold(
       appBar: AppBar(
-        title: BarTitle(w.name, count: '수집 $ownedNow / ${w.total}'),
+        title: BarTitle(w.name, count: trf('수집 {owned} / {total}', {'owned': ownedNow, 'total': w.total})),
         actions: [
           ToolIcon(
             // G-4d 작품 진행 카드 (그림으로 공유 · 저장)
             key: const ValueKey('guide-share'),
             icon: Icons.ios_share,
-            tip: '공유 카드',
+            tip: tr('공유 카드'),
             onTap: _shareGuide,
           ),
-          HelpButton(title: '작품 도감', items: workGuideHelp()), // G-2
+          HelpButton(title: tr('작품 도감'), items: workGuideHelp()), // G-2
           const SizedBox(width: 6),
         ],
       ),
@@ -298,10 +299,10 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
             return EmptyView(
               // G-8 P09 · 정리 요청 = Gunpula 데이터 저장소에 이슈 (lib/report.dart)
               icon: Icons.grid_view,
-              message: '이 작품은 아직 기체 정리가 안 됐어요',
+              message: tr('이 작품은 아직 기체 정리가 안 됐어요'),
               action: OutlinedButton(
                 onPressed: () => reportDataIssue(context, unitName: widget.work.name, kind: ReportKind.guide),
-                child: const Text('정리 요청'),
+                child: Text(tr('정리 요청')),
               ),
             );
           }
@@ -322,12 +323,12 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
                 LiveLevelBar(loaders: widget.loaders), // G-4a 수집 레벨 (아바타 옆 Lv 와 같은 막대)
                 FindBar(
                   // G-9
-                  hint: '${widget.work.name}에서 찾기',
+                  hint: trf('{name}에서 찾기', {'name': widget.work.name}),
                   initial: widget.initialQuery,
                   onQuery: (q) => setState(() => _query = q), // STATE: 찾기 → 칸 거르기
                   filterCount: _filter.count,
                   onFilter: () async {
-                    final f = await showGuideFilterSheet(context, pool: pool, initial: _filter, groupLabel: '묶음');
+                    final f = await showGuideFilterSheet(context, pool: pool, initial: _filter, groupLabel: tr('묶음'));
                     if (f != null) setState(() => _filter = f); // STATE: 도감 필터 → 칸 거르기 · 정렬
                   },
                   tools: [
@@ -338,8 +339,8 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
                         onChanged: (v) => setState(() => _byChapter = v), // STATE: 한 격자 ↔ 화수별
                         allIcon: Icons.grid_view_outlined,
                         mineIcon: Icons.format_list_numbered,
-                        allTip: '한 격자',
-                        mineTip: '화수별',
+                        allTip: tr('한 격자'),
+                        mineTip: tr('화수별'),
                       ),
                   ],
                 ),
@@ -393,10 +394,10 @@ class _UnitSheet extends StatelessWidget {
     final tier = tierOf(m);
     final manual = unit.ggetIds.any(m.store.guideManualLit.contains);
     final status = switch (tier) {
-      CellTier.photo => '구매함 · 내 사진으로 인증됨',
-      CellTier.owned => manual ? '구매함 · 손으로 켬' : '구매함',
-      CellTier.liked => '좋아요',
-      CellTier.none => '아직 없음',
+      CellTier.photo => tr('구매함 · 내 사진으로 인증됨'),
+      CellTier.owned => manual ? tr('구매함 · 손으로 켬') : tr('구매함'),
+      CellTier.liked => tr('좋아요'),
+      CellTier.none => tr('아직 없음'),
     };
     final lit = [
       for (final k in kits)
@@ -468,7 +469,7 @@ class _UnitSheet extends StatelessWidget {
                 if (unit.ggetIds.isNotEmpty) ...[
                   Expanded(
                     child: TogglePill(
-                      label: '손으로 켜기',
+                      label: tr('손으로 켜기'),
                       icon: Icons.bookmark_add_outlined,
                       activeIcon: Icons.bookmark_added,
                       color: Gp.own,
@@ -480,7 +481,7 @@ class _UnitSheet extends StatelessWidget {
                 ],
                 Expanded(
                   child: TogglePill(
-                    label: '내 사진',
+                    label: tr('내 사진'),
                     icon: Icons.add_a_photo_outlined,
                     activeIcon: Icons.workspace_premium,
                     color: Gp.own,
@@ -495,7 +496,7 @@ class _UnitSheet extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    photo == null ? '' : '다시 누르면 사진 바꾸기',
+                    photo == null ? '' : tr('다시 누르면 사진 바꾸기'),
                     style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
                   ),
                 ),
@@ -503,34 +504,34 @@ class _UnitSheet extends StatelessWidget {
                   TextButton(
                     onPressed: onRemovePhoto,
                     style: TextButton.styleFrom(foregroundColor: Gp.muted, visualDensity: VisualDensity.compact),
-                    child: const Text('사진 내리기'),
+                    child: Text(tr('사진 내리기')),
                   ),
               ],
             ),
             SectionHeader(
-              '이 기체의 상품',
-              subtitle: lit.isEmpty ? '' : '${lit.length}개',
+              tr('이 기체의 상품'),
+              subtitle: lit.isEmpty ? '' : trf('{n}개', {'n': lit.length}),
               padding: const EdgeInsets.fromLTRB(0, 14, 0, 4),
               // G-5d 빠진 상품 제보 → Gunpula 이슈 (lib/report.dart)
               trailing: ToolIcon(
                 icon: Icons.flag_outlined,
-                tip: '빠진 상품 제보',
+                tip: tr('빠진 상품 제보'),
                 onTap: () => reportDataIssue(context, unitName: unit.name, kind: ReportKind.missingKit),
               ),
             ),
             if (lit.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
                 child: Text(
-                  '대응 상품 아직 없음 · 나오면 홈에 먼저 떠요', // P09
-                  style: TextStyle(color: Gp.muted),
+                  tr('대응 상품 아직 없음 · 나오면 홈에 먼저 떠요'), // P09
+                  style: const TextStyle(color: Gp.muted),
                 ),
               ),
             for (final k in lit) kitRow(k),
             if (related.isNotEmpty) ...[
               SectionHeader(
-                '관련 상품',
-                subtitle: '부품 · SD 캐릭터 — 칸은 켜지지 않아요',
+                tr('관련 상품'),
+                subtitle: tr('부품 · SD 캐릭터 — 칸은 켜지지 않아요'),
                 padding: const EdgeInsets.fromLTRB(0, 14, 0, 4),
               ),
               for (final k in related) kitRow(k),
@@ -554,8 +555,8 @@ class _KitLine extends StatelessWidget {
     return ThumbRow(
       image: kit.image,
       title: kit.name,
-      tag: roleLabels[role] ?? '',
-      subtitle: joinDot([kit.line, kit.scale, if (kit.date.length >= 7) dateDot(kit.date.substring(0, 7))]),
+      tag: tr(roleLabels[role] ?? ''),
+      subtitle: joinDot([tr(kit.line), kit.scale, if (kit.date.length >= 7) dateDot(kit.date.substring(0, 7))]),
       size: 52,
       padding: const EdgeInsets.symmetric(vertical: 6),
       onTap: onTap,
@@ -567,12 +568,12 @@ class _KitLine extends StatelessWidget {
 /// G-2 작품 도감 ? — 칸 표시(레벨 시트와 같은 그림, 늘 컬러) + 찾기 줄 · 기체 시트 아이콘
 List<HelpItem> workGuideHelp() => [
   ...tierHelpItems(),
-  const HelpItem.group('아이콘'),
-  const HelpItem(Icons.ios_share, '공유 카드 (그림으로 공유 · 저장)'),
-  const HelpItem(Icons.tune, '도감 필터'),
-  const HelpItem(Icons.grid_view_outlined, '한 격자'),
-  const HelpItem(Icons.format_list_numbered, '화수별'),
-  const HelpItem(Icons.bookmark_add_outlined, '손으로 켜기 (상품 없이)', color: Gp.own),
-  const HelpItem(Icons.add_a_photo_outlined, '내 사진 (사진 인증)', color: Gp.own),
-  const HelpItem(Icons.flag_outlined, '빠진 상품 제보'),
+  HelpItem.group(tr('아이콘')),
+  HelpItem(Icons.ios_share, tr('공유 카드 (그림으로 공유 · 저장)')),
+  HelpItem(Icons.tune, tr('도감 필터')),
+  HelpItem(Icons.grid_view_outlined, tr('한 격자')),
+  HelpItem(Icons.format_list_numbered, tr('화수별')),
+  HelpItem(Icons.bookmark_add_outlined, tr('손으로 켜기 (상품 없이)'), color: Gp.own),
+  HelpItem(Icons.add_a_photo_outlined, tr('내 사진 (사진 인증)'), color: Gp.own),
+  HelpItem(Icons.flag_outlined, tr('빠진 상품 제보')),
 ];

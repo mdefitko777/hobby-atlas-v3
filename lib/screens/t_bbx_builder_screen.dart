@@ -29,6 +29,7 @@ import '../api.dart';
 import '../bbx/bbx.dart';
 import '../data/bbx_builder_data.dart';
 import '../data/user_store.dart';
+import '../l10n/l10n.dart';
 import '../logic/bbx_builder.dart';
 import '../marks.dart';
 import '../theme.dart';
@@ -70,24 +71,24 @@ class _BbxBuilderScreenState extends State<BbxBuilderScreen> {
     final store = Marks.of(context).store; // 저장 · 덱이 바뀌면 다시 그린다
     return Scaffold(
       appBar: AppBar(
-        title: const Text('베이 조합'),
+        title: Text(tr('베이 조합')),
         actions: [
           ToolIcon(
             // T-1 P07
             icon: _ownedOnly ? Icons.bookmark : Icons.bookmark_border,
-            tip: '가진 부품만',
+            tip: tr('가진 부품만'),
             on: _ownedOnly,
             color: _ownedOnly ? Gp.own : null,
             onTap: () => setState(() => _ownedOnly = !_ownedOnly),
           ),
-          const HelpButton(title: '베이 조합', items: bbxBuilderHelp), // T-11
+          HelpButton(title: tr('베이 조합'), items: bbxBuilderHelp()), // T-11
           const SizedBox(width: 6),
         ],
       ),
       body: FutureBuilder<BbxBuilderData>(
         future: _future,
         builder: (context, snap) {
-          if (snap.connectionState != ConnectionState.done) return const LoadingView(label: '베이 부품 불러오는 중…');
+          if (snap.connectionState != ConnectionState.done) return LoadingView(label: tr('베이 부품 불러오는 중…'));
           if (snap.hasError) {
             return ErrorView(
               message: '${snap.error}',
@@ -105,9 +106,9 @@ class _BbxBuilderScreenState extends State<BbxBuilderScreen> {
                   children: [
                     const SizedBox(width: 8),
                     for (final (i, (label, count)) in [
-                      ('만들기', null),
-                      ('저장', store.bbxCombos.length),
-                      ('덱', store.bbxDecks.length),
+                      (tr('만들기'), null),
+                      (tr('저장'), store.bbxCombos.length),
+                      (tr('덱'), store.bbxDecks.length),
                     ].indexed)
                       UnderlineTab(
                         label: label,
@@ -161,7 +162,7 @@ class _BbxBuilderScreenState extends State<BbxBuilderScreen> {
               ),
               ToolIcon(
                 icon: Icons.restart_alt,
-                tip: '새로 만들기',
+                tip: tr('새로 만들기'),
                 on: _parts.isNotEmpty || _editingId != null,
                 onTap: () => setState(() {
                   _parts.clear();
@@ -178,7 +179,7 @@ class _BbxBuilderScreenState extends State<BbxBuilderScreen> {
             children: [
               for (final slot in combo.arch.slots) ...[
                 if (slot == Slot.ratchet && integratedBit && _parts[Slot.ratchet] == null)
-                  const _FixedRow(label: '래칫', text: '비트에 붙어 있어요')
+                  _FixedRow(label: tr('래칫'), text: tr('비트에 붙어 있어요'))
                 else
                   _SlotRow(
                     // T-5 P07
@@ -191,7 +192,7 @@ class _BbxBuilderScreenState extends State<BbxBuilderScreen> {
                     onClear: () => setState(() => _parts.remove(slot)),
                   ),
                 if (slot == Slot.blade && combo.arch == Arch.integrated)
-                  const _FixedRow(label: '래칫', text: '블레이드에 붙어 있어요'),
+                  _FixedRow(label: tr('래칫'), text: tr('블레이드에 붙어 있어요')),
               ],
             ],
           ),
@@ -202,7 +203,7 @@ class _BbxBuilderScreenState extends State<BbxBuilderScreen> {
           child: GradientButton(
             // T-7 P03
             key: const Key('bbx-save'),
-            label: editing != null ? '고쳐 저장' : '저장',
+            label: editing != null ? tr('고쳐 저장') : tr('저장'),
             onPressed: combo.parts.isEmpty ? null : () => _save(cat),
           ),
         ),
@@ -242,12 +243,12 @@ class _BbxBuilderScreenState extends State<BbxBuilderScreen> {
     if (editing != null) {
       final c = bbxComboFor(editing.id, _frame, _parts, cat);
       store.saveBbxCombo(editing.copyWith(arch: c.arch, parts: c.parts, updatedAt: now));
-      showToast(context, '고쳐 저장했어요');
+      showToast(context, tr('고쳐 저장했어요'));
       return;
     }
     final name = await _askName(
       context,
-      title: '조합 저장',
+      title: tr('조합 저장'),
       initial: boxName(_draft(cat), cat, lang: 'ko'),
     );
     if (name == null || !mounted) return;
@@ -263,7 +264,7 @@ class _BbxBuilderScreenState extends State<BbxBuilderScreen> {
       ),
     );
     setState(() => _editingId = c.id);
-    showToast(context, '저장했어요');
+    showToast(context, tr('저장했어요'));
   }
 
   void _load(Combo c) => setState(() {
@@ -279,7 +280,7 @@ class _BbxBuilderScreenState extends State<BbxBuilderScreen> {
   Widget _savedTab(BbxBuilderData data, BbxInventory inv, UserStore store) {
     final cat = data.catalog;
     if (store.bbxCombos.isEmpty) {
-      return const EmptyView(message: '저장한 조합이 없어요', detail: '만들기에서 부품을 고르고 저장해 보세요', icon: Icons.bookmark_border);
+      return EmptyView(message: tr('저장한 조합이 없어요'), detail: tr('만들기에서 부품을 고르고 저장해 보세요'), icon: Icons.bookmark_border);
     }
     return ListView(
       padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + 24),
@@ -294,14 +295,18 @@ class _BbxBuilderScreenState extends State<BbxBuilderScreen> {
             current: c.id == _editingId,
             onTap: () => _load(c),
             onRename: () async {
-              final name = await _askName(context, title: '이름 바꾸기', initial: bbxComboTitle(c, cat));
+              final name = await _askName(context, title: tr('이름 바꾸기'), initial: bbxComboTitle(c, cat));
               if (name != null) store.renameBbxCombo(c.id, name);
             },
             onDelete: () {
               final combos = List.of(store.bbxCombos), decks = List.of(store.bbxDecks);
               store.deleteBbxCombo(c.id);
               if (_editingId == c.id) setState(() => _editingId = null);
-              showToast(context, '‘${bbxComboTitle(c, cat)}’ 지웠어요', onUndo: () => store.restoreBbx(combos, decks));
+              showToast(
+                context,
+                trf('‘{name}’ 지웠어요', {'name': bbxComboTitle(c, cat)}),
+                onUndo: () => store.restoreBbx(combos, decks),
+              );
             },
           ),
       ],
@@ -310,14 +315,14 @@ class _BbxBuilderScreenState extends State<BbxBuilderScreen> {
 }
 
 /// T-11 ? 도움말
-const bbxBuilderHelp = <HelpItem>[
-  HelpItem(Icons.bookmark_border, '가진 부품만 (고르기 시트도)'),
-  HelpItem(Icons.restart_alt, '새로 만들기'),
-  HelpItem(Icons.link, '붙어 있는 칸 (따로 못 고름)'),
-  HelpItem(Icons.block, '지금 조합과 안 맞음', color: Gp.danger),
-  HelpItem(Icons.check_circle, '규칙에 맞음', color: Gp.own),
-  HelpItem(Icons.bookmark, '내 부품으로 만들 수 있음', color: Gp.own),
-  HelpItem(Icons.edit_outlined, '이름 바꾸기'),
-  HelpItem(Icons.delete_outline, '지우기 (되돌리기 있음)'),
-  HelpItem(Icons.add, '덱 만들기 (3on3)'),
+List<HelpItem> bbxBuilderHelp() => [
+  HelpItem(Icons.bookmark_border, tr('가진 부품만 (고르기 시트도)')),
+  HelpItem(Icons.restart_alt, tr('새로 만들기')),
+  HelpItem(Icons.link, tr('붙어 있는 칸 (따로 못 고름)')),
+  HelpItem(Icons.block, tr('지금 조합과 안 맞음'), color: Gp.danger),
+  HelpItem(Icons.check_circle, tr('규칙에 맞음'), color: Gp.own),
+  HelpItem(Icons.bookmark, tr('내 부품으로 만들 수 있음'), color: Gp.own),
+  HelpItem(Icons.edit_outlined, tr('이름 바꾸기')),
+  HelpItem(Icons.delete_outline, tr('지우기 (되돌리기 있음)')),
+  HelpItem(Icons.add, tr('덱 만들기 (3on3)')),
 ];

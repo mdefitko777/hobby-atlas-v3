@@ -11,10 +11,13 @@ class _StatsPanel extends StatelessWidget {
     final max = catalog.comboStatMax;
     final w = stats.weightG;
     final weight = w != null
-        ? '무게 ${bbxGrams(w)}'
+        ? trf('무게 {g}', {'g': bbxGrams(w)})
         : stats.unknownWeightSlots.isNotEmpty
-        ? '무게 ${bbxGrams(stats.knownWeightG)}+ (모르는 칸: ${stats.unknownWeightSlots.map(bbxSlotLabel).join(' · ')})'
-        : '무게 ${bbxGrams(stats.knownWeightG)} (아직 덜 고름)';
+        ? trf('무게 {g}+ (모르는 칸: {slots})', {
+            'g': bbxGrams(stats.knownWeightG),
+            'slots': stats.unknownWeightSlots.map(bbxSlotLabel).join(' · '),
+          })
+        : trf('무게 {g} (아직 덜 고름)', {'g': bbxGrams(stats.knownWeightG)});
     return SectionPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -33,7 +36,7 @@ class _StatsPanel extends StatelessWidget {
                   SizedBox(
                     width: 72,
                     child: Text(
-                      bbxStatLabels[k]!,
+                      tr(bbxStatLabels[k]!),
                       style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
                     ),
                   ),

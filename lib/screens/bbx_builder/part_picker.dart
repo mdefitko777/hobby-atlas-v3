@@ -6,10 +6,10 @@ String _moldInfo(PartMold m, PartVariant? v) => joinDot([
   m.line.toUpperCase(),
   bbxSpinLabel(v?.rotation ?? m.rotation),
   bbxGrams(v?.weightG ?? m.weightG),
-  if (m.variantIds.length > 1) '${m.variantIds.length}색',
+  if (m.variantIds.length > 1) trf('{n}색', {'n': m.variantIds.length}),
   [
     for (final k in BbxStats.keys)
-      if ((v?.stats ?? m.stats)[k] > 0) '${bbxStatShort[k]}${(v?.stats ?? m.stats)[k]}',
+      if ((v?.stats ?? m.stats)[k] > 0) '${tr(bbxStatShort[k]!)}${(v?.stats ?? m.stats)[k]}',
   ].join(' '),
 ]);
 
@@ -60,7 +60,7 @@ class _SlotRow extends StatelessWidget {
                     style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
                   ),
                   Text(
-                    m?.name('ko') ?? '고르기',
+                    m?.name('ko') ?? tr('고르기'),
                     style: TextStyle(fontWeight: FontWeight.w600, color: m == null ? Gp.faint : Gp.ink),
                   ),
                   if (m != null)
@@ -74,13 +74,13 @@ class _SlotRow extends StatelessWidget {
               ),
             ),
             if (owned)
-              const Tooltip(
-                message: '보유',
-                child: OwnedIcon(size: Gp.iM),
+              Tooltip(
+                message: tr('보유'),
+                child: const OwnedIcon(size: Gp.iM),
               ),
             if (m != null)
               IconButton(
-                tooltip: '비우기',
+                tooltip: tr('비우기'),
                 onPressed: onClear,
                 icon: const Icon(Icons.close, size: Gp.iM, color: Gp.faint),
               )
@@ -179,12 +179,12 @@ class _PartPickerSheetState extends State<_PartPickerSheet> {
           children: [
             SectionHeader(
               bbxSlotLabel(widget.slot),
-              subtitle: '${all.length}종 · 보유 $ownedN',
+              subtitle: trf('{n}종 · 보유 {owned}', {'n': all.length, 'owned': ownedN}),
               padding: const EdgeInsets.fromLTRB(16, 0, 8, 4),
               trailing: ToolIcon(
                 // T-5a P07
                 icon: _ownedOnly ? Icons.bookmark : Icons.bookmark_border,
-                tip: '가진 부품만',
+                tip: tr('가진 부품만'),
                 on: _ownedOnly,
                 color: _ownedOnly ? Gp.own : null,
                 onTap: () {
@@ -195,13 +195,15 @@ class _PartPickerSheetState extends State<_PartPickerSheet> {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: GpSearchBar(hint: '이름 · 코드로 찾기', onChanged: (v) => setState(() => _query = v.trim())),
+              child: GpSearchBar(hint: tr('이름 · 코드로 찾기'), onChanged: (v) => setState(() => _query = v.trim())),
             ),
             Expanded(
               child: molds.isEmpty
                   ? EmptyView(
-                      message: _ownedOnly ? '가진 ${bbxSlotLabel(widget.slot)}가 없어요' : '찾는 부품이 없어요',
-                      detail: _ownedOnly ? '도감에서 가진 부품을 켜면 여기 보여요' : '',
+                      message: _ownedOnly
+                          ? trf('가진 {slot}가 없어요', {'slot': bbxSlotLabel(widget.slot)})
+                          : tr('찾는 부품이 없어요'),
+                      detail: _ownedOnly ? tr('도감에서 가진 부품을 켜면 여기 보여요') : '',
                       icon: Icons.search_off,
                     )
                   : ListView.builder(
@@ -272,20 +274,20 @@ class _PickRow extends StatelessWidget {
               ),
             ),
             if (breaks)
-              const Tooltip(
+              Tooltip(
                 // T-5b P05
-                message: '지금 조합과 안 맞아요',
-                child: Padding(
+                message: tr('지금 조합과 안 맞아요'),
+                child: const Padding(
                   padding: EdgeInsets.only(left: 6),
                   child: Icon(Icons.block, size: Gp.iS, color: Gp.danger),
                 ),
               ),
             if (owned)
-              const Padding(
-                padding: EdgeInsets.only(left: 6),
+              Padding(
+                padding: const EdgeInsets.only(left: 6),
                 child: Tooltip(
-                  message: '보유',
-                  child: OwnedIcon(size: Gp.iM),
+                  message: tr('보유'),
+                  child: const OwnedIcon(size: Gp.iM),
                 ),
               ),
             if (selected)

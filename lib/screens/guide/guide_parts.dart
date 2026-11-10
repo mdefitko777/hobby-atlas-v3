@@ -1,6 +1,7 @@
 // 도감(G) 공용 조각 — 찾기 + 도감 필터 · 칸 한 개 (작품 · 세대 · 채널 고르기는 공용 CategoryTile · CategoryGrid)
 import 'package:flutter/material.dart';
 
+import '../../l10n/l10n.dart';
 import '../../theme.dart';
 import '../../widgets.dart';
 
@@ -19,7 +20,7 @@ class GuideFind {
     List<T> items,
     String Function(T) text,
     GuideFacet Function(T) facet, {
-    String groupLabel = '묶음',
+    String? groupLabel,
     bool photo = false,
   }) {
     final found = [
@@ -28,14 +29,14 @@ class GuideFind {
     ];
     ctrl
       ..pool = [for (final x in found) facet(x)]
-      ..groupLabel = groupLabel
+      ..groupLabel = groupLabel ?? tr('묶음')
       ..photoTier = photo;
     return filter.apply(found, facet);
   }
 }
 
 /// 찾기 · 필터에 맞는 것이 없을 때
-const guideNoHit = EmptyView(icon: Icons.search_off, message: '이 조건의 칸이 없어요');
+Widget get guideNoHit => EmptyView(icon: Icons.search_off, message: tr('이 조건의 칸이 없어요'));
 
 /// 칸 격자 열 수 — 칸이 [min] 아래로 줄지 않게 (2–6열)
 int guideCols(double w, double min) => (w / min).floor().clamp(2, 6);

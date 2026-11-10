@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../api.dart';
 import '../../detail_pane.dart';
+import '../../l10n/l10n.dart';
 import '../../level.dart';
 import '../../marks.dart';
 import '../../models.dart';
@@ -59,9 +60,9 @@ class _GundamGuideState extends State<GundamGuide> {
             onRetry: () => setState(() => _future = widget.loaders.guideWorks()),
           );
         }
-        if (snap.data!.isEmpty) return const EmptyView(message: '도감 작품이 아직 없어요');
+        if (snap.data!.isEmpty) return EmptyView(message: tr('도감 작품이 아직 없어요'));
         // G-9 작품 이름 · 기체 이름 · 형식번호로 찾기 + 도감 필터(상태 · 라인 · 시대 · 기체 종류 · 정렬)
-        final works = widget.find.apply(snap.data!, (w) => '${w.name} ${w.keywords}', _workFacet, groupLabel: '시대');
+        final works = widget.find.apply(snap.data!, (w) => '${w.name} ${w.keywords}', _workFacet, groupLabel: tr('시대'));
         if (works.isEmpty) return guideNoHit;
         final sections = <String, List<GuideWork>>{};
         for (final w in works) {
@@ -72,7 +73,7 @@ class _GundamGuideState extends State<GundamGuide> {
           children: [
             for (final e in sections.entries) ...[
               SectionHeader(
-                e.key,
+                tr(e.key), // 시대 이름은 데이터 그대로 — '기타 작품'만 번역 표에
                 trailing: e.key == sections.keys.first ? const LevelHelpButton() : null, // G-2
                 padding: const EdgeInsets.fromLTRB(16, 14, 12, 10),
               ),
