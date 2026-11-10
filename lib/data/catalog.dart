@@ -12,6 +12,7 @@ import 'package:http/http.dart' as http;
 
 import '../channels.dart' show channelCovers, lineCovers;
 import '../json_util.dart';
+import '../l10n/l10n.dart';
 import '../models.dart';
 import 'blob_store.dart';
 import 'gundam_atlas.dart' show atlasBoxartFile, atlasKitMsFile, atlasMsFile;
@@ -100,7 +101,7 @@ class Catalog extends ChangeNotifier {
     await (_loading ??= _start());
     if (kits.isEmpty) {
       _loading = null; // 다시 시도할 수 있게
-      throw CatalogException(error.isEmpty ? '상품 데이터를 받지 못했어요.' : error);
+      throw CatalogException(error.isEmpty ? tr('상품 데이터를 받지 못했어요.') : error);
     }
   }
 
@@ -301,12 +302,12 @@ class Catalog extends ChangeNotifier {
   Future<bool> _refresh({required bool force}) async {
     if (kits.isEmpty) {
       phase = CatalogPhase.loading;
-      progress = '새 데이터 확인 중';
+      progress = tr('새 데이터 확인 중');
       notifyListeners();
     }
     try {
       final mText = await _get('data/split/manifest.json', count: true);
-      if (mText == null) throw const CatalogException('인터넷에 연결하지 못했어요.');
+      if (mText == null) throw CatalogException(tr('인터넷에 연결하지 못했어요.'));
       _fileDone();
       final m = jsonDecode(mText) as Map<String, Object?>;
       _checkedAt = DateTime.now();
@@ -316,7 +317,7 @@ class Catalog extends ChangeNotifier {
 
       final aux = <String, String>{};
       for (final f in auxFiles) {
-        _step('보조 데이터 $f');
+        _step(trf('보조 데이터 {file}', {'file': f}));
         final t = await _get('data/$f', count: true);
         if (t != null) aux[f] = t;
         _fileDone();
@@ -329,9 +330,9 @@ class Catalog extends ChangeNotifier {
           _fileDone();
           continue;
         }
-        _step('${_label[f]} 상품 받는 중');
+        _step(trf('{channel} 상품 받는 중', {'channel': tr(_label[f] ?? f)}));
         final raw = await _get('data/split/kits-$f.json', count: true);
-        if (raw == null) throw CatalogException('${_label[f]} 상품을 받지 못했어요.');
+        if (raw == null) throw CatalogException(trf('{channel} 상품을 받지 못했어요.', {'channel': tr(_label[f] ?? f)}));
         _fileDone();
         slim.addAll(
           await compute(mapKitsJob, {
@@ -344,7 +345,7 @@ class Catalog extends ChangeNotifier {
           }),
         );
       }
-      _step('정리하는 중');
+      _step(tr('정리하는 중'));
       final slimText = await compute(jsonEncode, slim);
       // first-seen · 등급 · 박스 아트는 상품에 녹였으니 따로 두지 않는다
       for (final e in aux.entries) {
@@ -372,7 +373,7 @@ class Catalog extends ChangeNotifier {
       lastChangeQuiet = !_loud;
       return true;
     } on Object catch (e) {
-      error = e is CatalogException ? e.message : '데이터를 정리하다 멈췄어요: $e';
+      error = e is CatalogException ? e.message : trf('데이터를 정리하다 멈췄어요: {error}', {'error': e});
       debugPrint('[catalog] $error');
       _checkedAt = null; // 다 받지 못했다 — 다음 확인은 간격을 기다리지 않는다
       if (kits.isEmpty) phase = CatalogPhase.error;

@@ -43,7 +43,7 @@ String foldName(String s) => String.fromCharCodes([
     }
     if (count.isNotEmpty) {
       key = (count.entries.toList()..sort((a, b) => b.value.compareTo(a.value))).first.key;
-      label = matches.firstWhere((k) => k.seriesKey == key || k.series == key).series;
+      label = matches.firstWhere((k) => k.seriesKey == key || k.series == key).seriesLabel; // 화면 글 — 고르기는 series 그대로
     }
   }
   final shown = {for (final k in matches) k.id};

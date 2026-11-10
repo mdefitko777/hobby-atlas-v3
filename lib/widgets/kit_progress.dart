@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show FilteringTextInputFormatter;
 
 import '../format.dart';
+import '../l10n/l10n.dart';
 import '../logic/build_status.dart';
 import '../logic/collection_rules.dart' show ScanDupKind, scanDuplicate;
 import '../logic/preorder.dart';
@@ -58,10 +59,10 @@ class BuildStageIcon extends StatelessWidget {
 /// ? 도움말 줄 — 조립 단계 · 도색 · 예약 · 도착 · 재판매 (컬렉션 · 상세가 같이 쓴다)
 List<HelpItem> kitProgressHelp({bool restock = false}) => [
   for (final s in BuildStage.values) HelpItem(buildStageIcon(s), s.label, color: buildStageColor(s)),
-  const HelpItem(paintIcon, '도색함', color: Gp.star),
-  const HelpItem(preorderIcon, '예약', color: Gp.reserve),
-  const HelpItem(arrivedIcon, '도착했어요 → 구매함으로', color: Gp.reserve),
-  if (restock) const HelpItem(restockIcon, '재판매 소식', color: Gp.resale),
+  HelpItem(paintIcon, tr('도색함'), color: Gp.star),
+  HelpItem(preorderIcon, tr('예약'), color: Gp.reserve),
+  HelpItem(arrivedIcon, tr('도착했어요 → 구매함으로'), color: Gp.reserve),
+  if (restock) HelpItem(restockIcon, tr('재판매 소식'), color: Gp.resale),
 ];
 
 /// 한 번 눌러 다음 단계 (미조립 → 조립 중 → 완성 → 미조립) + 토스트 되돌리기
@@ -81,7 +82,7 @@ class BuildStatusButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final rec = Marks.of(context).store.buildOf(kitId);
     return Tooltip(
-      message: joinDot([rec.stage.label, if (rec.painted) '도색']),
+      message: joinDot([rec.stage.label, if (rec.painted) tr('도색')]),
       child: InkResponse(
         key: ValueKey('build-$kitId'),
         onTap: () => cycleBuild(context, kitId),
@@ -128,7 +129,7 @@ class BuildStatusRow extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         Tooltip(
-          message: rec.painted ? '도색함' : '도색 안 함',
+          message: rec.painted ? tr('도색함') : tr('도색 안 함'),
           child: InkWell(
             key: ValueKey('paint-$kitId'),
             onTap: () => store.setBuild(kitId, painted: !rec.painted), // STATE: 도색
@@ -159,7 +160,7 @@ Future<void> showBuildSheet(BuildContext context, String kitId) => showGpSheet<v
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SectionHeader('조립 상태', padding: EdgeInsets.fromLTRB(0, 0, 0, 12)),
+          SectionHeader(tr('조립 상태'), padding: const EdgeInsets.fromLTRB(0, 0, 0, 12)),
           BuildStatusRow(kitId: kitId),
         ],
       ),
@@ -172,8 +173,8 @@ Future<void> showBuildSheet(BuildContext context, String kitId) => showGpSheet<v
 String preorderSummary(Preorder p) => joinDot([
   p.shop,
   if (p.price != null) won(p.price!),
-  if (p.arrival.isNotEmpty) '${arrivalLabel(p.arrival)} 도착',
-  if (p.arrivedAt.isNotEmpty) '도착함' else (p.paid ? '결제 완료' : '미결제'),
+  if (p.arrival.isNotEmpty) trf('{date} 도착', {'date': arrivalLabel(p.arrival)}),
+  if (p.arrivedAt.isNotEmpty) tr('도착함') else (p.paid ? tr('결제 완료') : tr('미결제')),
 ]);
 
 /// D-5g 상세 줄 (구매함이 아닐 때): 예약 요약 · 없으면 "예약" 적기. 오른쪽 📥 = 도착했어요
@@ -199,14 +200,14 @@ class PreorderRow extends StatelessWidget {
           children: [
             Icon(preorderIcon, size: Gp.iS, color: p == null ? Gp.muted : Gp.reserve),
             const SizedBox(width: 8),
-            const Text(
-              '예약',
-              style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
+            Text(
+              tr('예약'),
+              style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
             ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                p == null ? '안 적음' : preorderSummary(p),
+                p == null ? tr('안 적음') : preorderSummary(p),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -219,7 +220,7 @@ class PreorderRow extends StatelessWidget {
             if (p != null && p.active)
               IconButton(
                 key: const ValueKey('preorder-arrived'),
-                tooltip: '도착했어요',
+                tooltip: tr('도착했어요'),
                 onPressed: () => markPreorderArrived(context, kit),
                 icon: const Icon(arrivedIcon, size: Gp.iM, color: Gp.reserve),
               )
@@ -294,14 +295,14 @@ class _PreorderSheetState extends State<_PreorderSheet> {
     Navigator.pop(context);
     store.putPreorder(kit.id, null); // STATE: 예약 지움 (deleted 로 남김)
     if (widget.host.mounted) {
-      showToast(widget.host, '예약을 지웠어요', onUndo: () => store.putPreorder(kit.id, old));
+      showToast(widget.host, tr('예약을 지웠어요'), onUndo: () => store.putPreorder(kit.id, old));
     }
   }
 
   void _save() {
     final a = normalizeArrival(_arrival.text);
     if (_arrival.text.trim().isNotEmpty && a.isEmpty) {
-      showToast(widget.host, '도착 예정은 2026-12 또는 2026-12-15 처럼 적어요');
+      showToast(widget.host, tr('도착 예정은 2026-12 또는 2026-12-15 처럼 적어요'));
       return;
     }
     final next = Preorder(
@@ -316,7 +317,9 @@ class _PreorderSheetState extends State<_PreorderSheet> {
     Navigator.pop(context);
     if (!_marks.liked(kit) && !_marks.owned(kit)) _marks.set(kit, liked: true); // 예약 = 좋아요 + 예약 기록
     _marks.store.putPreorder(kit.id, next); // STATE: 예약 (기기 local_state)
-    if (widget.host.mounted) showToast(widget.host, _old == null ? '「${kit.name}」 예약을 적었어요' : '예약을 고쳤어요');
+    if (widget.host.mounted) {
+      showToast(widget.host, _old == null ? trf('「{name}」 예약을 적었어요', {'name': kit.name}) : tr('예약을 고쳤어요'));
+    }
   }
 
   @override
@@ -328,34 +331,34 @@ class _PreorderSheetState extends State<_PreorderSheet> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SectionHeader(
-            '예약',
+            tr('예약'),
             subtitle: widget.kit.name,
             padding: const EdgeInsets.fromLTRB(0, 0, 0, 12),
             trailing: _old == null
                 ? null
                 : IconButton(
-                    tooltip: '예약 지우기',
+                    tooltip: tr('예약 지우기'),
                     onPressed: _delete,
                     icon: const Icon(Icons.delete_outline, size: Gp.iM, color: Gp.danger),
                   ),
           ),
-          _field('shop', _shop, '가게 (예: 프리미엄 반다이)'),
+          _field('shop', _shop, tr('가게 (예: 프리미엄 반다이)')),
           Row(
             children: [
-              Expanded(child: _field('price', _price, '총액', number: true, suffix: '원')),
+              Expanded(child: _field('price', _price, tr('총액'), number: true, suffix: tr('원'))),
               const SizedBox(width: 8),
-              Expanded(child: _field('deposit', _deposit, '예약금', number: true, suffix: '원')),
+              Expanded(child: _field('deposit', _deposit, tr('예약금'), number: true, suffix: tr('원'))),
             ],
           ),
-          _field('arrival', _arrival, '도착 예정 (2026-12 · 2026-12-15)'),
+          _field('arrival', _arrival, tr('도착 예정 (2026-12 · 2026-12-15)')),
           SquareSegments<bool>(
             values: const [false, true],
             current: _paid,
             onPick: (v) => setState(() => _paid = v), // STATE: 결제 상태 (시트 안)
-            child: (v) => Text(v ? '결제 완료' : '미결제'),
+            child: (v) => Text(v ? tr('결제 완료') : tr('미결제')),
           ),
           const SizedBox(height: 14),
-          GradientButton(label: '저장', onPressed: _save),
+          GradientButton(label: tr('저장'), onPressed: _save),
         ],
       ),
     ),
@@ -370,17 +373,17 @@ Future<void> markPreorderArrived(BuildContext context, Kit kit) async {
   final toOwned = await showDialog<bool>(
     context: context,
     builder: (dialog) => AlertDialog(
-      title: const Text('도착했어요'),
+      title: Text(tr('도착했어요')),
       content: Text(
-        p.price == null ? '구매함으로 옮길까요?' : '구매함으로 옮길까요?\n내 구매가 ${won(p.price!)}',
+        p.price == null ? tr('구매함으로 옮길까요?') : '${tr('구매함으로 옮길까요?')}\n${trf('내 구매가 {price}', {'price': won(p.price!)})}',
         style: const TextStyle(fontSize: Gp.t14),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(dialog, false), child: const Text('도착만')),
+        TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(tr('도착만'))),
         FilledButton(
           key: const ValueKey('arrived-to-owned'),
           onPressed: () => Navigator.pop(dialog, true),
-          child: const Text('구매함으로'),
+          child: Text(tr('구매함으로')),
         ),
       ],
     ),
@@ -390,7 +393,7 @@ Future<void> markPreorderArrived(BuildContext context, Kit kit) async {
   if (before == null) return;
   showToast(
     context,
-    toOwned ? '「${kit.name}」 구매함에 넣었어요' : '도착했다고 적었어요',
+    toOwned ? trf('「{name}」 구매함에 넣었어요', {'name': kit.name}) : tr('도착했다고 적었어요'),
     onUndo: () => store.undoArrival(kit.id, before),
   );
 }
@@ -405,15 +408,15 @@ Future<bool> warnIfCollected(BuildContext context, List<Kit> kits) async {
   final (Widget icon, String head, String detail) = switch (d.kind) {
     ScanDupKind.owned => (
       const OwnedIcon(size: Gp.iL),
-      '이미 갖고 있어요 ×${d.quantity}',
-      joinDot([d.build.stage.label, if (d.build.painted) '도색']),
+      trf('이미 갖고 있어요 ×{n}', {'n': d.quantity}),
+      joinDot([d.build.stage.label, if (d.build.painted) tr('도색')]),
     ),
     ScanDupKind.preorder => (
       const Icon(preorderIcon, size: Gp.iL, color: Gp.reserve),
-      '이미 예약했어요',
+      tr('이미 예약했어요'),
       preorderSummary(d.preorder!),
     ),
-    ScanDupKind.liked => (const LikedIcon(size: Gp.iL), '좋아요한 상품이에요', ''),
+    ScanDupKind.liked => (const LikedIcon(size: Gp.iL), tr('좋아요한 상품이에요'), ''),
   };
   final open = await showGpSheet<bool>(
     context,
@@ -453,11 +456,11 @@ Future<bool> warnIfCollected(BuildContext context, List<Kit> kits) async {
               ),
             ],
             const SizedBox(height: 14),
-            GradientButton(label: '상세 보기', onPressed: () => Navigator.pop(sheet, true)),
+            GradientButton(label: tr('상세 보기'), onPressed: () => Navigator.pop(sheet, true)),
             TextButton.icon(
               onPressed: () => Navigator.pop(sheet, false),
               icon: const Icon(Icons.qr_code_scanner, size: Gp.iM),
-              label: const Text('다시 찍기'),
+              label: Text(tr('다시 찍기')),
             ),
           ],
         ),

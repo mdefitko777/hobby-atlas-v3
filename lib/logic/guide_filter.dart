@@ -1,5 +1,6 @@
 // 도감 필터 규칙 — 상태 · 라인 · 시대 · 기체 종류 · 상품 있는 것 · 정렬 (순수 Dart)
 
+import '../l10n/l10n.dart';
 import 'kit_filter.dart' show MineState;
 
 // ── 도감 필터 (칸이 켜졌나) ────────────────────────────────────────────────────────
@@ -8,9 +9,9 @@ enum LitState { any, lit, unlit }
 
 extension LitStateLabel on LitState {
   String get label => switch (this) {
-    LitState.any => '전체',
-    LitState.lit => '켜진 것',
-    LitState.unlit => '아직',
+    LitState.any => tr('전체'),
+    LitState.lit => tr('켜진 것'),
+    LitState.unlit => tr('아직'),
   };
 
   /// [lit] = 그 칸(작품이면 하나라도) 켜졌나
@@ -44,10 +45,10 @@ enum GuideSort { number, name, kits, recent }
 
 extension GuideSortLabel on GuideSort {
   String get label => switch (this) {
-    GuideSort.number => '번호',
-    GuideSort.name => '이름',
-    GuideSort.kits => '상품 수',
-    GuideSort.recent => '최근 구매',
+    GuideSort.number => tr('번호'),
+    GuideSort.name => tr('이름'),
+    GuideSort.kits => tr('상품 수'),
+    GuideSort.recent => tr('최근 구매'),
   };
 }
 

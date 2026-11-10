@@ -7,6 +7,7 @@
 // 파일이 없으면(404) 빈 묶음 → 상세 · 캘린더의 재판매 칸이 모두 숨는다.
 import '../format.dart' show monthKey;
 import '../json_util.dart';
+import '../l10n/l10n.dart';
 
 /// 보조 파일 이름 (lib/data/gunpula.dart auxFiles)
 const restocksFile = 'atlas/restocks.json';
@@ -19,7 +20,7 @@ const restockKindLabels = {
   'lottery': '추첨',
 };
 
-String restockKindLabel(String kind) => restockKindLabels[kind] ?? '재판매';
+String restockKindLabel(String kind) => tr(restockKindLabels[kind] ?? '재판매');
 
 /// 재판매 소식 한 건
 class RestockEvent {

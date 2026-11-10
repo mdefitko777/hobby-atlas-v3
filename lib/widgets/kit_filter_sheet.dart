@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../clock.dart';
 import '../format.dart';
+import '../l10n/l10n.dart';
 import '../logic/kit_filter.dart';
 import '../logic/kit_rules.dart';
 import '../marks.dart';
@@ -75,10 +76,10 @@ class MineStateLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => switch (state) {
-    MineState.any => const Text('전체'),
-    MineState.liked => const Tooltip(message: '좋아요', child: LikedIcon()),
-    MineState.owned => const Tooltip(message: '구매함', child: OwnedIcon()),
-    MineState.none => const Text('아직 없음'),
+    MineState.any => Text(tr('전체')),
+    MineState.liked => Tooltip(message: tr('좋아요'), child: const LikedIcon()),
+    MineState.owned => Tooltip(message: tr('구매함'), child: const OwnedIcon()),
+    MineState.none => Text(tr('아직 없음')),
   };
 }
 
@@ -100,6 +101,16 @@ class _FilterSheetState extends State<FilterSheet> {
   /// 기간 달 고르기의 가장 이른 해 — 이 목록에서 가장 오래된 발매일 (레고 전부면 1949)
   late final int _minYear = earliestYear(widget.kits.map((k) => k.date));
 
+  /// 작품 묶음 → 화면 이름 (중국어 화면이면 작품 중국어 이름)
+  late final Map<String, String> _workNames = {
+    ...widget.initial.workNames,
+    for (final k in widget.kits) kitWork(k): kitWorkLabel(k),
+  };
+
+  /// 고른 값들 한 줄 요약 — 라인 · 종류는 번역 표로, 작품은 [_workNames] 로
+  String _summary(Set<String> picked, {bool works = false}) =>
+      pickSummary({for (final v in picked) works ? (_workNames[v] ?? v) : tr(v)});
+
   int _hits(KitFilter f) => widget.kits.where(f.matches).length;
 
   int _with(void Function(KitFilter) change) {
@@ -115,10 +126,10 @@ class _FilterSheetState extends State<FilterSheet> {
     final kits = widget.kits;
     final hits = _hits(_draft);
     return GpPickSheet(
-      title: '필터',
+      title: tr('필터'),
       hits: hits,
-      noHitLabel: '맞는 상품 없음',
-      onApply: () => Navigator.pop(context, _draft),
+      noHitLabel: tr('맞는 상품 없음'),
+      onApply: () => Navigator.pop(context, _draft..workNames.addAll(_workNames)),
       onReset: () => setState(() {
         _draft.clear();
         _open = '';
@@ -157,11 +168,11 @@ class _FilterSheetState extends State<FilterSheet> {
         ),
         // 굿즈를 고르면 세부 종류 (티켓 · 의류 · 블루레이 …)
         if (_draft.types.contains('굿즈') && kits.any((k) => k.goodsKind.isNotEmpty)) ...[
-          const Padding(
-            padding: EdgeInsets.fromLTRB(2, 10, 0, 2),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(2, 10, 0, 2),
             child: Text(
-              '굿즈 종류',
-              style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
+              tr('굿즈 종류'),
+              style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
             ),
           ),
           CheckGrid(
@@ -177,8 +188,8 @@ class _FilterSheetState extends State<FilterSheet> {
         ],
         const Divider(height: 20),
         ExpandRow(
-          title: '라인',
-          summary: pickSummary(_draft.lines),
+          title: tr('라인'),
+          summary: _summary(_draft.lines),
           open: _open == '라인',
           onTap: () => setState(() => _open = _open == '라인' ? '' : '라인'),
         ),
@@ -194,8 +205,8 @@ class _FilterSheetState extends State<FilterSheet> {
             onToggle: (v) => _toggle(_draft.lines, v),
           ),
         ExpandRow(
-          title: '작품',
-          summary: pickSummary(_draft.works),
+          title: tr('작품'),
+          summary: _summary(_draft.works, works: true),
           open: _open == '작품',
           onTap: () => setState(() => _open = _open == '작품' ? '' : '작품'),
         ),
@@ -212,8 +223,8 @@ class _FilterSheetState extends State<FilterSheet> {
             onToggle: (v) => _toggle(_draft.works, v),
           ),
         ExpandRow(
-          title: '기간',
-          summary: periodLabel(_draft.from, _draft.to).isEmpty ? '전체' : periodLabel(_draft.from, _draft.to),
+          title: tr('기간'),
+          summary: periodLabel(_draft.from, _draft.to).isEmpty ? tr('전체') : periodLabel(_draft.from, _draft.to),
           open: _open == '기간',
           onTap: () => setState(() => _open = _open == '기간' ? '' : '기간'),
         ),
@@ -228,7 +239,7 @@ class _FilterSheetState extends State<FilterSheet> {
             }),
           ),
         ExpandRow(
-          title: '가격',
+          title: tr('가격'),
           summary: _draft.price.label,
           open: _open == '가격',
           onTap: () => setState(() => _open = _open == '가격' ? '' : '가격'),
@@ -237,7 +248,12 @@ class _FilterSheetState extends State<FilterSheet> {
           SquareSegments<PriceBand>(
             values: PriceBand.values,
             current: _draft.price,
-            child: (v) => Text(v == PriceBand.mid ? '3천–1만' : v.label.replaceAll(',000', '천')),
+            child: (v) => Text(switch (v) {
+              PriceBand.any => tr('전체'),
+              PriceBand.under3k => tr('¥3천 이하'),
+              PriceBand.mid => tr('3천–1만'),
+              PriceBand.over10k => tr('¥10천 이상'),
+            }),
             onPick: (v) => setState(() => _draft.price = v),
           ),
       ],
@@ -264,7 +280,7 @@ class _PeriodPicker extends StatelessWidget {
       final now = start ? from : to;
       final v = await pickMonth(
         context,
-        title: start ? '시작 달' : '끝 달',
+        title: start ? tr('시작 달') : tr('끝 달'),
         initial: now.isEmpty ? today.substring(0, 7) : now,
         minYear: minYear,
       );
@@ -301,7 +317,7 @@ class _PeriodPicker extends StatelessWidget {
               Expanded(
                 child: _MonthButton(
                   key: const ValueKey('period-from'),
-                  label: '시작',
+                  label: tr('시작'),
                   value: from,
                   onTap: () => pick(start: true),
                 ),
@@ -313,7 +329,7 @@ class _PeriodPicker extends StatelessWidget {
               Expanded(
                 child: _MonthButton(
                   key: const ValueKey('period-to'),
-                  label: '끝',
+                  label: tr('끝'),
                   value: to,
                   onTap: () => pick(start: false),
                 ),
@@ -340,7 +356,7 @@ class _MonthButton extends StatelessWidget {
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(Gp.rSmall))),
     ),
     child: Text(
-      value.isEmpty ? '$label  ·  열어 둠' : '$label  ${monthDot(value)}',
+      value.isEmpty ? trf('{label}  ·  열어 둠', {'label': label}) : '$label  ${monthDot(value)}',
       style: TextStyle(fontSize: Gp.t12, color: value.isEmpty ? Gp.muted : Gp.ink),
     ),
   );
@@ -388,7 +404,7 @@ class _MonthSheetState extends State<_MonthSheet> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               IconButton(
-                tooltip: '작년',
+                tooltip: tr('작년'),
                 onPressed: _year > _minYear ? () => setState(() => _year--) : null, // STATE: 해 → 달 칸
                 icon: const Icon(Icons.chevron_left, size: Gp.iL),
               ),
@@ -402,7 +418,7 @@ class _MonthSheetState extends State<_MonthSheet> {
                 ),
               ),
               IconButton(
-                tooltip: '다음 해',
+                tooltip: tr('다음 해'),
                 onPressed: _year < thisYear + 3 ? () => setState(() => _year++) : null,
                 icon: const Icon(Icons.chevron_right, size: Gp.iL),
               ),
@@ -426,12 +442,12 @@ class _MonthSheetState extends State<_MonthSheet> {
                     backgroundColor: _year == _initialYear && m == _month ? Gp.accent.withValues(alpha: 0.12) : null,
                     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(Gp.rSmall))),
                   ),
-                  child: Text('$m월', style: const TextStyle(fontSize: Gp.t14)),
+                  child: Text(trf('{m}월', {'m': m}), style: const TextStyle(fontSize: Gp.t14)),
                 ),
             ],
           ),
           const SizedBox(height: 8),
-          TextButton(onPressed: () => Navigator.pop(context, ''), child: const Text('정하지 않기 (열어 두기)')),
+          TextButton(onPressed: () => Navigator.pop(context, ''), child: Text(tr('정하지 않기 (열어 두기)'))),
         ],
       ),
     );
