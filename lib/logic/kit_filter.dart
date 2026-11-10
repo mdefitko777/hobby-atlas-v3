@@ -55,6 +55,55 @@ bool isBaseOrEvent(Kit k) {
 
 String _today() => dayKey(appNow());
 
+/// 기간 빠른 고르기 (필터 시트 「기간」)
+enum PeriodPreset { any, thisYear, lastYear, lastYearSpan }
+
+extension PeriodPresetLabel on PeriodPreset {
+  String get label => switch (this) {
+    PeriodPreset.any => '전체',
+    PeriodPreset.thisYear => '올해',
+    PeriodPreset.lastYear => '작년',
+    PeriodPreset.lastYearSpan => '최근 1년',
+  };
+
+  /// (시작, 끝) — 'YYYY-MM', 빈 글자 = 끝이 열림. [today] = 'YYYY-MM-DD'
+  (String, String) range(String today) {
+    final y = int.parse(today.substring(0, 4));
+    final m = int.parse(today.substring(5, 7));
+    String ym(int year, int month) => '$year-${month.toString().padLeft(2, '0')}';
+    return switch (this) {
+      PeriodPreset.any => ('', ''),
+      PeriodPreset.thisYear => (ym(y, 1), ym(y, 12)),
+      PeriodPreset.lastYear => (ym(y - 1, 1), ym(y - 1, 12)),
+      PeriodPreset.lastYearSpan => (m == 12 ? ym(y, 1) : ym(y - 1, m + 1), ym(y, m)),
+    };
+  }
+}
+
+/// 'YYYY-MM' → 'YYYY.MM' (빈 글자는 그대로)
+String monthDot(String ym) => ym.replaceAll('-', '.');
+
+/// 기간 한 줄: 2023.01–2024.06 · 2023.01 부터 · 2024.06 까지 · 빈 글자
+String periodLabel(String from, String to) => switch ((from.isEmpty, to.isEmpty)) {
+  (true, true) => '',
+  (false, true) => '${monthDot(from)} 부터',
+  (true, false) => '${monthDot(to)} 까지',
+  _ => from == to ? monthDot(from) : '${monthDot(from)}–${monthDot(to)}',
+};
+
+/// 발매일이 기간 [from]–[to] ('YYYY-MM', 빈 글자 = 열림) 안인가. 발매일이 없으면 밖, 해만 있으면 해로 비교
+bool inPeriod(String date, String from, String to) {
+  if (from.isEmpty && to.isEmpty) return true;
+  if (date.length < 4) return false;
+  if (date.length < 7) {
+    final y = date.substring(0, 4);
+    return (from.isEmpty || y.compareTo(from.substring(0, 4)) >= 0) &&
+        (to.isEmpty || y.compareTo(to.substring(0, 4)) <= 0);
+  }
+  final ym = date.substring(0, 7);
+  return (from.isEmpty || ym.compareTo(from) >= 0) && (to.isEmpty || ym.compareTo(to) <= 0);
+}
+
 /// 필터 조건 (이 목록 안에서만, 저장하지 않음)
 class KitFilter {
   KitFilter({
@@ -66,6 +115,8 @@ class KitFilter {
     this.release = ReleaseState.any,
     this.sale = SaleState.any,
     this.price = PriceBand.any,
+    this.from = '',
+    this.to = '',
   }) : works = works ?? {},
        types = types ?? {},
        lines = lines ?? {},
@@ -82,6 +133,10 @@ class KitFilter {
   SaleState sale;
   PriceBand price;
 
+  /// 발매 기간 'YYYY-MM' (빈 글자 = 열림)
+  String from;
+  String to;
+
   /// 내 상태(좋아요 · 구매함)를 읽는 곳 — 화면이 Marks 로 채운다
   CollectStatus Function(Kit)? statusOf;
 
@@ -94,6 +149,8 @@ class KitFilter {
     release: release,
     sale: sale,
     price: price,
+    from: from,
+    to: to,
   )..statusOf = statusOf;
 
   /// 모든 조건 비우기 (필터 시트 초기화)
@@ -106,6 +163,8 @@ class KitFilter {
     release = ReleaseState.any;
     sale = SaleState.any;
     price = PriceBand.any;
+    from = '';
+    to = '';
   }
 
   int get count =>
@@ -116,7 +175,8 @@ class KitFilter {
       (mine == MineState.any ? 0 : 1) +
       (release == ReleaseState.any ? 0 : 1) +
       (sale == SaleState.any ? 0 : 1) +
-      (price == PriceBand.any ? 0 : 1);
+      (price == PriceBand.any ? 0 : 1) +
+      (from.isEmpty && to.isEmpty ? 0 : 1);
 
   bool matches(Kit k) {
     if (works.isNotEmpty && !works.contains(kitWork(k))) return false;
@@ -124,6 +184,7 @@ class KitFilter {
     if (lines.isNotEmpty && !lines.contains(k.line)) return false;
     if (goodsKinds.isNotEmpty && !goodsKinds.contains(k.goodsKind)) return false;
     if (!price.hit(k.priceJpy)) return false;
+    if (!inPeriod(k.date, from, to)) return false;
     final st = statusOf?.call(k) ?? k.status;
     final today = _today();
     return switch (mine) {
@@ -158,6 +219,7 @@ class KitFilter {
         _ => '아직 없음',
       },
     if (release != ReleaseState.any) release.label,
+    if (from.isNotEmpty || to.isNotEmpty) periodLabel(from, to),
     if (sale != SaleState.any) sale.label,
     ...works,
     ...types,

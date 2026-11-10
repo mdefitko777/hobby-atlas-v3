@@ -27,6 +27,7 @@
 // │ D-14 │ 하단 고정 바 왼쪽: 복사 · 공식        │ 상품명 복사 · 공식 상품 페이지(출처)    │ P07 · P10     │
 // │ D-15 │ 오른쪽 위 ? (뒤로 맞은편, 떠 있는 원) │ 아이콘 뜻 한 줄씩 (♡ · 리본 · 수량 · 제보) │ P10        │
 // │ D-16 │ _GuideLink 줄 (기체 그림 · 이름 ›)    │ 도감에서 보기 → 그 작품 도감의 기체 시트   │ P07 · P06     │
+// │ D-18 │ 오른쪽 위 공유 (떠 있는 원)           │ 이 상품 링크 보내기 → 앱이 있으면 상세로   │ P07           │
 // │ D-17 │ _ManualLink 줄 (책 아이콘 · ›)        │ 공식 조립 설명서 → X 화면 (있는 상품만)   │ P10 · P07     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 홈 · 검색 · 설명 후보 · 바코드에서 쌓기(push, 오른쪽에서). 공식 정보 · 시세 · 구매가 → 덮기(바텀 시트).
@@ -34,11 +35,13 @@
 // 왜 이렇게: 내부 코드(GUNDAM_MERCH) · "보완 필요" · 수정 폼은 보이지 않게 — 정가 · 버전 · 출처만, 고칠 것은 "제보" 한 줄로.
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../api.dart';
 import '../logic/build_status.dart' show needsAssembly;
 import '../logic/friends.dart';
+import '../logic/kit_link.dart';
 import '../logic/market.dart';
 import '../logic/restock.dart';
 import '../marks.dart';
@@ -329,7 +332,20 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
                 child: SafeArea(
                   child: Padding(
                     padding: const EdgeInsets.all(12),
-                    child: HelpButton(title: '상품 상세', items: detailHelp, raised: true), // D-15
+                    child: Row(
+                      children: [
+                        RaisedCircleButton(
+                          // D-18 P07
+                          key: const ValueKey('share-kit'),
+                          tooltip: '공유',
+                          size: 40,
+                          onTap: _share,
+                          child: const Icon(Icons.share_outlined, size: Gp.iM, color: Gp.ink),
+                        ),
+                        const SizedBox(width: 8),
+                        HelpButton(title: '상품 상세', items: detailHelp, raised: true), // D-15
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -338,6 +354,20 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
         },
       ),
     );
+  }
+
+  /// D-18 이 상품 링크 보내기 — 받은 사람이 Hobby Atlas 가 있으면 이 상세로, 없으면 Gunpula 웹에서
+  Future<void> _share() async {
+    try {
+      await SharePlus.instance.share(
+        ShareParams(
+          text: kitShareText(name: k.name, kitId: k.id),
+          subject: k.name,
+        ),
+      );
+    } on Object {
+      if (mounted) showToast(context, '공유하지 못했어요');
+    }
   }
 
   List<Widget> _info(BuildContext context) {
@@ -1121,6 +1151,7 @@ final detailHelp = <HelpItem>[
   HelpItem(Icons.bookmark_add_outlined, '구매함 (가진 것)', color: Gp.own),
   HelpItem(Icons.add, '수량 (좋아요 = 갖고 싶은 수 · 구매함 = 가진 수)'),
   HelpItem(Icons.content_copy_rounded, '상품명 복사'),
+  HelpItem(Icons.share_outlined, '이 상품 보내기 (받은 사람이 앱에서 바로 열기)'),
   HelpItem(Icons.north_east, '공식 상품 페이지'),
   HelpItem(Icons.assignment_outlined, '공식 정보 전체'),
   HelpItem(Icons.menu_book_outlined, '공식 조립 설명서 (있는 상품만)'),

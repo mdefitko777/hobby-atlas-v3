@@ -71,6 +71,21 @@ Future<void> openShared(
           builder: (_) => PhotoFindScreen(sharedText: text, loaders: loaders, onGoSearch: onGoSearch),
         ),
       );
+    case SharedKitLink(:final kitId):
+      // D-18 로 받은 링크 — 그 상품 상세 (카탈로그에 없으면 알림)
+      final List<Kit> kits;
+      try {
+        kits = await loaders.kitsByIds([kitId]);
+      } on Object {
+        if (context.mounted) showToast(context, '상품 정보를 불러오지 못했어요');
+        return;
+      }
+      if (!context.mounted) return;
+      if (kits.isEmpty) {
+        showToast(context, '이 상품을 찾지 못했어요 · 데이터를 새로 받은 뒤 다시 열어 보세요');
+        return;
+      }
+      openKitDetail(context, kits.first, loaders: loaders);
   }
 }
 

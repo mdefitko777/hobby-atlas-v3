@@ -7,6 +7,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import '../logic/kit_link.dart';
+
 import 'shared_file_io.dart' if (dart.library.js_interop) 'shared_file_web.dart' as impl;
 
 /// 공유로 받은 것 하나
@@ -26,6 +28,12 @@ final class SharedText extends SharedItem {
   final String text;
 }
 
+/// 상품 링크 (Hobby Atlas 의 공유 링크를 눌렀을 때 · 그 링크가 든 글을 공유받았을 때) — 그 상품 상세로
+final class SharedKitLink extends SharedItem {
+  const SharedKitLink(this.kitId);
+  final String kitId;
+}
+
 /// MainActivity 가 보낸 것 `{type: image, path}` · `{type: text, text}` → 받은 것 하나 (모르는 모양이면 null)
 SharedItem? sharedItemFrom(Object? raw) {
   if (raw is! Map) return null;
@@ -33,7 +41,13 @@ SharedItem? sharedItemFrom(Object? raw) {
   final path = raw['path'];
   final text = raw['text'];
   if (type == 'image' && path is String && path.isNotEmpty) return SharedImage(path);
-  if (type == 'text' && text is String && text.trim().isNotEmpty) return SharedText(text.trim());
+  final id = raw['id'];
+  if (type == 'kit' && id is String && id.isNotEmpty) return SharedKitLink(id);
+  if (type == 'text' && text is String && text.trim().isNotEmpty) {
+    // 친구가 보낸 「이름 + 상품 링크」 글을 다시 공유받았으면 그 상품으로
+    final linked = kitIdFromLink(text);
+    return linked != null ? SharedKitLink(linked) : SharedText(text.trim());
+  }
   return null;
 }
 

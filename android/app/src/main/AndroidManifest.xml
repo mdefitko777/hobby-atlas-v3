@@ -59,6 +59,23 @@
                 <category android:name="android.intent.category.DEFAULT"/>
                 <data android:mimeType="image/*"/>
             </intent-filter>
+            <!-- 상품 링크 (lib/logic/kit_link.dart): 친구가 보낸 링크 → 그 상품 상세.
+                 Gunpula 의 넘김 페이지(app/open.html)가 intent://kit/<id>#Intent;scheme=hobbyatlas;… 로 연다.
+                 https 주소는 확인(assetlinks)을 못 하는 곳이라 안드로이드 12+ 에서는 앱 정보 → 기본으로 열기에서 켜야 바로 열린다 -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="hobbyatlas" android:host="kit"/>
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https" android:host="mdefitko777.github.io" android:pathPrefix="/Gunpula/app/open.html"/>
+            </intent-filter>
+            <!-- 링크는 MainActivity.kt 가 받아 넘긴다 — Flutter 가 주소를 화면 경로(/kit/…)로 바로 열지 않게 -->
+            <meta-data android:name="flutter_deeplinking_enabled" android:value="false"/>
         </activity>
         <!-- 앱 업데이트: 받은 APK 를 설치 창에 넘기는 통로 (res/xml/filepaths.xml) -->
         <provider

@@ -8,7 +8,7 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
 
-// 공유로 받기 (lib/share/share_intake.dart): 다른 앱의 "공유 → Hobby Atlas" 로 온 사진 · 글을 Flutter 로 넘긴다.
+// 공유로 받기 (lib/share/share_intake.dart): 다른 앱의 "공유 → Hobby Atlas" 로 온 사진 · 글, 상품 링크(VIEW)를 Flutter 로 넘긴다.
 // 사진은 앱 캐시(shared/)에 복사해 경로로, 글은 제목 + 본문 그대로.
 // 공유로 켜졌으면 Flutter 가 "initial" 로 꺼내 가고, 켜져 있을 때 온 공유는 "shared" 로 보낸다 (launchMode singleTask).
 class MainActivity : FlutterActivity() {
@@ -37,10 +37,15 @@ class MainActivity : FlutterActivity() {
         channel?.invokeMethod("shared", item)
     }
 
-    /** 공유 intent → {type: image, path} · {type: text, text}. 공유가 아니면 null */
+    /** 공유 intent → {type: image, path} · {type: text, text} · 상품 링크 {type: kit, id}. 아니면 null */
     private fun readShare(intent: Intent?): Map<String, String>? {
         if (intent == null) return null
         val action = intent.action ?: return null
+        if (action == Intent.ACTION_VIEW) {
+            val id = kitIdOf(intent.data)
+            setIntent(Intent(Intent.ACTION_MAIN))
+            return id?.let { mapOf("type" to "kit", "id" to it) }
+        }
         if (action != Intent.ACTION_SEND && action != Intent.ACTION_SEND_MULTIPLE) return null
         val type = intent.type ?: ""
         val item: Map<String, String>? = if (type.startsWith("image/")) {
@@ -55,6 +60,17 @@ class MainActivity : FlutterActivity() {
         // 같은 공유를 다시 열지 않게 (화면 회전 · 다시 그리기)
         setIntent(Intent(Intent.ACTION_MAIN))
         return item
+    }
+
+    /** hobbyatlas://kit/<id> · https://mdefitko777.github.io/Gunpula/app/open.html?kit=<id> → id */
+    private fun kitIdOf(uri: Uri?): String? {
+        if (uri == null) return null
+        val id = when (uri.scheme) {
+            "hobbyatlas" -> if (uri.host == "kit") uri.pathSegments.firstOrNull() else null
+            "https" -> if (uri.host == "mdefitko777.github.io") uri.getQueryParameter("kit") else null
+            else -> null
+        }
+        return id?.takeIf { Regex("^[A-Za-z0-9][A-Za-z0-9._-]{0,159}$").matches(it) }
     }
 
     @Suppress("DEPRECATION")
