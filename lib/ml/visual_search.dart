@@ -30,6 +30,17 @@ enum VisualState {
   failed,
 }
 
+/// 받기 실패 이유 → 화면 글. 우리가 번역해서 던진 글만 보이게 — `'$e'` 는 "FormatException: …" · "Bad state: …" 같은
+/// 타입 머리가 붙는다 (2026-11-11 품질 점검). HttpException 은 dart:io 라 (웹 빌드) 글 머리로 뗀다.
+String visualErrorText(Object e) => switch (e) {
+  FormatException(:final message) => message,
+  StateError(:final message) => message,
+  UnsupportedError(message: final String m) => m,
+  _ => '$e'.replaceFirst(_errorHead, ''),
+};
+
+final _errorHead = RegExp(r'^\w*(Exception|Error): ');
+
 class VisualSearch extends ChangeNotifier {
   VisualSearch._();
 
@@ -82,7 +93,7 @@ class VisualSearch extends ChangeNotifier {
       });
       _set(VisualState.ready);
     } on Object catch (e) {
-      error = '$e';
+      error = visualErrorText(e);
       _set(VisualState.failed);
     }
   }

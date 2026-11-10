@@ -40,7 +40,8 @@ Uri dataIssueUri({
   String problem = '',
   String detail = '',
 }) {
-  final what = kit?.name ?? (unitName.isNotEmpty ? unitName : (barcode.isNotEmpty ? '바코드 $barcode' : '상품'));
+  // 이슈는 Gunpula 데이터(names.ko 기준)를 고치는 사람이 읽는다 — 화면 언어와 상관없이 한국어 이름, 중국어 이름은 본문에 따로
+  final what = kit?.nameKo ?? (unitName.isNotEmpty ? unitName : (barcode.isNotEmpty ? '바코드 $barcode' : '상품'));
   final tag = switch (kind) {
     ReportKind.wrongInfo => '정보 오류',
     ReportKind.missingKit => '없는 상품',
@@ -50,8 +51,9 @@ Uri dataIssueUri({
   final body = [
     if (kit != null) ...[
       '- kit_id: `${kit.id}`',
-      '- 이름: ${kit.name}',
+      '- 이름: ${kit.nameKo}',
       if (kit.nameJa.isNotEmpty) '- 일본어 이름: ${kit.nameJa}',
+      if (kit.nameZh.isNotEmpty) '- 중국어 이름: ${kit.nameZh}',
       if (kit.officialUrl.isNotEmpty) '- 공식 페이지: ${kit.officialUrl}',
       if (kit.jan.isNotEmpty) '- JAN: ${kit.jan}',
     ],

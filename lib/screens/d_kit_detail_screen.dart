@@ -228,7 +228,9 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
 
   /// 공식 상품 페이지 · 국내 시세 검색을 브라우저로
   Future<void> _external(String where) async {
-    final url = where == '공식 상품 페이지' ? k.officialUrl : marketSearchUrl(where, k.name);
+    final url = where == '공식 상품 페이지'
+        ? k.officialUrl
+        : marketSearchUrl(where, marketSearchName(nameKo: k.nameKo, nameJa: k.nameJa));
     if (url.isEmpty) {
       showToast(context, tr('공식 페이지 주소가 없는 상품이에요'));
       return;

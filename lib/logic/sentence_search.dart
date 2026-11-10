@@ -41,6 +41,9 @@ class Concept {
 const _color = 1.0;
 
 /// 낱말 표 — 짧게 유지한다. 이름 쪽은 한국어 이름이 없는(일본어만 있는) 상품도 찾히게 표기를 모은다.
+/// 중국어 한 글자(红 · 金 · 粉 · 龙 …)는 [Concept.terms](문장 쪽)에만 — 상품 쪽 [Concept.needles] 에는 두 글자 이상만
+/// (상품 글자에 중국어 이름이 들어 있어 奥伯龙 · 金属 · 闪粉 · 黑胶 가 드래곤 · 금색 · 분홍 · 검정으로 잡혔다, 2026-11-11 점검).
+/// 문장 쪽 한 글자 한자도 띄어 쓴 낱말(또는 한 글자 한자 · 군말만으로 된 덩어리)일 때만 뜻으로 본다 — [_singleHanRun]
 const sentenceConcepts = <Concept>[
   // ── 색 ──
   Concept(
@@ -52,25 +55,25 @@ const sentenceConcepts = <Concept>[
   Concept(
     '검정',
     ['검은', '검정', '까만', '블랙', 'black', '黒', 'ブラック', '黑色', '黑'],
-    needles: ['black', 'ブラック', '黒', '블랙', '黑'],
+    needles: ['black', 'ブラック', '黒', '블랙', '黑色'],
     weight: _color,
   ),
   Concept(
     '빨강',
     ['빨간', '빨강', '붉은', '레드', 'red', '赤', 'レッド', '红色', '红'],
-    needles: ['red', 'レッド', '赤', '레드', '빨간', '红'],
+    needles: ['red', 'レッド', '赤', '레드', '빨간', '红色'],
     weight: _color,
   ),
   Concept(
     '파랑',
     ['파란', '파랑', '푸른', '블루', 'blue', '青', 'ブルー', '蓝色', '蓝'],
-    needles: ['blue', 'ブルー', '青', '블루', '파란', '蓝'],
+    needles: ['blue', 'ブルー', '青', '블루', '파란', '蓝色'],
     weight: _color,
   ),
   Concept(
     '초록',
     ['초록', '녹색', '그린', 'green', '緑', 'グリーン', '绿色', '绿'],
-    needles: ['green', 'グリーン', '緑', '그린', '绿'],
+    needles: ['green', 'グリーン', '緑', '그린', '绿色'],
     weight: _color,
   ),
   Concept(
@@ -82,19 +85,20 @@ const sentenceConcepts = <Concept>[
   Concept(
     '금색',
     ['금색', '골드', '황금', 'gold', '金', 'ゴールド', '金色', '黄金'],
-    needles: ['gold', 'ゴールド', '金', '골드'],
+    // 金 한 글자는 일본어 · 중국어 이름의 金属(메탈) · 金型 에도 있어 뺀다
+    needles: ['gold', 'ゴールド', '金色', '黄金', '金メッキ', '镀金', '골드', '금색'],
     weight: _color,
   ),
   Concept(
     '은색',
     ['은색', '실버', 'silver', '銀', 'シルバー', '银色', '银'],
-    needles: ['silver', 'シルバー', '銀', '실버', '银'],
+    needles: ['silver', 'シルバー', '銀', '실버', '银色'],
     weight: _color,
   ),
   Concept(
     '분홍',
     ['분홍', '핑크', 'pink', 'ピンク', '粉红色', '粉红', '粉色', '粉'],
-    needles: ['pink', 'ピンク', '핑크', '粉'],
+    needles: ['pink', 'ピンク', '핑크', '粉色', '粉红'],
     weight: _color,
   ),
   Concept('보라', ['보라', '퍼플', 'purple', '紫', 'パープル', '紫色'], needles: ['purple', 'パープル', '紫', '퍼플'], weight: _color),
@@ -114,7 +118,7 @@ const sentenceConcepts = <Concept>[
   Concept(
     '드래곤',
     ['드래곤', '드라군', '용 모양', 'dragon', 'ドラゴン', 'ドラン', '竜', '龍', '龙'],
-    needles: ['dragon', 'ドラゴン', 'ドラン', 'ドラグーン', '竜', '龍', '드래곤', '드랜', '드라군', 'dran', '龙'],
+    needles: ['dragon', 'ドラゴン', 'ドラン', 'ドラグーン', '竜', '龍', '드래곤', '드랜', '드라군', 'dran', '飞龙'],
   ),
   Concept('자쿠', ['자쿠', 'zaku', 'ザク', '扎古'], needles: ['zaku', 'ザク', '자쿠', '扎古'], hint: 'gundam'),
   Concept(
@@ -152,7 +156,7 @@ const sentenceConcepts = <Concept>[
   Concept(
     '잠자는',
     ['자고 있는', '자는', '잠자는', '잠든', 'sleep', 'おやすみ', 'すやすや', '寝', '睡觉', '睡着', '睡姿', '睡'],
-    needles: ['sleep', 'おやすみ', 'すやすや', '寝', '잠', '자는', '睡'],
+    needles: ['sleep', 'おやすみ', 'すやすや', '寝', '잠', '자는', '睡姿', '睡着', '熟睡', '睡觉'],
   ),
   Concept('세이버', ['세이버', 'saber', 'セイバー'], needles: ['saber', 'セイバー', '세이버']),
   Concept('블레이드', ['블레이드', 'blade', 'ブレード', '战刃'], needles: ['blade', 'ブレード', '블레이드']),
@@ -376,6 +380,31 @@ String normalizeSentence(String s) =>
     String.fromCharCodes([for (final c in s.runes) c >= 0xFF01 && c <= 0xFF5E ? c - 0xFEE0 : c]).toLowerCase();
 
 final _asciiWord = RegExp(r'^[a-z0-9\-]+$');
+
+/// 한자 (CJK 통합 한자 + 확장 A)
+final _hanRun = RegExp(r'[\u3400-\u9fff]+');
+bool _isSingleHan(String t) => t.length == 1 && _hanRun.hasMatch(t);
+
+/// 문장 쪽 한 글자 한자 표기 → 뜻 (红 · 金 · 龙 · 赤 …)
+final _singleHanTerms = <String, Concept>{
+  for (final c in sentenceConcepts)
+    for (final t in c.terms)
+      if (_isSingleHan(t)) t: c,
+};
+final _singleHanFillers = {
+  for (final f in _zhFillers)
+    if (f.length == 1) f,
+};
+
+/// 한자 덩어리 하나가 한 글자 표기 · 한 글자 군말만으로 되어 있으면 그 뜻들, 아니면 null.
+/// 红 · 红的 · 黑金 · 找龙 → 뜻 / 奥伯龙 · 闪粉 · 粉丝 → null (낱말 그대로 상품 글자에서 찾는다)
+List<Concept>? _singleHanRun(String run) {
+  final cs = run.split('');
+  if (!cs.any(_singleHanTerms.containsKey)) return null;
+  if (!cs.every((ch) => _singleHanTerms.containsKey(ch) || _singleHanFillers.contains(ch))) return null;
+  return [for (final ch in cs) ?_singleHanTerms[ch]];
+}
+
 final _split = RegExp(r'[\s,./!?·・、。()（）\[\]「」『』"“”]+');
 
 /// 문장에서 찾은 것: 표의 뜻 + 나머지 낱말
@@ -396,7 +425,8 @@ SentenceQuery parseSentence(String sentence) {
   // 긴 표기부터 (예: "역습의 샤아" 를 "샤아" 보다 먼저)
   final terms = [
     for (final c in sentenceConcepts)
-      for (final t in c.terms) (c, t),
+      for (final t in c.terms)
+        if (!_isSingleHan(t)) (c, t),
   ]..sort((a, b) => b.$2.length.compareTo(a.$2.length));
   for (final (c, t) in terms) {
     final re = _asciiWord.hasMatch(t)
@@ -406,6 +436,19 @@ SentenceQuery parseSentence(String sentence) {
     text = text.replaceAll(re, ' ');
     if (!found.contains(c)) found.add(c);
   }
+  // 두 글자 이상 군말도 먼저 지운다 — 안 그러면 "帮我找红的" · "一个红的" 덩어리에 帮 · 我 · 一 · 个 가 남아 红 을 못 본다
+  for (final f in _zhFillers) {
+    if (f.length > 1) text = text.replaceAll(f, ' ');
+  }
+  // 긴 표기 · 긴 군말을 다 지운 뒤 남은 한자 덩어리 (红高达 → 高达 를 지우면 红 만 남는다)
+  text = text.replaceAllMapped(_hanRun, (m) {
+    final cs = _singleHanRun(m[0]!);
+    if (cs == null) return m[0]!;
+    for (final c in cs) {
+      if (!found.contains(c)) found.add(c);
+    }
+    return ' ';
+  });
   for (final f in _zhFillers) {
     text = text.replaceAll(f, ' ');
   }

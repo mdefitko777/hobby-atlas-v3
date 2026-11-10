@@ -17,6 +17,7 @@ Kit kit(
   String line = '',
   String type = '',
   String date = '',
+  String blob = '',
 }) => Kit(
   id: id,
   franchiseId: franchise,
@@ -41,6 +42,7 @@ Kit kit(
   market: null,
   keywords: const [],
   seriesKey: seriesKey,
+  blob: blob,
 );
 
 Set<String> _labels(String s) => {for (final c in parseSentence(s).concepts) c.label};
@@ -66,6 +68,64 @@ void main() {
     expect(_labels('水星的魔女 风灵'), {'수성', '에어리얼'});
     expect(_labels('逆袭的夏亚'), {'역샤'}, reason: '긴 표기 먼저 — 夏亚 만 따로 잡지 않는다');
     expect(_labels('龙 战刃 陀螺'), {'드래곤', '블레이드', '베이블레이드'});
+  });
+
+  test('중국어 한 글자는 띄어 쓴 낱말 · 한 글자끼리 덩어리일 때만 뜻으로', () {
+    expect(_labels('红高达'), {'빨강', '건담'}, reason: '高达 를 지우면 红 만 남는다');
+    expect(_labels('黑金 高达'), {'검정', '금색', '건담'});
+    expect(_labels('找龙 陀螺'), {'드래곤', '베이블레이드'});
+    expect(_labels('帮我找红的高达'), {'빨강', '건담'}, reason: '두 글자 군말(帮我找)을 먼저 지워야 红 이 혼자 남는다');
+    expect(_labels('一个红的 扎古'), {'빨강', '자쿠'});
+    expect(_labels('有点粉的 粘土人'), {'분홍', '넨도로이드'});
+    expect(_labels('奥伯龙 粘土人'), {'넨도로이드'}, reason: '奥伯龙 의 龙 은 드래곤이 아니다');
+    expect(parseSentence('奥伯龙 粘土人').words, ['奥伯龙']);
+    expect(_labels('闪粉 亚克力'), isEmpty);
+    expect(_labels('金属 扎古'), {'메탈', '자쿠'});
+  });
+
+  test('중국어 이름이 상품 글자에 있어도 한 글자로 잘못 맞추지 않는다 (奥伯龙 · 金属)', () {
+    // 실제 데이터처럼 blob 에 한국어 · 일본어 · 중국어 이름이 다 들어 있다 (lib/data/gunpula.dart)
+    Kit nendo(String id, String ko, String ja, String zh, String date) => kit(
+      id,
+      name: ko,
+      nameJa: ja,
+      nameZh: zh,
+      franchise: 'fate',
+      line: '넨도로이드',
+      type: '피규어',
+      date: date,
+      blob: '$ko $ja 넨도로이드 피규어 $zh'.toLowerCase(),
+    );
+    final oberon = [
+      nendo('goodsmile-fate-14196', '넨도로이드 프리텐더/오베론', 'ねんどろいど プリテンダー/オベロン', '粘土人 Pretender / 奥伯龙', '2027-03'),
+      nendo('g35138', '넨도로이드 오베론 영기재림 Ver.', 'ねんどろいど オベロン 霊基再臨Ver.', '粘土人 奥伯龙 灵基再临Ver.', '2027-02'),
+    ];
+    final dragons = [
+      for (var i = 0; i < 5; i++)
+        nendo('dragon-$i', '넨도로이드 칸나 드래곤 Ver.$i', 'ねんどろいど カンナ ドラゴンVer.$i', '粘土人 康娜 龙Ver.$i', '2020-0${i + 1}'),
+    ];
+    final all = [...oberon, ...dragons];
+    final hits = sentenceSearch('드래곤 넨도로이드', all);
+    expect(hits.map((h) => h.kit.id), isNot(contains(startsWith('goodsmile-fate'))));
+    expect(hits.map((h) => h.kit.id).toSet(), {for (final k in dragons) k.id});
+    expect(hits.every((h) => h.score == 100), isTrue);
+    for (final h in sentenceSearch('드래곤 넨도로이드', all, limit: 99)) {
+      if (h.kit.id.startsWith('dragon')) continue;
+      expect(h.matched, isNot(contains('드래곤')), reason: h.kit.id);
+    }
+
+    final metal = kit(
+      'acvi-4934054088706',
+      name: '팬텀 C01-GAEA 레드 메탈 Ver.',
+      nameJa: 'ファンタズマ C01-GAEA レッドメタルVer.',
+      nameZh: '幻影 C01-GAEA 红色金属Ver.',
+      franchise: 'armored_core',
+      blob: '팬텀 c01-gaea 레드 메탈 ver. ファンタズマ c01-gaea レッドメタルver. 幻影 c01-gaea 红色金属ver.',
+    );
+    final gold = kit('acvi-gold', name: '팬텀 골드 Ver.', nameZh: '幻影 金色Ver.', franchise: 'armored_core');
+    expect(sentenceSearch('금색 아머드 코어', [metal, gold]).map((h) => h.kit.id), ['acvi-gold']);
+    expect(sentenceSearch('金色 装甲核心', [metal, gold]).map((h) => h.kit.id), ['acvi-gold']);
+    expect(sentenceSearch('금색 아머드 코어', [metal]), isEmpty);
   });
 
   test('찾기 화면 예시 문장의 중국어도 같은 뜻 (중국어 화면 예시 = sentenceExamplesZh)', () {

@@ -69,6 +69,7 @@ class NotifyStore extends ChangeNotifier {
     await meLoaded;
     me.addListener(_scheduleConfig);
     Catalog.instance.addListener(_scheduleConfig);
+    L10n.notifier.addListener(_onLanguage);
     await LocalNotifier.init();
     await _writeConfig();
     await scheduleCatalogCheck(enabled: config.enabled);
@@ -76,6 +77,13 @@ class NotifyStore extends ChangeNotifier {
     _life = AppLifecycleListener(onResume: () => unawaited(_onResume()));
     // 좋아요한 PB 상품의 예약 기간은 카탈로그에서 오므로 카탈로그가 준비된 뒤 첫 확인 (못 받아도 확인은 한다)
     unawaited(Catalog.instance.ensureLoaded().then((_) {}, onError: (Object _) {}).whenComplete(() => checkNow()));
+  }
+
+  /// 화면 언어를 바꾸면: notify_config.json 의 상품 이름(PB 예약 · 발매 D-n · 예약 도착 알림 제목)을 새 언어로 다시 쓰고,
+  /// 안드로이드 설정 › 알림의 채널 이름도 바꾼다 — 안 하면 다음 저장(보통 다음 실행)까지 백그라운드 알림이 옛 언어
+  void _onLanguage() {
+    _scheduleConfig();
+    unawaited(LocalNotifier.renameChannels());
   }
 
   Future<void> _onResume() async {

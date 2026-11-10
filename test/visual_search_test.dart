@@ -36,6 +36,13 @@ void main() {
     expect(() => index.nearest(Float32List(3)), throwsArgumentError);
   });
 
+  test('받기 실패 이유는 글만 (FormatException: · HttpException: 머리 없이)', () {
+    expect(visualErrorText(const FormatException('앱을 업데이트해야 받을 수 있어요')), '앱을 업데이트해야 받을 수 있어요');
+    expect(visualErrorText(const HttpException('내려받지 못했어요 (404)')), '내려받지 못했어요 (404)');
+    expect(visualErrorText(StateError('모델을 아직 받지 않았어요')), '모델을 아직 받지 않았어요');
+    expect(visualErrorText(UnsupportedError('못 해요')), '못 해요');
+  });
+
   test('표가 아니거나 잘렸으면 FormatException', () {
     expect(() => VisualIndex.parse(Uint8List.fromList([1, 2, 3])), throwsFormatException);
     expect(() => VisualIndex.parse(bytes.sublist(0, bytes.length - 3)), throwsFormatException);

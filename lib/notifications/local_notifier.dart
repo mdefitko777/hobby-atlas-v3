@@ -87,6 +87,20 @@ class LocalNotifier {
     }
   }
 
+  /// 화면 언어를 바꾼 뒤: 같은 id 로 채널을 다시 만들어 이름 · 설명만 새 언어로 (안드로이드가 중요도 · 사용자가 끈 설정은 그대로 둔다).
+  /// 아직 준비 전이면 할 일 없음 — init 이 그때의 언어로 만든다
+  static Future<void> renameChannels() async {
+    if (!supported || !_ready) return;
+    try {
+      final android = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      for (final c in channels.values) {
+        await android?.createNotificationChannel(c);
+      }
+    } on Object catch (e) {
+      debugPrint('[notify] 채널 이름을 바꾸지 못함: $e');
+    }
+  }
+
   static String _payload(String? p) => (p == null || p.isEmpty) ? 'inbox' : p;
 
   /// 안드로이드 13+ POST_NOTIFICATIONS 권한 창. 12 이하는 바로 true.

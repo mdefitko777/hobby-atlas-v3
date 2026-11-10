@@ -5,7 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hobby_atlas/api.dart';
 import 'package:hobby_atlas/data/user_store.dart';
 import 'package:hobby_atlas/detail_pane.dart';
+import 'package:hobby_atlas/l10n/l10n.dart';
 import 'package:hobby_atlas/logic/kit_rules.dart';
+import 'package:hobby_atlas/logic/market.dart';
 import 'package:hobby_atlas/marks.dart';
 import 'package:hobby_atlas/models.dart';
 import 'package:hobby_atlas/notifications/feed_rules.dart';
@@ -27,6 +29,7 @@ Kit kit(
   String id, {
   String name = '',
   String nameJa = '',
+  String nameZh = '',
   String franchise = 'gundam',
   String series = '',
   String seriesKey = '',
@@ -41,6 +44,7 @@ Kit kit(
   franchiseId: franchise,
   name: name.isEmpty ? id : name,
   nameJa: nameJa,
+  nameZh: nameZh,
   series: series,
   line: line,
   type: type,
@@ -267,6 +271,25 @@ void main() {
     final m = dataIssueUri(kind: ReportKind.missingKit, barcode: '4900000000000', problem: '상품이 없어요');
     expect(m.queryParameters['title'], '[없는 상품] 바코드 4900000000000 — 상품이 없어요');
     expect(reportChoices(ReportKind.guide), isNotEmpty);
+  });
+
+  test('중국어 화면에서도 국내 시세 검색 · 제보 제목은 한국어 이름 (없으면 일본어)', () {
+    addTearDown(() => L10n.debugSet(AppLang.ko));
+    L10n.debugSet(AppLang.zh);
+    final k = kit(
+      'goodsmile-fate-14196',
+      name: '넨도로이드 프리텐더/오베론',
+      nameJa: 'ねんどろいど プリテンダー/オベロン',
+      nameZh: '粘土人 Pretender / 奥伯龙',
+    );
+    expect(k.name, '粘土人 Pretender / 奥伯龙');
+    final q = marketSearchName(nameKo: k.nameKo, nameJa: k.nameJa);
+    expect(q, '넨도로이드 프리텐더/오베론');
+    expect(marketSearchUrl('번개장터', q), contains(Uri.encodeComponent('오베론')));
+    expect(marketSearchName(nameKo: ' ', nameJa: 'ねんどろいど'), 'ねんどろいど');
+    final u = dataIssueUri(kind: ReportKind.wrongInfo, kit: k, problem: '이름');
+    expect(u.queryParameters['title'], '[정보 오류] 넨도로이드 프리텐더/오베론 — 이름');
+    expect(u.queryParameters['body'], contains('- 중국어 이름: 粘土人 Pretender / 奥伯龙'));
   });
 
   test('같은 IP의 새 상품: 찾은 상품의 작품 · 새것부터 · 위에 보인 것 빼고 · 12개', () {

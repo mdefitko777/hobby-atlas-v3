@@ -53,7 +53,7 @@ void main() {
     expect(tr(channelOf('pokemon').label), '宝可梦');
     expect(tr(worldSectionOf('pokemon', 'pokemon-gen1')), '正篇世代');
     expect((episodesLabel('1–3화'), episodesLabel('12화'), episodesLabel('')), ('第 1–3 集', '第 12 集', ''));
-    expect(TagGame.frienda.subtitle, 'Frienda 卡');
+    expect(TagGame.frienda.subtitle, 'Frienda Pick');
 
     L10n.debugSet(AppLang.ko);
     expect((episodesLabel('1–3화'), lineGroupLabel('의류'), TagGame.frienda.subtitle), ('1–3화', '의류', '프렌다 픽'));

@@ -34,7 +34,7 @@ const Map<String, String> zhBrowse = {
 
   // 메자스타 · 프렌다 (lib/data/tag_atlas.dart)
   '메자스타 · 태그스타 태그': 'Mezastar · Tagstar 卡匣',
-  '프렌다 픽': 'Frienda 卡',
+  '프렌다 픽': 'Frienda Pick',
   '프로모 태그': '特典卡匣',
   '서포트 포켓몬 티켓': '支援宝可梦券',
   '서포트 포켓몬 티켓 · 이전': '支援宝可梦券 · 往期',
