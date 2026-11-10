@@ -12,6 +12,14 @@ const gunpulaBase = 'https://mdefitko777.github.io/Gunpula/';
 /// Pages 가 안 될 때만 (raw 는 kits.json 을 압축하지 않으니 split 만 받는다)
 const gunpulaRawBase = 'https://raw.githubusercontent.com/mdefitko777/Gunpula/main/';
 
+/// raw 로 받은 파일 안의 보관 사진 경로(`./assets/catalog|kotobukiya-ac|bbx/…`)를 raw 주소로.
+/// Pages 판은 이 사진들을 gunpula-img-N 저장소 주소로 바꿔 내보내지만 저장소 원본은 `./assets/…` 그대로이고,
+/// 이 폴더들은 Pages 에 더는 없다 (Gunpula `scripts/publish_site.mjs`, 2026-11-11). 사진 원본은 저장소에 있으니 raw 로.
+String rawAssetPaths(String json) => json.replaceAllMapped(
+  RegExp(r'"\./assets/(catalog|kotobukiya-ac|bbx)/'),
+  (m) => '"${gunpulaRawBase}app/assets/${m[1]}/',
+);
+
 /// Gunpula · 공식 페이지(프렌다 그림)에 보내는 User-Agent — Hobby Atlas 데이터 작업들과 같은 봇 이름 (브라우저인 척하지 않는다 · 웹은 바꿀 수 없다)
 const gunpulaUserAgent = 'HobbyAtlasDataBot/1.0 (+https://github.com/mdefitko777/Gunpula)';
 

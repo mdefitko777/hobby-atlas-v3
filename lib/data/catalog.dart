@@ -547,7 +547,8 @@ class Catalog extends ChangeNotifier {
             bytes.add(chunk);
             if (count) _addBytes(chunk.length);
           }
-          return utf8.decode(bytes.takeBytes());
+          final text = utf8.decode(bytes.takeBytes());
+          return base == gunpulaRawBase ? rawAssetPaths(text) : text;
         }
         await res.stream.drain<void>();
         debugPrint('[catalog] $base$path → HTTP ${res.statusCode}');
