@@ -79,6 +79,9 @@ class NotifyStore extends ChangeNotifier {
 
   Future<void> _onResume() async {
     await reloadFromDisk();
+    // 오래 뒤에 있던 앱: 상품 목록도 새 데이터가 있는지 본다 (알림 확인과 같은 [checkInterval] · manifest 가 같으면
+    // 안 받는다 · 뒤 작업이 새 manifest 를 봤으면 바로) — 「새 상품」 알림을 누르면 그 상품이 이 기기 목록에 있게
+    unawaited(Catalog.instance.checkForNewData(maxAge: checkInterval));
     await checkNow();
   }
 
@@ -156,14 +159,21 @@ class NotifyStore extends ChangeNotifier {
     state = next;
     _catchUpFollowed();
     notifyListeners();
+    // 알림 확인(뒤 작업 · 앱)이 상품 목록보다 새 manifest 를 봤다 → 상품 목록도 받는다 (그 manifest 하나에 한 번)
+    if (persist && Catalog.instance.noteManifestSeen(next.lastManifest)) {
+      unawaited(Catalog.instance.checkForNewData(maxAge: checkInterval));
+    }
   }
 
   // ── 확인 ──
-  /// [force] = 바로 (당겨서 새로 고침 · "지금 확인"), 아니면 마지막 확인에서 20분이 지났을 때만
+  /// 앱을 열 때 · 돌아올 때 확인하는 간격 (상품 목록의 새 데이터 확인도 이 간격)
+  static const checkInterval = Duration(minutes: 20);
+
+  /// [force] = 바로 (당겨서 새로 고침 · "지금 확인"), 아니면 마지막 확인에서 [checkInterval] 이 지났을 때만
   Future<CheckOutcome?> checkNow({bool force = false}) async {
     if (!persist || checking) return null;
     final last = DateTime.tryParse(state.lastCheckAt);
-    if (!force && last != null && DateTime.now().difference(last) < const Duration(minutes: 20)) return null;
+    if (!force && last != null && DateTime.now().difference(last) < checkInterval) return null;
     checking = true;
     notifyListeners();
     try {

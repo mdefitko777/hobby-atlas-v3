@@ -67,6 +67,11 @@ class Catalog extends ChangeNotifier {
   /// 새 데이터를 받을 때마다 +1 (앱 셸이 화면을 다시 불러온다)
   int version = 0;
 
+  /// 마지막 [version] 변화가 뒤에서 알아서 받은 것인가 (켤 때 · 돌아올 때 · 알림 상품 찾기).
+  /// 앱 셸은 이때 지금 보고 있는 탭을 바로 다시 만들지 않는다 (검색어 · 스크롤을 지킨다).
+  /// false = 사람이 고른 것 (당겨서 새로 고침 · 지금 새로 받기 · 레고 범위)
+  bool lastChangeQuiet = false;
+
   List<Kit> kits = const [];
   Map<String, Kit> byId = const {};
   Map<String, Object?> manifest = const {};
@@ -81,7 +86,12 @@ class Catalog extends ChangeNotifier {
   String get updatedAt => jStr(manifest['updated_at']);
 
   Future<void>? _loading;
-  bool _refreshing = false;
+
+  /// 지금 받는 중인 refresh (없으면 null) — [checkForNewData] 가 끝날 때까지 기다린다
+  Future<bool>? _inflight;
+
+  /// manifest 를 마지막으로 받아 본 때 (같아서 아무것도 안 받았어도)
+  DateTime? _checkedAt;
 
   /// 화면이 데이터를 쓰기 전에 기다린다. 캐시가 있으면 바로, 없으면 첫 다운로드가 끝날 때까지.
   Future<void> ensureLoaded() async {
@@ -103,7 +113,7 @@ class Catalog extends ChangeNotifier {
       await refresh();
     } else {
       // 캐시로 먼저 보여 주고 뒤에서 새로 받는다
-      refresh().ignore();
+      refresh(quiet: true).ignore();
     }
   }
 
@@ -143,6 +153,7 @@ class Catalog extends ChangeNotifier {
     if (_all.isEmpty) return;
     _applyScope();
     version++;
+    lastChangeQuiet = false;
     notifyListeners();
   }
 
@@ -170,6 +181,8 @@ class Catalog extends ChangeNotifier {
   void debugForget() {
     _slim = [];
     _loading = null;
+    _checkedAt = null;
+    _seenElsewhere = _seenElsewhereChecked = '';
     manifest = const {};
     _rebuild();
   }
@@ -182,6 +195,14 @@ class Catalog extends ChangeNotifier {
       ..clear()
       ..addAll(aux);
     _rebuild();
+  }
+
+  /// 테스트: 새 데이터를 받은 것처럼 [version] 만 올린다
+  @visibleForTesting
+  void debugBumpVersion({bool quiet = true}) {
+    version++;
+    lastChangeQuiet = quiet;
+    notifyListeners();
   }
 
   /// 받는 화면의 "다시 시도"
@@ -223,10 +244,60 @@ class Catalog extends ChangeNotifier {
   /// 보조 파일의 기기 캐시 이름 — `atlas/…` 처럼 폴더가 붙은 이름도 한 파일로 (`/` → `__`)
   static String auxKey(String file) => 'aux_${file.replaceAll('/', '__')}';
 
-  /// 새 데이터 확인. [force] = manifest 가 같아도 다시 받기 (설정 › 지금 새로 받기)
-  Future<bool> refresh({bool force = false}) async {
-    if (_refreshing) return false;
-    _refreshing = true;
+  /// 알림 확인(runCatalogCheck — 뒤 작업 · 앱)이 마지막으로 다 본 manifest 의 서명 (notify_state.json last_manifest)
+  String _seenElsewhere = '';
+
+  /// 그 서명으로 이미 한 번 확인했다 (같은 서명으로 manifest 를 또 받지 않게)
+  String _seenElsewhereChecked = '';
+
+  /// 알림 확인이 본 manifest 를 알려 준다 (notify_store.dart). 이 목록보다 새것이면 true — 다음 [checkForNewData] 는
+  /// 간격을 기다리지 않는다 (「새 상품」 알림은 그 manifest 로 만든 것이라, 이 기기 목록에는 아직 그 상품이 없다)
+  bool noteManifestSeen(String signature) {
+    if (signature.isEmpty) return false;
+    _seenElsewhere = signature;
+    return _behind;
+  }
+
+  bool get _behind =>
+      kits.isNotEmpty &&
+      _seenElsewhere.isNotEmpty &&
+      _seenElsewhere != manifestSignature(manifest) &&
+      _seenElsewhere != _seenElsewhereChecked;
+
+  /// 새 데이터가 있는지 한 번 더 본다 — 이미 받는 중이면 그것이 끝날 때까지 기다리고, [maxAge] 안에 manifest 를
+  /// 본 적이 있으면 받지 않는다 (알림 확인이 더 새 manifest 를 봤으면 바로). 바뀌었으면 true.
+  ///   · 앱으로 돌아올 때 · 알림 확인이 새 manifest 를 봤을 때 (알림 확인과 같은 20분 간격, notify_store.dart)
+  ///   · 알림 · 받은 링크의 상품이 이 기기 목록에 없을 때 (api.dart fetchKitsByIds)
+  Future<bool> checkForNewData({required Duration maxAge}) async {
+    if (_inflight case final f?) return f;
+    if (kits.isEmpty) return false; // 처음 받기는 ensureLoaded 가 맡는다
+    final behind = _behind;
+    final at = _checkedAt;
+    if (!behind && at != null && DateTime.now().difference(at) < maxAge) return false;
+    _seenElsewhereChecked = _seenElsewhere;
+    return refresh(quiet: true);
+  }
+
+  /// 새 데이터 확인. [force] = manifest 가 같아도 다시 받기 (설정 › 지금 새로 받기).
+  /// [quiet] = 뒤에서 알아서 받는 것 ([lastChangeQuiet])
+  ///
+  /// 뒤에서 받는 중에 사람이 고르면(당겨서 새로 고침 · 지금 새로 받기) 그 받기를 기다려 결과를 돌려주고, 받은 것은
+  /// 사람이 고른 것으로 친다 (지금 탭도 바로 다시). [force] 인데 그 받기가 같은 manifest 였으면 다시 받는다.
+  Future<bool> refresh({bool force = false, bool quiet = false}) async {
+    for (var f = _inflight; f != null; f = _inflight) {
+      if (quiet) return false;
+      _loud = true;
+      final changed = await f; // whenComplete 뒤라 여기서는 _inflight 가 비어 있다 (그 사이 또 시작했으면 다시 기다림)
+      if (changed || !force) return changed;
+    }
+    _loud = !quiet;
+    return _inflight = _refresh(force: force).whenComplete(() => _inflight = null);
+  }
+
+  /// 지금 받기를 사람이 골랐다 (처음부터, 또는 뒤에서 받는 중에 [refresh]) → [lastChangeQuiet] = false
+  bool _loud = false;
+
+  Future<bool> _refresh({required bool force}) async {
     if (kits.isEmpty) {
       phase = CatalogPhase.loading;
       progress = '새 데이터 확인 중';
@@ -237,6 +308,7 @@ class Catalog extends ChangeNotifier {
       if (mText == null) throw const CatalogException('인터넷에 연결하지 못했어요.');
       _fileDone();
       final m = jsonDecode(mText) as Map<String, Object?>;
+      _checkedAt = DateTime.now();
       // updated_at · total (+ content_hash — 같은 날 파일만 바뀐 갱신도 받는다)
       final same = manifestSignature(m) == manifestSignature(manifest);
       if (same && kits.isNotEmpty && !force) return false;
@@ -296,14 +368,15 @@ class Catalog extends ChangeNotifier {
       _slim = slim;
       _rebuild();
       version++;
+      lastChangeQuiet = !_loud;
       return true;
     } on Object catch (e) {
       error = e is CatalogException ? e.message : '데이터를 정리하다 멈췄어요: $e';
       debugPrint('[catalog] $error');
+      _checkedAt = null; // 다 받지 못했다 — 다음 확인은 간격을 기다리지 않는다
       if (kits.isEmpty) phase = CatalogPhase.error;
       return false;
     } finally {
-      _refreshing = false;
       progress = '';
       notifyListeners();
     }

@@ -57,12 +57,9 @@ class HobbyAtlasApp extends StatelessWidget {
           child: MarksHost(child: PaneHost(child: child!)),
         ),
       ),
-      // 새 데이터를 받으면 화면들이 다시 불러오도록 셸을 새로 만든다 (하루 한 번쯤).
-      // 처음 설치(캐시 없음)면 셸 대신 받는 화면 (V)
-      home: FirstRunGate(
-        catalog: Catalog.instance,
-        builder: (context) => AppShell(key: ValueKey(Catalog.instance.version)),
-      ),
+      // 처음 설치(캐시 없음)면 셸 대신 받는 화면 (V). 새 데이터를 받으면 셸은 그대로 두고 탭 화면만 다시 불러온다
+      // (s_app_shell.dart _onCatalog — 셸을 새로 만들면 지금 탭 · 검색어 · 서랍 · 연 시트가 사라졌다)
+      home: FirstRunGate(catalog: Catalog.instance, builder: (context) => const AppShell()),
     );
   }
 }

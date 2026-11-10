@@ -131,7 +131,8 @@ class FeedItem {
 
 /// 알리지 않는 변화 이유 (Gunpula scripts/build_update_feed.mjs changeReasons)
 /// release_found = 발매일이 처음 생긴 것 (나중에 상품 페이지에서 읽어 채운 날짜 — 바뀐 게 아니라 몰랐던 것)
-const quietReasons = {'image', 'name', 'series', 'product_line', 'metadata', 'release_found'};
+/// archive = 출처가 웹 보관본(Wayback)으로만 바뀐 것 (원래 페이지가 사라졌을 뿐, 상품은 그대로)
+const quietReasons = {'image', 'name', 'series', 'product_line', 'metadata', 'release_found', 'archive'};
 
 /// 옛 앱 app/update-feed.js itemIsPremiumBandai 와 같은 판정
 bool itemIsPremiumBandai(Map<String, Object?> j) {
@@ -308,7 +309,8 @@ NoticeRecord? recordForItem(FeedItem it, FeedEntry e, NotifyConfig c, {bool seen
     );
   }
   final wanted = wantedHit(it, c);
-  if (!wanted && ruleHits(it, c).isEmpty) return null;
+  final hits = ruleHits(it, c);
+  if (!wanted && hits.isEmpty) return null;
   return NoticeRecord(
     id: 'feed-${e.date}-${it.kitId}',
     kind: it.changeType,
@@ -321,7 +323,7 @@ NoticeRecord? recordForItem(FeedItem it, FeedEntry e, NotifyConfig c, {bool seen
     reasons: it.reasons,
     pb: it.isPb,
     wanted: wanted,
-    watched: it.isSeed00,
+    watched: hits.contains('seed_00'), // SEED / 00 규칙을 켜서 걸린 것만
     seen: seen,
   );
 }
@@ -642,6 +644,10 @@ class SystemAlert {
 /// 새 상품 · 변경을 하나씩 보내는 최대 개수 (넘으면 요약 하나)
 const catalogAlertsEach = 5;
 
+/// 요약 알림 제목: 「새 상품 6개 · 변경 2개」 (없는 쪽은 뺀다)
+String catalogSummaryTitle({required int added, required int changed}) =>
+    [if (added > 0) '새 상품 $added개', if (changed > 0) '변경 $changed개'].join(' · ');
+
 /// 새로 들어온 줄 → 휴대폰 알림. 새 상품은 5개까지 하나씩(넘으면 요약), 좋아요 · PB 는 3개까지 하나씩(넘으면 요약).
 List<SystemAlert> buildAlerts(Iterable<NoticeRecord> fresh) {
   final live = [
@@ -663,15 +669,11 @@ List<SystemAlert> buildAlerts(Iterable<NoticeRecord> fresh) {
       );
     }
   } else if (cat.isNotEmpty) {
-    // 제목: 옛 앱 maybeShowUpdateNotification 과 같은 순서
-    final title = cat.any((r) => r.watched)
-        ? 'SEED / 00 업데이트'
-        : cat.any((r) => r.pb || r.franchise == 'beyblade')
-        ? '관심 항목 업데이트'
-        : '모델 DB 업데이트';
+    // 제목 = 무엇이 몇 개인지 (옛 건담 앱의 「SEED / 00 업데이트 · 모델 DB 업데이트」는 섞인 묶음과 맞지 않았다)
     final dates = {for (final r in cat) r.date}.toList()..sort();
     final added = cat.where((r) => r.kind == 'added').length;
     final changed = cat.length - added;
+    final title = catalogSummaryTitle(added: added, changed: changed);
     final when = dates.length == 1 ? _md(dates.first) : '${_md(dates.first)}–${_md(dates.last)}';
     out.add(
       SystemAlert(
@@ -679,7 +681,7 @@ List<SystemAlert> buildAlerts(Iterable<NoticeRecord> fresh) {
         id: stableId('catalog:${cat.first.id}:${cat.length}'),
         channel: 'catalog',
         title: title,
-        body: '$when · 신규 $added · 변경 $changed · ${_names(cat)}',
+        body: '$when · ${_names(cat)}',
         payload: cat.length == 1 ? 'kit:${cat.first.kitId}' : 'inbox',
       ),
     );

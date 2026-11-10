@@ -41,6 +41,14 @@ Future<void> askUpdateOnce(BuildContext context, {AppUpdate? update}) async {
   if (context.mounted) await showUpdateSheet(context, info, update: u);
 }
 
+AppLifecycleListener? _resumeWatch;
+
+/// 앱으로 돌아올 때 ⬇ 확인 (한 시간에 한 번 — 켤 때 오프라인이라 못 봤으면 돌아올 때 바로 다시). 앱 셸이 한 번 부른다.
+void watchUpdateOnResume({AppUpdate? update}) {
+  if (!AppUpdate.supported) return;
+  _resumeWatch ??= AppLifecycleListener(onResume: () => (update ?? AppUpdate.instance).check().ignore());
+}
+
 /// 업데이트 시트 — 바뀐 점 + [나중에 · 업데이트]. 받는 동안 진행률, 다 받으면 안드로이드 설치 창
 Future<void> showUpdateSheet(BuildContext context, UpdateInfo info, {AppUpdate? update}) {
   final u = update ?? AppUpdate.instance;
@@ -174,7 +182,8 @@ class _VersionTileState extends State<VersionTile> {
     if (!mounted) return;
     setState(() => _checking = false);
     if (info == null) {
-      showToast(context, '최신 버전이에요');
+      // 못 받은 것을 「최신」이라고 하지 않는다
+      showToast(context, u.checkFailed ? '업데이트를 확인하지 못했어요 · 인터넷 연결을 확인해 주세요' : '최신 버전이에요');
     } else {
       await showUpdateSheet(context, info, update: u);
     }

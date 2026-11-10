@@ -90,18 +90,29 @@ class AppUpdate extends ChangeNotifier {
   /// 마지막 오류 (화면 토스트)
   String error = '';
 
+  /// 마지막 확인이 version.json 을 받지 못했다 (오프라인 · 시간 초과 · HTTP 오류) — 「최신 버전이에요」와 구별
+  bool checkFailed = false;
+
   DateTime? _lastCheck;
   StreamSubscription<OtaEvent>? _download;
 
-  /// version.json 확인. [force] 가 아니면 한 시간에 한 번. 새 빌드면 [available] 을 채우고 돌려준다.
+  /// version.json 확인. [force] 가 아니면 한 시간에 한 번 (받은 때만 센다 — 못 받았으면 다음에 바로 다시).
+  /// 새 빌드면 [available] 을 채우고 돌려준다. 못 받으면 [checkFailed] = true, 지난 결과를 그대로 돌려준다.
   Future<UpdateInfo?> check({bool force = false, Future<String?> Function(Uri)? fetch}) async {
     if (!supported && fetch == null) return null;
     final now = DateTime.now();
     if (!force && _lastCheck != null && now.difference(_lastCheck!) < const Duration(hours: 1)) return available;
-    _lastCheck = now;
+    final before = _lastCheck;
+    _lastCheck = now; // 확인하는 동안 겹쳐 부르지 않게
     final uri = Uri.parse('${updateBase}version.json');
     final text = await (fetch ?? _get)(uri);
-    if (text == null) return available;
+    if (text == null) {
+      _lastCheck = before;
+      checkFailed = true;
+      notifyListeners();
+      return available;
+    }
+    checkFailed = false;
     final info = UpdateInfo.fromJson(_decode(text));
     available = info != null && info.build > appBuild ? info : null;
     notifyListeners();
@@ -174,6 +185,7 @@ class AppUpdate extends ChangeNotifier {
     available = null;
     progress = null;
     error = '';
+    checkFailed = false;
     _lastCheck = null;
   }
 }

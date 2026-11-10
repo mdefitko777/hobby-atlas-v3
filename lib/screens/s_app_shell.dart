@@ -20,6 +20,7 @@
 // 전환: S-3 옆으로(탭) · S-4 덮기(bottom sheet) · S-1 덮기(Drawer → M) · S-9 · S-10 쌓기(push, 넓은 화면은 오른쪽 칸).
 // S-8: X · Threads처럼 내용을 내려 읽는 동안 탭 바를 숨겨 화면을 넓히고, 카메라 버튼만 남긴다.
 // 왜 이렇게: 위 IP 줄 + 아래 화면 줄 + 도감 안 탭처럼 길을 여럿 두지 않고, 아래 탭 하나 + 화면 안 채널 바 하나.
+import 'dart:async' show Timer;
 import 'dart:ui' show DisplayFeatureType, ImageFilter;
 
 import 'package:flutter/foundation.dart' show listEquals;
@@ -27,6 +28,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
 
 import '../api.dart';
+import '../data/catalog.dart';
 import '../data/user_store.dart';
 import '../detail_pane.dart';
 import '../channels.dart';
@@ -90,6 +92,12 @@ const _topRowHelp = <HelpItem>[
 class _AppShellState extends State<AppShell> {
   int _tab = 0;
 
+  /// 새 데이터(Catalog.version)를 받으면 탭 화면만 다시 만든다 — 셸(지금 탭 · 서랍 · 연 시트 · 오른쪽 칸)은 그대로.
+  /// 탭마다 그 화면을 만든 데이터 세대. 뒤에서 알아서 받은 데이터(lastChangeQuiet)면 지금 보고 있는 탭은
+  /// 떠날 때 다시 만든다 (검색어 · 스크롤 · 연 목록을 지킨다). 당겨서 새로 고침 · 지금 새로 받기 · 레고 범위는 바로.
+  int _dataVersion = Catalog.instance.version;
+  late final List<int> _pageGen = List.filled(_tabs.length, _dataVersion);
+
   /// 하단 탭 바가 보이는지 (아래로 스크롤하면 숨김)
   bool _barShown = true;
 
@@ -118,6 +126,7 @@ class _AppShellState extends State<AppShell> {
   @override
   void initState() {
     super.initState();
+    Catalog.instance.addListener(_onCatalog);
     LocalNotifier.taps.addListener(_onNotificationTap);
     ShareIntake.instance.incoming.addListener(_onShared);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -125,6 +134,7 @@ class _AppShellState extends State<AppShell> {
       _onShared(); // 공유로 켜졌으면
       _askNotifyOnce();
       askUpdateOnce(context); // 큰 업데이트면 한 번 묻기 (나중에 → ⬇ 아이콘만)
+      watchUpdateOnResume(); // 켤 때 못 봤으면(오프라인) 돌아올 때 다시 ⬇ 확인
     });
   }
 
@@ -142,10 +152,28 @@ class _AppShellState extends State<AppShell> {
 
   @override
   void dispose() {
+    Catalog.instance.removeListener(_onCatalog);
     LocalNotifier.taps.removeListener(_onNotificationTap);
     ShareIntake.instance.incoming.removeListener(_onShared);
     _me?.removeListener(_onUserStore);
     super.dispose();
+  }
+
+  void _onCatalog() {
+    final cat = Catalog.instance;
+    if (!mounted || cat.version == _dataVersion) return;
+    setState(() {
+      _dataVersion = cat.version; // STATE: 새 데이터 → 탭 화면 다시 만들기 (보고 있는 탭은 뒤에서 받은 것이면 떠날 때)
+      for (var i = 0; i < _pageGen.length; i++) {
+        if (i != _tab || !cat.lastChangeQuiet) _pageGen[i] = _dataVersion;
+      }
+    });
+  }
+
+  /// 탭 바꾸기 — 떠나는 탭이 옛 데이터로 남아 있었으면 지금 다시 만든다 (보이지 않는 동안)
+  void _setTab(int i) {
+    if (i != _tab) _pageGen[_tab] = _dataVersion;
+    _tab = i;
   }
 
   void _onUserStore() {
@@ -171,15 +199,23 @@ class _AppShellState extends State<AppShell> {
     final kitId = payload.startsWith('kit:') ? payload.substring(4) : '';
     if (kitId.isNotEmpty) {
       _notify.markKitRead(kitId);
+      // 「새 상품」은 이 기기 목록에 아직 없을 수 있다 — 새 데이터를 받아 찾는 동안 기다린다는 것을 알려 준다
+      final slow = Timer(const Duration(milliseconds: 800), () {
+        if (mounted) showToast(context, '새 데이터를 받는 중이에요 · 잠시만요');
+      });
       try {
         final kits = await widget.loaders.kitsByIds([kitId]);
+        slow.cancel();
         if (!mounted) return;
         if (kits.isNotEmpty) {
           openKitDetail(context, kits.first, loaders: widget.loaders);
           return;
         }
       } on ApiException catch (e) {
+        slow.cancel();
         if (mounted) showToast(context, e.message);
+      } finally {
+        slow.cancel(); // 다른 오류로 끝나도 「받는 중」이 뒤늦게 뜨지 않게
       }
     }
     if (mounted) openNotifications(context, myChannels: _myChannels, loaders: widget.loaders, notify: _notify);
@@ -197,7 +233,7 @@ class _AppShellState extends State<AppShell> {
 
   /// 검색 탭으로 + 검색창 커서 (홈 검색창 · 카메라 결과의 "이름으로 검색")
   void _goSearch() => setState(() {
-    _tab = 1; // STATE: 검색으로 → 검색 탭 + 커서
+    _setTab(1); // STATE: 검색으로 → 검색 탭 + 커서
     _searchFocusTick++;
     _barShown = true;
   });
@@ -209,6 +245,7 @@ class _AppShellState extends State<AppShell> {
       builder: (sheet) => AddSheet(
         onPick: (pick) {
           Navigator.pop(sheet);
+          if (!mounted) return;
           switch (pick) {
             case 'photo':
               openCamera(context, CameraMode.photo, loaders: widget.loaders, onGoSearch: _goSearch);
@@ -224,7 +261,7 @@ class _AppShellState extends State<AppShell> {
 
   /// 내 정보 숫자 · 홈 내 보드 · Lv → 컬렉션 탭 + 그 목록(좋아요 · 구매함 · 도감)
   void _jumpTo(CollectionJump j) => setState(() {
-    _tab = 3; // STATE: 컬렉션 탭 + 그 목록
+    _setTab(3); // STATE: 컬렉션 탭 + 그 목록
     _jump = j;
     _jumpTick++;
     _barShown = true;
@@ -287,7 +324,7 @@ class _AppShellState extends State<AppShell> {
       children: [
         avatar,
         const SizedBox(width: 6),
-        LevelButton(loaders: widget.loaders),
+        LevelButton(key: ValueKey(_dataVersion), loaders: widget.loaders), // 새 데이터면 다시 센다
         const Spacer(),
         const UpdateButton(), // 새 빌드가 있을 때만 ⬇
         bell,
@@ -311,7 +348,7 @@ class _AppShellState extends State<AppShell> {
     Widget page(int i) => i == 0
         ? HomeScreen(
             // A
-            key: const ValueKey(0),
+            key: ValueKey((0, _pageGen[0])),
             leading: wide ? null : topRow,
             myChannels: _myChannels,
             onMyChannelsChanged: _setChannels,
@@ -323,7 +360,7 @@ class _AppShellState extends State<AppShell> {
         : i == 1
         ? SearchScreen(
             // B
-            key: const ValueKey(1),
+            key: ValueKey((1, _pageGen[1])),
             leading: wide ? null : topRow,
             myChannels: _myChannels,
             onMyChannelsChanged: _setChannels,
@@ -334,7 +371,7 @@ class _AppShellState extends State<AppShell> {
         : i == 2
         ? CalendarScreen(
             // H
-            key: const ValueKey(2),
+            key: ValueKey((2, _pageGen[2])),
             leading: wide ? null : topRow,
             myChannels: _myChannels,
             onMyChannelsChanged: _setChannels,
@@ -342,7 +379,7 @@ class _AppShellState extends State<AppShell> {
           )
         : CollectionScreen(
             // F
-            key: const ValueKey(3),
+            key: ValueKey((3, _pageGen[3])),
             leading: wide ? null : topRow,
             myChannels: _myChannels,
             onMyChannelsChanged: _setChannels,
@@ -371,7 +408,7 @@ class _AppShellState extends State<AppShell> {
       bar: _BottomBar(
         index: _tab,
         onSelect: (i) => setState(() {
-          _tab = i; // STATE: 탭 번호 → IndexedStack
+          _setTab(i); // STATE: 탭 번호 → IndexedStack
           _barShown = true;
         }),
       ),
@@ -405,7 +442,7 @@ class _AppShellState extends State<AppShell> {
                           child: NavigationRail(
                             selectedIndex: _tab,
                             labelType: shortLandscape ? NavigationRailLabelType.none : NavigationRailLabelType.all,
-                            onDestinationSelected: (i) => setState(() => _tab = i),
+                            onDestinationSelected: (i) => setState(() => _setTab(i)),
                             // 가로 폰: 탭이 먼저 보이게 — 아바타 / 탭 4개 / 🔔 ⚙ 한 줄 (카메라는 검색창 카메라로)
                             leading: shortLandscape
                                 ? Padding(padding: const EdgeInsets.only(top: 4), child: avatar)

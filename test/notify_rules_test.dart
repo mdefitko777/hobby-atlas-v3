@@ -301,6 +301,51 @@ void main() {
       expect(a.single.payload, 'inbox');
       expect(a.single.id, isNot(b.single.id));
       expect(buildAlerts(batch('c', 5)), hasLength(5));
+      expect(a.single.title, '새 상품 6개');
+      expect(a.single.body, startsWith('11.03 · 「a0」 · 「a1」 외 4'));
+    });
+
+    test('요약 제목은 SEED / 00 규칙과 상관없이 개수 — 바뀐 것만이면 「변경 n개」', () {
+      final at = DateTime.utc(2026, 11, 3);
+      NoticeRecord r(String id, String kind, {bool watched = false}) => NoticeRecord(
+        id: id,
+        kind: kind,
+        kitId: id,
+        title: id,
+        body: '',
+        at: at,
+        date: '2026-11-03',
+        franchise: 'gundam',
+        watched: watched,
+      );
+      final mixed = [for (var i = 0; i < 5; i++) r('p$i', 'added'), r('seed', 'added', watched: true)];
+      expect(buildAlerts(mixed).single.title, '새 상품 6개');
+      expect(buildAlerts([for (var i = 0; i < 6; i++) r('c$i', 'changed')]).single.title, '변경 6개');
+      expect(catalogSummaryTitle(added: 2, changed: 5), '새 상품 2개 · 변경 5개');
+    });
+
+    test('SEED / 00 규칙을 끄면 건담 규칙으로 걸린 SEED 상품은 watched 가 아니다', () {
+      final c = defaults()..rules['gundam'] = true;
+      final seed = FeedItem.fromJson({
+        'kit_id': 'hg-seed-1',
+        'franchise': 'gundam',
+        'series_key': 'seed',
+        'names': {'ko': 'HG 스트라이크'},
+      }, 'added')!;
+      const e = FeedEntry(date: '2026-11-03', items: []);
+      expect(seed.isSeed00, isTrue);
+      expect(recordForItem(seed, e, c)!.watched, isTrue);
+      c.rules['seed_00'] = false;
+      final r = recordForItem(seed, e, c)!; // 건담 전체 규칙으로는 그대로 알린다
+      expect(r.watched, isFalse);
+    });
+
+    test('출처가 웹 보관본(Wayback)으로만 바뀐 것(archive)은 알리지 않는다', () {
+      FeedItem it(List<String> reasons) =>
+          FeedItem.fromJson({'kit_id': 'a', 'franchise': 'fate', 'change_reasons': reasons}, 'changed')!;
+      expect(it(['archive']).meaningful, isFalse);
+      expect(it(['archive', 'image']).meaningful, isFalse);
+      expect(it(['archive', 'price']).meaningful, isTrue);
     });
 
     test('좋아요한 상품은 채널 · 규칙과 상관없이 (가격 변경)', () {
@@ -417,7 +462,8 @@ void main() {
       expect(old, hasLength(2));
       expect(old.every((r) => r.seen), isTrue);
       expect(plan.records.where((r) => r.date != '2026-10-11').every((r) => !r.seen), isTrue);
-      expect(buildAlerts(plan.records).single.title, 'SEED / 00 업데이트');
+      // 요약 제목 = 무엇이 몇 개인지 (옛 「SEED / 00 업데이트」는 섞인 묶음 · 규칙을 끈 때와 맞지 않았다)
+      expect(buildAlerts(plan.records).single.title, '새 상품 6개 · 변경 2개');
     });
 
     test('피드를 못 받으면 날짜 · manifest 기록을 그대로 둔다', () {
