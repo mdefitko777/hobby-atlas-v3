@@ -9,6 +9,7 @@
 // 작품 배정은 MS 마스터의 작품 목록(작품별 등장 기체)에서 오고, 시대 가드([eraAllowed])가 다른 세계관 기체를 걸러 낸다
 // (예: GN- 은 서력(00) · LM3xx 는 우주세기(V건담) — SEED 작품에 들어가지 않는다).
 import '../json_util.dart';
+import '../l10n/l10n.dart';
 import 'gunpula.dart' show pickName;
 
 /// 앱이 받는 Atlas 파일 (data/ 아래 경로 = Catalog.aux 이름)
@@ -162,6 +163,15 @@ class AtlasUnit {
     blob: blob,
     type: t,
   );
+}
+
+/// [AtlasChapter.episodes] ("1–3화" · "12화", 기기에 그대로 둔 한국어) → 화면 글 (고른 언어)
+String episodesLabel(String episodes) {
+  final range = RegExp(r'^(\d+)–(\d+)화$').firstMatch(episodes);
+  if (range != null) return trf('{from}–{to}화', {'from': range[1], 'to': range[2]});
+  final one = RegExp(r'^(\d+)화$').firstMatch(episodes);
+  if (one != null) return trf('{n}화', {'n': one[1]});
+  return episodes;
 }
 
 /// 작품 안 묶음 — 화수 범위(장 · arc) 또는 한 화(episode)
