@@ -20,6 +20,7 @@ import 'package:flutter/foundation.dart';
 
 import '../data/user_store.dart';
 import '../json_util.dart';
+import '../l10n/l10n.dart';
 import 'device_state.dart';
 import 'rpc.dart';
 
@@ -186,7 +187,7 @@ class DeviceStateSync extends ChangeNotifier {
       _set(DeviceSyncPhase.offline, e.message);
       _retryTimer = Timer(retryEvery, () => syncNow(reason: 'retry').ignore());
     } on RpcException catch (e) {
-      _set(DeviceSyncPhase.error, e.code == '54000' ? '기기 기록이 너무 커서 올리지 못했어요' : e.toString());
+      _set(DeviceSyncPhase.error, e.code == '54000' ? tr('기기 기록이 너무 커서 올리지 못했어요') : e.toString());
     } on Object catch (e) {
       _set(DeviceSyncPhase.error, '$e');
     } finally {
@@ -269,11 +270,11 @@ class DeviceStateSync extends ChangeNotifier {
 
   /// 설정 화면 한 줄 (없으면 '')
   String get statusLine => switch (phase) {
-    DeviceSyncPhase.syncing => '기기 기록 맞추는 중…',
+    DeviceSyncPhase.syncing => tr('기기 기록 맞추는 중…'),
     DeviceSyncPhase.synced => '',
-    DeviceSyncPhase.offline => '오프라인 — 베이 · 도감 기록은 연결되면 맞춰요',
-    DeviceSyncPhase.missing => '서버에 기기 기록 함수가 없어 베이 · 도감 기록은 이 기기에만 있어요',
-    DeviceSyncPhase.error => '기기 기록을 맞추지 못했어요: $message',
+    DeviceSyncPhase.offline => tr('오프라인 — 베이 · 도감 기록은 연결되면 맞춰요'),
+    DeviceSyncPhase.missing => tr('서버에 기기 기록 함수가 없어 베이 · 도감 기록은 이 기기에만 있어요'),
+    DeviceSyncPhase.error => trf('기기 기록을 맞추지 못했어요: {message}', {'message': message}),
     DeviceSyncPhase.off => '',
   };
 

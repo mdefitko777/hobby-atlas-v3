@@ -19,6 +19,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 
 import '../data/user_store.dart';
+import '../l10n/l10n.dart';
 import 'collection_merge.dart';
 import 'friends_service.dart';
 import 'rpc.dart';
@@ -254,7 +255,7 @@ class SyncService extends ChangeNotifier with WidgetsBindingObserver {
     } on OfflineException catch (e) {
       _set(SyncPhase.offline, e.message);
     } on RpcException catch (e) {
-      _set(SyncPhase.error, e.isAuth ? '로그인이 풀렸어요. 다시 로그인해 주세요' : e.toString());
+      _set(SyncPhase.error, e.isAuth ? tr('로그인이 풀렸어요. 다시 로그인해 주세요') : e.toString());
     } on Object catch (e) {
       _set(SyncPhase.error, '$e');
     } finally {
@@ -358,7 +359,7 @@ class SyncService extends ChangeNotifier with WidgetsBindingObserver {
         store.markSynced(startRev);
       }
     } else {
-      throw const RpcException('PGRST202', '서버에 동기화 함수(Gunpula v2/v3 SQL)가 없어요');
+      throw RpcException('PGRST202', tr('서버에 동기화 함수(Gunpula v2/v3 SQL)가 없어요'));
     }
   }
 
@@ -442,15 +443,19 @@ class SyncService extends ChangeNotifier with WidgetsBindingObserver {
   String get statusLine {
     final dirty = store.cloudDirty;
     return switch (phase) {
-      SyncPhase.off => auth.signedIn ? '곧 동기화해요' : '로그인하지 않음',
-      SyncPhase.syncing => '동기화 중…',
+      SyncPhase.off => tr(auth.signedIn ? '곧 동기화해요' : '로그인하지 않음'),
+      SyncPhase.syncing => tr('동기화 중…'),
       SyncPhase.synced => [
-        '동기화됨${lastSyncedAt == null ? '' : ' · ${_ago(lastSyncedAt!)}'}',
-        if (workspace case final w?) '공유 공간 「${w.name}」 · $selfName${w.canEdit ? '' : ' (읽기 전용)'}' else '내 계정에 저장',
-        if (accountSwitched) '다른 계정이라 이 기기의 구매함 · 좋아요를 이 계정 것으로 바꿨어요',
+        '${tr('동기화됨')}${lastSyncedAt == null ? '' : ' · ${_ago(lastSyncedAt!)}'}',
+        if (workspace case final w?)
+          '${trf('공유 공간 「{name}」', {'name': w.name})} · $selfName${w.canEdit ? '' : ' (${tr('읽기 전용')})'}'
+        else
+          tr('내 계정에 저장'),
+        if (accountSwitched) tr('다른 계정이라 이 기기의 구매함 · 좋아요를 이 계정 것으로 바꿨어요'),
       ].join('\n'),
-      SyncPhase.offline => dirty ? '오프라인 — 바꾼 것은 기기에 있고, 연결되면 올려요' : '오프라인 — 연결되면 다시 받아요',
-      SyncPhase.error => '동기화하지 못했어요: $message${dirty ? '\n바꾼 것은 기기에 남아 있어요' : ''}',
+      SyncPhase.offline => tr(dirty ? '오프라인 — 바꾼 것은 기기에 있고, 연결되면 올려요' : '오프라인 — 연결되면 다시 받아요'),
+      SyncPhase.error =>
+        '${trf('동기화하지 못했어요: {message}', {'message': message})}${dirty ? '\n${tr('바꾼 것은 기기에 남아 있어요')}' : ''}',
     };
   }
 

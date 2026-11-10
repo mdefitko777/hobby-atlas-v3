@@ -30,6 +30,7 @@ import '../logic/preorder.dart';
 import '../marks.dart';
 import '../channels.dart';
 import '../data/catalog.dart';
+import '../l10n/l10n.dart';
 import '../models.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -165,20 +166,20 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   SectionHeader(
-                    '휴지통',
-                    subtitle: '지운 상품은 30일 동안 여기서 되살릴 수 있어요',
+                    tr('휴지통'),
+                    subtitle: tr('지운 상품은 30일 동안 여기서 되살릴 수 있어요'),
                     padding: const EdgeInsets.fromLTRB(16, 0, 8, 8),
                     trailing: gone.isEmpty
                         ? null
                         : TextButton(
-                            onPressed: () => restore(gone.map((k) => k.id), '${gone.length}개를 모두 복원했어요'),
-                            child: const Text('모두 복원'),
+                            onPressed: () => restore(gone.map((k) => k.id), trf('{n}개를 모두 복원했어요', {'n': gone.length})),
+                            child: Text(tr('모두 복원')),
                           ),
                   ),
                   if (gone.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.fromLTRB(16, 8, 16, 28),
-                      child: Text('지운 상품이 없어요', style: TextStyle(color: Gp.muted)),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+                      child: Text(tr('지운 상품이 없어요'), style: const TextStyle(color: Gp.muted)),
                     )
                   else
                     Flexible(
@@ -191,11 +192,11 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                               image: k.image,
                               title: k.name,
                               size: 52,
-                              tag: removed[k.id]! ? '구매함' : '좋아요',
-                              onTap: () => restore([k.id], '「${k.name}」을(를) 복원했어요'),
-                              trailing: const Text(
-                                '복원',
-                                style: TextStyle(color: Gp.accent, fontWeight: FontWeight.w600),
+                              tag: tr(removed[k.id]! ? '구매함' : '좋아요'),
+                              onTap: () => restore([k.id], trf('「{name}」을(를) 복원했어요', {'name': k.name})),
+                              trailing: Text(
+                                tr('복원'),
+                                style: const TextStyle(color: Gp.accent, fontWeight: FontWeight.w600),
                               ),
                             ),
                         ],
@@ -249,11 +250,11 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
       // F-7 P05
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('$n개를 ${_ownedTab ? '구매함' : '좋아요'}에서 삭제할까요?'),
-        content: const Text('내 컬렉션에서만 빠져요 · 🗑 휴지통에서 30일 안에 되살려요'),
+        title: Text(_ownedTab ? trf('{n}개를 구매함에서 삭제할까요?', {'n': n}) : trf('{n}개를 좋아요에서 삭제할까요?', {'n': n})),
+        content: Text(tr('내 컬렉션에서만 빠져요 · 🗑 휴지통에서 30일 안에 되살려요')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('취소')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('삭제')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr('취소'))),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(tr('삭제'))),
         ],
       ),
     );
@@ -277,7 +278,7 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
     if (!mounted) return;
     showToast(
       context,
-      '$n개를 삭제했어요',
+      trf('{n}개를 삭제했어요', {'n': n}),
       onUndo: () {
         apply(true);
         marks.store.trashRemove(gone);
@@ -313,11 +314,11 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                   FindBar(
                     // F-12 모든 탭과 같은 줄 · 같은 높이(채널 바 바로 아래): [검색창][필터]
                     hint: _guide
-                        ? '도감에서 찾기'
+                        ? tr('도감에서 찾기')
                         : switch (_tab) {
-                            _Tab.owned => '구매함에서 찾기',
-                            _Tab.preorder => '예약에서 찾기',
-                            _Tab.liked => '좋아요에서 찾기',
+                            _Tab.owned => tr('구매함에서 찾기'),
+                            _Tab.preorder => tr('예약에서 찾기'),
+                            _Tab.liked => tr('좋아요에서 찾기'),
                           },
                     onQuery: (q) => setState(() => _find.query = q), // STATE: 찾기 → 목록 · 도감
                     filterCount: _guide ? _guideFilter.filter.count : _find.filter.count,
@@ -326,7 +327,7 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                       ToolIcon(
                         // F-10 휴지통 (지운 수 배지)
                         icon: Icons.delete_outline,
-                        tip: '휴지통',
+                        tip: tr('휴지통'),
                         badge: _removed.length,
                         onTap: () => _openTrash(all),
                       ),
@@ -334,13 +335,13 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                           ? ToolIcon(
                               // F-8 도감 탭: 편집 자리에 내 컬렉션 공유 카드
                               icon: Icons.ios_share,
-                              tip: '공유 카드',
+                              tip: tr('공유 카드'),
                               onTap: () => openCollectionShare(context, loaders: widget.loaders),
                             )
                           : ToolIcon(
                               // F-6 편집 → 체크박스 · 삭제 바
                               icon: _editing ? Icons.done : Icons.checklist,
-                              tip: _editing ? '편집 끝내기' : '편집',
+                              tip: tr(_editing ? '편집 끝내기' : '편집'),
                               onTap: () => setState(() {
                                 _editing = !_editing; // STATE: 편집 → 체크박스 · 삭제 바
                                 _selected.clear();
@@ -395,38 +396,40 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
         return ListView(
           children: [
             ?stages,
-            EmptyView(icon: buildStageIcon(buildFilterAt(_build) ?? BuildStage.unbuilt), message: '이 상태의 상품이 없어요'),
+            EmptyView(icon: buildStageIcon(buildFilterAt(_build) ?? BuildStage.unbuilt), message: tr('이 상태의 상품이 없어요')),
           ],
         );
       }
       return EmptyView(
         // F-12 찾기 · 필터 결과 없음
         icon: Icons.search_off,
-        message: '이 조건의 상품이 없어요',
+        message: tr('이 조건의 상품이 없어요'),
         action: _find.filter.count > 0
-            ? OutlinedButton(onPressed: () => setState(() => _find.filter = KitFilter()), child: const Text('필터 초기화'))
+            ? OutlinedButton(onPressed: () => setState(() => _find.filter = KitFilter()), child: Text(tr('필터 초기화')))
             : null,
       );
     }
     if (kits.isEmpty && _tab == _Tab.preorder) {
-      return const EmptyView(icon: preorderIcon, message: '기다리는 예약이 없어요', detail: '상품 상세의 예약 칸에 적으면 여기에 모여요');
+      return EmptyView(icon: preorderIcon, message: tr('기다리는 예약이 없어요'), detail: tr('상품 상세의 예약 칸에 적으면 여기에 모여요'));
     }
     if (kits.isEmpty) {
       final empty = EmptyView(
         // F-9 P09
         icon: _ownedTab ? Icons.bookmark_added_outlined : Icons.favorite_border, // 구매함 = 리본, 좋아요 = ♡
-        message: _ownedTab ? '아직 구매함에 넣은 상품이 없어요' : '아직 좋아요에 담은 상품이 없어요',
-        detail: channel == allChannelId ? '상품 상세에서 좋아요 · 구매함을 누르면 여기에 모여요' : '${channelOf(channel).label} 채널에는 아직 없어요',
+        message: tr(_ownedTab ? '아직 구매함에 넣은 상품이 없어요' : '아직 좋아요에 담은 상품이 없어요'),
+        detail: channel == allChannelId
+            ? tr('상품 상세에서 좋아요 · 구매함을 누르면 여기에 모여요')
+            : trf('{channel} 채널에는 아직 없어요', {'channel': tr(channelOf(channel).label)}),
         action: _removed.isEmpty
             ? OutlinedButton.icon(
                 onPressed: widget.onGoSearch,
                 icon: const Icon(Icons.search, size: Gp.iM),
-                label: const Text('검색하러 가기'),
+                label: Text(tr('검색하러 가기')),
               )
             : OutlinedButton.icon(
                 onPressed: () => _openTrash(all), // 다 지웠어도 휴지통은 열 수 있게
                 icon: const Icon(Icons.delete_outline, size: Gp.iM),
-                label: Text('휴지통 (${_removed.length})'),
+                label: Text(trf('휴지통 ({n})', {'n': _removed.length})),
               ),
       );
       // R-11 상품은 없어도 좋아요 · 구매함한 태그 · 픽은 보인다
@@ -462,9 +465,19 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                     child: Text(
                       switch (_tab) {
                         // 세 탭 모두 "개수 · 돈 · 더" 순서
-                        _Tab.owned => joinDot(['$pieces개', '지출 ${won(spent)}', if (backlog > 0) '미조립 $backlog']),
-                        _Tab.preorder => joinDot(['${kits.length}건', if (due > 0) '낼 돈 ${won(due)}']),
-                        _Tab.liked => joinDot(['$pieces개', '합계 ${yen(total)}']),
+                        _Tab.owned => joinDot([
+                          trf('{n}개', {'n': pieces}),
+                          trf('지출 {money}', {'money': won(spent)}),
+                          if (backlog > 0) trf('미조립 {n}', {'n': backlog}),
+                        ]),
+                        _Tab.preorder => joinDot([
+                          trf('{n}건', {'n': kits.length}),
+                          if (due > 0) trf('낼 돈 {money}', {'money': won(due)}),
+                        ]),
+                        _Tab.liked => joinDot([
+                          trf('{n}개', {'n': pieces}),
+                          trf('합계 {money}', {'money': yen(total)}),
+                        ]),
                       }, // F-4 P01
                       style: const TextStyle(color: Gp.muted, fontSize: Gp.t12),
                     ),
@@ -483,18 +496,19 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                   title: k.name,
                   titleLines: 2,
                   size: 68,
-                  tag: _tab == _Tab.liked && (pre[k.id]?.active ?? false) ? '예약' : '',
+                  tag: _tab == _Tab.liked && (pre[k.id]?.active ?? false) ? tr('예약') : '',
                   tagColor: Gp.reserve,
                   subtitle: _tab == _Tab.preorder
                       ? joinDot([
                           pre[k.id]?.shop ?? '',
-                          if (pre[k.id]?.arrival case final a? when a.isNotEmpty) '${arrivalLabel(a)} 도착',
+                          if (pre[k.id]?.arrival case final a? when a.isNotEmpty)
+                            trf('{date} 도착', {'date': arrivalLabel(a)}),
                         ])
                       : joinDot([
                           if (me.quantityOf(k.id) > 1) '×${me.quantityOf(k.id)}', // D-7 수량
-                          channelOf(k.franchiseId).label,
-                          k.line,
-                          k.series,
+                          tr(channelOf(k.franchiseId).label),
+                          tr(k.line),
+                          k.seriesLabel,
                         ]),
                   leading: _editing
                       ? Icon(
@@ -517,7 +531,7 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                                   // 구매함: 적은 구매가 (없으면 정가 × 환율을 옅게 ≈) · 아래에 정가
                                   Text(
                                     switch (_paid(k)) {
-                                      (krw: null, estimate: _) => '구매가 미입력',
+                                      (krw: null, estimate: _) => tr('구매가 미입력'),
                                       (krw: final int w, estimate: true) => '≈ ${won(w)}',
                                       (krw: final int w, estimate: false) => won(w),
                                     },
@@ -528,7 +542,7 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                                     ),
                                   ),
                                   Text(
-                                    '정가 ${yen(k.priceJpy)}',
+                                    trf('정가 {money}', {'money': yen(k.priceJpy)}),
                                     style: const TextStyle(fontSize: Gp.t11, color: Gp.faint),
                                   ),
                                 ] else
@@ -561,7 +575,7 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                       _selected.addAll(kits.map((k) => k.id));
                     }
                   }),
-                  child: Text(_selected.length == kits.length ? '모두 해제' : '모두 선택'),
+                  child: Text(tr(_selected.length == kits.length ? '모두 해제' : '모두 선택')),
                 ),
                 const Spacer(),
                 OutlinedButton(
@@ -571,7 +585,7 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                     foregroundColor: Gp.danger,
                     side: BorderSide(color: _selected.isEmpty ? Gp.line : Gp.danger),
                   ),
-                  child: Text('삭제 (${_selected.length})'),
+                  child: Text(trf('삭제 ({n})', {'n': _selected.length})),
                 ),
               ],
             ),
@@ -594,8 +608,8 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
         current: _build,
         onPick: (i) => setState(() => _build = i), // STATE: 조립 상태 거르기 → 목록
         child: (i) => Text(switch (buildFilterAt(i)) {
-          null => '전체 $total',
-          final s => '${s.label} ${counts[s]}',
+          null => trf('전체 {n}', {'n': total}),
+          final s => '${tr(s.label)} ${counts[s]}',
         }),
       ),
     );
@@ -613,14 +627,14 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
             style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w600),
           ),
           Text(
-            (p?.due ?? 0) > 0 ? '낼 돈 ${won(p!.due)}' : (p?.paid ?? false ? '결제 완료' : '미결제'),
+            (p?.due ?? 0) > 0 ? trf('낼 돈 {money}', {'money': won(p!.due)}) : tr(p?.paid ?? false ? '결제 완료' : '미결제'),
             style: TextStyle(fontSize: Gp.t11, color: (p?.due ?? 0) > 0 ? Gp.reserve : Gp.faint),
           ),
         ],
       ),
       if (!_editing)
         IconButton(
-          tooltip: '도착했어요',
+          tooltip: tr('도착했어요'),
           onPressed: () => markPreorderArrived(context, k),
           icon: const Icon(arrivedIcon, size: Gp.iM, color: Gp.reserve),
         ),
@@ -653,9 +667,9 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
     return Dismissible(
       key: ValueKey('swipe-${k.id}'),
       background: _ownedTab
-          ? bg(Gp.accent, Icons.favorite, '좋아요로', Alignment.centerLeft)
-          : bg(Gp.own, Icons.bookmark, '구매함으로', Alignment.centerLeft),
-      secondaryBackground: bg(Gp.danger, Icons.delete_outline, '빼기', Alignment.centerRight),
+          ? bg(Gp.accent, Icons.favorite, tr('좋아요로'), Alignment.centerLeft)
+          : bg(Gp.own, Icons.bookmark, tr('구매함으로'), Alignment.centerLeft),
+      secondaryBackground: bg(Gp.danger, Icons.delete_outline, tr('빼기'), Alignment.centerRight),
       confirmDismiss: (dir) async {
         if (dir == DismissDirection.startToEnd && _tab == _Tab.preorder) {
           await markPreorderArrived(context, k); // 예약 → 도착 (· 구매함, 예약 총액 = 구매가)
@@ -669,7 +683,7 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
           marks.store.trashAdd([k.id], owned: wasOwned);
           showToast(
             context,
-            wasOwned ? '구매함에서 뺐어요' : '좋아요에서 뺐어요',
+            tr(wasOwned ? '구매함에서 뺐어요' : '좋아요에서 뺐어요'),
             onUndo: () {
               wasOwned ? marks.set(k, owned: true) : marks.set(k, liked: true);
               marks.store.trashRemove([k.id]);
@@ -712,13 +726,13 @@ class _TopRow extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(6, 2, 6, 2),
       child: Row(
         children: [
-          one('좋아요', _Tab.liked), // F-2 P06
-          if ((counts[_Tab.preorder] ?? 0) > 0 || tab == _Tab.preorder) one('예약', _Tab.preorder),
-          one('구매함', _Tab.owned),
+          one(tr('좋아요'), _Tab.liked), // F-2 P06
+          if ((counts[_Tab.preorder] ?? 0) > 0 || tab == _Tab.preorder) one(tr('예약'), _Tab.preorder),
+          one(tr('구매함'), _Tab.owned),
           UnderlineTab(
             // F-8 도감 (개수 없음 — 내 진행은 칸으로)
             key: const ValueKey('tab-guide'),
-            label: '도감',
+            label: tr('도감'),
             fontSize: Gp.t16,
             selected: tab == null,
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -732,13 +746,13 @@ class _TopRow extends StatelessWidget {
 
 /// F-13 ? 도움말 (위 줄 ? 의 "컬렉션" 묶음 — s_app_shell.dart)
 List<HelpItem> collectionHelp() => [
-  const HelpItem(Icons.tune, '필터'),
-  const HelpItem(Icons.delete_outline, '휴지통 (30일 동안 되살리기)'),
-  const HelpItem(Icons.checklist, '편집 (골라서 지우기)'),
-  const HelpItem.group('구매함 · 예약 (누르면 다음 단계 · 길게 = 도색)'),
+  HelpItem(Icons.tune, tr('필터')),
+  HelpItem(Icons.delete_outline, tr('휴지통 (30일 동안 되살리기)')),
+  HelpItem(Icons.checklist, tr('편집 (골라서 지우기)')),
+  HelpItem.group(tr('구매함 · 예약 (누르면 다음 단계 · 길게 = 도색)')),
   ...kitProgressHelp(),
-  const HelpItem.group('도감'),
-  const HelpItem(Icons.ios_share, '내 컬렉션 공유 카드'),
-  const HelpItem(Icons.build_outlined, '베이 조합 만들기 (베이 도감)'),
+  HelpItem.group(tr('도감')),
+  HelpItem(Icons.ios_share, tr('내 컬렉션 공유 카드')),
+  HelpItem(Icons.build_outlined, tr('베이 조합 만들기 (베이 도감)')),
   ...tierHelpItems(),
 ];

@@ -33,6 +33,7 @@ import '../channels.dart';
 import '../clock.dart';
 import '../data/social_local.dart' show ProfileImageKind;
 import '../detail_pane.dart';
+import '../l10n/l10n.dart';
 import '../level.dart';
 import '../logic/build_status.dart';
 import '../logic/level_math.dart';
@@ -194,15 +195,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              row(Icons.account_circle_outlined, '아바타', () => editProfileImage(context, ProfileImageKind.avatar)),
-              row(Icons.wallpaper_outlined, '배경', () => editProfileImage(context, ProfileImageKind.cover)),
-              row(Icons.edit_outlined, '이름', () {
+              row(Icons.account_circle_outlined, tr('아바타'), () => editProfileImage(context, ProfileImageKind.avatar)),
+              row(Icons.wallpaper_outlined, tr('배경'), () => editProfileImage(context, ProfileImageKind.cover)),
+              row(Icons.edit_outlined, tr('이름'), () {
                 if (ensureSignedIn(context)) askDisplayName(context);
               }),
-              row(Icons.alternate_email, '아이디', () {
+              row(Icons.alternate_email, tr('아이디'), () {
                 if (ensureSignedIn(context)) askHandle(context);
               }),
-              row(Icons.sell_outlined, '취향 태그', _editTags),
+              row(Icons.sell_outlined, tr('취향 태그'), _editTags),
               const SizedBox(height: 8),
             ],
           ),
@@ -238,14 +239,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (dialog) => AlertDialog(
-        title: Text('${m.name}님과 친구를 끊을까요?'),
-        content: const Text('서로의 컬렉션 · 사진이 더 이상 보이지 않아요.'),
+        title: Text(trf('{name}님과 친구를 끊을까요?', {'name': m.name})),
+        content: Text(tr('서로의 컬렉션 · 사진이 더 이상 보이지 않아요.')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialog, false), child: const Text('취소')),
+          TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(tr('취소'))),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Gp.danger),
             onPressed: () => Navigator.pop(dialog, true),
-            child: const Text('친구 끊기'),
+            child: Text(tr('친구 끊기')),
           ),
         ],
       ),
@@ -254,7 +255,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       await AccountScope.read(context).friends.remove(m.handle);
       if (!mounted) return;
-      showToast(context, '${m.name}님과 친구를 끊었어요');
+      showToast(context, trf('{name}님과 친구를 끊었어요', {'name': m.name}));
       Navigator.of(context).maybePop();
     } on FriendsFailure catch (e) {
       if (mounted) showToast(context, e.message);
@@ -266,18 +267,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final friend = widget.friend;
     return Scaffold(
       appBar: AppBar(
-        title: friend == null ? const Text('내 정보') : null,
+        title: friend == null ? Text(tr('내 정보')) : null,
         actions: [
           if (friend == null)
             IconButton(
               // I-14 공유 카드
               key: const ValueKey('profile-share'),
-              tooltip: '공유 카드',
+              tooltip: tr('공유 카드'),
               onPressed: () => openCollectionShare(context, loaders: widget.loaders),
               icon: const Icon(Icons.ios_share, size: Gp.iL),
             ),
           // I-15 ?
-          HelpButton(title: friend == null ? '내 정보' : '친구', items: friend == null ? profileHelp : friendProfileHelp),
+          HelpButton(
+            title: tr(friend == null ? '내 정보' : '친구'),
+            items: friend == null ? profileHelp() : friendProfileHelp(),
+          ),
           const SizedBox(width: 6),
         ],
       ),
@@ -322,8 +326,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       children: [
         _Header(
           name: name,
-          subtitle: handle.isNotEmpty ? '@$handle' : (signedIn ? '아이디 없음' : '로그인 전'),
-          avatar: MyAvatar(fallback: name.characters.isEmpty ? '나' : name.characters.first, size: 76, ringWidth: 3),
+          subtitle: handle.isNotEmpty ? '@$handle' : tr(signedIn ? '아이디 없음' : '로그인 전'),
+          avatar: MyAvatar(fallback: name.characters.isEmpty ? tr('나') : name.characters.first, size: 76, ringWidth: 3),
           cover: ProfileCover(file: store.social.image(ProfileImageKind.cover)?.file ?? ''),
           level: level,
           onLevel: jump == null ? null : () => jump(CollectionJump.guide),
@@ -334,12 +338,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _Hint(
             // I-13 P09
             icon: Icons.cloud_outlined,
-            text: '로그인 전이에요',
-            action: '로그인',
+            text: tr('로그인 전이에요'),
+            action: tr('로그인'),
             onTap: () => openSignIn(context),
           )
         else if (account.handle.isEmpty && !account.friends.unavailable)
-          _Hint(icon: Icons.alternate_email, text: '아이디가 없어요', action: '아이디 정하기', onTap: () => askHandle(context)),
+          _Hint(
+            icon: Icons.alternate_email,
+            text: tr('아이디가 없어요'),
+            action: tr('아이디 정하기'),
+            onTap: () => askHandle(context),
+          ),
         Padding(
           // I-4 My Page 와 같은 두 묶음 (lib/widgets/stats.dart)
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
@@ -364,7 +373,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ? IconButton(
                   // I-9 공개 범위
                   key: const ValueKey('photo-privacy'),
-                  tooltip: '공개 범위',
+                  tooltip: tr('공개 범위'),
                   visualDensity: VisualDensity.compact,
                   onPressed: () => showPhotoPrivacy(context),
                   icon: Icon(privacyIcon(store.social), size: Gp.iM, color: Gp.muted),
@@ -403,12 +412,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               const Spacer(),
               IconButton(
-                tooltip: '아이디로 친구 추가',
+                tooltip: tr('아이디로 친구 추가'),
                 onPressed: () => showAddFriend(context),
                 icon: const Icon(Icons.person_add_alt_1_outlined, size: Gp.iL, color: Gp.ink),
               ),
               IconButton(
-                tooltip: '친구 요청',
+                tooltip: tr('친구 요청'),
                 onPressed: () => showFriendRequests(context),
                 icon: Badge(
                   isLabelVisible: f.incoming.isNotEmpty,
@@ -433,10 +442,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   IconButton(
-                    tooltip: '아이디 복사', // P07
+                    tooltip: tr('아이디 복사'), // P07
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: '@${account.handle}'));
-                      showToast(context, '아이디를 복사했어요');
+                      showToast(context, tr('아이디를 복사했어요'));
                     },
                     icon: const Icon(Icons.content_copy_rounded, size: Gp.iM, color: Gp.muted),
                   ),
@@ -477,20 +486,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: StatGroups(
             groups: [
               [
-                StatCell(const LikedIcon(), '${m.liked}', '좋아요', onTap: () => open(CollectionJump.liked)),
-                StatCell(const OwnedIcon(), '${m.owned}', '구매함', onTap: () => open(CollectionJump.owned)),
+                StatCell(const LikedIcon(), '${m.liked}', tr('좋아요'), onTap: () => open(CollectionJump.liked)),
+                StatCell(const OwnedIcon(), '${m.owned}', tr('구매함'), onTap: () => open(CollectionJump.owned)),
               ],
               [
                 StatCell(
                   const Icon(Icons.auto_awesome_mosaic_outlined, size: Gp.iS, color: Gp.muted),
                   '${m.lit}',
-                  '도감',
+                  tr('도감'),
                   onTap: () => open(CollectionJump.guide),
                 ),
                 StatCell(
                   const Icon(Icons.photo_library_outlined, size: Gp.iS, color: Gp.muted),
                   '${d.wall.photos.length}',
-                  '사진',
+                  tr('사진'),
                 ),
               ],
             ],
@@ -508,7 +517,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onPressed: () => _unfriend(m),
               style: OutlinedButton.styleFrom(foregroundColor: Gp.danger),
               icon: const Icon(Icons.person_remove_outlined, size: Gp.iM),
-              label: const Text('친구 끊기'),
+              label: Text(tr('친구 끊기')),
             ),
           ),
       ],
@@ -630,7 +639,7 @@ class _Header extends StatelessWidget {
               top: 4,
               right: 4,
               child: IconButton(
-                tooltip: '프로필 편집', // I-3
+                tooltip: tr('프로필 편집'), // I-3
                 onPressed: onEdit,
                 icon: const Icon(Icons.edit_outlined, size: Gp.iM, color: Gp.ink),
               ),
@@ -688,7 +697,7 @@ class _TagSheetState extends State<_TagSheet> {
               ),
               const Spacer(),
               IconButton(
-                tooltip: '저장',
+                tooltip: tr('저장'),
                 onPressed: () {
                   _add(); // 적어 두고 + 를 안 눌렀어도 넣는다
                   Navigator.pop(context, _tags);
@@ -731,10 +740,10 @@ class _TagSheetState extends State<_TagSheet> {
             textInputAction: TextInputAction.done,
             onSubmitted: (_) => _add(),
             decoration: InputDecoration(
-              hintText: '건담 · 베이블레이드 …',
+              hintText: tr('건담 · 베이블레이드 …'),
               counterText: '',
               suffixIcon: IconButton(
-                tooltip: '태그 더하기',
+                tooltip: tr('태그 더하기'),
                 onPressed: _add,
                 icon: const Icon(Icons.add, size: Gp.iM),
               ),
@@ -747,28 +756,28 @@ class _TagSheetState extends State<_TagSheet> {
 }
 
 /// I-15 ? 도움말 — 내 정보
-const profileHelp = <HelpItem>[
-  HelpItem(Icons.ios_share, '공유 카드 (그림으로 공유 · 저장)'),
-  HelpItem(Icons.edit_outlined, '프로필 편집 (아바타 · 배경 · 이름 · 아이디 · 태그)'),
-  HelpItem.widget(LikedIcon(size: Gp.iL), '좋아요 수 → 컬렉션'),
-  HelpItem.widget(OwnedIcon(size: Gp.iL), '구매함 수 → 컬렉션'),
-  HelpItem(Icons.inventory_2_outlined, '미조립 수 → 구매함'),
-  HelpItem(Icons.calendar_month_outlined, '이번 달 지출'),
-  HelpItem(Icons.account_balance_wallet_outlined, '총 지출'),
-  HelpItem(Icons.person_add_alt_1_outlined, '아이디로 친구 추가'),
-  HelpItem(Icons.mail_outline, '받은 친구 요청'),
-  HelpItem(Icons.content_copy_rounded, '내 아이디 복사'),
-  HelpItem(Icons.add_a_photo_outlined, '사진 넣기 (사진 벽)'),
-  HelpItem(Icons.group_outlined, '사진 공개 범위'),
-  HelpItem(Icons.lock_outline, '사진 공개 끔'),
-  HelpItem(Icons.warning_amber_rounded, '올리지 못한 사진 있음', color: Gp.star),
+List<HelpItem> profileHelp() => [
+  HelpItem(Icons.ios_share, tr('공유 카드 (그림으로 공유 · 저장)')),
+  HelpItem(Icons.edit_outlined, tr('프로필 편집 (아바타 · 배경 · 이름 · 아이디 · 태그)')),
+  HelpItem.widget(const LikedIcon(size: Gp.iL), tr('좋아요 수 → 컬렉션')),
+  HelpItem.widget(const OwnedIcon(size: Gp.iL), tr('구매함 수 → 컬렉션')),
+  HelpItem(Icons.inventory_2_outlined, tr('미조립 수 → 구매함')),
+  HelpItem(Icons.calendar_month_outlined, tr('이번 달 지출')),
+  HelpItem(Icons.account_balance_wallet_outlined, tr('총 지출')),
+  HelpItem(Icons.person_add_alt_1_outlined, tr('아이디로 친구 추가')),
+  HelpItem(Icons.mail_outline, tr('받은 친구 요청')),
+  HelpItem(Icons.content_copy_rounded, tr('내 아이디 복사')),
+  HelpItem(Icons.add_a_photo_outlined, tr('사진 넣기 (사진 벽)')),
+  HelpItem(Icons.group_outlined, tr('사진 공개 범위')),
+  HelpItem(Icons.lock_outline, tr('사진 공개 끔')),
+  HelpItem(Icons.warning_amber_rounded, tr('올리지 못한 사진 있음'), color: Gp.star),
 ];
 
 /// I-15 ? 도움말 — 친구 보기
-const friendProfileHelp = <HelpItem>[
-  HelpItem.widget(LikedIcon(size: Gp.iL), '친구의 좋아요'),
-  HelpItem.widget(OwnedIcon(size: Gp.iL), '친구의 구매함'),
-  HelpItem(Icons.auto_awesome_mosaic_outlined, '도감 비교'),
-  HelpItem(Icons.photo_library_outlined, '친구가 보이기로 둔 사진'),
-  HelpItem(Icons.person_remove_outlined, '친구 끊기'),
+List<HelpItem> friendProfileHelp() => [
+  HelpItem.widget(const LikedIcon(size: Gp.iL), tr('친구의 좋아요')),
+  HelpItem.widget(const OwnedIcon(size: Gp.iL), tr('친구의 구매함')),
+  HelpItem(Icons.auto_awesome_mosaic_outlined, tr('도감 비교')),
+  HelpItem(Icons.photo_library_outlined, tr('친구가 보이기로 둔 사진')),
+  HelpItem(Icons.person_remove_outlined, tr('친구 끊기')),
 ];
