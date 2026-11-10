@@ -11,6 +11,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/catalog.dart';
+import '../l10n/l10n.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -55,12 +56,12 @@ class FirstRunScreen extends StatelessWidget {
                 const SizedBox(height: 20),
                 if (failed)
                   // W-3
-                  ErrorView(title: '데이터를 받지 못했어요', message: c.error, onRetry: c.retry)
+                  ErrorView(title: tr('데이터를 받지 못했어요'), message: c.error, onRetry: c.retry)
                 else ...[
                   // V-2
-                  const Text(
-                    '데이터 받는 중',
-                    style: TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w700),
+                  Text(
+                    tr('데이터 받는 중'),
+                    style: const TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 14),
                   SizedBox(

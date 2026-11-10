@@ -17,6 +17,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../api.dart';
 import '../data/catalog.dart';
+import '../l10n/l10n.dart';
 import '../level.dart';
 import '../logic/build_status.dart';
 import '../logic/level_math.dart';
@@ -55,10 +56,10 @@ class _ShareSheetState extends State<_ShareSheet> {
     setState(() => _busy = true); // STATE: 찍는 중 → 버튼 잠금
     try {
       final png = await captureCard(widget.boundary);
-      if (png == null) throw StateError('카드를 그리지 못했어요');
+      if (png == null) throw StateError(tr('카드를 그리지 못했어요'));
       await f(png);
     } on Object catch (e) {
-      if (mounted) showToast(context, '만들지 못했어요: $e');
+      if (mounted) showToast(context, trf('만들지 못했어요: {error}', {'error': e}));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -75,7 +76,7 @@ class _ShareSheetState extends State<_ShareSheet> {
 
   Future<void> _save() => _run((png) async {
     final uri = await FilePicker.saveFile(fileName: widget.fileName, bytes: png, mimeType: 'image/png');
-    if (mounted && uri != null) showToast(context, '저장했어요');
+    if (mounted && uri != null) showToast(context, tr('저장했어요'));
   });
 
   @override
@@ -101,9 +102,9 @@ class _ShareSheetState extends State<_ShareSheet> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                action(Icons.ios_share, '공유', _share, key: const ValueKey('share-card-share')), // V-5
+                action(Icons.ios_share, tr('공유'), _share, key: const ValueKey('share-card-share')), // V-5
                 const SizedBox(width: 24),
-                action(Icons.download_outlined, '저장', _save, key: const ValueKey('share-card-save')),
+                action(Icons.download_outlined, tr('저장'), _save, key: const ValueKey('share-card-save')),
               ],
             ),
           ],
@@ -129,14 +130,15 @@ Future<void> openCollectionShare(BuildContext context, {Loaders loaders = const 
   if (!context.mounted) return;
   final owned = me.idsWith(const {CollectStatus.owned});
   final byId = Catalog.instance.byId;
-  final name = account.signedIn ? account.displayName : '나';
+  final meLabel = tr('나');
+  final name = account.signedIn ? account.displayName : meLabel;
   final handle = account.signedIn ? account.handle : '';
   await showShareCard(
     context,
     fileName: 'hobby-atlas-collection',
     card: CollectionShareCard(
-      avatar: MyAvatar(fallback: name.characters.isEmpty ? '나' : name.characters.first, size: 56, ringWidth: 2.5),
-      name: name.isEmpty ? '나' : name,
+      avatar: MyAvatar(fallback: name.characters.isEmpty ? meLabel : name.characters.first, size: 56, ringWidth: 2.5),
+      name: name.isEmpty ? meLabel : name,
       handle: handle,
       level: LevelChip(level: lv),
       liked: me.wantedCount,

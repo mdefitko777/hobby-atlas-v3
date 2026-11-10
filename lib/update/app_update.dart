@@ -12,6 +12,7 @@ import 'package:ota_update/ota_update.dart';
 
 import '../data/blob_store.dart';
 import '../json_util.dart';
+import '../l10n/l10n.dart';
 
 /// 이 APK 의 빌드 번호 (GitHub Actions 실행 번호)
 const appBuild = int.fromEnvironment('APP_BUILD');
@@ -20,7 +21,8 @@ const appBuild = int.fromEnvironment('APP_BUILD');
 const updateBase = 'https://github.com/mdefitko777/hobby-atlas-v3/releases/download/apk-latest/';
 
 /// 설정 › 버전 에 보이는 글자
-String get appVersionLabel => appBuild <= 0 ? '개발 빌드' : (appVersion.isEmpty ? '빌드 $appBuild' : appVersion);
+String get appVersionLabel =>
+    appBuild <= 0 ? tr('개발 빌드') : (appVersion.isEmpty ? trf('빌드 {n}', {'n': appBuild}) : appVersion);
 
 /// 이 APK 의 버전 이름 (1.1.6 = pubspec 앞 두 자리 + 빌드 번호, --dart-define=APP_VERSION)
 const appVersion = String.fromEnvironment('APP_VERSION');
@@ -42,7 +44,7 @@ class UpdateInfo {
 
   /// 1.1.6 (옛 version.json 에는 없다 → 빌드 번호로)
   final String version;
-  String get versionLabel => version.isEmpty ? '빌드 $build' : version;
+  String get versionLabel => version.isEmpty ? trf('빌드 {n}', {'n': build}) : version;
   final String builtAt;
 
   /// true = 앱을 열 때 한 번 묻는다, false(커밋에 [minor]) = ⬇ 아이콘만
@@ -157,18 +159,18 @@ class AppUpdate extends ChangeNotifier {
               case OtaStatus.INSTALLING || OtaStatus.INSTALLATION_DONE:
                 progress = null; // 안드로이드 설치 창으로
               case OtaStatus.PERMISSION_NOT_GRANTED_ERROR:
-                _fail('"알 수 없는 앱 설치"를 허용해야 업데이트할 수 있어요');
+                _fail(tr('"알 수 없는 앱 설치"를 허용해야 업데이트할 수 있어요'));
               case OtaStatus.CHECKSUM_ERROR:
-                _fail('받은 파일이 깨졌어요 · 다시 시도해 주세요');
+                _fail(tr('받은 파일이 깨졌어요 · 다시 시도해 주세요'));
               case OtaStatus.ALREADY_RUNNING_ERROR:
                 break;
               default:
-                _fail('업데이트를 받지 못했어요 (${e.status.name})');
+                _fail(trf('업데이트를 받지 못했어요 ({status})', {'status': e.status.name}));
             }
             notifyListeners();
           },
           onError: (Object e) {
-            _fail('업데이트를 받지 못했어요');
+            _fail(tr('업데이트를 받지 못했어요'));
             notifyListeners();
           },
         );

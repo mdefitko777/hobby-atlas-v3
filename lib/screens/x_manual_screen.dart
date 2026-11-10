@@ -15,6 +15,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../detail_pane.dart';
+import '../l10n/l10n.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'j_announcement_screen.dart' show articleViewSupported;
@@ -83,7 +84,7 @@ class _ManualScreenState extends State<ManualScreen> {
   /// X-4 브라우저로
   Future<void> _openOutside() async {
     final ok = await launchUrl(manualPageUri(widget.id), mode: LaunchMode.externalApplication);
-    if (!ok && mounted) showToast(context, '브라우저를 열지 못했어요');
+    if (!ok && mounted) showToast(context, tr('브라우저를 열지 못했어요'));
   }
 
   @override
@@ -101,7 +102,7 @@ class _ManualScreenState extends State<ManualScreen> {
               child: Row(
                 children: [
                   IconButton(
-                    tooltip: '뒤로',
+                    tooltip: tr('뒤로'),
                     icon: const Icon(Icons.arrow_back_ios_new, size: Gp.iM),
                     onPressed: () => Navigator.of(context).maybePop(),
                   ),
@@ -110,9 +111,9 @@ class _ManualScreenState extends State<ManualScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          '조립 설명서',
-                          style: TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w800),
+                        Text(
+                          tr('조립 설명서'),
+                          style: const TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w800),
                         ),
                         Text(
                           widget.kitName,
@@ -141,8 +142,8 @@ class _ManualScreenState extends State<ManualScreen> {
                   )
                 : ErrorView(
                     // X-3 P09
-                    title: _web == null ? '이 기기에서는 앱 안에서 볼 수 없어요' : '설명서를 열지 못했어요',
-                    message: '아래 「브라우저로」로 열 수 있어요',
+                    title: _web == null ? tr('이 기기에서는 앱 안에서 볼 수 없어요') : tr('설명서를 열지 못했어요'),
+                    message: tr('아래 「브라우저로」로 열 수 있어요'),
                     onRetry: _web == null ? _openOutside : _retry,
                   ),
           ),
@@ -159,16 +160,16 @@ class _ManualScreenState extends State<ManualScreen> {
                 child: Row(
                   children: [
                     const SizedBox(width: Gp.gutter),
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        'BANDAI HOBBY 공식 설명서',
-                        style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                        tr('BANDAI HOBBY 공식 설명서'),
+                        style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
                       ),
                     ),
                     TextButton.icon(
                       onPressed: _openOutside,
                       icon: const Icon(Icons.north_east, size: Gp.iS),
-                      label: const Text('브라우저로'),
+                      label: Text(tr('브라우저로')),
                     ),
                     const SizedBox(width: 8),
                   ],

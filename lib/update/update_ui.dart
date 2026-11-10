@@ -1,6 +1,7 @@
 // 앱 업데이트 화면 조각 — 위 줄 ⬇ 아이콘 · 업데이트 시트(바뀐 점 · 받기 진행률) · 앱을 열 때 한 번 묻기
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'app_update.dart';
@@ -19,7 +20,7 @@ class UpdateButton extends StatelessWidget {
         final info = u.available;
         if (info == null) return const SizedBox.shrink();
         return IconButton(
-          tooltip: '업데이트',
+          tooltip: tr('업데이트'),
           onPressed: () => showUpdateSheet(context, info, update: u),
           icon: Badge(
             smallSize: 8,
@@ -70,10 +71,10 @@ Future<void> showUpdateSheet(BuildContext context, UpdateInfo info, {AppUpdate? 
                   children: [
                     const Icon(Icons.system_update_alt, color: Gp.accent, size: Gp.iL),
                     const SizedBox(width: 10),
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        '새 버전이 있어요',
-                        style: TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w700),
+                        tr('새 버전이 있어요'),
+                        style: const TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w700),
                       ),
                     ),
                     SoftTag(info.versionLabel),
@@ -81,14 +82,18 @@ Future<void> showUpdateSheet(BuildContext context, UpdateInfo info, {AppUpdate? 
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  joinDot(['지금 $appVersionLabel', dateDot(info.builtAt), info.sizeLabel]),
+                  joinDot([
+                    trf('지금 {version}', {'version': appVersionLabel}),
+                    dateDot(info.builtAt),
+                    info.sizeLabel,
+                  ]),
                   style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
                 ),
                 if (info.notes.isNotEmpty) ...[
                   const SizedBox(height: 14),
-                  const Text(
-                    '바뀐 점',
-                    style: TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w700),
+                  Text(
+                    tr('바뀐 점'),
+                    style: const TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 6),
                   for (final n in info.notes)
@@ -118,7 +123,7 @@ Future<void> showUpdateSheet(BuildContext context, UpdateInfo info, {AppUpdate? 
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '받는 중 $p% · 다 받으면 설치 창이 떠요',
+                    trf('받는 중 {p}% · 다 받으면 설치 창이 떠요', {'p': p}),
                     style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
                   ),
                 ] else
@@ -133,22 +138,22 @@ Future<void> showUpdateSheet(BuildContext context, UpdateInfo info, {AppUpdate? 
                               borderRadius: BorderRadius.all(Radius.circular(Gp.radius)),
                             ),
                           ),
-                          child: const Text('나중에'),
+                          child: Text(tr('나중에')),
                         ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: GradientButton(
-                          label: '업데이트',
+                          label: tr('업데이트'),
                           onPressed: AppUpdate.supported ? () => u.start(info) : null, // STATE: 받기 시작
                         ),
                       ),
                     ],
                   ),
                 const SizedBox(height: 8),
-                const Text(
-                  '처음 한 번은 "이 출처의 앱 설치 허용"을 켜야 해요 · 내 기록은 그대로예요',
-                  style: TextStyle(fontSize: Gp.t11, color: Gp.faint),
+                Text(
+                  tr('처음 한 번은 "이 출처의 앱 설치 허용"을 켜야 해요 · 내 기록은 그대로예요'),
+                  style: const TextStyle(fontSize: Gp.t11, color: Gp.faint),
                 ),
               ],
             );
@@ -174,7 +179,7 @@ class _VersionTileState extends State<VersionTile> {
   Future<void> _check() async {
     final u = widget.update ?? AppUpdate.instance;
     if (!AppUpdate.supported) {
-      showToast(context, '이 빌드는 앱 안 업데이트를 쓰지 않아요');
+      showToast(context, tr('이 빌드는 앱 안 업데이트를 쓰지 않아요'));
       return;
     }
     setState(() => _checking = true); // STATE: 확인 중
@@ -183,7 +188,7 @@ class _VersionTileState extends State<VersionTile> {
     setState(() => _checking = false);
     if (info == null) {
       // 못 받은 것을 「최신」이라고 하지 않는다
-      showToast(context, u.checkFailed ? '업데이트를 확인하지 못했어요 · 인터넷 연결을 확인해 주세요' : '최신 버전이에요');
+      showToast(context, u.checkFailed ? tr('업데이트를 확인하지 못했어요 · 인터넷 연결을 확인해 주세요') : tr('최신 버전이에요'));
     } else {
       await showUpdateSheet(context, info, update: u);
     }
@@ -196,15 +201,18 @@ class _VersionTileState extends State<VersionTile> {
       listenable: u,
       builder: (context, _) => ListTile(
         leading: const Icon(Icons.info_outline),
-        title: const Text('버전'),
+        title: Text(tr('버전')),
         subtitle: Text(
           u.available == null
               ? 'Hobby Atlas · $appVersionLabel'
-              : 'Hobby Atlas · $appVersionLabel → ${u.available!.versionLabel} 있음',
+              : trf('Hobby Atlas · {version} → {next} 있음', {
+                  'version': appVersionLabel,
+                  'next': u.available!.versionLabel,
+                }),
         ),
         trailing: _checking
             ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
-            : Text('업데이트 확인 ›', style: TextStyle(color: u.available == null ? Gp.muted : Gp.accent)),
+            : Text(tr('업데이트 확인 ›'), style: TextStyle(color: u.available == null ? Gp.muted : Gp.accent)),
         onTap: _checking ? null : _check,
       ),
     );

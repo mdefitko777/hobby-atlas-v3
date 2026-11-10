@@ -47,6 +47,7 @@ import '../logic/restock.dart';
 import '../marks.dart';
 import '../detail_pane.dart';
 import '../channels.dart';
+import '../l10n/l10n.dart';
 import '../data/catalog.dart';
 import '../sync/account.dart';
 import '../data/user_store.dart';
@@ -137,7 +138,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
 
   Future<void> _openUrl(String url) async {
     final ok = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-    if (!ok && mounted) showToast(context, '열지 못했어요');
+    if (!ok && mounted) showToast(context, tr('열지 못했어요'));
   }
 
   /// 내가 낸 돈 (구매함일 때) — 기기에 저장, 컬렉션 지출 합계에 들어간다
@@ -157,7 +158,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SectionHeader('국내 시세', padding: EdgeInsets.fromLTRB(0, 0, 0, 12)),
+              SectionHeader(tr('국내 시세'), padding: const EdgeInsets.fromLTRB(0, 0, 0, 12)),
               _MarketCard(onOpen: _external),
             ],
           ),
@@ -178,16 +179,16 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SectionHeader('내 구매가', padding: EdgeInsets.fromLTRB(0, 0, 0, 12)),
+            SectionHeader(tr('내 구매가'), padding: const EdgeInsets.fromLTRB(0, 0, 0, 12)),
             TextField(
               controller: ctrl,
               autofocus: true,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(hintText: '예: 38000', suffixText: '원'),
+              decoration: InputDecoration(hintText: tr('예: 38000'), suffixText: tr('원')),
             ),
             const SizedBox(height: 6),
             Text(
-              '정가 ${yen(k.priceJpy)} · 컬렉션 지출 합계에 들어가요',
+              trf('정가 {price} · 컬렉션 지출 합계에 들어가요', {'price': yen(k.priceJpy)}),
               style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
             ),
             const SizedBox(height: 14),
@@ -200,7 +201,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
                 UserStore.instance.setPurchasePrice(k.id, v); // 보관 장소 · 메모는 그대로
                 showToast(
                   context,
-                  v == null ? '구매가를 지웠어요' : '구매가 ${won(v)}을 적었어요',
+                  v == null ? tr('구매가를 지웠어요') : trf('구매가 {price}을 적었어요', {'price': won(v)}),
                   onUndo: () {
                     setState(() => _paid = before);
                     UserStore.instance.setPurchasePrice(k.id, before);
@@ -208,7 +209,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
                 );
               },
               style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(46)),
-              child: const Text('적기'),
+              child: Text(tr('적기')),
             ),
           ],
         ),
@@ -222,18 +223,18 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
 
   void _copy(String text, String what) {
     Clipboard.setData(ClipboardData(text: text));
-    showToast(context, '$what을(를) 복사했어요');
+    showToast(context, trf('{what}을(를) 복사했어요', {'what': what}));
   }
 
   /// 공식 상품 페이지 · 국내 시세 검색을 브라우저로
   Future<void> _external(String where) async {
     final url = where == '공식 상품 페이지' ? k.officialUrl : marketSearchUrl(where, k.name);
     if (url.isEmpty) {
-      showToast(context, '공식 페이지 주소가 없는 상품이에요');
+      showToast(context, tr('공식 페이지 주소가 없는 상품이에요'));
       return;
     }
     final ok = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-    if (!ok && mounted) showToast(context, '$where을(를) 열지 못했어요');
+    if (!ok && mounted) showToast(context, trf('{where}을(를) 열지 못했어요', {'where': tr(where)}));
   }
 
   /// D-12 정보 오류 제보 — 무엇이 틀렸나 고르고 GitHub 이슈로 (lib/report.dart)
@@ -244,17 +245,17 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
 
   /// 공식 정보 (요약 줄과 바텀 시트가 같은 목록을 쓴다)
   List<(String, String)> get _specs => [
-    ('판매', k.pb ? 'PB 한정' : (k.limited ? '한정' : '일반 판매')),
-    ('분류', channelOf(k.franchiseId).label),
-    ('작품', k.series),
-    ('제품 라인', k.line),
-    ('상품 유형', k.type),
-    ('스케일', k.scale),
-    ('발매', dateDot(k.date)),
-    ('정가', yen(k.priceJpy)),
-    ('브랜드', k.brands.join(' · ')),
-    if (k.pbOpens.isNotEmpty || k.pbCloses.isNotEmpty) ('PB 예약', '${dateDot(k.pbOpens)} – ${dateDot(k.pbCloses)}'),
-    ('바코드', k.jan),
+    (tr('판매'), k.pb ? tr('PB 한정') : (k.limited ? tr('한정') : tr('일반 판매'))),
+    (tr('분류'), tr(channelOf(k.franchiseId).label)),
+    (tr('작품'), k.seriesLabel),
+    (tr('제품 라인'), tr(k.line)),
+    (tr('상품 유형'), tr(k.type)),
+    (tr('스케일'), k.scale),
+    (tr('발매'), dateDot(k.date)),
+    (tr('정가'), yen(k.priceJpy)),
+    (tr('브랜드'), k.brands.join(' · ')),
+    if (k.pbOpens.isNotEmpty || k.pbCloses.isNotEmpty) (tr('PB 예약'), '${dateDot(k.pbOpens)} – ${dateDot(k.pbCloses)}'),
+    (tr('바코드'), k.jan),
   ].where((e) => e.$2.isNotEmpty).toList();
 
   void _openSpecs() {
@@ -277,13 +278,13 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
         owned: _owned,
         onWanted: _toggleWanted,
         onOwned: _toggleOwned,
-        onCopy: () => _copy(k.name, '상품명'),
+        onCopy: () => _copy(k.name, tr('상품명')),
         onOfficial: () => _external('공식 상품 페이지'),
       ),
       body: LayoutBuilder(
         builder: (context, box) {
           final wide = box.maxWidth >= detailWideBreakpoint; // D-13
-          final gallery = _Gallery(images: _images, label: k.line, reference: k.imageRef);
+          final gallery = _Gallery(images: _images, label: tr(k.line), reference: k.imageRef);
           final info = _info(context);
           return Stack(
             children: [
@@ -319,7 +320,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
                   padding: const EdgeInsets.all(12),
                   child: RaisedCircleButton(
                     // D-1 P03
-                    tooltip: '뒤로',
+                    tooltip: tr('뒤로'),
                     size: 40,
                     onTap: () => Navigator.of(context).maybePop(),
                     child: const Icon(Icons.arrow_back_ios_new, size: Gp.iM, color: Gp.ink),
@@ -337,13 +338,13 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
                         RaisedCircleButton(
                           // D-18 P07
                           key: const ValueKey('share-kit'),
-                          tooltip: '공유',
+                          tooltip: tr('공유'),
                           size: 40,
                           onTap: _share,
                           child: const Icon(Icons.share_outlined, size: Gp.iM, color: Gp.ink),
                         ),
                         const SizedBox(width: 8),
-                        HelpButton(title: '상품 상세', items: detailHelp, raised: true), // D-15
+                        HelpButton(title: tr('상품 상세'), items: detailHelp, raised: true), // D-15
                       ],
                     ),
                   ),
@@ -366,7 +367,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
         ),
       );
     } on Object {
-      if (mounted) showToast(context, '공유하지 못했어요');
+      if (mounted) showToast(context, tr('공유하지 못했어요'));
     }
   }
 
@@ -390,9 +391,9 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
             ],
             const SizedBox(height: 14),
             // 엔화 = 일본 정가, 원화 = 국내 시세 · 내 구매가 (섞여 보여도 무엇인지 알게)
-            const Text(
-              '일본 정가',
-              style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
+            Text(
+              tr('일본 정가'),
+              style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
             ),
             const SizedBox(height: 2),
             // 좁은 화면에서는 다음 줄로 넘어가게 (Wrap)
@@ -408,13 +409,13 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 3),
                   child: Text(
-                    '발매 ${dateDot(k.date)}',
+                    trf('발매 {date}', {'date': dateDot(k.date)}),
                     style: const TextStyle(color: Gp.muted, fontSize: Gp.t12),
                   ),
                 ),
-                if (k.limited) const TagPill('한정', strong: true),
+                if (k.limited) TagPill(tr('한정'), strong: true),
                 if (k.pb) const TagPill('PB', strong: true),
-                if (_restocks.any((e) => !e.quiet)) const SoftTag('재판매', color: Gp.resale), // D-5h
+                if (_restocks.any((e) => !e.quiet)) SoftTag(tr('재판매'), color: Gp.resale), // D-5h
               ],
             ),
             const SizedBox(height: 10),
@@ -427,15 +428,15 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
                 decoration: BoxDecoration(color: Gp.bg, borderRadius: BorderRadius.circular(Gp.radius)),
                 child: Row(
                   children: [
-                    const Text(
-                      '국내 시세',
-                      style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                    Text(
+                      tr('국내 시세'),
+                      style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
                     ),
                     const SizedBox(width: 10),
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        '모은 시세 없음 · 찾아보기', // Gunpula 에 국내 시세가 없다 — 숫자를 지어내지 않는다
-                        style: TextStyle(fontSize: Gp.t14, color: Gp.muted),
+                        tr('모은 시세 없음 · 찾아보기'), // Gunpula 에 국내 시세가 없다 — 숫자를 지어내지 않는다
+                        style: const TextStyle(fontSize: Gp.t14, color: Gp.muted),
                       ),
                     ),
                     const Icon(Icons.north_east, size: Gp.iS, color: Gp.muted),
@@ -470,17 +471,17 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
                   ),
                   child: Row(
                     children: [
-                      const Text(
-                        '내 구매가',
-                        style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                      Text(
+                        tr('내 구매가'),
+                        style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           _paid == null
                               ? switch (Catalog.instance.listPriceKrw(widget.kit.id)) {
-                                  final int w => '안 적음 · 정가로 ≈ ${won(w)}',
-                                  _ => '아직 안 적었어요',
+                                  final int w => trf('안 적음 · 정가로 ≈ {price}', {'price': won(w)}),
+                                  _ => tr('아직 안 적었어요'),
                                 }
                               : won(_paid!),
                           style: TextStyle(
@@ -491,7 +492,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
                         ),
                       ),
                       Text(
-                        _paid == null ? '적기' : '수정',
+                        _paid == null ? tr('적기') : tr('수정'),
                         style: const TextStyle(fontSize: Gp.t12, color: Gp.accent, fontWeight: FontWeight.w600),
                       ),
                     ],
@@ -527,9 +528,9 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
               return const SizedBox(height: 120, child: LoadingView()); // P01
             }
             if (snap.hasError) {
-              return const Padding(
-                padding: EdgeInsets.all(16),
-                child: Text('관련 상품을 불러오지 못했어요', style: TextStyle(color: Gp.muted)),
+              return Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(tr('관련 상품을 불러오지 못했어요'), style: const TextStyle(color: Gp.muted)),
               );
             }
             final same = snap.data!.where((r) => r.id != k.id && r.series == k.series).toList();
@@ -538,7 +539,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SectionHeader(same.isNotEmpty ? '같은 작품의 다른 상품' : '같은 채널의 다른 상품'), // D-10 P06
+                SectionHeader(same.isNotEmpty ? tr('같은 작품의 다른 상품') : tr('같은 채널의 다른 상품')), // D-10 P06
                 SizedBox(
                   height: 148 + 32,
                   child: ListView.separated(
@@ -566,13 +567,13 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SectionHeader('상품 상세'), // D-11 P02
+            SectionHeader(tr('상품 상세')), // D-11 P02
             for (final img in _images)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(Gp.radius),
-                  child: AppImage(img, fit: BoxFit.fitWidth, placeholder: k.line),
+                  child: AppImage(img, fit: BoxFit.fitWidth, placeholder: tr(k.line)),
                 ),
               ),
           ],
@@ -584,7 +585,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
           child: TextButton.icon(
             onPressed: _report, // D-12 P09
             icon: const Icon(Icons.flag_outlined, size: Gp.iM, color: Gp.muted),
-            label: const Text('정보가 틀렸나요? 제보하기', style: TextStyle(color: Gp.muted)),
+            label: Text(tr('정보가 틀렸나요? 제보하기'), style: const TextStyle(color: Gp.muted)),
           ),
         ),
       ),
@@ -642,14 +643,14 @@ class _GalleryState extends State<_Gallery> {
               child: PageDots(count: images.length, index: page),
             ),
           if (widget.reference)
-            const Positioned(
+            Positioned(
               // D-2c
               left: 16,
               bottom: 10,
               child: Tooltip(
-                message: '공식 사진이 없어 같은 기체의 다른 상품 사진을 보여 줘요',
+                message: tr('공식 사진이 없어 같은 기체의 다른 상품 사진을 보여 줘요'),
                 triggerMode: TooltipTriggerMode.tap,
-                child: SoftTag('참고 그림 · 같은 기체'),
+                child: SoftTag(tr('참고 그림 · 같은 기체')),
               ),
             ),
         ],
@@ -740,12 +741,12 @@ class _SpecSheet extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Padding(
-              padding: EdgeInsets.only(bottom: 16),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
               child: Text(
-                '공식 정보',
+                tr('공식 정보'),
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: Gp.t19, fontWeight: FontWeight.w600),
+                style: const TextStyle(fontSize: Gp.t19, fontWeight: FontWeight.w600),
               ),
             ),
             DecoratedBox(
@@ -799,14 +800,14 @@ class _MarketCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Row(
+        Row(
           children: [
-            Icon(Icons.info_outline, size: Gp.iS, color: Gp.faint),
-            SizedBox(width: 6),
+            const Icon(Icons.info_outline, size: Gp.iS, color: Gp.faint),
+            const SizedBox(width: 6),
             Expanded(
               child: Text(
-                '모은 시세가 없어요 · 상품명으로 찾아보기', // P09
-                style: TextStyle(color: Gp.muted),
+                tr('모은 시세가 없어요 · 상품명으로 찾아보기'), // P09
+                style: const TextStyle(color: Gp.muted),
               ),
             ),
           ],
@@ -827,7 +828,7 @@ class _MarketCard extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            p,
+                            tr(p), // p 는 시세 검색 주소를 고르는 값 — 보이는 곳에서만 번역
                             style: const TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w500),
                           ),
                           const SizedBox(width: 2),
@@ -870,11 +871,11 @@ class _QtyRow extends StatelessWidget {
       child: Row(
         children: [
           Text(
-            owned ? '가진 수' : '갖고 싶은 수',
+            owned ? tr('가진 수') : tr('갖고 싶은 수'),
             style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
           ),
           const Spacer(),
-          step(Icons.remove, '하나 빼기', qty - 1),
+          step(Icons.remove, tr('하나 빼기'), qty - 1),
           SizedBox(
             width: 28,
             child: Text(
@@ -884,7 +885,7 @@ class _QtyRow extends StatelessWidget {
               style: const TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w600),
             ),
           ),
-          step(Icons.add, '하나 더', qty + 1),
+          step(Icons.add, tr('하나 더'), qty + 1),
         ],
       ),
     );
@@ -942,13 +943,13 @@ class _BottomActions extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Row(
               children: [
-                small(Icons.content_copy_rounded, '복사', onCopy), // P07
-                small(Icons.north_east, '공식', onOfficial), // P10 출처
+                small(Icons.content_copy_rounded, tr('복사'), onCopy), // P07
+                small(Icons.north_east, tr('공식'), onOfficial), // P10 출처
                 const SizedBox(width: 6),
                 Expanded(
                   child: TogglePill(
                     // P03
-                    label: '좋아요',
+                    label: tr('좋아요'),
                     icon: Icons.favorite_border,
                     activeIcon: Icons.favorite,
                     active: wanted,
@@ -958,7 +959,7 @@ class _BottomActions extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: TogglePill(
-                    label: '구매함',
+                    label: tr('구매함'),
                     icon: Icons.bookmark_add_outlined, // 리본 + = 구매함 (상품 사진 위 리본과 같은 모양)
                     activeIcon: Icons.bookmark_added,
                     color: Gp.own,
@@ -1000,13 +1001,13 @@ class _RestockList extends StatelessWidget {
                   Icon(restockIcon, size: Gp.iS, color: e.quiet ? Gp.faint : Gp.resale),
                   const SizedBox(width: 8),
                   Text(
-                    '${dateDot(e.date)}${e.dateEstimated ? ' 쯤' : ''}',
+                    e.dateEstimated ? trf('{date} 쯤', {'date': dateDot(e.date)}) : dateDot(e.date),
                     style: TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w600, color: e.quiet ? Gp.faint : Gp.ink),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      e.label,
+                      tr(e.label),
                       style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
                     ),
                   ),
@@ -1055,12 +1056,12 @@ class _FriendsWithKit extends StatelessWidget {
         children: [
           if (f.owned.isNotEmpty)
             Tooltip(
-              message: '갖고 있는 친구',
+              message: tr('갖고 있는 친구'),
               child: line(const OwnedIcon(size: Gp.iS, filled: true), f.owned),
             ),
           if (f.liked.isNotEmpty)
             Tooltip(
-              message: '좋아요한 친구',
+              message: tr('좋아요한 친구'),
               child: line(const LikedIcon(size: Gp.iS, filled: true), f.liked),
             ),
         ],
@@ -1094,7 +1095,7 @@ class _GuideLinkState extends State<_GuideLink> {
         child: ThumbRow(
           key: const ValueKey('guide-link'),
           image: u.image,
-          title: '도감에서 보기',
+          title: tr('도감에서 보기'),
           subtitle: joinDot([u.name, index.work(u.workId)!.name]),
           size: 44,
           trailing: const Icon(Icons.chevron_right, size: Gp.iM, color: Gp.muted),
@@ -1116,28 +1117,28 @@ class _ManualLink extends StatelessWidget {
     child: InkWell(
       key: const ValueKey('manual-link'),
       onTap: () => openManual(context, id: kit.manualId, kitName: kit.name),
-      child: const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
-            Icon(Icons.menu_book_outlined, size: Gp.iM, color: Gp.ink),
-            SizedBox(width: 12),
+            const Icon(Icons.menu_book_outlined, size: Gp.iM, color: Gp.ink),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '조립 설명서',
-                    style: TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w700),
+                    tr('조립 설명서'),
+                    style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w700),
                   ),
                   Text(
-                    'BANDAI HOBBY 공식',
-                    style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                    tr('BANDAI HOBBY 공식'),
+                    style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
                   ),
                 ],
               ),
             ),
-            Icon(Icons.chevron_right, size: Gp.iM, color: Gp.muted),
+            const Icon(Icons.chevron_right, size: Gp.iM, color: Gp.muted),
           ],
         ),
       ),
@@ -1145,17 +1146,17 @@ class _ManualLink extends StatelessWidget {
   );
 }
 
-/// D-15 ? 도움말
-final detailHelp = <HelpItem>[
-  HelpItem(Icons.favorite_border, '좋아요 (갖고 싶은 것)'),
-  HelpItem(Icons.bookmark_add_outlined, '구매함 (가진 것)', color: Gp.own),
-  HelpItem(Icons.add, '수량 (좋아요 = 갖고 싶은 수 · 구매함 = 가진 수)'),
-  HelpItem(Icons.content_copy_rounded, '상품명 복사'),
-  HelpItem(Icons.share_outlined, '이 상품 보내기 (받은 사람이 앱에서 바로 열기)'),
-  HelpItem(Icons.north_east, '공식 상품 페이지'),
-  HelpItem(Icons.assignment_outlined, '공식 정보 전체'),
-  HelpItem(Icons.menu_book_outlined, '공식 조립 설명서 (있는 상품만)'),
-  HelpItem(Icons.flag_outlined, '정보 오류 제보'),
-  HelpItem(Icons.add_a_photo_outlined, '내 사진 넣기 (구매함)'),
+/// D-15 ? 도움말 — 열 때마다 만든다 (고른 언어를 따라가게)
+List<HelpItem> get detailHelp => [
+  HelpItem(Icons.favorite_border, tr('좋아요 (갖고 싶은 것)')),
+  HelpItem(Icons.bookmark_add_outlined, tr('구매함 (가진 것)'), color: Gp.own),
+  HelpItem(Icons.add, tr('수량 (좋아요 = 갖고 싶은 수 · 구매함 = 가진 수)')),
+  HelpItem(Icons.content_copy_rounded, tr('상품명 복사')),
+  HelpItem(Icons.share_outlined, tr('이 상품 보내기 (받은 사람이 앱에서 바로 열기)')),
+  HelpItem(Icons.north_east, tr('공식 상품 페이지')),
+  HelpItem(Icons.assignment_outlined, tr('공식 정보 전체')),
+  HelpItem(Icons.menu_book_outlined, tr('공식 조립 설명서 (있는 상품만)')),
+  HelpItem(Icons.flag_outlined, tr('정보 오류 제보')),
+  HelpItem(Icons.add_a_photo_outlined, tr('내 사진 넣기 (구매함)')),
   ...kitProgressHelp(restock: true),
 ];

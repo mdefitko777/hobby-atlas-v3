@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show FilteringTextInputFormatter;
 
 import '../detail_pane.dart';
+import '../l10n/l10n.dart';
 import '../sync/account.dart';
 import '../sync/rpc.dart';
 import '../theme.dart';
@@ -59,7 +60,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
   void _send() {
     if (!_emailOk) {
-      setState(() => _error = '메일 주소를 확인해 주세요');
+      setState(() => _error = tr('메일 주소를 확인해 주세요'));
       return;
     }
     _run(() async {
@@ -70,14 +71,14 @@ class _SignInScreenState extends State<SignInScreen> {
 
   void _verify() {
     if (_code.text.trim().length < 6) {
-      setState(() => _error = '메일에 온 6자리 코드를 넣어 주세요');
+      setState(() => _error = tr('메일에 온 6자리 코드를 넣어 주세요'));
       return;
     }
     _run(() async {
       final account = AccountScope.read(context);
       await account.verifyCode(_email.text, _code.text);
       if (!mounted) return;
-      showToast(context, '로그인했어요 · 컬렉션을 받아 오는 중');
+      showToast(context, tr('로그인했어요 · 컬렉션을 받아 오는 중'));
       Navigator.of(context).maybePop();
     });
   }
@@ -86,17 +87,17 @@ class _SignInScreenState extends State<SignInScreen> {
   Widget build(BuildContext context) {
     final account = AccountScope.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('로그인')),
+      appBar: AppBar(title: Text(tr('로그인'))),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
         children: [
-          const Text(
-            '옛 Gunpula 앱과 같은 메일이면 구매함 · 좋아요가 그대로 와요 · 두 앱이 15초쯤 안에 맞춰져요',
-            style: TextStyle(color: Gp.muted, height: 1.45),
+          Text(
+            tr('옛 Gunpula 앱과 같은 메일이면 구매함 · 좋아요가 그대로 와요 · 두 앱이 15초쯤 안에 맞춰져요'),
+            style: const TextStyle(color: Gp.muted, height: 1.45),
           ),
           const SizedBox(height: 18),
           if (!account.available && account.ready)
-            const Text('계정 연결 설정이 없어요 (config/supabase.json)', style: TextStyle(color: Gp.danger)),
+            Text(tr('계정 연결 설정이 없어요 (config/supabase.json)'), style: const TextStyle(color: Gp.danger)),
           TextField(
             // P-1
             controller: _email,
@@ -105,14 +106,14 @@ class _SignInScreenState extends State<SignInScreen> {
             autofillHints: const [AutofillHints.email],
             textInputAction: TextInputAction.send,
             onSubmitted: (_) => _send(),
-            decoration: const InputDecoration(labelText: '메일', border: OutlineInputBorder()),
+            decoration: InputDecoration(labelText: tr('메일'), border: const OutlineInputBorder()),
           ),
           const SizedBox(height: 10),
           if (!_sent)
             FilledButton(
               onPressed: _busy ? null : _send,
               style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(46)),
-              child: Text(_busy ? '보내는 중…' : '코드 받기'),
+              child: Text(_busy ? tr('보내는 중…') : tr('코드 받기')),
             )
           else ...[
             TextField(
@@ -126,13 +127,17 @@ class _SignInScreenState extends State<SignInScreen> {
               maxLength: 10,
               textInputAction: TextInputAction.done,
               onSubmitted: (_) => _verify(),
-              decoration: const InputDecoration(labelText: '메일로 온 코드', border: OutlineInputBorder(), counterText: ''),
+              decoration: InputDecoration(
+                labelText: tr('메일로 온 코드'),
+                border: const OutlineInputBorder(),
+                counterText: '',
+              ),
             ),
             const SizedBox(height: 10),
             FilledButton(
               onPressed: _busy ? null : _verify,
               style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(46)),
-              child: Text(_busy ? '확인 중…' : '로그인'),
+              child: Text(_busy ? tr('확인 중…') : tr('로그인')),
             ),
             TextButton(
               onPressed: _busy
@@ -141,7 +146,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       _sent = false; // STATE: 메일 다시 쓰기
                       _code.clear();
                     }),
-              child: const Text('메일 바꾸기 · 코드 다시 받기'),
+              child: Text(tr('메일 바꾸기 · 코드 다시 받기')),
             ),
           ],
           if (_error.isNotEmpty)
@@ -151,9 +156,9 @@ class _SignInScreenState extends State<SignInScreen> {
               child: Text(_error, style: const TextStyle(color: Gp.danger, height: 1.4)),
             ),
           const SizedBox(height: 24),
-          const Text(
-            '메일이 안 오면 스팸함 · 1분 뒤 다시 · 처음 쓰는 메일은 새 계정 (같이 쓰는 사람 · 친구는 각자 메일)',
-            style: TextStyle(fontSize: Gp.t12, color: Gp.faint, height: 1.45),
+          Text(
+            tr('메일이 안 오면 스팸함 · 1분 뒤 다시 · 처음 쓰는 메일은 새 계정 (같이 쓰는 사람 · 친구는 각자 메일)'),
+            style: const TextStyle(fontSize: Gp.t12, color: Gp.faint, height: 1.45),
           ),
         ],
       ),

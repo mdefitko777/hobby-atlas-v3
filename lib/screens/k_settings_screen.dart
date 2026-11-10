@@ -72,9 +72,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await _checkPermission();
     if (!mounted) return;
     if (!ok) {
-      showToast(context, '알림 권한이 꺼져 있어요 · 휴대폰 설정 › 애플리케이션 › Hobby Atlas › 알림에서 켤 수 있어요');
+      showToast(context, tr('알림 권한이 꺼져 있어요 · 휴대폰 설정 › 애플리케이션 › Hobby Atlas › 알림에서 켤 수 있어요'));
     } else if (on && !LocalNotifier.supported) {
-      showToast(context, '웹 미리보기에서는 휴대폰 알림을 보내지 않아요 · 알림 화면에는 모여요');
+      showToast(context, tr('웹 미리보기에서는 휴대폰 알림을 보내지 않아요 · 알림 화면에는 모여요'));
     }
   }
 
@@ -84,8 +84,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showToast(
       context,
       r == null
-          ? '이미 확인 중이에요'
-          : (r.error.isNotEmpty ? r.error : (r.liveCount == 0 ? '새 소식이 없어요' : '새 알림 ${r.liveCount}개')),
+          ? tr('이미 확인 중이에요')
+          : (r.error.isNotEmpty
+                ? r.error
+                : (r.liveCount == 0 ? tr('새 소식이 없어요') : trf('새 알림 {n}개', {'n': r.liveCount}))),
     );
   }
 
@@ -95,7 +97,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (!mounted) return;
     setState(() => _refreshing = false);
     final c = Catalog.instance;
-    showToast(context, changed ? '새로 받았어요 · ${c.kits.length}개' : (c.error.isEmpty ? '이미 최신이에요' : c.error));
+    showToast(
+      context,
+      changed ? trf('새로 받았어요 · {n}개', {'n': c.kits.length}) : (c.error.isEmpty ? tr('이미 최신이에요') : c.error),
+    );
   }
 
   /// K-2 언어 고르기 — 고르면 L10n 이 앱 전체를 그 언어로 다시 만든다 (main.dart)
@@ -125,21 +130,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (dialog) => AlertDialog(
-        title: const Text('로그아웃할까요?'),
+        title: Text(tr('로그아웃할까요?')),
         content: Text(
-          '${account.store.cloudDirty ? '아직 올리지 못한 변경이 있어요. 로그아웃해도 이 기기에는 남지만, '
-                    '다시 로그인할 때까지 다른 기기에는 보이지 않아요.' : '이 기기의 구매함 · 좋아요는 그대로 남아요.'}'
-          '\n\n다른 계정으로 로그인하면 이 기기의 구매함 · 좋아요는 그 계정 것으로 바뀌어요 (지금 계정 것은 서버에 그대로 있어요).',
+          '${account.store.cloudDirty ? tr('아직 올리지 못한 변경이 있어요. 로그아웃해도 이 기기에는 남지만, 다시 로그인할 때까지 다른 기기에는 보이지 않아요.') : tr('이 기기의 구매함 · 좋아요는 그대로 남아요.')}'
+          '\n\n${tr('다른 계정으로 로그인하면 이 기기의 구매함 · 좋아요는 그 계정 것으로 바뀌어요 (지금 계정 것은 서버에 그대로 있어요).')}',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialog, false), child: const Text('취소')),
-          FilledButton(onPressed: () => Navigator.pop(dialog, true), child: const Text('로그아웃')),
+          TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(tr('취소'))),
+          FilledButton(onPressed: () => Navigator.pop(dialog, true), child: Text(tr('로그아웃'))),
         ],
       ),
     );
     if (ok != true || !mounted) return;
     await account.signOut();
-    if (mounted) showToast(context, '로그아웃했어요');
+    if (mounted) showToast(context, tr('로그아웃했어요'));
   }
 
   /// K-0 계정 · 동기화
@@ -152,20 +156,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SectionHeader('계정 · 동기화'),
+          SectionHeader(tr('계정 · 동기화')),
           if (!a.ready)
-            const ListTile(leading: Icon(Icons.cloud_outlined), title: Text('계정 확인 중…'))
+            ListTile(leading: const Icon(Icons.cloud_outlined), title: Text(tr('계정 확인 중…')))
           else if (!a.available)
-            const ListTile(
-              leading: Icon(Icons.cloud_off_outlined),
-              title: Text('계정 연결 설정이 없어요'),
-              subtitle: Text('기기에만 저장 중'),
+            ListTile(
+              leading: const Icon(Icons.cloud_off_outlined),
+              title: Text(tr('계정 연결 설정이 없어요')),
+              subtitle: Text(tr('기기에만 저장 중')),
             )
           else if (!a.signedIn)
             ListTile(
               leading: const Icon(Icons.login),
-              title: const Text('로그인'),
-              subtitle: const Text('옛 앱과 같은 메일로'),
+              title: Text(tr('로그인')),
+              subtitle: Text(tr('옛 앱과 같은 메일로')),
               trailing: const Icon(Icons.chevron_right, color: Gp.faint),
               onTap: () => openSignIn(context),
             )
@@ -176,7 +180,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 SyncPhase.error => Icons.error_outline,
                 _ => Icons.cloud_done_outlined,
               }, color: sync.phase == SyncPhase.error ? Gp.danger : null),
-              title: Text(a.email.isEmpty ? '로그인됨' : a.email),
+              title: Text(a.email.isEmpty ? tr('로그인됨') : a.email),
               subtitle: Text(syncLine),
               isThreeLine: syncLine.contains('\n'),
               trailing: busy
@@ -187,10 +191,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         a.deviceState.syncNow().ignore(); // 베이 · 도감 손으로 켜기 등 기기 기록 · 내 사진 목록도
                         a.photoRestore.restore().ignore();
                       },
-                      child: const Text('지금 동기화'),
+                      child: Text(tr('지금 동기화')),
                     ),
             ),
-            ListTile(leading: const Icon(Icons.logout), title: const Text('로그아웃'), onTap: _signOut),
+            ListTile(leading: const Icon(Icons.logout), title: Text(tr('로그아웃')), onTap: _signOut),
           ],
         ],
       ),
@@ -201,7 +205,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _notifySection() {
     final c = _n.config;
     Widget chip(String key) => FilterChip(
-      label: Text(notifyRuleLabels[key] ?? key),
+      label: Text(tr(notifyRuleLabels[key] ?? key)),
       selected: c.rule(key),
       showCheckmark: false,
       selectedColor: Gp.accent.withValues(alpha: 0.14),
@@ -228,32 +232,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SectionHeader('알림'),
+          SectionHeader(tr('알림')),
           SwitchListTile(
             // K-1 P03
             secondary: const Icon(Icons.notifications_none),
-            title: const Text('새 소식 알림'),
-            subtitle: blocked ? const Text('휴대폰 설정에서 알림이 꺼져 있어요') : null,
+            title: Text(tr('새 소식 알림')),
+            subtitle: blocked ? Text(tr('휴대폰 설정에서 알림이 꺼져 있어요')) : null,
             value: c.enabled && _permitted != false,
             activeThumbColor: Gp.accent,
             onChanged: _setNotify, // STATE: 알림 스위치 (저장 · 권한 요청)
           ),
           SwitchListTile(
             secondary: const Icon(Icons.filter_alt_outlined),
-            title: const Text('내 채널 소식만'),
+            title: Text(tr('내 채널 소식만')),
             value: c.onlyMine,
             activeThumbColor: Gp.accent,
             onChanged: _n.setOnlyMine, // STATE: 채널 범위 (저장)
           ),
           // K-5 어떤 새 상품이 나오면 알릴지 (켠 것만)
-          chips('이런 새 상품이 나오면 알림', notifyInterestRules),
-          chips('이 채널 새 상품은 전부 알림', notifyWorldRules),
+          chips(tr('이런 새 상품이 나오면 알림'), notifyInterestRules),
+          chips(tr('이 채널 새 상품은 전부 알림'), notifyWorldRules),
           // 내가 만든 조건: 채널 · 작품(캐릭터) · 종류
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 4, 16, 2),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 2),
             child: Text(
-              '골라서 알림 (채널 · 작품 · 종류)',
-              style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
+              tr('골라서 알림 (채널 · 작품 · 종류)'),
+              style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
             ),
           ),
           for (final x in c.conditions)
@@ -262,7 +266,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               leading: const Icon(Icons.notifications_active_outlined, size: 20),
               title: Text(conditionLabel(x)),
               trailing: IconButton(
-                tooltip: '지우기',
+                tooltip: tr('지우기'),
                 icon: const Icon(Icons.close, size: 18, color: Gp.faint),
                 onPressed: () => _n.removeCondition(x.id), // STATE: 조건 지우기 (저장)
               ),
@@ -270,7 +274,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ListTile(
             dense: true,
             leading: const Icon(Icons.add, size: 20, color: Gp.accent),
-            title: const Text('조건 추가', style: TextStyle(color: Gp.accent)),
+            title: Text(tr('조건 추가'), style: const TextStyle(color: Gp.accent)),
             onTap: () async {
               final x = await pickNotifyCondition(context);
               if (x != null) _n.addCondition(x); // STATE: 조건 추가 (저장)
@@ -279,11 +283,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ListTile(
             // K-6
             leading: const Icon(Icons.history),
-            title: const Text('새 소식 확인'),
+            title: Text(tr('새 소식 확인')),
             subtitle: Text(_n.shortStatus),
             trailing: _n.checking
                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                : TextButton(onPressed: _checkNow, child: const Text('지금 확인')),
+                : TextButton(onPressed: _checkNow, child: Text(tr('지금 확인'))),
           ),
         ],
       ),
@@ -295,7 +299,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final cat = Catalog.instance;
     final account = AccountScope.of(context); // 로그인 · 동기화 상태가 바뀌면 다시 그림
     return Scaffold(
-      appBar: AppBar(title: const Text('설정')),
+      appBar: AppBar(title: Text(tr('설정'))),
       body: ListView(
         padding: const EdgeInsets.only(bottom: 40),
         children: [
@@ -305,28 +309,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SectionHeader('데이터'),
+                SectionHeader(tr('데이터')),
                 ListTile(
                   // K-4
                   leading: const Icon(Icons.storage_outlined), // 상자 = 미조립과 겹치지 않게
-                  title: const Text('상품 데이터'),
+                  title: Text(tr('상품 데이터')),
                   subtitle: Text(
                     cat.kits.isEmpty
-                        ? (cat.progress.isNotEmpty ? cat.progress : '아직 받지 않았어요')
-                        : '${dateDot(cat.updatedAt)} · ${cat.kits.length}개',
+                        ? (cat.progress.isNotEmpty ? cat.progress : tr('아직 받지 않았어요'))
+                        : trf('{date} · {n}개', {'date': dateDot(cat.updatedAt), 'n': cat.kits.length}),
                   ),
                   trailing: _refreshing
                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                      : TextButton(onPressed: _refresh, child: const Text('지금 새로 받기')),
+                      : TextButton(onPressed: _refresh, child: Text(tr('지금 새로 받기'))),
                 ),
                 // 레고: 최근 정식 세트(2015~, 굿즈 · 책 · 폴리백 빼고) · 전부 (Rebrickable 2.8만 개)
                 ListTile(
                   leading: const Icon(Icons.toys_outlined),
-                  title: const Text('레고 범위'),
+                  title: Text(tr('레고 범위')),
                   subtitle: Text(
                     UserStore.instance.legoScope == LegoScope.all
-                        ? 'Rebrickable 의 레고 전부 (굿즈 · 책 · 옛 세트까지)'
-                        : '$legoRecentFromYear년부터 나온 정식 세트 · 미니피규어',
+                        ? tr('Rebrickable 의 레고 전부 (굿즈 · 책 · 옛 세트까지)')
+                        : trf('{year}년부터 나온 정식 세트 · 미니피규어', {'year': legoRecentFromYear}),
                   ),
                 ),
                 Padding(
@@ -334,7 +338,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: SquareSegments<LegoScope>(
                     values: LegoScope.values,
                     current: UserStore.instance.legoScope,
-                    child: (v) => Text(v == LegoScope.recent ? '최근 정식 세트' : '전부'),
+                    child: (v) => Text(v == LegoScope.recent ? tr('최근 정식 세트') : tr('전부')),
                     // STATE: 레고 범위 (저장 · 동기화) — 목록은 Catalog 가 UserStore 를 듣고 다시 거른다
                     onPick: (v) => setState(() => UserStore.instance.setLegoScope(v)),
                   ),
@@ -352,7 +356,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SectionHeader('앱'),
+                SectionHeader(tr('앱')),
                 ListTile(
                   // K-2 화면 언어 — 한국어(기본) · 中文. 고르면 앱 전체가 그 언어로 다시 열린다 (lib/l10n)
                   key: const Key('settings-language'),
@@ -365,7 +369,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ListTile(
                   // K-7
                   leading: const Icon(Icons.help_outline),
-                  title: const Text('도움말'),
+                  title: Text(tr('도움말')),
                   trailing: const Icon(Icons.chevron_right, color: Gp.faint),
                   onTap: () => openPage(context, const HelpScreen()),
                 ),
@@ -423,7 +427,7 @@ class HelpScreen extends StatelessWidget {
       ],
     );
     return Scaffold(
-      appBar: AppBar(title: const Text('도움말')),
+      appBar: AppBar(title: Text(tr('도움말'))),
       body: ListView(
         padding: const EdgeInsets.only(bottom: 40),
         children: [
@@ -432,14 +436,14 @@ class HelpScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SectionHeader('도감 칸'),
+                SectionHeader(tr('도감 칸')),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    cell(CellTier.none, Icons.image_outlined, '아직'),
-                    cell(CellTier.liked, Icons.image_outlined, '♡ 좋아요'),
-                    cell(CellTier.owned, Icons.image_outlined, '리본 구매함'),
-                    cell(CellTier.photo, Icons.photo_camera_outlined, '내 사진'),
+                    cell(CellTier.none, Icons.image_outlined, tr('아직')),
+                    cell(CellTier.liked, Icons.image_outlined, tr('♡ 좋아요')),
+                    cell(CellTier.owned, Icons.image_outlined, tr('리본 구매함')),
+                    cell(CellTier.photo, Icons.photo_camera_outlined, tr('내 사진')),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -448,7 +452,7 @@ class HelpScreen extends StatelessWidget {
                   child: Wrap(
                     spacing: 16,
                     runSpacing: 8,
-                    children: [dot(Gp.accent, '파랑 = 고름 · 좋아요'), dot(Gp.own, '민트 = 가진 것')],
+                    children: [dot(Gp.accent, tr('파랑 = 고름 · 좋아요')), dot(Gp.own, tr('민트 = 가진 것'))],
                   ),
                 ),
               ],
@@ -459,11 +463,15 @@ class HelpScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SectionHeader('데이터'),
-                tip(Icons.cloud_download_outlined, '상품 정보', 'Gunpula 가 공식 사이트에서 매일 모아요 (BANDAI SPIRITS · 포켓몬센터 …)'),
-                tip(Icons.toys_outlined, '레고 정보', 'Rebrickable (rebrickable.com) 의 레고 카탈로그 데이터를 써요'),
-                tip(Icons.payments_outlined, '가격', '일본 정가만 · 국내 시세는 상세에서 검색으로'),
-                tip(Icons.flag_outlined, '틀린 정보', '상품 상세 맨 아래 › 제보 (GitHub)'),
+                SectionHeader(tr('데이터')),
+                tip(
+                  Icons.cloud_download_outlined,
+                  tr('상품 정보'),
+                  tr('Gunpula 가 공식 사이트에서 매일 모아요 (BANDAI SPIRITS · 포켓몬센터 …)'),
+                ),
+                tip(Icons.toys_outlined, tr('레고 정보'), tr('Rebrickable (rebrickable.com) 의 레고 카탈로그 데이터를 써요')),
+                tip(Icons.payments_outlined, tr('가격'), tr('일본 정가만 · 국내 시세는 상세에서 검색으로')),
+                tip(Icons.flag_outlined, tr('틀린 정보'), tr('상품 상세 맨 아래 › 제보 (GitHub)')),
               ],
             ),
           ),
@@ -472,9 +480,9 @@ class HelpScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SectionHeader('알림'),
-                tip(Icons.schedule, '12시간마다 확인', '앱을 열 때도 한 번 더'),
-                tip(Icons.today_outlined, '좋아요한 상품', '발매 D-7 · D-1 · 당일 (발매일이 정해진 것만)'),
+                SectionHeader(tr('알림')),
+                tip(Icons.schedule, tr('12시간마다 확인'), tr('앱을 열 때도 한 번 더')),
+                tip(Icons.today_outlined, tr('좋아요한 상품'), tr('발매 D-7 · D-1 · 당일 (발매일이 정해진 것만)')),
               ],
             ),
           ),
@@ -483,8 +491,8 @@ class HelpScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SectionHeader('앱 업데이트'),
-                tip(Icons.system_update_outlined, '위 줄 ⬇ · 설정 › 앱 › 버전', '새 빌드를 받아 안드로이드 설치 창으로'),
+                SectionHeader(tr('앱 업데이트')),
+                tip(Icons.system_update_outlined, tr('위 줄 ⬇ · 설정 › 앱 › 버전'), tr('새 빌드를 받아 안드로이드 설치 창으로')),
               ],
             ),
           ),

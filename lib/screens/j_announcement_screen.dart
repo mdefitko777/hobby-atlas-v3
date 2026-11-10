@@ -27,6 +27,7 @@ import '../data/page_translate.dart';
 import '../logic/page_text.dart';
 import '../detail_pane.dart';
 import '../channels.dart';
+import '../l10n/l10n.dart';
 import '../logic/announcement_match.dart';
 import '../models.dart';
 import '../notifications/notify_store.dart';
@@ -222,27 +223,28 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
     }
     _toggling = true; // 첫 await 전에 — 모델 확인 중에 또 눌러도 대화상자 · 번역이 두 번 뜨지 않게
     try {
-      final tr = PageTranslator.instance;
-      if (!await tr.ready()) {
+      final translator = PageTranslator.instance;
+      if (!await translator.ready()) {
         if (!mounted) return;
         final ok = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('번역 모델 받기'),
-            content: const Text('일본어 · 한국어 번역 모델(약 60 MB)을 한 번 받아요. 그다음부터는 인터넷 없이도 이 기기 안에서 번역해요. Wi-Fi 에서 받는 것을 권해요.'),
+            title: Text(tr('번역 모델 받기')),
+            // 번역은 화면 언어로 (lib/data/page_translate.dart) — 중국어 화면이면 일본어 · 중국어 모델
+            content: Text(tr('일본어 · 한국어 번역 모델(약 60 MB)을 한 번 받아요. 그다음부터는 인터넷 없이도 이 기기 안에서 번역해요. Wi-Fi 에서 받는 것을 권해요.')),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('나중에')),
-              TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('받기')),
+              TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr('나중에'))),
+              TextButton(onPressed: () => Navigator.pop(context, true), child: Text(tr('받기'))),
             ],
           ),
         );
         if (ok != true || !mounted) return;
-        setState(() => _translateBusy = '모델 받는 중'); // STATE: 모델 받는 중 → 버튼 옆 글
-        final done = await tr.download(); // 멈춘 받기는 5분 뒤 false
+        setState(() => _translateBusy = tr('모델 받는 중')); // STATE: 모델 받는 중 → 버튼 옆 글
+        final done = await translator.download(); // 멈춘 받기는 5분 뒤 false
         if (!mounted) return;
         setState(() => _translateBusy = '');
         if (!done) {
-          showToast(context, '번역 모델을 받지 못했어요 · 인터넷을 확인해 주세요');
+          showToast(context, tr('번역 모델을 받지 못했어요 · 인터넷을 확인해 주세요'));
           return;
         }
       }
@@ -263,27 +265,28 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
     // 더 새 번역이 시작됐거나 · 껐거나 · 화면을 닫았다
     bool stale() => !mounted || run != _trRun || !_translateOn;
     // 글을 모으는 동안에도 버튼 대신 도는 표시 (그 사이 눌러 끄면 번역만 남아 돌았다)
-    setState(() => _translateBusy = '번역 준비 중'); // STATE: 번역 시작
+    setState(() => _translateBusy = tr('번역 준비 중')); // STATE: 번역 시작
     try {
       // 원문이 멈춰 답하지 않으면 도는 표시가 남지 않게 15초까지만 (TimeoutException → 아래 알림)
       final raw = await web.runJavaScriptReturningResult(collectTextsJs).timeout(const Duration(seconds: 15));
       final texts = textsToTranslate(decodeTextList(raw));
       if (!mounted || stale()) return;
       if (texts.isEmpty) {
-        showToast(context, '번역할 일본어 글이 없어요 (그림 안 글자는 못 바꿔요)');
+        showToast(context, tr('번역할 일본어 글이 없어요 (그림 안 글자는 못 바꿔요)'));
         return;
       }
       final map = await PageTranslator.instance.translate(
         texts,
         shouldStop: stale,
         onProgress: (done, total) {
-          if (!stale()) setState(() => _translateBusy = '번역 중 $done/$total'); // STATE: 번역 진행
+          if (stale()) return;
+          setState(() => _translateBusy = trf('번역 중 {done}/{total}', {'done': done, 'total': total})); // STATE: 번역 진행
         },
       );
       if (stale()) return;
       await web.runJavaScript(applyTranslationsJs(map));
     } on Exception {
-      if (mounted && !stale()) showToast(context, '이 페이지는 번역하지 못했어요 · ↗ 브라우저에서 번역해 보세요');
+      if (mounted && !stale()) showToast(context, tr('이 페이지는 번역하지 못했어요 · ↗ 브라우저에서 번역해 보세요'));
     } finally {
       // 이 차례가 마지막일 때만 — 옛 차례가 새 차례의 도는 표시를 지우지 않게
       if (mounted && run == _trRun) setState(() => _translateBusy = '');
@@ -294,18 +297,18 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
   Future<void> _openOutside() async {
     final u = _uri;
     if (u == null) {
-      showToast(context, '원문 주소가 없는 예고예요');
+      showToast(context, tr('원문 주소가 없는 예고예요'));
       return;
     }
     final ok = await launchUrl(u, mode: LaunchMode.externalApplication);
-    if (!ok && mounted) showToast(context, '브라우저를 열지 못했어요');
+    if (!ok && mounted) showToast(context, tr('브라우저를 열지 못했어요'));
   }
 
   /// J-3 알림 받기 — 다음 단계(상품화 확정 · 예약 시작 · 발매)가 되면 휴대폰 알림
   void _toggleFollow(NotifyStore store) {
     final a = widget.item;
     if (a.status == announcementStages.last) {
-      showToast(context, '이미 발매된 예고예요');
+      showToast(context, tr('이미 발매된 예고예요'));
       return;
     }
     final before = store.isFollowing(a.id);
@@ -314,10 +317,10 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
     showToast(
       context,
       before
-          ? '이 예고 알림을 껐어요'
+          ? tr('이 예고 알림을 껐어요')
           : store.config.enabled
-          ? '다음 단계가 되면 알려 드릴게요'
-          : '다음 단계가 되면 알림함에 · 휴대폰 알림은 설정에서',
+          ? tr('다음 단계가 되면 알려 드릴게요')
+          : tr('다음 단계가 되면 알림함에 · 휴대폰 알림은 설정에서'),
       onUndo: () => set(before),
     );
   }
@@ -391,7 +394,7 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  joinDot([channelOf(a.franchiseId).label, dateDot(a.date), a.source]),
+                  joinDot([tr(channelOf(a.franchiseId).label), dateDot(a.date), a.source]),
                   style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
                 ),
                 const SizedBox(height: 20),
@@ -408,18 +411,18 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
               }
               final kits = snap.data ?? const <Kit>[];
               if (kits.isEmpty) {
-                return const Padding(
-                  padding: EdgeInsets.all(16),
+                return Padding(
+                  padding: const EdgeInsets.all(16),
                   child: Text(
-                    '이어진 상품 아직 없음 · 상품화되면 여기에', // P09
-                    style: TextStyle(color: Gp.muted, fontSize: Gp.t12),
+                    tr('이어진 상품 아직 없음 · 상품화되면 여기에'), // P09
+                    style: const TextStyle(color: Gp.muted, fontSize: Gp.t12),
                   ),
                 );
               }
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SectionHeader('이 예고의 상품', subtitle: '${kits.length}개'), // P06
+                  SectionHeader(tr('이 예고의 상품'), subtitle: trf('{n}개', {'n': kits.length})), // P06
                   _tiles(sheet, kits),
                 ],
               );
@@ -433,7 +436,7 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SectionHeader('같은 IP의 새 상품', subtitle: ip.label), // P06
+                  SectionHeader(tr('같은 IP의 새 상품'), subtitle: _ipLabel(ip)), // P06
                   _tiles(sheet, ip.kits),
                 ],
               );
@@ -442,6 +445,14 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
         ],
       ),
     );
+  }
+
+  /// J-7 머리 글 — [sameIpKits] 의 label 은 한국어 작품 이름(묶기 값) 또는 채널 이름 → 화면 언어로
+  static String _ipLabel(({String label, List<Kit> kits}) ip) {
+    for (final k in ip.kits) {
+      if (k.series == ip.label) return k.seriesLabel;
+    }
+    return tr(ip.label);
   }
 
   /// 가로 상품 줄 (누르면 시트를 닫고 상세)
@@ -480,7 +491,7 @@ class _TopBar extends StatelessWidget {
       child: Row(
         children: [
           IconButton(
-            tooltip: '뒤로',
+            tooltip: tr('뒤로'),
             onPressed: onBack,
             icon: const Icon(Icons.arrow_back_ios_new, size: Gp.iM, color: Gp.ink),
           ),
@@ -498,7 +509,7 @@ class _TopBar extends StatelessWidget {
                 const SizedBox(height: 3),
                 Row(
                   children: [
-                    SoftTag(item.status, color: stageColor(item.status)),
+                    SoftTag(tr(item.status), color: stageColor(item.status)),
                     const SizedBox(width: 6),
                     Flexible(
                       child: Text(
@@ -558,7 +569,7 @@ class _BottomBar extends StatelessWidget {
             children: [
               Expanded(
                 child: TogglePill(
-                  label: on ? '알림 받는 중' : '알림 받기',
+                  label: on ? tr('알림 받는 중') : tr('알림 받기'),
                   icon: Icons.notifications_none,
                   activeIcon: Icons.notifications_active,
                   active: on,
@@ -578,7 +589,7 @@ class _BottomBar extends StatelessWidget {
                         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(Gp.radius))),
                       ),
                       icon: const Icon(Icons.info_outline, size: Gp.iS),
-                      label: Text(n > 0 ? '이 예고 · 상품 $n' : '이 예고'),
+                      label: Text(n > 0 ? trf('이 예고 · 상품 {n}', {'n': n}) : tr('이 예고')),
                     );
                   },
                 ),
@@ -598,12 +609,12 @@ class _BottomBar extends StatelessWidget {
                       )
                     : IconButton(
                         key: const ValueKey('translate'),
-                        tooltip: translateOn ? '원문으로' : '한국어로 번역',
+                        tooltip: translateOn ? tr('원문으로') : tr('한국어로 번역'),
                         onPressed: onTranslate,
                         icon: Icon(Icons.translate, size: Gp.iM, color: translateOn ? Gp.accent : Gp.muted),
                       ),
               IconButton(
-                tooltip: '브라우저로 열기',
+                tooltip: tr('브라우저로 열기'),
                 onPressed: onOutside,
                 icon: const Icon(Icons.open_in_new, size: Gp.iM, color: Gp.muted),
               ),
@@ -634,9 +645,9 @@ class _Summary extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (failed) ...[
-                const Text(
-                  '앱 안에서 열 수 없는 페이지 · 아래 ↗ 로 브라우저에서',
-                  style: TextStyle(fontSize: Gp.t12, color: Gp.danger),
+                Text(
+                  tr('앱 안에서 열 수 없는 페이지 · 아래 ↗ 로 브라우저에서'),
+                  style: const TextStyle(fontSize: Gp.t12, color: Gp.danger),
                 ),
                 const SizedBox(height: 12),
               ],
@@ -646,7 +657,7 @@ class _Summary extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                joinDot([channelOf(item.franchiseId).label, dateDot(item.date), item.source]),
+                joinDot([tr(channelOf(item.franchiseId).label), dateDot(item.date), item.source]),
                 style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
               ),
               const SizedBox(height: 20),
@@ -702,7 +713,7 @@ class _StageLine extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  label,
+                  tr(label), // 단계 이름은 비교 값 — 보이는 곳에서만 번역
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: Gp.t11,
