@@ -2,6 +2,7 @@
 //   종류: 채널 상품 → 칸 키(라인 · 굿즈 세부 종류 · 베이 상품 형태) → 채널마다 정한 묶음(프라모델 · SD · 완성품 …)
 //   세대: 건담 = 작품을 시대 묶음으로, 그 밖 = atlas 묶음(세대 · 작품)을 채널마다 정한 묶음으로
 //   세부 시리즈: 상품 화면 위 줄 (HGUC · HGCE … · PB 한정)
+import '../l10n/l10n.dart';
 import '../models.dart';
 
 /// 작은 칸을 모으는 이름 (같은 묶음 안 끝)
@@ -19,7 +20,8 @@ const _goodsLineSplit = {'가샤폰', '카드'};
 /// 키 → 보이는 이름 (라인 코드 그대로인 것만 다듬는다)
 const _labels = {'RE100': 'RE/100', 'PGU': 'PG UNLEASHED'};
 
-String lineGroupLabel(String key) => _labels[key] ?? key;
+/// 화면 이름 (고른 언어). 키는 한국어 그대로 — 묶기 · lineCovers 에 쓴다
+String lineGroupLabel(String key) => tr(_labels[key] ?? key);
 
 /// 상품 하나의 종류 칸 키: 굿즈 세부 종류 > 굿즈 라인 안의 가샤폰 · 카드 > 라인 > 유형 > 기타
 String lineGroupKey(Kit k) {
@@ -217,7 +219,7 @@ List<TypeSection> typeSections(String channel, Iterable<Kit> kits, {int minGroup
     out.add(
       TypeSection(def.title, [
         for (final key in keys) entry(key, lineGroupLabel(key), byKey[key]!),
-        if (merged.isNotEmpty) entry('${def.title}/$lineOtherKey', lineOtherKey, merged),
+        if (merged.isNotEmpty) entry('${def.title}/$lineOtherKey', tr(lineOtherKey), merged),
       ]),
     );
   }

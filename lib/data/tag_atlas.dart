@@ -5,6 +5,7 @@
 // 칸 하나 = 그 지역에서 나온 인쇄 하나. 좋아요 · 구매함 표시는 인쇄 id(메자스타 `…@KR`) · 픽 id(프렌다) 그대로 쓴다.
 import 'catalog.dart';
 import '../json_util.dart';
+import '../l10n/l10n.dart';
 
 enum TagGame { mezastar, frienda }
 
@@ -14,10 +15,10 @@ extension TagGameInfo on TagGame {
     TagGame.frienda => 'Frienda',
   };
 
-  /// 한국어 부제
+  /// 부제 (고른 언어)
   String get subtitle => switch (this) {
-    TagGame.mezastar => '메자스타 · 태그스타 태그',
-    TagGame.frienda => '프렌다 픽',
+    TagGame.mezastar => tr('메자스타 · 태그스타 태그'),
+    TagGame.frienda => tr('프렌다 픽'),
   };
 
   List<TagRegion> get regions => switch (this) {
@@ -55,16 +56,23 @@ const friendaRegion = TagRegion('JP', '일본', friendaFile, 'JP');
 class TagSet {
   const TagSet({
     required this.id,
-    required this.name,
+    required String name,
+    this.nameZh = '',
     this.local = '',
     this.date = '',
     this.ordinal = 0,
     this.extra = false,
-  });
+  }) : nameKo = name;
   final String id;
 
   /// 한국어 이름 (스타더스트 1탄 · 고저스스타 5탄 · 베스트태그 2탄 …)
-  final String name;
+  final String nameKo;
+
+  /// 중국어 화면 이름 (데이터의 중국어 이름 · 'N탄' → 第N弹 · 영어 이름). 비면 [nameKo] 를 번역 표로
+  final String nameZh;
+
+  /// 화면에 보이는 이름 — 고른 언어를 따른다
+  String get name => !L10n.isZh ? nameKo : (nameZh.isNotEmpty ? nameZh : tr(nameKo));
 
   /// 그 지역 이름 (星塵第1彈 · ゴージャススター5弾 …)
   final String local;
@@ -83,8 +91,9 @@ class TagCard {
     required this.game,
     required this.region,
     required this.number,
-    required this.name,
+    required String name,
     required this.setIds,
+    this.nameZh = '',
     this.local = '',
     this.searchText = '',
     this.rarity = '',
@@ -94,8 +103,9 @@ class TagCard {
     this.large = const [],
     this.url = '',
     this.dex = 0,
-    this.variant = '',
-  });
+    String variant = '',
+  }) : nameKo = name,
+       variantKo = variant;
 
   /// 좋아요 · 구매함 키 — 데이터의 인쇄 id / 픽 id 그대로
   final String id;
@@ -109,7 +119,13 @@ class TagCard {
   final String number;
 
   /// 한국어 이름 (없으면 일본어 · 영어)
-  final String name;
+  final String nameKo;
+
+  /// 중국어 이름 (데이터 zh → zh_hant, 포켓몬 공식 이름). 없으면 ''
+  final String nameZh;
+
+  /// 화면에 보이는 이름 — 중국어 화면이면 [nameZh] 가 있을 때 그것
+  String get name => L10n.isZh && nameZh.isNotEmpty ? nameZh : nameKo;
 
   /// 그 지역 이름 (뮤츠 · 超夢 · Mewtwo · ミュウツー)
   final String local;
@@ -133,10 +149,14 @@ class TagCard {
   final String url;
   final int dex;
 
-  /// 같은 번호의 다른 판 (체험판 · 캠페인)
-  final String variant;
+  /// 같은 번호의 다른 판 (체험판 · 캠페인) — 데이터 그대로 (찾기 글자에 들어간다)
+  final String variantKo;
 
-  String get rarityLabel => rarityLabels[rarity] ?? rarity;
+  /// 화면에 보이는 [variantKo] (앱이 붙인 '이전 탄' 같은 말은 번역)
+  String get variant => tr(variantKo);
+
+  /// 등급 이름 (고른 언어)
+  String get rarityLabel => tr(rarityLabels[rarity] ?? rarity);
 
   /// 칸 위 짧은 표시: ★6 · 프로모
   String get badge => grade != null ? '★$grade' : rarityLabel;
@@ -148,7 +168,8 @@ class TagCard {
     game: game,
     region: region,
     number: number,
-    name: name,
+    name: nameKo,
+    nameZh: nameZh,
     setIds: setIds,
     local: local,
     searchText: searchText,
@@ -159,7 +180,7 @@ class TagCard {
     large: large,
     url: url,
     dex: dex,
-    variant: variant,
+    variant: variantKo,
   );
 
   bool matches(String query) {
@@ -263,6 +284,25 @@ String dexArtwork(int dex) => dex <= 0
     ? ''
     : 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/$dex.png';
 
+/// 중국어 이름: 간체 먼저, 없으면 번체 (대만판 공식 이름)
+String _zhName(Map<String, Object?> names) {
+  for (final l in const ['zh', 'zh_hans', 'zh_hant']) {
+    final s = jStr(names[l]).trim();
+    if (s.isNotEmpty) return s;
+  }
+  return '';
+}
+
+/// 탄 이름의 중국어판 — 데이터 중국어 → '3탄' 같은 번호만인 것 → 영어 이름 ('' = 한국어 이름을 번역 표로)
+String _setZh(Map<String, Object?> names, String ko, {bool promo = false}) {
+  final zh = _zhName(names);
+  if (zh.isNotEmpty) return zh;
+  if (promo) return '';
+  final no = RegExp(r'^(\d+)탄$').firstMatch(ko);
+  if (no != null) return '第${no.group(1)}弹';
+  return jStr(names['en']).trim();
+}
+
 String _koName(Map<String, Object?> names) {
   for (final l in const ['ko', 'ja', 'en', 'zh_hant']) {
     final s = jStr(names[l]).trim();
@@ -314,6 +354,7 @@ TagBook parseMezastar(Object? json, TagRegion region) {
           region: region.id,
           number: number,
           name: _koName(names),
+          nameZh: _zhName(names),
           local: jStr(p['name']),
           setIds: pSets.isNotEmpty ? pSets : tagSets,
           searchText: _search([...names.values, p['name'], number, serial, tagId, variant]),
@@ -350,6 +391,7 @@ TagBook parseMezastar(Object? json, TagRegion region) {
       TagSet(
         id: id,
         name: name,
+        nameZh: _setZh(names, name, promo: promo),
         local: jStr(mine['local_name']).isNotEmpty ? jStr(mine['local_name']) : jStr(names['ja']),
         date: jStr(mine['date']),
         ordinal: jInt(s['ordinal']),
@@ -440,6 +482,7 @@ TagBook parseFrienda(Object? json) {
         region: friendaRegion.id,
         number: number,
         name: _koName(names),
+        nameZh: _zhName(names),
         local: jStr(names['ja']),
         setIds: [jStr(p['set'])],
         searchText: _search([...names.values, number, no, id, variant]),
@@ -465,6 +508,7 @@ TagBook parseFrienda(Object? json) {
       TagSet(
         id: id,
         name: ko.isNotEmpty ? ko : _koName(names),
+        nameZh: _setZh(names, ko.isNotEmpty ? ko : _koName(names)),
         local: jStr(names['ja']),
         date: jStr(s['release_date']),
         ordinal: jInt(s['ordinal']) == 0 ? 1000 + sets.length : jInt(s['ordinal']),
@@ -500,7 +544,7 @@ class TagAtlas {
   /// 그 게임 · 지역 도감. 파일이 없으면 오류
   static Future<TagBook> book(TagGame game, TagRegion region) async {
     final raw = await source(region.file);
-    if (raw == null) throw const CatalogException('태그 데이터를 받지 못했어요.');
+    if (raw == null) throw CatalogException(tr('태그 데이터를 받지 못했어요.'));
     final key = '${game.name}/${region.id}';
     final hit = _cache[key];
     if (hit != null && identical(hit.$1, raw)) return hit.$2;
