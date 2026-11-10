@@ -43,6 +43,40 @@ void main() {
     expect(await u.check(force: true, fetch: (_) async => jsonEncode({'build': 0})), isNull);
   });
 
+  test('못 받으면 checkFailed — 「최신 버전」과 구별 · 한 시간 간격을 쓰지 않아 다음 확인은 바로 다시', () async {
+    var fetches = 0;
+    expect(
+      await u.check(
+        fetch: (_) async {
+          fetches++;
+          return null; // 켤 때 오프라인
+        },
+      ),
+      isNull,
+    );
+    expect(u.checkFailed, isTrue);
+    // 인터넷이 돌아온 뒤 (force 아님) — 한 시간을 기다리지 않고 다시 받는다
+    expect(
+      await u.check(
+        fetch: (_) async {
+          fetches++;
+          return _json;
+        },
+      ),
+      isNotNull,
+    );
+    expect(fetches, 2);
+    expect(u.checkFailed, isFalse);
+    // 받은 뒤로는 한 시간에 한 번
+    await u.check(
+      fetch: (_) async {
+        fetches++;
+        return _json;
+      },
+    );
+    expect(fetches, 2);
+  });
+
   testWidgets('새 빌드가 있으면 ⬇ → 시트에 바뀐 점 · 설정 줄에 "있음"', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;

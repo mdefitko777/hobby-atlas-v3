@@ -57,11 +57,28 @@ Future<List<Kit>> fetchKitsByIds(List<String> ids) => _guard(() async {
   await cat.ensureLoaded();
   // 앱을 막 켠 때는 옛 id(Gunpula 가 합친 상품)가 아직 안 붙었을 수 있다 — 못 찾은 id 가 있을 때만 기다린다
   // (기기 파일이 없어 인터넷으로 받는 중이면 오래 걸릴 수 있어 5초까지만)
-  if (ids.any((id) => cat.byId[id] == null)) {
+  bool missing() => ids.any((id) => cat.byId[id] == null);
+  if (missing()) {
     await cat.aliasesReady.timeout(const Duration(seconds: 5), onTimeout: () {});
+  }
+  // 그래도 없으면 이 기기 목록이 옛것일 수 있다 — 「새 상품」 알림은 뒤 작업이 새 manifest 를 먼저 보고 보낸다.
+  // 받는 중이면 끝날 때까지, 아니면 manifest 를 한 번 더 보고([missingKitRecheck]에 한 번까지) 바뀌었으면 받은 뒤 다시 찾는다.
+  // 상품 하나를 여는 때만 (알림 · 받은 링크 · 알림함 · 사진 찾기). 여러 개를 늘어놓는 목록(도감 칸 · 친구 컬렉션 ·
+  // 세대)은 없는 id 가 늘 있을 수 있어, 켜자마자 연 목록이 뒤의 46 MB 받기나 느린 인터넷을 기다리지 않게 바로 보인다
+  if (ids.length == 1 && missing()) {
+    final changed = await cat
+        .checkForNewData(maxAge: missingKitRecheck)
+        .timeout(missingKitWait, onTimeout: () => false);
+    if (changed) await cat.aliasesReady.timeout(const Duration(seconds: 5), onTimeout: () {});
   }
   return [for (final id in ids) ?cat.byId[id]];
 });
+
+/// 못 찾은 상품 때문에 manifest 를 다시 보는 간격 (같은 id 를 여러 번 눌러도 매번 받지 않게)
+const missingKitRecheck = Duration(minutes: 1);
+
+/// 못 찾은 상품 때문에 새 데이터를 기다리는 최대 시간 (상품 파일 전체 ≈ 46 MB)
+const missingKitWait = Duration(seconds: 90);
 
 /// 도감(포켓몬 세대 · Fate 작품 · AC 세대 · BBX 라인 · 건담 시대) · 홈 진행도
 Future<List<World>> fetchWorlds(String channelId) => _guard(() => deriveWorlds(channelId));
