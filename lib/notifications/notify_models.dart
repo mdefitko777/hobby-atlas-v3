@@ -5,6 +5,7 @@
 // 이 파일은 Flutter 위젯을 쓰지 않는다 (백그라운드 isolate · 단위 테스트에서 그대로 돈다).
 
 import '../json_util.dart';
+import '../l10n/l10n.dart';
 
 const notifyConfigKey = 'notify_config.json';
 const notifyStateKey = 'notify_state.json';
@@ -58,6 +59,9 @@ const notifyRuleLabels = <String, String>{
   'madoka': '마도카 마기카 전체',
   'lego': '레고 전체',
 };
+
+/// 규칙 이름 (화면) — [notifyRuleLabels] 의 한국어는 그대로 두고 보일 때만 번역
+String notifyRuleLabel(String key) => tr(notifyRuleLabels[key] ?? key);
 
 /// 내가 만든 알림 조건 — 채널 · 작품(또는 캐릭터 · 세대) · 종류. 빈 칸 = 전부.
 ///   scope: `series:<series key>` (건담 작품) · `group:<atlas 묶음 id>` (마도카 캐릭터 · Fate 작품 · 포켓몬 세대 · 베이 블레이더)

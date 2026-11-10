@@ -23,6 +23,7 @@ import '../api.dart';
 import '../data/catalog.dart';
 import '../data/user_store.dart';
 import '../detail_pane.dart';
+import '../l10n/l10n.dart';
 import '../logic/friends.dart';
 import '../models.dart';
 import '../sync/account.dart';
@@ -68,20 +69,20 @@ extension on NoticeType {
 
   /// ? 도움말 한 줄
   String get helpLabel => switch (this) {
-    NoticeType.release => '발매 (내 채널 · 좋아요한 상품)',
-    NoticeType.reserve => 'PB 예약 · 재판매 · 예약 도착', // derive/notifications.dart: isPbWindow · isRestock · isPreorder
-    NoticeType.price => '가격 변경 (일본 정가)', // 국내 시세가 아니라 공식 엔화 정가 (feed_rules.dart 'price')
-    NoticeType.announce => '공식 예고 · 공지',
-    NoticeType.friend => '친구 소식',
-    NoticeType.request => '친구 요청',
+    NoticeType.release => tr('발매 (내 채널 · 좋아요한 상품)'),
+    NoticeType.reserve => tr('PB 예약 · 재판매 · 예약 도착'), // derive/notifications.dart: isPbWindow · isRestock · isPreorder
+    NoticeType.price => tr('가격 변경 (일본 정가)'), // 국내 시세가 아니라 공식 엔화 정가 (feed_rules.dart 'price')
+    NoticeType.announce => tr('공식 예고 · 공지'),
+    NoticeType.friend => tr('친구 소식'),
+    NoticeType.request => tr('친구 요청'),
   };
 }
 
-/// N-10 ? 도움말 — 사진 귀퉁이 아이콘 · 밀기 · ⚙ (화면 위 긴 안내 대신)
-final notificationsHelp = <HelpItem>[
+/// N-10 ? 도움말 — 사진 귀퉁이 아이콘 · 밀기 · ⚙ (화면 위 긴 안내 대신). 열 때마다 만든다 (화면 언어가 바뀔 수 있다)
+List<HelpItem> get notificationsHelp => [
   for (final t in NoticeType.values) HelpItem(t.icon, t.helpLabel),
-  const HelpItem(Icons.swipe_left_outlined, '왼쪽으로 밀면 지우기'),
-  const HelpItem(Icons.settings_outlined, '알림 설정 (내 채널 소식만 · 알림 규칙)'),
+  HelpItem(Icons.swipe_left_outlined, tr('왼쪽으로 밀면 지우기')),
+  HelpItem(Icons.settings_outlined, tr('알림 설정 (내 채널 소식만 · 알림 규칙)')),
 ];
 
 /// "3시간 전" · "어제" · "10.16"
@@ -148,7 +149,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             id: 'own-${o.handle}-${o.kitId}',
             type: NoticeType.friend,
             title: k.name,
-            body: '${o.name.isEmpty ? '@${o.handle}' : o.name}님이 이미 갖고 있어요',
+            body: trf('{name}님이 이미 갖고 있어요', {'name': o.name.isEmpty ? '@${o.handle}' : o.name}),
             image: k.image,
             at: noticeNow,
             read: false,
@@ -183,8 +184,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         AppNotice(
           id: 'req-${p.handle}',
           type: NoticeType.request,
-          title: '${p.name}님의 친구 요청',
-          body: '@${p.handle} · 수락하면 서로의 구매함 · 좋아요를 볼 수 있어요',
+          title: trf('{name}님의 친구 요청', {'name': p.name}),
+          body: trf('@{handle} · 수락하면 서로의 구매함 · 좋아요를 볼 수 있어요', {'handle': p.handle}),
           image: '',
           at: noticeNow,
           read: false,
@@ -206,7 +207,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     ];
     if (ids.isEmpty) return;
     _store.setRead(ids, true); // STATE: 모두 읽음 → 점 · 굵은 글씨 사라짐 · 🔔 숫자 0 (저장)
-    showToast(context, '${ids.length}개를 읽음으로 표시했어요', onUndo: () => _store.setRead(ids, false));
+    showToast(context, trf('{n}개를 읽음으로 표시했어요', {'n': ids.length}), onUndo: () => _store.setRead(ids, false));
   }
 
   void _remove(AppNotice n) {
@@ -214,7 +215,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     _store.setDismissed(n.id, true); // STATE: 밀어서 지우기 → 목록에서 빠짐 (저장)
     showToast(
       context,
-      '알림을 지웠어요',
+      tr('알림을 지웠어요'),
       onUndo: () {
         _store.setDismissed(n.id, false);
         if (!wasRead) _store.setRead([n.id], false);
@@ -233,7 +234,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         if (kits.isNotEmpty) {
           openKitDetail(context, kits.first, loaders: widget.loaders);
         } else {
-          showToast(context, '이 상품은 지금 카탈로그에 없어요');
+          showToast(context, tr('이 상품은 지금 카탈로그에 없어요'));
         }
       } else if (n.annId.isNotEmpty) {
         final anns = await widget.loaders.announcements([n.franchiseId]);
@@ -244,7 +245,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         final f = p.friends.where((f) => f.handle == n.friend).firstOrNull;
         if (!mounted) return;
         if (f == null) {
-          showToast(context, '@${n.friend} 님의 프로필을 찾지 못했어요');
+          showToast(context, trf('@{handle} 님의 프로필을 찾지 못했어요', {'handle': n.friend}));
         } else {
           openFriend(context, f, loaders: widget.loaders);
         }
@@ -261,7 +262,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (!real) {
       if (accept) {
         _store.setDismissed(n.id, true);
-        showToast(context, '친구가 됐어요 · 친구 서랍에서 볼 수 있어요');
+        showToast(context, tr('친구가 됐어요 · 친구 서랍에서 볼 수 있어요'));
       } else {
         _remove(n);
       }
@@ -269,7 +270,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
     try {
       await account.friends.respond(n.friend, accept: accept);
-      if (mounted) showToast(context, accept ? '친구가 됐어요 · 친구 서랍에서 볼 수 있어요' : '요청을 거절했어요');
+      if (mounted) showToast(context, accept ? tr('친구가 됐어요 · 친구 서랍에서 볼 수 있어요') : tr('요청을 거절했어요'));
     } on FriendsFailure catch (e) {
       if (mounted) showToast(context, e.message);
     }
@@ -295,7 +296,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         Navigator.pop(sheet);
                         _respond(n, accept: false);
                       },
-                      child: const Text('거절'),
+                      child: Text(tr('거절')),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -305,7 +306,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         Navigator.pop(sheet);
                         _respond(n, accept: true);
                       },
-                      child: const Text('수락'),
+                      child: Text(tr('수락')),
                     ),
                   ),
                 ],
@@ -328,18 +329,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         final list = _tab == _Tab.all ? scoped : scoped.where((n) => n.type.tab == _tab).toList();
         return Scaffold(
           appBar: AppBar(
-            title: const Text('알림'),
+            title: Text(tr('알림')),
             actions: [
               TextButton(
                 onPressed: list.any((n) => !_isRead(n)) ? () => _readAll(list) : null, // N-6
-                child: const Text('모두 읽음'),
+                child: Text(tr('모두 읽음')),
               ),
               IconButton(
-                tooltip: '알림 설정',
+                tooltip: tr('알림 설정'),
                 onPressed: () => openSettings(context),
                 icon: const Icon(Icons.settings_outlined),
               ),
-              HelpButton(title: '알림', items: notificationsHelp), // N-10
+              HelpButton(title: tr('알림'), items: notificationsHelp), // N-10
               const SizedBox(width: 6),
             ],
           ),
@@ -373,7 +374,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Widget _tabs(List<AppNotice> scoped) {
     int unread(_Tab t) => scoped.where((n) => !_isRead(n) && (t == _Tab.all || n.type.tab == t)).length;
     Widget tab(String label, _Tab t) => UnderlineTab(
-      label: label,
+      label: tr(label),
       count: unread(t) == 0 ? null : unread(t),
       selected: _tab == t,
       onTap: () => setState(() => _tab = t), // STATE: 탭 → 목록 거르기
@@ -401,8 +402,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             child: EmptyView(
               // N-11 P09
               icon: Icons.notifications_none,
-              message: '새 알림이 없어요',
-              detail: '내 채널 새 상품 · 좋아요한 상품 변화 · PB 예약이 여기에 모여요\n${_store.statusLine}',
+              message: tr('새 알림이 없어요'),
+              detail: '${tr('내 채널 새 상품 · 좋아요한 상품 변화 · PB 예약이 여기에 모여요')}\n${_store.statusLine}',
             ),
           ),
         ),
@@ -424,7 +425,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ),
         ),
         for (final e in groups.entries) ...[
-          SectionHeader(e.key, padding: const EdgeInsets.fromLTRB(16, 16, 16, 6)), // N-2
+          SectionHeader(tr(e.key), padding: const EdgeInsets.fromLTRB(16, 16, 16, 6)), // N-2 (묶음 열쇠는 한국어)
           for (final n in e.value)
             Dismissible(
               // N-5
@@ -440,7 +441,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               child: _NoticeRow(
                 notice: n,
                 read: _isRead(n),
-                time: n.id.startsWith('req-') ? '누르면 수락 · 거절' : noticeTime(n.at),
+                time: n.id.startsWith('req-') ? tr('누르면 수락 · 거절') : noticeTime(n.at),
                 onTap: () => _open(n),
               ),
             ),

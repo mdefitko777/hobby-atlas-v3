@@ -6,7 +6,9 @@ import 'package:flutter/material.dart';
 import '../channels.dart';
 import '../data/catalog.dart';
 import '../data/derive.dart' show deriveWorlds;
+import '../l10n/l10n.dart';
 import '../logic/category_browse.dart' show isBeyLineWorld;
+import '../models.dart' show Kit;
 import '../notifications/notify_models.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -58,7 +60,7 @@ class _ConditionSheetState extends State<_ConditionSheet> {
       for (final k in Catalog.instance.kits) {
         if (k.franchiseId != 'gundam' || k.seriesKey.isEmpty || k.seriesKey == 'other') continue;
         count[k.seriesKey] = (count[k.seriesKey] ?? 0) + 1;
-        label[k.seriesKey] = k.series;
+        label[k.seriesKey] = k.series; // 조건에는 한국어 이름 (보일 때 scopeShown)
       }
       final keys = count.keys.toList()..sort((a, b) => count[b]!.compareTo(count[a]!));
       return [for (final key in keys) ('series:$key', label[key]!)];
@@ -86,7 +88,10 @@ class _ConditionSheetState extends State<_ConditionSheet> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: const TextStyle(fontSize: Gp.t12, color: Gp.muted)),
+        Text(
+          title,
+          style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+        ),
         const SizedBox(height: 6),
         Wrap(spacing: 6, runSpacing: 6, children: chips),
       ],
@@ -101,30 +106,35 @@ class _ConditionSheetState extends State<_ConditionSheet> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SectionHeader('알림 조건 추가', padding: EdgeInsets.fromLTRB(20, 0, 8, 4)),
+          SectionHeader(tr('알림 조건 추가'), padding: const EdgeInsets.fromLTRB(20, 0, 8, 4)),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
               children: [
-                _step('채널', [
+                _step(tr('채널'), [
                   for (final c in allChannels)
-                    if (c.hasData) _chip(c.label, ch == c.id, () => _pickChannel(c.id)),
+                    if (c.hasData) _chip(tr(c.label), ch == c.id, () => _pickChannel(c.id)),
                 ]),
                 if (ch != null && _scopes.isNotEmpty)
-                  _step(switch (ch) {
-                    'madoka' => '캐릭터',
-                    'beyblade' => '블레이더',
-                    'lego' => '시리즈',
-                    'pokemon' => '세대',
-                    _ => '작품',
-                  }, [
-                    _chip('전부', _scope.$1.isEmpty, () => setState(() => _scope = ('', ''))),
-                    for (final s in _scopes) _chip(s.$2, _scope.$1 == s.$1, () => setState(() => _scope = s)),
-                  ]),
+                  _step(
+                    switch (ch) {
+                      'madoka' => tr('캐릭터'),
+                      'beyblade' => tr('블레이더'),
+                      'lego' => tr('시리즈'),
+                      'pokemon' => tr('세대'),
+                      _ => tr('작품'),
+                    },
+                    [
+                      _chip(tr('전부'), _scope.$1.isEmpty, () => setState(() => _scope = ('', ''))),
+                      for (final s in _scopes)
+                        _chip(scopeShown(s.$1, s.$2), _scope.$1 == s.$1, () => setState(() => _scope = s)),
+                    ],
+                  ),
                 if (ch != null && _lines.isNotEmpty)
-                  _step('종류', [
-                    _chip('전부', _line.isEmpty, () => setState(() => _line = '')),
-                    for (final l in _lines) _chip(l, _line == l, () => setState(() => _line = l)),
+                  _step(tr('종류'), [
+                    _chip(tr('전부'), _line.isEmpty, () => setState(() => _line = '')),
+                    // 라인 이름은 조건 값(한국어 그대로 저장 · 비교) — 보일 때만 번역
+                    for (final l in _lines) _chip(tr(l), _line == l, () => setState(() => _line = l)),
                   ]),
               ],
             ),
@@ -132,7 +142,7 @@ class _ConditionSheetState extends State<_ConditionSheet> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
             child: GradientButton(
-              label: ch == null ? '채널을 골라 주세요' : '추가',
+              label: ch == null ? tr('채널을 골라 주세요') : tr('추가'),
               onPressed: ch == null
                   ? null
                   : () => Navigator.pop(
@@ -149,7 +159,29 @@ class _ConditionSheetState extends State<_ConditionSheet> {
 
 /// 조건 한 줄 글자: "건담 · SEED · HG" (빈 칸 = 전부)
 String conditionLabel(NotifyCondition x) => [
-  channelOf(x.franchise).label,
-  x.scope.isEmpty ? '전부' : x.scopeLabel,
-  x.line.isEmpty ? '전부' : x.line,
+  tr(channelOf(x.franchise).label),
+  x.scope.isEmpty ? tr('전부') : scopeShown(x.scope, x.scopeLabel),
+  x.line.isEmpty ? tr('전부') : tr(x.line),
 ].join(' · ');
+
+/// 작품 이름 (화면) — 조건에는 한국어 작품 이름을 저장하고 (기기 · 언어가 바뀌어도 같은 값), 중국어 화면에서는 상품의 중국어 작품 이름으로
+String scopeShown(String scope, String label) {
+  if (!L10n.isZh || !scope.startsWith('series:')) return label;
+  return _seriesZhByKey()[scope.substring('series:'.length)] ?? label;
+}
+
+List<Kit>? _seriesZhOf;
+Map<String, String> _seriesZh = const {};
+
+/// series key → 중국어 작품 이름 (카탈로그가 바뀔 때만 다시 만든다 — 시트 칩마다 전체 상품을 돌지 않게)
+Map<String, String> _seriesZhByKey() {
+  final kits = Catalog.instance.kits;
+  if (!identical(kits, _seriesZhOf)) {
+    _seriesZhOf = kits;
+    _seriesZh = {
+      for (final k in kits)
+        if (k.seriesKey.isNotEmpty && k.seriesZh.isNotEmpty) k.seriesKey: k.seriesZh,
+    };
+  }
+  return _seriesZh;
+}

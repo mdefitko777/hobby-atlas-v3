@@ -14,6 +14,7 @@
 //   · 예약한 상품의 도착 달 · 도착 날 (기기에 적은 예약, 규칙 '예약 도착')
 // 이 파일은 Flutter 위젯을 쓰지 않는다 (백그라운드 isolate · 단위 테스트).
 import '../data/gunpula.dart' show correctedCode, lineLabel, pickName;
+import '../l10n/l10n.dart';
 import '../logic/lego_scope.dart';
 import 'notify_models.dart';
 import '../json_util.dart';
@@ -89,13 +90,16 @@ class FeedItem {
     final id = jStr(j['kit_id']);
     if (id.isEmpty) return null;
     final restock = _restockOf(j);
+    // 휴대폰 알림 제목 · 둘째 줄의 이름도 고른 화면 언어로 (Kit.name 과 같은 순서 — lib/data/gunpula.dart)
+    final name = pickName(j['names'], L10n.isZh ? const ['zh', 'ja', 'en', 'ko'] : const ['ko', 'ja', 'en', 'zh']);
+    final seriesZh = jStr(jMap(j['series_labels'])['zh']);
     return FeedItem(
       kitId: id,
       changeType: jStr(j['change_type']).isEmpty ? changeType : jStr(j['change_type']),
       franchise: jStr(j['franchise']),
-      name: pickName(j['names']).isEmpty ? id : pickName(j['names']),
+      name: name.isEmpty ? id : name,
       seriesKey: jStr(j['series_key']),
-      seriesLabel: pickName(j['series_labels']),
+      seriesLabel: L10n.isZh && seriesZh.isNotEmpty ? seriesZh : pickName(j['series_labels']),
       releaseDate: jStr(j['release_date']),
       priceJpy: j['price_jpy'] is num ? (j['price_jpy']! as num).toInt() : null,
       isLimited: j['is_limited'] == true,
@@ -276,7 +280,7 @@ bool wantedHit(FeedItem it, NotifyConfig c) => c.rule('wanted') && c.wanted.cont
 bool restockHit(FeedItem it, NotifyConfig c) =>
     it.isRestock && c.rule('restock') && (c.wanted.contains(it.kitId) || c.owned.contains(it.kitId));
 
-/// 재판매 종류 → 글자 (lib/logic/restock.dart restockKindLabels 와 같음 — 이 파일은 백그라운드에서도 돈다)
+/// 재판매 종류 → 글자 (lib/logic/restock.dart restockKindLabels 와 같음 — 이 파일은 백그라운드에서도 돈다). 쓸 때 tr
 const _restockKinds = {'pb_resale': 'PB 재판매', 'retail_resale': '일반 재판매', 'tamashii_resale': '혼 재판매', 'lottery': '추첨'};
 
 /// 짧은 종류 (변경 이유 글자 "재판매 2027.01 · PB")
@@ -293,10 +297,10 @@ NoticeRecord? recordForItem(FeedItem it, FeedEntry e, NotifyConfig c, {bool seen
       kitId: it.kitId,
       title: it.name,
       body: [
-        '재판매',
+        tr('재판매'),
         if (it.restockDate.isNotEmpty) _ymDot(it.restockDate),
-        owned ? '구매함 상품' : '좋아요한 상품',
-        ?_restockKinds[it.restockKind],
+        owned ? tr('구매함 상품') : tr('좋아요한 상품'),
+        ?_trOrNull(_restockKinds[it.restockKind]),
       ].join(' · '),
       at: e.generatedAt ?? DateTime.parse('${e.date}T00:00:00Z'),
       franchise: it.franchise,
@@ -331,34 +335,36 @@ NoticeRecord? recordForItem(FeedItem it, FeedEntry e, NotifyConfig c, {bool seen
 /// 알림 둘째 줄: "좋아요한 상품 · 가격 변경 ¥5,940 · 프리미엄 반다이 · SEED"
 String itemBody(FeedItem it, {bool wanted = false}) {
   final reasons = it.changeType == 'added'
-      ? ['새로 수록']
+      ? [tr('새로 수록')]
       : [
           for (final r in it.reasons)
             if (!quietReasons.contains(r)) _reasonLabel(r, it),
         ];
   return [
-    if (wanted) '좋아요한 상품',
+    if (wanted) tr('좋아요한 상품'),
     ...reasons,
-    if (it.isPb) '프리미엄 반다이',
+    if (it.isPb) tr('프리미엄 반다이'),
     if (it.seriesLabel.isNotEmpty && it.franchise != 'pokemon') it.seriesLabel,
-    if (it.changeType == 'added' && it.releaseDate.isNotEmpty) '${it.releaseDate} 발매',
+    if (it.changeType == 'added' && it.releaseDate.isNotEmpty) trf('{date} 발매', {'date': it.releaseDate}),
   ].join(' · ');
 }
 
 String _reasonLabel(String r, FeedItem it) => switch (r) {
-  'price' => it.priceJpy == null ? '가격 변경' : '가격 변경 ¥${_comma(it.priceJpy!)}',
-  'release' => it.releaseDate.isEmpty ? '발매일 변경' : '발매일 ${it.releaseDate}',
-  'limited' => it.isLimited ? '한정 표시' : '한정 해제',
-  'source' => '판매처 · 출처 변경',
+  'price' => it.priceJpy == null ? tr('가격 변경') : trf('가격 변경 {price}', {'price': '¥${_comma(it.priceJpy!)}'}),
+  'release' => it.releaseDate.isEmpty ? tr('발매일 변경') : trf('발매일 {date}', {'date': it.releaseDate}),
+  'limited' => it.isLimited ? tr('한정 표시') : tr('한정 해제'),
+  'source' => tr('판매처 · 출처 변경'),
   'restock' => [
-    it.restockDate.isEmpty ? '재판매' : '재판매 ${_ymDot(it.restockDate)}',
-    ?_restockShort[it.restockKind],
+    it.restockDate.isEmpty ? tr('재판매') : trf('재판매 {date}', {'date': _ymDot(it.restockDate)}),
+    ?_trOrNull(_restockShort[it.restockKind]),
   ].join(' · '),
-  _ => '정보 변경',
+  _ => tr('정보 변경'),
 };
 
+String? _trOrNull(String? ko) => ko == null ? null : tr(ko);
+
 /// PB 예약 기간 알림에 붙는 말 (Wayback 에서 읽은 날짜라)
-const pbStaleNote = 'Wayback 기록이라 바뀌었을 수 있어요';
+String get pbStaleNote => tr('Wayback 기록이라 바뀌었을 수 있어요');
 
 /// 좋아요한 PB 상품: 예약 시작(하루 전 ~ 이틀 뒤) · 마감 임박(3일 안). 이미 알린 것([known])은 빼고.
 List<NoticeRecord> pbWindowRecords(NotifyConfig c, Set<String> known, DateTime now) {
@@ -373,7 +379,9 @@ List<NoticeRecord> pbWindowRecords(NotifyConfig c, Set<String> known, DateTime n
       final d = o.difference(today).inDays;
       final id = 'pb-open-${w.id}-${w.opens}';
       if (d <= 1 && d >= -2 && (cl == null || !today.isAfter(cl)) && !known.contains(id)) {
-        final when = d == 1 ? '내일 예약 시작 (${_md(w.opens)})' : (d == 0 ? '오늘 예약 시작' : '예약 중 (${_md(w.opens)} 시작)');
+        final when = d == 1
+            ? trf('내일 예약 시작 ({date})', {'date': _md(w.opens)})
+            : (d == 0 ? tr('오늘 예약 시작') : trf('예약 중 ({date} 시작)', {'date': _md(w.opens)}));
         out.add(_pbRecord(id, 'pb_open', w, w.opens, '$when · $pbStaleNote', now));
       }
     }
@@ -381,7 +389,7 @@ List<NoticeRecord> pbWindowRecords(NotifyConfig c, Set<String> known, DateTime n
       final d = cl.difference(today).inDays;
       final id = 'pb-close-${w.id}-${w.closes}';
       if (d >= 0 && d <= 3 && !known.contains(id)) {
-        final when = d == 0 ? '오늘 예약 마감' : '예약 마감 D-$d (${_md(w.closes)})';
+        final when = d == 0 ? tr('오늘 예약 마감') : trf('예약 마감 D-{n} ({date})', {'n': d, 'date': _md(w.closes)});
         out.add(_pbRecord(id, 'pb_close', w, w.closes, '$when · $pbStaleNote', now));
       }
     }
@@ -414,9 +422,9 @@ List<NoticeRecord> releaseRecords(NotifyConfig c, Set<String> known, DateTime no
     if (day == null) continue;
     final d = day.difference(today).inDays;
     final (stage, body) = switch (d) {
-      0 => ('d0', '오늘 발매'),
-      1 => ('d1', '내일 발매 (${_md(r.date)})'),
-      >= 2 && <= 7 => ('d7', 'D-$d · ${_md(r.date)} 발매'),
+      0 => ('d0', tr('오늘 발매')),
+      1 => ('d1', trf('내일 발매 ({date})', {'date': _md(r.date)})),
+      >= 2 && <= 7 => ('d7', trf('D-{n} · {date} 발매', {'n': d, 'date': _md(r.date)})),
       _ => ('', ''),
     };
     if (stage.isEmpty) continue;
@@ -428,7 +436,7 @@ List<NoticeRecord> releaseRecords(NotifyConfig c, Set<String> known, DateTime no
         kind: 'release',
         kitId: r.id,
         title: r.name,
-        body: '좋아요한 상품 · $body',
+        body: '${tr('좋아요한 상품')} · $body',
         at: now.toUtc(),
         franchise: r.franchise,
         date: r.date,
@@ -449,10 +457,10 @@ List<NoticeRecord> preorderRecords(NotifyConfig c, Set<String> known, DateTime n
   for (final p in c.preorders) {
     if (!p.arrival.startsWith(ym)) continue;
     final exact = p.arrival.length == 10;
-    final money = p.due > 0 ? '낼 돈 ${_comma(p.due)}원' : '결제 완료';
+    final money = p.due > 0 ? trf('낼 돈 {n}원', {'n': _comma(p.due)}) : tr('결제 완료');
     for (final (stage, label) in [
-      ('month', exact ? '${_md(p.arrival)} 도착 예정' : '이번 달 도착 예정'),
-      if (exact && p.arrival == today) ('d0', '오늘 도착 예정'),
+      ('month', exact ? trf('{date} 도착 예정', {'date': _md(p.arrival)}) : tr('이번 달 도착 예정')),
+      if (exact && p.arrival == today) ('d0', tr('오늘 도착 예정')),
     ]) {
       final id = 'pre-${p.id}-${p.arrival}-$stage';
       if (known.contains(id)) continue;
@@ -462,7 +470,7 @@ List<NoticeRecord> preorderRecords(NotifyConfig c, Set<String> known, DateTime n
           kind: 'preorder',
           kitId: p.id,
           title: p.name,
-          body: ['예약', label, if (p.shop.isNotEmpty) p.shop, money].join(' · '),
+          body: [tr('예약'), label, if (p.shop.isNotEmpty) p.shop, money].join(' · '),
           at: now.toUtc(),
           franchise: p.franchise,
           date: p.arrival,
@@ -475,7 +483,7 @@ List<NoticeRecord> preorderRecords(NotifyConfig c, Set<String> known, DateTime n
 }
 
 // ── 알림 받는 공식 예고 ──────────────────────────────────────────────────────
-/// announcements.json status → 화면 글자 (순서 = 단계 순서)
+/// announcements.json status → 화면 글자 (순서 = 단계 순서). 한국어 값은 비교에도 쓴다(annStageKey) — 보일 때 tr
 const annStageLabels = {
   'announced': '공식 발표',
   'product_confirmed': '상품화 확정',
@@ -508,7 +516,7 @@ List<NoticeRecord> annStageRecords(NotifyConfig config, Object? announcements, S
             kitId: '',
             annId: e.key,
             title: e.value.title,
-            body: '${annStageLabels[e.value.stage] ?? '공식 발표'} → ${annStageLabels[stage]}',
+            body: '${tr(annStageLabels[e.value.stage] ?? '공식 발표')} → ${tr(annStageLabels[stage] ?? stage)}',
             at: now,
             franchise: e.value.franchise,
             reasons: [stage],
@@ -645,8 +653,10 @@ class SystemAlert {
 const catalogAlertsEach = 5;
 
 /// 요약 알림 제목: 「새 상품 6개 · 변경 2개」 (없는 쪽은 뺀다)
-String catalogSummaryTitle({required int added, required int changed}) =>
-    [if (added > 0) '새 상품 $added개', if (changed > 0) '변경 $changed개'].join(' · ');
+String catalogSummaryTitle({required int added, required int changed}) => [
+  if (added > 0) trf('새 상품 {n}개', {'n': added}),
+  if (changed > 0) trf('변경 {n}개', {'n': changed}),
+].join(' · ');
 
 /// 새로 들어온 줄 → 휴대폰 알림. 새 상품은 5개까지 하나씩(넘으면 요약), 좋아요 · PB 는 3개까지 하나씩(넘으면 요약).
 List<SystemAlert> buildAlerts(Iterable<NoticeRecord> fresh) {
@@ -662,7 +672,7 @@ List<SystemAlert> buildAlerts(Iterable<NoticeRecord> fresh) {
         SystemAlert(
           id: stableId('catalog:${r.id}'),
           channel: 'catalog',
-          title: r.kind == 'added' ? '새 상품 · ${r.title}' : r.title,
+          title: r.kind == 'added' ? trf('새 상품 · {name}', {'name': r.title}) : r.title,
           body: r.body,
           payload: 'kit:${r.kitId}',
         ),
@@ -692,7 +702,7 @@ List<SystemAlert> buildAlerts(Iterable<NoticeRecord> fresh) {
       SystemAlert(
         id: stableId('wanted'),
         channel: 'wanted',
-        title: '좋아요한 상품 ${wanted.length}개가 바뀌었어요',
+        title: trf('좋아요한 상품 {n}개가 바뀌었어요', {'n': wanted.length}),
         body: _names(wanted),
         payload: 'inbox',
       ),
@@ -716,7 +726,7 @@ List<SystemAlert> buildAlerts(Iterable<NoticeRecord> fresh) {
       SystemAlert(
         id: stableId('pb'),
         channel: 'pb',
-        title: '좋아요한 PB 상품 ${pb.length}개 예약 소식',
+        title: trf('좋아요한 PB 상품 {n}개 예약 소식', {'n': pb.length}),
         body: '${_names(pb)} · $pbStaleNote',
         payload: 'inbox',
       ),
@@ -727,7 +737,9 @@ List<SystemAlert> buildAlerts(Iterable<NoticeRecord> fresh) {
         SystemAlert(
           id: stableId(r.id),
           channel: 'pb',
-          title: r.kind == 'pb_open' ? 'PB 예약 시작 · ${r.title}' : 'PB 예약 마감 임박 · ${r.title}',
+          title: r.kind == 'pb_open'
+              ? trf('PB 예약 시작 · {name}', {'name': r.title})
+              : trf('PB 예약 마감 임박 · {name}', {'name': r.title}),
           body: r.body,
           payload: 'kit:${r.kitId}',
         ),
@@ -740,7 +752,7 @@ List<SystemAlert> buildAlerts(Iterable<NoticeRecord> fresh) {
       SystemAlert(
         id: stableId('restock'),
         channel: 'restock',
-        title: '재판매 소식 ${restock.length}개',
+        title: trf('재판매 소식 {n}개', {'n': restock.length}),
         body: _names(restock),
         payload: 'inbox',
       ),
@@ -763,7 +775,7 @@ List<SystemAlert> buildAlerts(Iterable<NoticeRecord> fresh) {
       SystemAlert(
         id: stableId(r.id),
         channel: 'preorder',
-        title: '예약 도착 · 「${r.title}」',
+        title: trf('예약 도착 · 「{name}」', {'name': r.title}),
         body: r.body,
         payload: 'kit:${r.kitId}',
       ),
@@ -775,7 +787,7 @@ List<SystemAlert> buildAlerts(Iterable<NoticeRecord> fresh) {
       SystemAlert(
         id: stableId('ann'),
         channel: 'ann',
-        title: '알림 받는 공식 예고 ${ann.length}개가 다음 단계로',
+        title: trf('알림 받는 공식 예고 {n}개가 다음 단계로', {'n': ann.length}),
         body: _names(ann),
         payload: 'inbox',
       ),
@@ -786,7 +798,7 @@ List<SystemAlert> buildAlerts(Iterable<NoticeRecord> fresh) {
         SystemAlert(
           id: stableId(r.id),
           channel: 'ann',
-          title: '${annStageLabels[r.reasons.firstOrNull] ?? '다음 단계'} · ${r.title}',
+          title: '${tr(annStageLabels[r.reasons.firstOrNull] ?? '다음 단계')} · ${r.title}',
           body: r.body,
           payload: 'ann:${r.franchise}:${r.annId}',
         ),
@@ -799,7 +811,7 @@ List<SystemAlert> buildAlerts(Iterable<NoticeRecord> fresh) {
 /// 재판매 휴대폰 알림 제목: "재판매 · 「이름」 2027.03"
 String restockTitle(NoticeRecord r) {
   final ym = RegExp(r'^\d{4}-\d{2}').hasMatch(r.date) ? ' ${_ymDot(r.date)}' : '';
-  return '재판매 · 「${r.title}」$ym';
+  return trf('재판매 · 「{name}」{ym}', {'name': r.title, 'ym': ym});
 }
 
 /// '2027-03-15' · '2027-03' → '2027.03'
@@ -811,7 +823,7 @@ String _ymd(Object? v) => RegExp(r'^\d{4}-\d{2}(-\d{2})?').firstMatch(jStr(v))?.
 /// 「A」 · 「B」 외 3
 String _names(List<NoticeRecord> rs) {
   final head = rs.take(2).map((r) => '「${r.title}」').join(' · ');
-  return rs.length > 2 ? '$head 외 ${rs.length - 2}' : head;
+  return rs.length > 2 ? trf('{names} 외 {n}', {'names': head, 'n': rs.length - 2}) : head;
 }
 
 /// '2026-10-23' → '10.23'
