@@ -3,6 +3,7 @@
 // 거르는 규칙(GuideFilter.matches · apply)은 lib/logic/guide_filter.dart
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../logic/guide_filter.dart';
 import '../logic/kit_filter.dart' show valueCounts;
 import '../theme.dart';
@@ -94,6 +95,9 @@ class _GuideFilterSheetState extends State<GuideFilterSheet> {
   List<String> _values(Iterable<Iterable<String>> all) =>
       valueCounts([for (final vs in all) ...vs]).map((e) => e.$1).toList();
 
+  /// 고른 값들 한 줄 요약 (라인 · 시대 · 기체 종류 — 번역 표에 있으면 중국어)
+  String _summary(Set<String> picked) => pickSummary({for (final v in picked) tr(v)});
+
   Widget _expand(String title, String summary, Widget body) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
@@ -136,9 +140,9 @@ class _GuideFilterSheetState extends State<GuideFilterSheet> {
         if (t != GuideTier.photo || widget.photoTier) t,
     ];
     return GpPickSheet(
-      title: '도감 필터',
+      title: tr('도감 필터'),
       hits: hits,
-      noHitLabel: '맞는 칸 없음',
+      noHitLabel: tr('맞는 칸 없음'),
       onApply: () => Navigator.pop(context, _draft),
       onReset: () => setState(() {
         _draft.clear();
@@ -151,9 +155,9 @@ class _GuideFilterSheetState extends State<GuideFilterSheet> {
           current: _draft.tier,
           child: (v) => switch (v.mine) {
             final m? => MineStateLabel(m),
-            null => const Tooltip(
-              message: '내 사진',
-              child: Icon(Icons.workspace_premium, size: Gp.iS, color: Gp.own),
+            null => Tooltip(
+              message: tr('내 사진'),
+              child: const Icon(Icons.workspace_premium, size: Gp.iS, color: Gp.own),
             ),
           },
           onPick: (v) => setState(() => _draft.tier = v),
@@ -161,24 +165,25 @@ class _GuideFilterSheetState extends State<GuideFilterSheet> {
         const Divider(height: 20),
         // 상품 필터와 같은 줄: 라인
         if (grades.isNotEmpty)
-          _expand('라인', pickSummary(_draft.grades), _checks(grades, _draft.grades, (f) => f.grades)),
+          _expand(tr('라인'), _summary(_draft.grades), _checks(grades, _draft.grades, (f) => f.grades)),
         // 도감에만: 시대 · 기체 종류 · 상품 있는 것만 · 정렬
         if (groups.length > 1)
           _expand(
-            widget.groupLabel,
-            pickSummary(_draft.groups),
+            tr(widget.groupLabel),
+            _summary(_draft.groups),
             _checks(groups, _draft.groups, (f) => f.groups, columns: 1),
           ),
-        if (types.length > 1) _expand('기체 종류', pickSummary(_draft.types), _checks(types, _draft.types, (f) => f.types)),
+        if (types.length > 1)
+          _expand(tr('기체 종류'), _summary(_draft.types), _checks(types, _draft.types, (f) => f.types)),
         CheckGrid(
           columns: 1,
-          values: const ['상품 있는 것만'],
-          selected: {if (_draft.withKits) '상품 있는 것만'},
+          values: [tr('상품 있는 것만')],
+          selected: {if (_draft.withKits) tr('상품 있는 것만')},
           countOf: (_) => _with((f) => f.withKits = true),
           onToggle: (_) => setState(() => _draft.withKits = !_draft.withKits),
         ),
         _expand(
-          '정렬',
+          tr('정렬'),
           _draft.sort.label,
           SquareSegments<GuideSort>(
             values: GuideSort.values,

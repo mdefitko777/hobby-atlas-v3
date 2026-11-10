@@ -3,6 +3,7 @@
 // 수집 기록(items[kit_id])에는 넣지 않는다 — 옛 Gunpula 앱이 동기화 때 모르는 칸을 버릴 수 있다.
 // 조립하는 상품만 단계가 있다 ([needsAssembly]) — 피규어 · 인형 · 굿즈는 사면 끝.
 import '../json_util.dart';
+import '../l10n/l10n.dart';
 import '../models.dart';
 
 /// 프라모델이 아니어도 직접 조립하는 라인 (lib/data/gunpula.dart lineLabel 의 이름)
@@ -19,8 +20,11 @@ enum BuildStage {
   building('조립 중'),
   built('완성');
 
-  const BuildStage(this.label);
-  final String label;
+  const BuildStage(this._ko);
+  final String _ko;
+
+  /// 화면 글 (중국어 화면이면 번역)
+  String get label => tr(_ko);
 
   String get key => name;
 

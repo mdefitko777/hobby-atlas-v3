@@ -1,6 +1,7 @@
 // 상품 규칙 — 글자 찾기 · 바코드 · 작품 묶음 · 워터마크 글자 (순수 Dart)
 import '../clock.dart';
 import '../format.dart';
+import '../l10n/l10n.dart';
 import '../models.dart';
 
 /// 검색어가 이름 · 일본어 이름 · 작품 · 라인 · 종류에 들어 있는지 (검색 탭 · 홈 전체 목록 공통)
@@ -39,6 +40,9 @@ List<Kit> kitsWithBarcode(Iterable<Kit> kits, String raw) {
 /// 작품 묶음 이름 (홈 전체 목록 거르기). 베이블레이드는 작품이 하나라 series(한정 · UX…) 대신 이름 하나로
 String kitWork(Kit k) => k.franchiseId == 'beyblade' ? 'BEYBLADE X' : k.series;
 
+/// [kitWork] 를 화면에 보일 때 (중국어 화면이면 작품 중국어 이름) — 묶기 · 비교는 [kitWork] 그대로
+String kitWorkLabel(Kit k) => k.franchiseId == 'beyblade' ? 'BEYBLADE X' : k.seriesLabel;
+
 /// 워터마크 글자: 앱 이름 줄임(GP) + 올린 사람 아이디
 String watermarkText(String handle) => 'HA · @$handle';
 
@@ -61,13 +65,13 @@ List<Kit> newThisWeek(List<Kit> kits, {int limit = 8}) {
   final today = dayKey(now);
   if (wanted && k.pbCloses.length >= 10 && k.pbCloses.compareTo(today) >= 0) {
     final d = DateTime.parse(k.pbCloses).difference(DateTime(now.year, now.month, now.day)).inDays;
-    return (sortKey: k.pbCloses, label: d == 0 ? 'PB 오늘' : 'PB D-$d', urgent: true);
+    return (sortKey: k.pbCloses, label: d == 0 ? tr('PB 오늘') : 'PB D-$d', urgent: true);
   }
   if (k.date.length == 10 && k.date.compareTo(today) >= 0) {
     return (sortKey: k.date, label: dateDot(k.date.substring(5)), urgent: false);
   }
   if (k.date.length == 7 && k.date.compareTo(today.substring(0, 7)) >= 0) {
-    return (sortKey: '${k.date}-99', label: '${int.parse(k.date.substring(5))}월', urgent: false);
+    return (sortKey: '${k.date}-99', label: trf('{m}월', {'m': int.parse(k.date.substring(5))}), urgent: false);
   }
   return null;
 }

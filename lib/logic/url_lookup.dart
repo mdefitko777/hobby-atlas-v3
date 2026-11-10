@@ -4,6 +4,7 @@
 //   3) 없으면 주소 안의 JAN 13자리(검사 숫자가 맞는 것) → 바코드가 같은 상품
 //   4) 없으면 프리미엄 반다이 item-<번호> → 그 번호가 든 상품 id · 출처 주소
 // Flutter 를 쓰지 않는다 (단위 테스트 · compute 안 매핑 함수도 isListingUrl 을 부른다).
+import '../l10n/l10n.dart';
 import '../models.dart';
 import 'kit_rules.dart' show kitsWithBarcode;
 
@@ -15,10 +16,23 @@ List<String> urlsIn(String text) => [
 ];
 
 /// 상품을 가리키는 값 (이것만 남긴다)
-const _idParams = {'prd_id', 'jan_code', 'jan', 'productno', 'product_no', 'item_id', 'goods_id', 'item_code', 'id', 'pid'};
+const _idParams = {
+  'prd_id',
+  'jan_code',
+  'jan',
+  'productno',
+  'product_no',
+  'item_id',
+  'goods_id',
+  'item_code',
+  'id',
+  'pid',
+};
 
 /// 언어 · 지역 칸 (/en/ · /ja/ · /en-others/ …) — 같은 상품의 다른 언어 페이지
-final _localeSeg = RegExp(r'^(en|ja|jp|ko|kr|zh|tw|hk|cn|zh-hant|zh-hans|zh-tw|en-others|en-us|en-gb|ja-jp|ko-kr|global)$');
+final _localeSeg = RegExp(
+  r'^(en|ja|jp|ko|kr|zh|tw|hk|cn|zh-hant|zh-hans|zh-tw|en-others|en-us|en-gb|ja-jp|ko-kr|global)$',
+);
 
 /// 목록 · 검색 페이지 (상품 하나가 아님) — 매핑 때 출처 주소에서 뺀다
 bool isListingUrl(String url) {
@@ -104,7 +118,7 @@ class UrlIndex {
   List<UrlHit> find(String url) {
     final key = urlKey(url);
     if (key.isEmpty) return const [];
-    if (_byKey[key] case final ks?) return [for (final k in ks) UrlHit(k, '주소')];
+    if (_byKey[key] case final ks?) return [for (final k in ks) UrlHit(k, tr('주소'))];
     for (final jan in jansInUrl(url)) {
       final ks = kitsWithBarcode(_kits, jan);
       if (ks.isNotEmpty) return [for (final k in ks) UrlHit(k, 'JAN $jan')];
@@ -114,9 +128,14 @@ class UrlIndex {
       final needle = 'item-$item';
       final ks = [
         for (final k in _kits)
-          if (k.id.endsWith('-$item') || k.officialUrl.contains(needle) || k.sourceUrls.any((u) => u.contains(needle))) k,
+          if (k.id.endsWith('-$item') || k.officialUrl.contains(needle) || k.sourceUrls.any((u) => u.contains(needle)))
+            k,
       ];
-      if (ks.isNotEmpty) return [for (final k in ks) UrlHit(k, '상품 번호 $item')];
+      if (ks.isNotEmpty) {
+        return [
+          for (final k in ks) UrlHit(k, trf('상품 번호 {item}', {'item': item})),
+        ];
+      }
     }
     return const [];
   }

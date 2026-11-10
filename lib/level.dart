@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'api.dart';
 import 'data/user_store.dart';
+import 'l10n/l10n.dart';
 import 'logic/level_math.dart';
 import 'marks.dart';
 import 'theme.dart';
@@ -125,7 +126,7 @@ class LevelHelpButton extends StatelessWidget {
   const LevelHelpButton({super.key});
 
   @override
-  Widget build(BuildContext context) => HelpButton.sheet(title: '레벨 · 도감', builder: (_) => const _LevelHelp());
+  Widget build(BuildContext context) => HelpButton.sheet(title: tr('레벨 · 도감'), builder: (_) => const _LevelHelp());
 }
 
 const _tierSample = 'assets/gp/units/g3000u00100.webp';
@@ -151,11 +152,11 @@ Widget tierHelpCell(CellTier t) => tierSample(t);
 
 /// 도감 칸 표시 + 경험치 — 컬렉션 · 작품 도감의 ? 에 같이 넣는다
 List<HelpItem> tierHelpItems() => [
-  HelpItem.widget(tierHelpCell(CellTier.none), '그림 그대로 = 아직 (칸은 늘 컬러)'),
-  HelpItem.widget(tierHelpCell(CellTier.liked), '♡ = 좋아요 · 0'),
-  HelpItem.widget(tierHelpCell(CellTier.owned), '리본 = 구매함 · +10'),
-  const HelpItem(Icons.grid_view_rounded, '도감 새 칸 · +5', color: Gp.own),
-  HelpItem.widget(tierHelpCell(CellTier.photo), '내 사진 + 도는 고리 = 사진 인증 · +3'),
+  HelpItem.widget(tierHelpCell(CellTier.none), tr('그림 그대로 = 아직 (칸은 늘 컬러)')),
+  HelpItem.widget(tierHelpCell(CellTier.liked), tr('♡ = 좋아요 · 0')),
+  HelpItem.widget(tierHelpCell(CellTier.owned), tr('리본 = 구매함 · +10')),
+  HelpItem(Icons.grid_view_rounded, tr('도감 새 칸 · +5'), color: Gp.own),
+  HelpItem.widget(tierHelpCell(CellTier.photo), tr('내 사진 + 도는 고리 = 사진 인증 · +3')),
 ];
 
 class _LevelHelp extends StatelessWidget {
@@ -186,10 +187,10 @@ class _LevelHelp extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            row(tier(CellTier.liked), '♡ 좋아요', '0'),
-            row(tier(CellTier.owned), '구매함', '+10'),
-            row(const Icon(Icons.grid_view_rounded, color: Gp.own, size: Gp.iL), '도감 새 칸', '+5'),
-            row(tier(CellTier.photo), '사진 인증', '+3'),
+            row(tier(CellTier.liked), tr('♡ 좋아요'), '0'),
+            row(tier(CellTier.owned), tr('구매함'), '+10'),
+            row(const Icon(Icons.grid_view_rounded, color: Gp.own, size: Gp.iL), tr('도감 새 칸'), '+5'),
+            row(tier(CellTier.photo), tr('사진 인증'), '+3'),
             const SizedBox(height: 10),
             Row(
               children: [

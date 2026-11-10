@@ -1,6 +1,7 @@
 // 상품 필터 규칙 — 내 상태 · 발매 · 판매 · 가격 · 종류 · 라인 · 작품 (화면 없이 테스트할 수 있는 순수 Dart)
 import '../clock.dart';
 import '../format.dart';
+import '../l10n/l10n.dart';
 import '../models.dart';
 import 'kit_rules.dart';
 
@@ -14,10 +15,10 @@ enum PriceBand { any, under3k, mid, over10k }
 
 extension PriceBandLabel on PriceBand {
   String get label => switch (this) {
-    PriceBand.any => '전체',
-    PriceBand.under3k => '¥3,000 이하',
+    PriceBand.any => tr('전체'),
+    PriceBand.under3k => tr('¥3,000 이하'),
     PriceBand.mid => '¥3,000 – ¥10,000',
-    PriceBand.over10k => '¥10,000 이상',
+    PriceBand.over10k => tr('¥10,000 이상'),
   };
 
   bool hit(int? p) => switch (this) {
@@ -30,20 +31,20 @@ extension PriceBandLabel on PriceBand {
 
 extension ReleaseStateLabel on ReleaseState {
   String get label => switch (this) {
-    ReleaseState.any => '전체',
-    ReleaseState.upcoming => '발매 예정',
-    ReleaseState.thisMonth => '이번 달',
-    ReleaseState.released => '발매됨',
+    ReleaseState.any => tr('전체'),
+    ReleaseState.upcoming => tr('발매 예정'),
+    ReleaseState.thisMonth => tr('이번 달'),
+    ReleaseState.released => tr('발매됨'),
   };
 }
 
 extension SaleStateLabel on SaleState {
   String get label => switch (this) {
-    SaleState.any => '전체',
-    SaleState.regular => '일반',
-    SaleState.limited => '한정',
+    SaleState.any => tr('전체'),
+    SaleState.regular => tr('일반'),
+    SaleState.limited => tr('한정'),
     SaleState.pb => 'PB',
-    SaleState.base => '베이스',
+    SaleState.base => tr('베이스'),
   };
 }
 
@@ -60,10 +61,10 @@ enum PeriodPreset { any, thisYear, lastYear, lastYearSpan }
 
 extension PeriodPresetLabel on PeriodPreset {
   String get label => switch (this) {
-    PeriodPreset.any => '전체',
-    PeriodPreset.thisYear => '올해',
-    PeriodPreset.lastYear => '작년',
-    PeriodPreset.lastYearSpan => '최근 1년',
+    PeriodPreset.any => tr('전체'),
+    PeriodPreset.thisYear => tr('올해'),
+    PeriodPreset.lastYear => tr('작년'),
+    PeriodPreset.lastYearSpan => tr('최근 1년'),
   };
 
   /// (시작, 끝) — 'YYYY-MM', 빈 글자 = 끝이 열림. [today] = 'YYYY-MM-DD'
@@ -107,8 +108,8 @@ String monthDot(String ym) => ym.replaceAll('-', '.');
 /// 기간 한 줄: 2023.01–2024.06 · 2023.01 부터 · 2024.06 까지 · 빈 글자
 String periodLabel(String from, String to) => switch ((from.isEmpty, to.isEmpty)) {
   (true, true) => '',
-  (false, true) => '${monthDot(from)} 부터',
-  (true, false) => '${monthDot(to)} 까지',
+  (false, true) => trf('{from} 부터', {'from': monthDot(from)}),
+  (true, false) => trf('{to} 까지', {'to': monthDot(to)}),
   _ => from == to ? monthDot(from) : '${monthDot(from)}–${monthDot(to)}',
 };
 
@@ -138,7 +139,9 @@ class KitFilter {
     this.price = PriceBand.any,
     this.from = '',
     this.to = '',
-  }) : works = works ?? {},
+    Map<String, String>? workNames,
+  }) : workNames = workNames ?? {},
+       works = works ?? {},
        types = types ?? {},
        lines = lines ?? {},
        goodsKinds = goodsKinds ?? {};
@@ -149,6 +152,9 @@ class KitFilter {
 
   /// 굿즈 세부 종류 (굿즈를 고르면 보인다)
   final Set<String> goodsKinds;
+
+  /// 작품 묶음 이름 → 화면에 보일 이름 (중국어 화면의 작품 이름 — 필터 시트가 채운다, 거르기에는 안 쓴다)
+  final Map<String, String> workNames;
   MineState mine;
   ReleaseState release;
   SaleState sale;
@@ -172,6 +178,7 @@ class KitFilter {
     price: price,
     from: from,
     to: to,
+    workNames: {...workNames},
   )..statusOf = statusOf;
 
   /// 모든 조건 비우기 (필터 시트 초기화)
@@ -235,17 +242,17 @@ class KitFilter {
   List<String> get labels => [
     if (mine != MineState.any)
       switch (mine) {
-        MineState.liked => '좋아요',
-        MineState.owned => '구매함',
-        _ => '아직 없음',
+        MineState.liked => tr('좋아요'),
+        MineState.owned => tr('구매함'),
+        _ => tr('아직 없음'),
       },
     if (release != ReleaseState.any) release.label,
     if (from.isNotEmpty || to.isNotEmpty) periodLabel(from, to),
     if (sale != SaleState.any) sale.label,
-    ...works,
-    ...types,
-    ...lines,
-    ...goodsKinds,
+    for (final w in works) workNames[w] ?? w,
+    ...types.map(tr),
+    ...lines.map(tr),
+    ...goodsKinds.map(tr),
     if (price != PriceBand.any) price.label,
   ];
 }
