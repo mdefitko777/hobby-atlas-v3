@@ -42,7 +42,8 @@ class Catalog extends ChangeNotifier {
   /// 12: 베이 상세 사진 맨 앞에 공식 파츠 상세 그림
   /// 13: goodsmile.com 상세 사진을 다시 보이기 (점검이 끝남)
   /// 14: 공식 조립 설명서 번호 (manualId)
-  static const mapVersion = 14;
+  /// 15: 찾기 글자(blob)의 전각 영숫자를 반각으로 (ＨＷＳ Ｖｅｒ．Ｋａ → hws ver.ka)
+  static const mapVersion = 15;
 
   CatalogPhase phase = CatalogPhase.empty;
   String error = '';

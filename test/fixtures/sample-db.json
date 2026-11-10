@@ -3878,8 +3878,8 @@
       "id": "n06",
       "type": "price",
       "franchiseId": "gundam",
-      "title": "구매함 상품의 시세가 올랐어요",
-      "body": "MGEX 스트라이크 프리덤 · 189,000원 → 205,000원",
+      "title": "MGEX 1/100 스트라이크 프리덤 건담",
+      "body": "가격 변경 ¥17,050 · Gundam SEED",
       "image": "assets/gp/kits/gu02.jpg",
       "at": "2026-10-24T20:00",
       "read": true,
@@ -3888,24 +3888,24 @@
     {
       "id": "n07",
       "type": "friend",
-      "title": "동생님이 사진으로 인증했어요",
+      "title": "곰돌님이 사진으로 인증했어요",
       "body": "RX-78-2 건담 🏅 · 공유 공간",
       "image": "assets/gp/kits/gu01.jpg",
       "at": "2026-10-23T21:40",
       "read": true,
-      "friend": "gp_dongsaeng"
+      "friend": "gp_gomdol"
     },
     {
       "id": "n08",
       "type": "friend",
       "franchiseId": "gundam",
-      "title": "동생님이 이미 산 상품이에요",
+      "title": "곰돌님이 이미 산 상품이에요",
       "body": "HG 1/144 건담 캘리번 · 겹쳐 사지 않게 확인하세요",
       "image": "assets/gp/kits/gu05.jpg",
       "at": "2026-10-21T15:10",
       "read": true,
       "kitId": "gu05",
-      "friend": "gp_dongsaeng"
+      "friend": "gp_gomdol"
     },
     {
       "id": "n09",
@@ -3997,8 +3997,8 @@
         "owned": 8
       },
       {
-        "name": "동생",
-        "handle": "gp_dongsaeng",
+        "name": "곰돌",
+        "handle": "gp_gomdol",
         "role": "Editor",
         "self": false,
         "liked": 5,
@@ -4009,8 +4009,8 @@
     ],
     "friends": [
       {
-        "name": "동생",
-        "handle": "gp_dongsaeng",
+        "name": "곰돌",
+        "handle": "gp_gomdol",
         "role": "공유 공간",
         "group": "special",
         "status": "[최근] RX-78-2 건담 인증",
@@ -4183,7 +4183,7 @@
       },
       {
         "id": "ph6",
-        "owner": "gp_dongsaeng",
+        "owner": "gp_gomdol",
         "image": "assets/gp/kits/gu01.jpg",
         "unit": "RX-78-2 건담",
         "work": "Mobile Suit Gundam",
@@ -4191,7 +4191,7 @@
       },
       {
         "id": "ph7",
-        "owner": "gp_dongsaeng",
+        "owner": "gp_gomdol",
         "image": "assets/gp/kits/po19.png",
         "unit": "이브이",
         "work": "포켓몬",
@@ -4199,7 +4199,7 @@
       },
       {
         "id": "ph8",
-        "owner": "gp_dongsaeng",
+        "owner": "gp_gomdol",
         "image": "assets/gp/kits/ar37.jpg",
         "unit": "화이트 글린트",
         "work": "ACfA",

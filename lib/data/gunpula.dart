@@ -1,6 +1,7 @@
 // Gunpula 데이터(GitHub Pages) → 앱 모델용 가벼운 Map.
 // 여기 함수는 compute() 안(다른 isolate)에서도 돌아가야 해서 Flutter 위젯 · 전역 상태를 쓰지 않는다.
 import 'dart:convert';
+import '../format.dart' show halfWidth;
 import '../json_util.dart';
 import '../logic/url_lookup.dart' show isListingUrl;
 import 'gundam_atlas.dart' show atlasBoxartFile, atlasChaptersFile, atlasKitMsFile, atlasMsFile;
@@ -190,9 +191,8 @@ const _lineLabels = {
   'AC_SHOKUGAN': '식완',
 };
 
-/// 전각 영숫자 → 반각 (ＨＧＵＣ → HGUC)
-String _halfWidth(String s) =>
-    String.fromCharCodes(s.runes.map((c) => c >= 0xFF01 && c <= 0xFF5E ? c - 0xFEE0 : (c == 0x3000 ? 0x20 : c)));
+/// 전각 영숫자 → 반각 (ＨＧＵＣ → HGUC) — lib/format.dart
+const _halfWidth = halfWidth;
 
 /// 세부 시리즈 이름 — 세부 시리즈가 실제로 갈리는 라인만 (그 밖의 subline 은 라인 풀네임 · 탄 번호 · 판매처라 버린다)
 ///   HG → HGUC · HGCE · HGBF · HGBD:R … / ROBOT魂 · METAL ROBOT魂 → ver. A.N.I.M.E. · Ka signature /
@@ -545,7 +545,8 @@ List<Map<String, Object?>> mapKitsJob(Map<String, String> msg) {
       'brands': brands,
       'firstSeen': jStr(firstSeen[id]),
       'keywords': keywords,
-      'blob': [name, nameJa, seriesLabel, line, type, ...keywords].join(' ').toLowerCase(),
+      // 검색 글자 — 전각(ＨＷＳ Ｖｅｒ．Ｋａ · ［Ｕ.Ｃ.００８８］)도 반각으로 접어 'hws' · 'ver.ka' · '0088' 로 찾힌다 (검색어도 kitMatches 에서 접는다)
+      'blob': _halfWidth([name, nameJa, seriesLabel, line, type, ...keywords].join(' ')).toLowerCase(),
       // 레고 보기 범위 (lib/logic/lego_scope.dart) — 세트 번호 · 등급 코드
       if (number.isNotEmpty) 'number': number,
       'gradeCode': code,

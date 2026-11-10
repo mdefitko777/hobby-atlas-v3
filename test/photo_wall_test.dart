@@ -58,8 +58,8 @@ void main() {
     files = MemoryPhotoFiles();
     PhotoFiles.instance = files;
     server = FakeServer(v2Payload: null, handle: 'bbang', displayName: '빵빵한빵디');
-    server.users['dongsaeng'] = (
-      name: '동생',
+    server.users['gomdol'] = (
+      name: '곰돌',
       collection: {
         'items': {
           'a': {'status': 'wanted', 'updated_at': '2026-02-01T00:00:00Z'},
@@ -67,7 +67,7 @@ void main() {
         },
       },
     );
-    server.friends.add('dongsaeng');
+    server.friends.add('gomdol');
     auth = FakeAuth(signedIn: true);
     storage = FakePhotoStorage();
     store = UserStore.memory();
@@ -180,24 +180,24 @@ void main() {
   });
 
   testWidgets('친구 보기: 친구가 보이기로 둔 사진 · 태그 · ♡/리본 숫자', (tester) async {
-    server.friendPhotos['dongsaeng'] = [
+    server.friendPhotos['gomdol'] = [
       {'id': 'f1', 'path': 'uid-d/f1.jpg', 'kit_id': 'b', 'watermark': true},
     ];
-    server.friendTags['dongsaeng'] = ['건담', 'HG'];
+    server.friendTags['gomdol'] = ['건담', 'HG'];
     storage.objects['uid-d/f1.jpg'] = _jpeg;
     await loadMe(tester);
-    const friend = Member(name: '동생', handle: 'dongsaeng', role: '친구', self: false, liked: 0, lit: 0, owned: 0);
+    const friend = Member(name: '곰돌', handle: 'gomdol', role: '친구', self: false, liked: 0, lit: 0, owned: 0);
     await show(tester, ProfileScreen(friend: friend, loaders: _loaders));
     expect(find.byKey(const ValueKey('friend-photo-f1')), findsOneWidget);
     expect(find.byKey(const ValueKey('kit-photo-b')), findsNothing); // 사진을 붙인 상품은 한 번만
     expect(find.text('건담'), findsOneWidget);
-    expect(find.text('@dongsaeng'), findsOneWidget);
+    expect(find.text('@gomdol'), findsOneWidget);
     expect(find.byTooltip('좋아요'), findsOneWidget);
     expect(server.count('gunpula_v3_get_friend_wall'), 1);
     await tester.tap(find.byKey(const ValueKey('friend-photo-f1')));
     await settle(tester);
     expect(find.byType(PhotoViewScreen), findsOneWidget);
-    expect(find.text('HA · @dongsaeng'), findsOneWidget); // 친구가 정한 워터마크
+    expect(find.text('HA · @gomdol'), findsOneWidget); // 친구가 정한 워터마크
     expect(find.text('친구에게 보이기'), findsNothing); // 친구 사진은 스위치 없음
     expect(tester.takeException(), isNull);
   });
@@ -216,7 +216,7 @@ void main() {
     expect(tester.takeException(), isNull);
 
     // 친구 보기: get_friend_wall 이 없으면 빈 벽 (공식 상품 사진으로 채우지 않는다)
-    const friend = Member(name: '동생', handle: 'dongsaeng', role: '친구', self: false, liked: 0, lit: 0, owned: 0);
+    const friend = Member(name: '곰돌', handle: 'gomdol', role: '친구', self: false, liked: 0, lit: 0, owned: 0);
     await show(tester, ProfileScreen(friend: friend, loaders: _loaders));
     expect(find.byKey(const ValueKey('kit-photo-b')), findsNothing);
     expect(find.byType(FriendPhotoTile), findsNothing);

@@ -5,12 +5,13 @@ import '../models.dart';
 
 /// 검색어가 이름 · 일본어 이름 · 작품 · 라인 · 종류에 들어 있는지 (검색 탭 · 홈 전체 목록 공통)
 bool kitMatches(Kit k, String query) {
-  final q = query.trim().toLowerCase();
+  // 전각으로 친 검색어(ＨＧ · ０088)도 반각으로 — blob 은 미리 반각 (lib/data/gunpula.dart)
+  final q = halfWidth(query).trim().toLowerCase();
   if (q.isEmpty) return true;
   // 실제 데이터: 미리 만든 소문자 한 줄에서 (8,800개를 글자마다 다시 소문자로 바꾸지 않게)
   if (k.blob.isNotEmpty) return q.split(RegExp(r'\s+')).every(k.blob.contains);
   // keywords: 한글 줄임말(수성 · 철혈 …) · 다른 표기로도 찾히게
-  return [k.name, k.nameJa, k.series, k.line, k.type, ...k.keywords].any((f) => f.toLowerCase().contains(q));
+  return [k.name, k.nameJa, k.series, k.line, k.type, ...k.keywords].any((f) => halfWidth(f).toLowerCase().contains(q));
 }
 
 /// 바코드 읽은 값 → 숫자 13자리 비교용 (UPC-A 12자리는 앞에 0, EAN-8 은 그대로). 숫자가 아니면 빈 글자

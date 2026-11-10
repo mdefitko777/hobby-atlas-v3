@@ -41,8 +41,8 @@ void main() {
 
   setUp(() {
     server = FakeServer(v2Payload: null, handle: 'bbang', displayName: '빵빵한빵디');
-    server.users['dongsaeng'] = (
-      name: '동생',
+    server.users['gomdol'] = (
+      name: '곰돌',
       collection: {
         'items': {
           'a': {'status': 'wanted', 'updated_at': '2026-02-01T00:00:00Z'},
@@ -51,7 +51,7 @@ void main() {
       },
     );
     server.users['friend_b'] = (name: '친구B', collection: const {});
-    server.friends.add('dongsaeng');
+    server.friends.add('gomdol');
     server.incoming.add('friend_b');
     auth = FakeAuth(signedIn: true);
     // start() 를 부르지 않는다: 15초 타이머 없이 화면만 본다
@@ -136,11 +136,11 @@ void main() {
     expect(find.text('빵빵한빵디'), findsOneWidget);
     expect(find.text('@bbang'), findsOneWidget);
     expect(find.text('친구 요청 1건'), findsOneWidget);
-    expect(find.text('동생'), findsOneWidget);
+    expect(find.text('곰돌'), findsOneWidget);
     // 상태 한 줄 = 가장 최근 일 (구매함 b, 2/2) — get_friend_collection
     final status = tester.widget<FriendStatusLine>(find.byType(FriendStatusLine));
     expect((status.event?.kind, status.event?.kitId), ('owned', 'b'));
-    expect(status.fallback, '@dongsaeng · 좋아요 1 · 구매함 1');
+    expect(status.fallback, '@gomdol · 좋아요 1 · 구매함 1');
     expect(server.count('gunpula_v3_get_friend_collection'), 1);
     // 받은 요청 시트 → 수락
     await tester.tap(find.text('친구 요청 1건'));
@@ -148,7 +148,7 @@ void main() {
     expect(find.text('친구B'), findsOneWidget);
     await tester.tap(find.widgetWithText(FilledButton, '수락'));
     await settle(tester);
-    expect(server.friends, containsAll(['dongsaeng', 'friend_b']));
+    expect(server.friends, containsAll(['gomdol', 'friend_b']));
     expect(account.incomingCount, 0);
     expect(tester.takeException(), isNull);
   });
@@ -202,7 +202,7 @@ void main() {
 
   testWidgets('친구 보기: 계정에서 숫자를 받고, 친구 끊기', (tester) async {
     await loadMe(tester);
-    const friend = Member(name: '동생', handle: 'dongsaeng', role: '친구', self: false, liked: 0, lit: 0, owned: 0);
+    const friend = Member(name: '곰돌', handle: 'gomdol', role: '친구', self: false, liked: 0, lit: 0, owned: 0);
     await show(tester, ProfileScreen(friend: friend, loaders: _loaders));
     expect(find.text('Lv.1'), findsOneWidget); // lit 2 → 1 + 4 ~/ 5
     expect(find.text('1'), findsWidgets); // 좋아요 1 · 구매함 1

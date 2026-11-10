@@ -169,13 +169,13 @@ void main() {
           '빵빵한빵디': {
             'a': {'status': 'wanted', 'updated_at': '2025-12-01T00:00:00Z'},
           },
-          '동생': {
+          '곰돌': {
             'd': {'status': 'owned', 'updated_at': '2026-01-04T00:00:00Z'},
           },
         },
       }, o);
       final m = n['member_items']! as Map;
-      expect(m.keys.toSet(), {'빵빵한빵디', '동생'});
+      expect(m.keys.toSet(), {'빵빵한빵디', '곰돌'});
       expect((m['빵빵한빵디'] as Map)['a']['status'], 'owned'); // member 쪽이 더 늦음
       expect(n['items'], contains('b'));
     });
@@ -211,7 +211,7 @@ void main() {
             'member': {
               'x': {'status': 'owned'},
             },
-            '동생': {
+            '곰돌': {
               'z': {'status': 'owned'},
             },
           },
@@ -220,14 +220,14 @@ void main() {
       expect(resolveSelfBucket(p, 'mdefitko'), 'member');
     });
 
-    test('공유 공간에서 동생이 마지막에 저장해 items 가 동생 것이어도 동생 버킷을 내 것으로 잡지 않는다', () {
+    test('공유 공간에서 곰돌이 마지막에 저장해 items 가 곰돌 것이어도 곰돌 버킷을 내 것으로 잡지 않는다', () {
       final p = {
         'collection': {
           'items': {
             'z': {'status': 'owned'},
           },
           'member_items': {
-            '동생': {
+            '곰돌': {
               'z': {'status': 'owned'},
             },
             'old_name': {
@@ -236,8 +236,8 @@ void main() {
           },
         },
       };
-      expect(resolveSelfBucket(p, 'mdefitko', notMine: {'동생'}), 'mdefitko');
-      expect(resolveSelfBucket(p, 'mdefitko'), '동생'); // 다른 멤버 이름을 모르면 items 를 따른다 (v3 만 쓰는 계정)
+      expect(resolveSelfBucket(p, 'mdefitko', notMine: {'곰돌'}), 'mdefitko');
+      expect(resolveSelfBucket(p, 'mdefitko'), '곰돌'); // 다른 멤버 이름을 모르면 items 를 따른다 (v3 만 쓰는 계정)
     });
 
     test('빈 payload 면 서버 이름', () {
@@ -260,7 +260,7 @@ void main() {
             'a': {'status': 'owned', 'updated_at': '2026-01-01T00:00:00Z', 'updated_by': '빵빵한빵디', 'quantity': 1},
           },
           // 다른 멤버: 정리 안 된 글자 그대로 남아야 한다 (가격 문자열 · 수량 없음)
-          '동생': {
+          '곰돌': {
             'z': {'status': 'owned', 'purchase_price': '12,000', 'updated_at': '2026-01-05T00:00:00Z'},
           },
           'member': {
@@ -304,7 +304,7 @@ void main() {
       final col = out['collection']! as Map;
       expect(col['custom_items'], (remote['collection']! as Map)['custom_items']);
       final members = col['member_items'] as Map;
-      expect(members['동생'], ((remote['collection']! as Map)['member_items'] as Map)['동생']);
+      expect(members['곰돌'], ((remote['collection']! as Map)['member_items'] as Map)['곰돌']);
       expect(members.containsKey('member'), isFalse); // 나에게 합침
       expect(members.containsKey('냐아'), isFalse); // 버림
       expect((members['빵빵한빵디'] as Map).keys.toSet(), {'a', 'b', 'm'});
