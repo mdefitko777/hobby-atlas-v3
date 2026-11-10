@@ -108,8 +108,9 @@ class _FilterSheetState extends State<FilterSheet> {
   };
 
   /// 고른 값들 한 줄 요약 — 라인 · 종류는 번역 표로, 작품은 [_workNames] 로
-  String _summary(Set<String> picked, {bool works = false}) =>
-      pickSummary({for (final v in picked) works ? (_workNames[v] ?? v) : tr(v)});
+  String _summary(Set<String> picked, {bool works = false}) => pickSummary(picked, label: works ? _workName : tr);
+
+  String _workName(String work) => _workNames[work] ?? work;
 
   int _hits(KitFilter f) => widget.kits.where(f.matches).length;
 
@@ -214,6 +215,7 @@ class _FilterSheetState extends State<FilterSheet> {
           CheckGrid(
             columns: 1,
             values: valueCounts(kits.map(kitWork)).map((e) => e.$1).toList(),
+            label: _workName, // 작품 이름은 번역 표가 아니라 상품의 중국어 작품 이름
             selected: _draft.works,
             countOf: (v) => _with(
               (f) => f.works

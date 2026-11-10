@@ -3,6 +3,7 @@
 // 기능별 part 파일: derive/guide · bbx · worlds · announcements · notifications · profile
 library;
 
+import '../l10n/l10n.dart';
 import '../models.dart';
 import '../notifications/feed_rules.dart' show annStageLabels;
 import '../notifications/notify_models.dart';
@@ -26,6 +27,9 @@ part 'derive/worlds.dart';
 
 Catalog get _cat => Catalog.instance;
 UserStore get _me => UserStore.instance;
+
+/// 데이터의 `names` · `labels` 에서 화면 언어 이름 (중국어 화면 = zh 먼저, 건담 Atlas 와 같은 순서)
+String _shown(Object? names) => atlasName(names, zh: L10n.isZh);
 
 CollectStatus _kitStatus(String id) => _me.statusOf(id) ?? CollectStatus.none;
 

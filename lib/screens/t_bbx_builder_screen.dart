@@ -249,7 +249,7 @@ class _BbxBuilderScreenState extends State<BbxBuilderScreen> {
     final name = await _askName(
       context,
       title: tr('조합 저장'),
-      initial: boxName(_draft(cat), cat, lang: 'ko'),
+      initial: boxName(_draft(cat), cat, lang: bbxNameLang),
     );
     if (name == null || !mounted) return;
     final c = bbxComboFor(bbxNewId('c'), _frame, _parts, cat);

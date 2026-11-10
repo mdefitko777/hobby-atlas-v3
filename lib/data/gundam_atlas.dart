@@ -12,6 +12,13 @@ import '../json_util.dart';
 import '../l10n/l10n.dart';
 import 'gunpula.dart' show pickName;
 
+/// Atlas 이름 고르는 순서 — 중국어 화면은 중국어 → 번체 → 영어 → 일본어 (한국어는 맨 뒤: 중국어 사용자가 못 읽는다)
+List<String> atlasNameOrder({required bool zh}) =>
+    zh ? const ['zh', 'zh_tw', 'en', 'ja', 'ko'] : const ['ko', 'ja', 'en', 'zh'];
+
+/// Atlas `names` 에서 화면 언어의 이름
+String atlasName(Object? names, {required bool zh}) => pickName(names, atlasNameOrder(zh: zh));
+
 /// 앱이 받는 Atlas 파일 (data/ 아래 경로 = Catalog.aux 이름)
 const atlasMsFile = 'atlas/gundam-ms.json';
 const atlasKitMsFile = 'atlas/gundam-kit-ms.json';
@@ -291,12 +298,15 @@ class GundamAtlas {
   /// [ms] = gundam-ms.json, [kitMs] = gundam-kit-ms.json (jsonDecode 결과).
   /// [knownKit] 을 주면 카탈로그에 없는 상품 연결은 버린다. [workLogos] = gget 시리즈 번호 → 로고 (atlas-groups).
   /// 칸 = gget 그림이 있거나 칸을 켜는 상품(부품 · SD 제외)이 하나라도 연결된 MS (여객기 · 배처럼 둘 다 없는 것은 뺀다).
+  /// [zh] = 중국어 화면 — 시대 · 작품 · 기체 이름을 중국어 먼저 ([atlasNameOrder]).
   factory GundamAtlas.parse(
     Object? ms,
     Object? kitMs, {
     bool Function(String kitId)? knownKit,
     Map<int, String> workLogos = const {},
+    bool zh = false,
   }) {
+    String shown(Object? names) => atlasName(names, zh: zh);
     final root = jMap(ms);
     final km = jMap(kitMs);
     final redirects = {
@@ -309,7 +319,7 @@ class GundamAtlas {
     final timelines = [
       for (final t in jList(root['timelines']))
         if (jStr(jMap(t)['id']) case final id when id.isNotEmpty)
-          AtlasTimeline(id, pickName(jMap(t)['names']), pickName(jMap(t)['names'], const ['en', 'ja', 'ko'])),
+          AtlasTimeline(id, shown(jMap(t)['names']), pickName(jMap(t)['names'], const ['en', 'ja', 'ko'])),
     ];
     final tlRank = {for (var i = 0; i < timelines.length; i++) timelines[i].id: i};
 
@@ -386,7 +396,7 @@ class GundamAtlas {
       }
       if (works.isEmpty) continue;
       final names = jMap(m['names']);
-      final name = pickName(names, const ['ko', 'ja', 'en', 'zh']);
+      final name = shown(names);
       final en = jStr(names['en']).trim();
       units[id] = AtlasUnit(
         id: id,
@@ -441,7 +451,7 @@ class GundamAtlas {
       works.add(
         AtlasWork(
           id: e.key,
-          name: pickName(m['names']).isEmpty ? e.key : pickName(m['names']),
+          name: shown(m['names']).isEmpty ? e.key : shown(m['names']),
           nameEn: jStr(jMap(m['names'])['en']),
           timeline: jStr(m['timeline']),
           order: jInt(m['order']),
@@ -506,8 +516,8 @@ class GundamAtlas {
 
 // ── gundam-chapters.json ───────────────────────────────────────────────────────────
 
-/// 작품 id → 묶음. 장(arcs, 화수 범위)이 있으면 장, 없으면 기체가 적힌 화(episodes)
-Map<String, List<AtlasChapter>> parseChapters(Object? json) {
+/// 작품 id → 묶음. 장(arcs, 화수 범위)이 있으면 장, 없으면 기체가 적힌 화(episodes). [zh] = 장 이름을 중국어 화면 순서로
+Map<String, List<AtlasChapter>> parseChapters(Object? json, {bool zh = false}) {
   final out = <String, List<AtlasChapter>>{};
   for (final e in jMap(jMap(json)['works']).entries) {
     final w = jMap(e.value);
@@ -521,7 +531,7 @@ Map<String, List<AtlasChapter>> parseChapters(Object? json) {
       if (arcs.isNotEmpty)
         for (final a in arcs)
           AtlasChapter(
-            pickName(a['title']),
+            atlasName(a['title'], zh: zh),
             ids(a['ms']),
             episodes: switch ((jInt(a['episode_from']), jInt(a['episode_to']))) {
               (0, _) => '',

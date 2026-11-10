@@ -253,7 +253,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
     (tr('스케일'), k.scale),
     (tr('발매'), dateDot(k.date)),
     (tr('정가'), yen(k.priceJpy)),
-    (tr('브랜드'), k.brands.join(' · ')),
+    (tr('브랜드'), k.brands.map(tr).join(' · ')),
     if (k.pbOpens.isNotEmpty || k.pbCloses.isNotEmpty) (tr('PB 예약'), '${dateDot(k.pbOpens)} – ${dateDot(k.pbCloses)}'),
     (tr('바코드'), k.jan),
   ].where((e) => e.$2.isNotEmpty).toList();

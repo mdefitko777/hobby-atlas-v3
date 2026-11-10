@@ -389,7 +389,7 @@ class _PhotoViewScreenState extends State<PhotoViewScreen> {
                             borderRadius: BorderRadius.circular(Gp.rSmall),
                             child: ColoredBox(
                               color: Gp.soft,
-                              child: AppImage(k.image, fit: BoxFit.contain, placeholder: k.line),
+                              child: AppImage(k.image, fit: BoxFit.contain, placeholder: tr(k.line)),
                             ),
                           ),
                         ),

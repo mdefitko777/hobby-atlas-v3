@@ -48,7 +48,7 @@ class _SlotRow extends StatelessWidget {
               clipBehavior: Clip.antiAlias,
               child: v == null
                   ? const Icon(Icons.add, color: Gp.faint, size: Gp.iM)
-                  : AppImage(v.image, fit: BoxFit.contain, placeholder: m?.name('ko') ?? ''),
+                  : AppImage(v.image, fit: BoxFit.contain, placeholder: m?.name(bbxNameLang) ?? ''),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -60,7 +60,7 @@ class _SlotRow extends StatelessWidget {
                     style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
                   ),
                   Text(
-                    m?.name('ko') ?? tr('고르기'),
+                    m?.name(bbxNameLang) ?? tr('고르기'),
                     style: TextStyle(fontWeight: FontWeight.w600, color: m == null ? Gp.faint : Gp.ink),
                   ),
                   if (m != null)
@@ -253,7 +253,12 @@ class _PickRow extends StatelessWidget {
           children: [
             SizedBox.square(
               dimension: 52,
-              child: AppImage(v?.image ?? '', fit: BoxFit.contain, grayscale: !owned, placeholder: mold.name('ko')),
+              child: AppImage(
+                v?.image ?? '',
+                fit: BoxFit.contain,
+                grayscale: !owned,
+                placeholder: mold.name(bbxNameLang),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -261,7 +266,7 @@ class _PickRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    mold.name('ko'),
+                    mold.name(bbxNameLang),
                     style: TextStyle(fontWeight: FontWeight.w600, color: selected ? Gp.accent : Gp.ink),
                   ),
                   Text(

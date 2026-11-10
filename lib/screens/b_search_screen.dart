@@ -44,6 +44,9 @@ import 'r_mezastar_screen.dart' show TagSearchSection;
 /// B-5 설명으로 찾기 예시 (실제 데이터에서 후보가 나오는 문장)
 const sentenceExamples = ['샤아 전용 자쿠 HG', '수성의 마녀 에어리얼 HG', '이브이 인형', '드래곤 블레이드 베이'];
 
+/// 중국어 화면의 예시 — 위와 같은 순서 · 같은 뜻 (설명으로 찾기가 중국어도 읽어 같은 낱말이 잡힌다, test/sentence_search_zh_test.dart)
+const sentenceExamplesZh = ['夏亚专用 扎古 HG', '水星的魔女 风灵 HG', '伊布 玩偶', '龙 战刃 陀螺'];
+
 class SearchScreen extends StatefulWidget {
   const SearchScreen({
     super.key,
@@ -381,7 +384,7 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
         ],
         SectionHeader(tr('설명으로 찾기'), padding: const EdgeInsets.fromLTRB(16, 24, 12, 10)), // B-5 P10
         wrap([
-          for (final example in sentenceExamples)
+          for (final example in byLang(ko: sentenceExamples, zh: sentenceExamplesZh))
             _chip(example, icon: Icons.manage_search, onTap: () => _search(example)),
         ]),
       ],

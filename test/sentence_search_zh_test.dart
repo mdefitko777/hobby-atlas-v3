@@ -4,6 +4,7 @@ import 'package:hobby_atlas/l10n/l10n.dart';
 import 'package:hobby_atlas/l10n/zh_text.dart';
 import 'package:hobby_atlas/logic/sentence_search.dart';
 import 'package:hobby_atlas/models.dart';
+import 'package:hobby_atlas/screens/b_search_screen.dart' show sentenceExamples, sentenceExamplesZh;
 
 Kit kit(
   String id, {
@@ -67,14 +68,11 @@ void main() {
     expect(_labels('龙 战刃 陀螺'), {'드래곤', '블레이드', '베이블레이드'});
   });
 
-  test('찾기 화면 예시 문장의 중국어도 같은 뜻', () {
-    const pairs = {
-      '샤아 전용 자쿠 HG': '夏亚专用 扎古 HG',
-      '수성의 마녀 에어리얼 HG': '水星的魔女 风灵 HG',
-      '이브이 인형': '伊布 玩偶',
-      '드래곤 블레이드 베이': '龙 战刃 陀螺',
-    };
-    pairs.forEach((ko, zh) => expect(_labels(zh), _labels(ko), reason: zh));
+  test('찾기 화면 예시 문장의 중국어도 같은 뜻 (중국어 화면 예시 = sentenceExamplesZh)', () {
+    expect(sentenceExamplesZh, hasLength(sentenceExamples.length));
+    for (var i = 0; i < sentenceExamples.length; i++) {
+      expect(_labels(sentenceExamplesZh[i]), _labels(sentenceExamples[i]), reason: sentenceExamplesZh[i]);
+    }
   });
 
   test('중국어 군말은 버리고 남는 낱말만', () {

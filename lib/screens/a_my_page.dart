@@ -15,6 +15,7 @@ import '../api.dart';
 import '../clock.dart';
 import '../data/catalog.dart';
 import '../data/user_store.dart';
+import '../l10n/l10n.dart';
 import '../logic/build_status.dart';
 import '../logic/kit_rules.dart';
 import '../marks.dart';
@@ -162,7 +163,7 @@ class _LikedSoon extends StatelessWidget {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(Gp.rSmall),
-                    child: SizedBox(width: 38, height: 38, child: AppImage(k.image, placeholder: k.line)),
+                    child: SizedBox(width: 38, height: 38, child: AppImage(k.image, placeholder: tr(k.line))),
                   ),
                   const SizedBox(width: 10),
                   Expanded(

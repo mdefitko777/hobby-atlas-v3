@@ -89,9 +89,9 @@ class Kit {
   String get name => L10n.isZh && nameZh.isNotEmpty ? nameZh : nameKo;
 
   /// 작품(시리즈) 이름의 중국어판 (Gunpula series.labels.zh). [series] 는 한국어 그대로 — 묶기 · 비교에 쓰인다,
-  /// 화면에는 [seriesLabel]
+  /// 화면에는 [seriesLabel] — zh 가 없으면 번역 표('포켓몬' · '한정' 같은 이름표)를 거친다
   final String seriesZh;
-  String get seriesLabel => L10n.isZh && seriesZh.isNotEmpty ? seriesZh : series;
+  String get seriesLabel => L10n.isZh && seriesZh.isNotEmpty ? seriesZh : trData(series);
   final String nameJa;
   final String series;
   final String line;

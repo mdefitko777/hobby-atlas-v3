@@ -46,7 +46,7 @@ Future<List<BbxTop>> deriveBbxTops() async {
           BbxPart(
             id: pid,
             typeLabel: _partLabels[type]!,
-            name: pickName(part['names']),
+            name: _shown(part['names']),
             image: jStr(part['image']).isNotEmpty ? jStr(part['image']) : jStr(part['image_remote']),
             have: kitOwned || _me.bbxOwnedParts.contains(pid),
             topId: setId,
@@ -62,7 +62,7 @@ Future<List<BbxTop>> deriveBbxTops() async {
       BbxTop(
         id: setId,
         line: _bbxLine(setId),
-        name: pickName(prod['names']),
+        name: _shown(prod['names']),
         image: resolveAsset(jStr(prod['image']).isNotEmpty ? prod['image'] : prod['image_remote']),
         owned: partList.where((x) => x.have).length,
         total: partList.length,

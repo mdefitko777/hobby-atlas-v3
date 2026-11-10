@@ -24,7 +24,7 @@ class _SavedRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final cat = catalog;
     final title = bbxComboTitle(combo, cat);
-    final box = boxName(combo, cat, lang: 'ko');
+    final box = boxName(combo, cat, lang: bbxNameLang);
     final legal = isLegalBey(combo, cat);
     final buildable = legal && canBuild(combo, inventory);
     return InkWell(

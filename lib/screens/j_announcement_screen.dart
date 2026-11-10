@@ -133,7 +133,7 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
   late final Future<({String label, List<Kit> kits})> _sameIp = Future.wait([
     _all,
     _related,
-  ]).then((r) => sameIpKits(r[1], r[0], channelLabel: channelOf(widget.item.franchiseId).label));
+  ]).then((r) => sameIpKits(r[1], r[0], channelLabel: tr(channelOf(widget.item.franchiseId).label)));
 
   @override
   void initState() {
@@ -436,7 +436,7 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SectionHeader(tr('같은 IP의 새 상품'), subtitle: _ipLabel(ip)), // P06
+                  SectionHeader(tr('같은 IP의 새 상품'), subtitle: ip.label), // P06
                   _tiles(sheet, ip.kits),
                 ],
               );
@@ -445,14 +445,6 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
         ],
       ),
     );
-  }
-
-  /// J-7 머리 글 — [sameIpKits] 의 label 은 한국어 작품 이름(묶기 값) 또는 채널 이름 → 화면 언어로
-  static String _ipLabel(({String label, List<Kit> kits}) ip) {
-    for (final k in ip.kits) {
-      if (k.series == ip.label) return k.seriesLabel;
-    }
-    return tr(ip.label);
   }
 
   /// 가로 상품 줄 (누르면 시트를 닫고 상세)

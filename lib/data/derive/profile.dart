@@ -3,11 +3,11 @@ part of '../derive.dart';
 
 Future<Profile> deriveProfile() async {
   final a = Account.instance;
-  final name = a.signedIn ? a.displayName : (_me.member == 'member' ? '나' : _me.member);
+  final name = a.signedIn ? a.displayName : (_me.member == 'member' ? tr('나') : _me.member);
   return Profile(
     name: name,
     handle: a.handle,
-    avatarText: name.characters.isEmpty ? '나' : name.characters.first,
+    avatarText: name.characters.isEmpty ? tr('나') : name.characters.first,
     tags: List.of(_me.profileTags), // 내 정보 화면은 UserStore · 계정에서 바로 읽는다
     spendKrw: _me.spendKrw,
     workspace: a.sync.workspace?.name ?? '',

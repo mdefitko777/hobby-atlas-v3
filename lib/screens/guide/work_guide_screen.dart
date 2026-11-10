@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 
 import '../../api.dart';
-import '../../data/gundam_atlas.dart' show roleLabels;
+import '../../data/gundam_atlas.dart' show episodesLabel, roleLabels;
 import '../../l10n/l10n.dart';
 import '../../level.dart';
 import '../../logic/collection_rules.dart' show bestStatus;
@@ -351,7 +351,10 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
                   // G-4c 화수 · 장마다 그때 나온 기체 (한 기체가 여러 장에 나올 수 있다)
                   for (final c in _chapters)
                     if ([for (final id in c.unitIds) ?byId[id]] case final list when list.isNotEmpty) ...[
-                      SectionHeader(joinDot([c.episodes, c.name]), padding: const EdgeInsets.fromLTRB(16, 12, 12, 8)),
+                      SectionHeader(
+                        joinDot([episodesLabel(c.episodes), c.name]),
+                        padding: const EdgeInsets.fromLTRB(16, 12, 12, 8),
+                      ),
                       _grid(box, m, list),
                     ],
               ],

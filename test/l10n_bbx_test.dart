@@ -33,6 +33,17 @@ void main() {
     expect(bbxProfileLabel('free'), '自由');
   });
 
+  test('부품 이름도 화면 언어로 (중국어 화면 = 데이터의 zh 이름)', () {
+    addTearDown(() => L10n.debugSet(AppLang.ko));
+    final mold = data.catalog.molds.values.firstWhere(
+      (m) => (m.names['zh'] ?? '').isNotEmpty && (m.names['ko'] ?? '').isNotEmpty,
+    );
+    L10n.debugSet(AppLang.ko);
+    expect(mold.name(bbxNameLang), mold.names['ko']);
+    L10n.debugSet(AppLang.zh);
+    expect(mold.name(bbxNameLang), mold.names['zh']);
+  });
+
   testWidgets('중국어 화면: 조합 만들기 첫 화면', (tester) async {
     addTearDown(() => L10n.debugSet(AppLang.ko));
     L10n.debugSet(AppLang.zh);

@@ -56,7 +56,7 @@ class _NamePanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cat = catalog;
-    final ko = boxName(combo, cat, lang: 'ko');
+    final shown = boxName(combo, cat, lang: bbxNameLang);
     final others = joinDot([boxName(combo, cat), boxName(combo, cat, lang: 'en')]);
     final issues = comboIssues(combo, cat);
     final errors = [
@@ -96,11 +96,11 @@ class _NamePanel extends StatelessWidget {
               style: const TextStyle(fontSize: Gp.t12, color: Gp.accent, fontWeight: FontWeight.w600),
             ),
           Text(
-            ko.isEmpty ? tr('부품을 골라 주세요') : ko,
+            shown.isEmpty ? tr('부품을 골라 주세요') : shown,
             key: const Key('bbx-box-name'),
-            style: TextStyle(fontSize: Gp.t19, fontWeight: FontWeight.w800, color: ko.isEmpty ? Gp.faint : Gp.ink),
+            style: TextStyle(fontSize: Gp.t19, fontWeight: FontWeight.w800, color: shown.isEmpty ? Gp.faint : Gp.ink),
           ),
-          if (ko.isNotEmpty && others.isNotEmpty)
+          if (shown.isNotEmpty && others.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 2),
               child: Text(
@@ -119,7 +119,7 @@ class _NamePanel extends StatelessWidget {
               line(
                 Icons.bookmark_border,
                 Gp.muted,
-                trf('없는 부품: {parts}', {'parts': short.map((m) => cat.molds[m.moldKey]!.name('ko')).join(' · ')}),
+                trf('없는 부품: {parts}', {'parts': short.map((m) => cat.molds[m.moldKey]!.name(bbxNameLang)).join(' · ')}),
               ),
           ],
         ],

@@ -52,7 +52,7 @@ void main() {
     expect([for (final s in secs) ...s.entries.map((e) => (e.key, e.label))], [('옵션 파츠', '配件包'), ('의류', '服饰')]);
     expect(tr(channelOf('pokemon').label), '宝可梦');
     expect(tr(worldSectionOf('pokemon', 'pokemon-gen1')), '正篇世代');
-    expect((episodesLabel('1–3화'), episodesLabel('12화'), episodesLabel('')), ('第1–3集', '第12集', ''));
+    expect((episodesLabel('1–3화'), episodesLabel('12화'), episodesLabel('')), ('第 1–3 集', '第 12 集', ''));
     expect(TagGame.frienda.subtitle, 'Frienda 卡');
 
     L10n.debugSet(AppLang.ko);
@@ -68,7 +68,7 @@ void main() {
 
     L10n.debugSet(AppLang.zh);
     expect((pika.name, pika.nameKo, kr.sets.first.name), ('皮卡丘', '피카츄', '星塵第1彈'));
-    expect(jp.sets.map((s) => s.name), ['第1弹', 'Gorgeous Star Set 5', '活动卡匣']);
+    expect(jp.sets.map((s) => s.name), ['第1弹', 'Gorgeous Star Set 5', '特典卡匣']);
     expect(f.sets.first.name, '第1弹');
     final star = jp.cards.firstWhere((c) => c.grade == null && c.rarity.isNotEmpty, orElse: () => jp.cards.first);
     expect(_hangul.hasMatch(star.badge), isFalse);

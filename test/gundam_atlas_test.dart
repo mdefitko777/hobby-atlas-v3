@@ -12,15 +12,26 @@ import 'package:hobby_atlas/models.dart';
 
 import 'support/atlas_fixture.dart';
 
-GundamAtlas _parse({Set<String> catalog = const {}}) => GundamAtlas.parse(
+GundamAtlas _parse({Set<String> catalog = const {}, bool zh = false}) => GundamAtlas.parse(
   fixture('atlas-gundam-ms.sample.json'),
   fixture('atlas-gundam-kit-ms.sample.json'),
   knownKit: (id) => id != 'not-in-catalog' && (catalog.isEmpty || catalog.contains(id)),
   workLogos: const {10: 'assets/gp/works/w10.webp'},
+  zh: zh,
 );
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('중국어 화면: 이름은 zh 먼저, 없으면 번체 → 영어 (한국어는 맨 뒤)', () {
+    expect(atlasName({'ko': '우주세기', 'zh': '宇宙世纪'}, zh: true), '宇宙世纪');
+    expect(atlasName({'ko': '우주세기', 'zh': '宇宙世纪'}, zh: false), '우주세기');
+    expect(atlasName({'ko': '스트라이크', 'ja': 'ストライク', 'en': 'Strike'}, zh: true), 'Strike');
+    final zh = _parse(zh: true);
+    expect(zh.work('seed')!.name, 'Mobile Suit Gundam SEED');
+    expect(zh.timeline('CE')!.name, 'Cosmic Era');
+    expect(zh.units['GAT-X105 Strike Gundam']!.name, 'Strike Gundam');
+  });
 
   group('GundamAtlas.parse', () {
     final a = _parse();

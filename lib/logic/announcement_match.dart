@@ -27,6 +27,7 @@ String foldName(String s) => String.fromCharCodes([
 
 /// J-7 같은 IP의 새 상품 — 제목으로 찾은 상품([matches])의 작품(series_key · 작품 이름) 상품 중 발매일 새것(예정 포함)부터.
 /// 찾은 상품이 없으면 채널 전체([all]). 이미 위에 보인 상품은 뺀다. 발매일 없는 상품은 뒤로.
+/// label = 화면 글 (작품의 seriesLabel, 없으면 [channelLabel] — 부르는 쪽이 화면 언어로 넘긴다)
 ({String label, List<Kit> kits}) sameIpKits(
   List<Kit> matches,
   List<Kit> all, {

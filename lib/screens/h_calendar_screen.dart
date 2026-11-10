@@ -649,10 +649,12 @@ class _DayHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final md = '${date.month}.${date.day.toString().padLeft(2, '0')}';
+    final wd = _weekdays[date.weekday % 7];
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 6),
       child: Text(
-        '${date.month}.${date.day.toString().padLeft(2, '0')} (${byLang(ko: '', zh: '周')}${_weekdays[date.weekday % 7]})',
+        byLang(ko: '$md ($wd)', zh: '$md（周$wd）'),
         style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w600),
       ),
     );

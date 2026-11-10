@@ -99,7 +99,7 @@ class FeedItem {
       franchise: jStr(j['franchise']),
       name: name.isEmpty ? id : name,
       seriesKey: jStr(j['series_key']),
-      seriesLabel: L10n.isZh && seriesZh.isNotEmpty ? seriesZh : pickName(j['series_labels']),
+      seriesLabel: L10n.isZh && seriesZh.isNotEmpty ? seriesZh : trData(pickName(j['series_labels'])),
       releaseDate: jStr(j['release_date']),
       priceJpy: j['price_jpy'] is num ? (j['price_jpy']! as num).toInt() : null,
       isLimited: j['is_limited'] == true,

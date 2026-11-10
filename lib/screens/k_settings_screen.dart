@@ -111,7 +111,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            for (final (lang, label) in const [(AppLang.ko, '한국어'), (AppLang.zh, '中文 (简体)')])
+            for (final (lang, label) in const [(AppLang.ko, '한국어'), (AppLang.zh, '中文（简体）')])
               ListTile(
                 key: Key('language-${lang.name}'),
                 title: Text(label),

@@ -4,6 +4,9 @@ import '../bbx/bbx.dart';
 import '../data/user_store.dart';
 import '../l10n/l10n.dart';
 
+/// 부품 · 상자 이름의 언어 (엔진 names 키) — 중국어 화면이면 중국어 이름 (Gunpula bbx-database 에 zh 가 다 있다)
+String get bbxNameLang => L10n.isZh ? 'zh' : 'ko';
+
 String bbxSlotLabel(Slot s) => switch (s) {
   Slot.blade => tr('블레이드'),
   Slot.ratchet => tr('래칫'),
@@ -41,7 +44,7 @@ String bbxProfileHint(String id) => switch (id) {
 /// 엔진의 이유(영어 · 코드) → 한국어 한 줄
 String bbxIssueText(RuleIssue i, BbxCatalog cat) {
   final mold = i.moldKey == null ? null : cat.molds[i.moldKey!];
-  final n = mold?.name('ko') ?? '';
+  final n = mold?.name(bbxNameLang) ?? '';
   final s = i.slot == null ? '' : bbxSlotLabel(i.slot!);
   return switch (i.code) {
     IssueCode.unknownPart => trf('{slot}: 데이터에 없는 부품이에요', {'slot': s}),
@@ -79,11 +82,11 @@ String bbxIssueText(RuleIssue i, BbxCatalog cat) {
 
 String _beyNo(RuleIssue i) => i.beys.isEmpty ? '' : '${i.beys.first + 1}';
 
-/// 조합 이름 (내가 붙인 이름, 없으면 한국어 상자 이름)
+/// 조합 이름 (내가 붙인 이름, 없으면 화면 언어의 상자 이름)
 String bbxComboTitle(Combo c, BbxCatalog cat) {
   final nick = c.nickname?.trim() ?? '';
   if (nick.isNotEmpty) return nick;
-  final box = boxName(c, cat, lang: 'ko');
+  final box = boxName(c, cat, lang: bbxNameLang);
   return box.isEmpty ? tr('빈 조합') : box;
 }
 
@@ -193,7 +196,7 @@ class DeckCheck {
         short.isEmpty
             ? tr('내 부품으로 셋 다 만들 수 있어요')
             : trf('동시에 만들려면 모자라요: {parts}', {
-                'parts': short.map((m) => '${cat.molds[m.moldKey]!.name('ko')} ${m.have}/${m.need}').join(' · '),
+                'parts': short.map((m) => '${cat.molds[m.moldKey]!.name(bbxNameLang)} ${m.have}/${m.need}').join(' · '),
               }),
       ));
     }

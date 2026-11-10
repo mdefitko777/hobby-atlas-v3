@@ -62,6 +62,9 @@ String tr(String ko) {
   return ko;
 }
 
+/// 데이터 값(작품 이름 등) — 번역 표에 있으면 번역, 없으면 그대로. 데이터라 빠진 번역으로 치지 않는다
+String trData(String ko) => L10n.isZh ? (zhText[ko] ?? ko) : ko;
+
 /// 값이 들어가는 글 — `{이름}` 자리를 [args] 로 채운다 (번역에도 같은 이름의 자리가 있다)
 String trf(String ko, Map<String, Object?> args) {
   var s = tr(ko);

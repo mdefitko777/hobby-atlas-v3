@@ -38,7 +38,7 @@ void main() {
     expect(find.text('食玩'), findsOneWidget, reason: '자료 값은 보이는 자리에서만 번역');
     expect(find.text('没有可显示的内容'), findsOneWidget);
     expect(pickSummary({}), '全部');
-    expect(pickSummary({'식완', 'HG'}), '食玩 等另 1 个');
+    expect(pickSummary({'식완', 'HG'}), '食玩 和另外 1 个');
     expect(HelpButton.tip, '帮助');
   });
 

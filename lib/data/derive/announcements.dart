@@ -16,7 +16,7 @@ Future<List<Announcement>> deriveAnnouncements(List<String> channelIds) async {
         return Announcement(
           id: jStr(m['id']),
           franchiseId: jStr(m['franchise']),
-          title: pickName(m['names']),
+          title: _shown(m['names']),
           status: annStageLabels[jStr(m['status'])] ?? '공식 발표',
           date: jStr(m['announced_at']),
           source: jStr(m['source_name']),

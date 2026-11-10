@@ -11,9 +11,10 @@ Future<GundamAtlas> _atlas() async {
   final km = await _cat.aux(atlasKitMsFile);
   final groups = await _cat.aux('atlas-groups.json');
   final chapters = await _cat.aux(atlasChaptersFile); // 아직 없으면 null → 화수별 보기 · 종류 필터만 빠진다
-  final key = [ms, km, groups, chapters, _cat.byId];
+  final zh = L10n.isZh; // 이름이 언어마다 달라 캐시 열쇠에 넣는다
+  final key = [ms, km, groups, chapters, _cat.byId, zh];
   if (_atlasCache case final a? when _sameAll(_atlasKey, key)) return a;
-  if (ms == null) throw const CatalogException('건담 도감 데이터를 받지 못했어요.');
+  if (ms == null) throw CatalogException(tr('건담 도감 데이터를 받지 못했어요.'));
   // gget 시리즈 번호 → 공식 작품 로고 (atlas-groups 의 건담 시대 묶음)
   final logos = <int, String>{};
   for (final g in jList(jMap(jMap(groups)['franchises'])['gundam_timeline'])) {
@@ -22,8 +23,8 @@ Future<GundamAtlas> _atlas() async {
       if (img.isNotEmpty) logos.putIfAbsent(jInt(jMap(w)['work_id']), () => img);
     }
   }
-  var a = GundamAtlas.parse(ms, km, knownKit: _cat.byId.containsKey, workLogos: logos);
-  if (chapters != null) a = a.withChapters(parseChapters(chapters)).withUnitTypes(parseUnitTypes(chapters));
+  var a = GundamAtlas.parse(ms, km, knownKit: _cat.byId.containsKey, workLogos: logos, zh: zh);
+  if (chapters != null) a = a.withChapters(parseChapters(chapters, zh: zh)).withUnitTypes(parseUnitTypes(chapters));
   _atlasKey = key;
   return _atlasCache = a;
 }

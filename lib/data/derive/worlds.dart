@@ -15,8 +15,8 @@ Future<List<World>> deriveWorlds(String channelId) async {
         World(
           id: 'beyblade-${e.key.toLowerCase()}',
           franchiseId: 'beyblade',
-          label: '${e.key} 라인',
-          subtitle: '${e.value.length}개 상품',
+          label: trf('{line} 라인', {'line': e.key}),
+          subtitle: trf('{n}개 상품', {'n': e.value.length}),
           image: e.value.first.image,
           total: e.value.length,
           owned: e.value.where((t) => t.owned > 0).length,
@@ -57,8 +57,8 @@ List<World> _atlasWorlds(String channelId, Map<String, Object?> atlas) {
           return World(
             id: '$channelId-${jStr(m['id'])}',
             franchiseId: channelId,
-            label: pickName(m['labels']),
-            subtitle: pickName(m['subtitle']),
+            label: _shown(m['labels']),
+            subtitle: _shown(m['subtitle']),
             image: resolveAsset(m['image']), // ./assets/atlas/covers/… → Pages 주소 (공식 표지)
             total: ids.length,
             owned: ids.where((id) => _kitStatus(id) == CollectStatus.owned).length,

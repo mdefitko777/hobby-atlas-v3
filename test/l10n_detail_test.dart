@@ -63,7 +63,7 @@ void main() {
   });
 
   test('상품 상세 도움말은 열 때의 언어로', () {
-    expect(detailHelp.first.text, '喜欢 (想要的)');
+    expect(detailHelp.first.text, '喜欢（想要的）');
     L10n.debugSet(AppLang.ko);
     expect(detailHelp.first.text, '좋아요 (갖고 싶은 것)');
   });

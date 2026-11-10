@@ -41,7 +41,7 @@ void main() {
         ),
     ]);
     expect(alerts.single.title, '4 个喜欢的商品有变动');
-    expect(alerts.single.body, '「商品0」 · 「商品1」 还有 2 个');
+    expect(alerts.single.body, '「商品0」 · 「商品1」 和另外 2 个');
     for (final c in LocalNotifier.channels.values) {
       expect('${c.name} ${c.description}', isNot(matches(_hangul)));
     }
