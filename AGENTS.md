@@ -6,7 +6,7 @@
 - 안드로이드 앱 `com.mdefitko.hobbyatlas`. 옛 Gunpula 앱(`com.mdefitko.gunpula`, Capacitor WebView)을 **대체**한다. 옛 앱과 나란히 설치해 두고, 다 옮긴 뒤에 옛 앱을 지운다.
 - 데이터는 Gunpula 저장소(공개, `C:\Users\Windows11\Documents\Gundam\_upload_repo`)의 GitHub Actions 가 매일 만들고, 앱은 GitHub Pages 에서 읽는다.
   - 데이터: `https://mdefitko777.github.io/Gunpula/data/…` (먼저 `split/manifest.json` 의 `updated_at`·`total` 로 바뀌었는지 본다. Pages ETag 는 배포마다 바뀌어 쓸모없다)
-  - 이미지: `./assets/…` → `https://mdefitko777.github.io/Gunpula/app/assets/…`
+  - 이미지: Gunpula 가 보관한 상품 사진은 Pages 1 GB 제한 때문에 따로 된 사진 저장소(`https://mdefitko777.github.io/gunpula-img-N/…`)에 있고, 발행된 JSON 에 그 전체 주소로 들어 있다 (Gunpula `scripts/publish_site.mjs`, 2026-11-11). 남은 `./assets/…`(공식 표지 · 공지 그림 등) → `https://mdefitko777.github.io/Gunpula/app/assets/…`.
   - `kits.json` · `search-index.json` 은 받지 않는다 (split 과 같은 내용이고 너무 크다).
 - 계정 · 공유는 Gunpula 의 Supabase 프로젝트를 같이 쓴다 (`docs/supabase-setup-v2.sql` · `-v3.sql`, 이메일 6자리 코드 로그인). 옛 앱과 같은 계정이라 **로그인만 하면 옛 컬렉션이 온다**.
   - 코드: `lib/sync/` — `collection_merge.dart`(옛 `collection-store.js` 를 그대로 옮김, `test/collection_merge_js_test.dart` 가 JS 결과와 비교), `sync_service.dart`, `device_state.dart` · `device_state_sync.dart`(기기 기록), `photo_restore.dart`(내 사진 되찾기), `friends_service.dart`, `account.dart`(AccountScope), `supabase_backend.dart`(supabase_flutter 를 부르는 유일한 파일).
@@ -48,6 +48,15 @@
 - `lib/widgets/` 공용 조각 — 화면은 묶음 `lib/widgets.dart` 하나만 import. 아래 시트는 `showGpSheet` 로 열고, 고르는 시트는 `GpPickSheet`(제목 · 초기화 · "n개 보기"), 도감 칸은 `TierCell`, 찾기 + 필터 짝은 `KitFind`. 그림 경로(인터넷 · 앱 안 · `local:` 내 사진)는 `images.dart` 한 곳.
 - `lib/screens/` 화면 — 맨 위 화면은 글자 머리(a_ … u_) + 파일 맨 위 디자인 가이드 대응표(`tool/make_guide.py` 가 읽는다). 큰 화면은 하위 폴더로: `guide/`(G 도감, 대응표는 `g_guide_view.dart`) · `bbx_builder/`(T 의 part 파일). 화면 안에 JSON 파싱 · HTTP · BlobStore 를 두지 않는다.
 - 크기 · 색은 `lib/theme.dart` `Gp` 토큰만: 글자 t11–t24, 아이콘 iXS 12 · iS 16 · iM 20 · iL 24 · iXL 40, 모서리 rSmall · radius · rLarge, 옆 여백 gutter. 따로 둔 값: 상세 빈 칸 그림 · 첫 받기 앱 아이콘 72 · 진행 막대 캡슐 99 · 색 막대 2 · 견본 색 3.
+
+## 쓰는 법 (여러 AI 가 나눠 고쳐도 한 사람이 쓴 것처럼)
+- 화면 글: [docs/terms.md](docs/terms.md) 용어집의 말과 말투만 쓴다. 새 말은 용어집에 먼저 넣는다. (중국어 화면을 붙인 뒤에는 화면 글이 번역 표 `lib/l10n/` 을 거친다.)
+- 주석: 한국어, 짧게. *무엇을* 하는지보다 *왜* 그렇게 하는지 (실측 날짜 · 실패했던 일 · 다른 길을 안 쓴 까닭). 파일 맨 위에는 그 파일이 맡은 일 한두 줄. 코드를 그대로 읽어 주는 주석은 쓰지 않는다.
+- 이름: 파일 `snake_case.dart`, 맨 위 화면은 글자 머리(`d_kit_detail_screen.dart`), 타입 `UpperCamel`, 나머지 `lowerCamel`, 비공개는 `_`. 같은 일을 하는 이름은 이미 있는 것을 따른다 (`kitsByIds` · `openKitDetail` · `showGpSheet` …) — 비슷한 도우미를 새로 만들기 전에 `lib/widgets.dart` · `lib/logic/` 에서 찾는다.
+- 모양: 고친 파일만 `dart format -l 120` (Claude Code 훅이 편집 뒤 자동으로 돌린다), `dart analyze lib test tool` 0 issues. 크기 · 색은 `Gp` 토큰, 시트는 `showGpSheet`, 그림은 `images.dart` — 화면마다 따로 만들지 않는다.
+- 테스트: 규칙(`lib/logic/`)을 바꾸면 `test/` 에 그 경우 하나 이상. 화면 테스트는 되도록 글자보다 `Key` · 아이콘 · 타입으로 찾는다 (중국어 화면에서도 통과하도록).
+- 커밋: `v3: <무엇이 달라졌나 — 사람이 느끼는 말로>` 한국어 한 줄 + 필요하면 본문. 알림 팝업이 필요 없는 작은 것은 `[minor]`. 끝에 Co-Authored-By 줄.
+- 나눠서 고친 결과는 그대로 합치지 않는다: 마지막에 한 사람(주 세션)이 전체 diff 를 읽고 말투 · 이름 · 용어를 맞춘 뒤 커밋한다.
 
 ## 작업 방식
 - 상태: 앱 전체 한 벌은 위쪽 Host(InheritedWidget) + 저장소 객체(ChangeNotifier), 화면 안 표시는 `setState`. 내 기록 = `MarksHost`/`UserStore`, 계정 · 동기화 · 친구 = `AccountScope`/`Account`.
