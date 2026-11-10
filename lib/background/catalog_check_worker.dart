@@ -163,6 +163,7 @@ Future<CheckOutcome> runCatalogCheck({bool background = false, DateTime? now, Fe
   final config = NotifyConfig.fromJson(_decode(await BlobStore.read(notifyConfigKey)));
   final before = NotifyState.fromJson(_decode(await BlobStore.read(notifyStateKey)));
 
+  // 오류 글은 한국어로 파일에 적는다 — 보일 때 번역 (NotifyStore.shortStatus · statusLine, lib/l10n/zh/notify.dart)
   var error = '';
   var sig = '';
   var source = '';

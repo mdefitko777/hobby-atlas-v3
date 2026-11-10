@@ -12,6 +12,7 @@ import '../channels.dart' show defaultMyChannels;
 import '../data/blob_store.dart';
 import '../data/catalog.dart';
 import '../data/user_store.dart';
+import '../l10n/l10n.dart';
 import '../logic/lego_scope.dart';
 import '../logic/preorder.dart' show Preorder;
 import '../models.dart';
@@ -191,26 +192,27 @@ class NotifyStore extends ChangeNotifier {
     }
   }
 
-  /// 설정 줄: "11.01 13:20 확인" 또는 오류
+  /// 설정 줄: "11.01 13:20 확인" 또는 오류 (오류 글은 파일에 한국어로 남고, 보일 때 번역)
   String get shortStatus {
     final at = DateTime.tryParse(state.lastCheckAt)?.toLocal();
-    if (at == null) return '아직 확인하지 않았어요';
-    if (state.lastError.isNotEmpty) return state.lastError;
-    return '${shortDateTime(at)} 확인';
+    if (at == null) return tr('아직 확인하지 않았어요');
+    if (state.lastError.isNotEmpty) return tr(state.lastError);
+    return trf('{time} 확인', {'time': shortDateTime(at)});
   }
 
   /// "마지막 확인 11.01 13:20 · 피드 2026-10-23 · 새 알림 2" (+ 요약 피드만 읽었으면 그렇다고)
   String get statusLine {
     final at = DateTime.tryParse(state.lastCheckAt)?.toLocal();
-    if (at == null) return '아직 확인하지 않았어요';
+    if (at == null) return tr('아직 확인하지 않았어요');
     final t = shortDateTime(at);
-    if (state.lastError.isNotEmpty) return '마지막 확인 $t · ${state.lastError}';
+    if (state.lastError.isNotEmpty) return trf('마지막 확인 {time} · {error}', {'time': t, 'error': tr(state.lastError)});
     final src = switch (state.lastSource) {
-      'lite' => ' · 요약 피드(날짜마다 20개까지)',
-      'atlas+lite' => ' · 새 소식 파일 기다리는 중',
+      'lite' => ' · ${tr('요약 피드(날짜마다 20개까지)')}',
+      'atlas+lite' => ' · ${tr('새 소식 파일 기다리는 중')}',
       _ => '',
     };
-    return '마지막 확인 $t · 피드 ${state.lastSeen.isEmpty ? '-' : state.lastSeen} · 새 알림 ${state.lastNew}$src';
+    final feed = state.lastSeen.isEmpty ? '-' : state.lastSeen;
+    return trf('마지막 확인 {time} · 피드 {feed} · 새 알림 {n}', {'time': t, 'feed': feed, 'n': state.lastNew}) + src;
   }
 
   // ── 설정 ──

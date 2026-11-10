@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 
 import 'data/user_store.dart';
+import 'l10n/l10n.dart';
 import 'models.dart';
 import 'widgets.dart' show showToast;
 
@@ -83,10 +84,10 @@ class Marks extends InheritedWidget {
     showToast(
       context,
       before == CollectStatus.wanted
-          ? '좋아요를 취소했어요'
+          ? tr('좋아요를 취소했어요')
           : before == CollectStatus.owned
-          ? '「${k.name}」 구매함 → 좋아요로 옮겼어요'
-          : '「${k.name}」 좋아요',
+          ? trf('「{name}」 구매함 → 좋아요로 옮겼어요', {'name': k.name})
+          : trf('「{name}」 좋아요', {'name': k.name}),
       onUndo: () => _restore(k, before),
     );
   }
@@ -97,7 +98,7 @@ class Marks extends InheritedWidget {
     set(k, owned: before != CollectStatus.owned);
     showToast(
       context,
-      before == CollectStatus.owned ? '구매함에서 뺐어요' : '「${k.name}」 구매함에 넣었어요',
+      before == CollectStatus.owned ? tr('구매함에서 뺐어요') : trf('「{name}」 구매함에 넣었어요', {'name': k.name}),
       onUndo: () => _restore(k, before),
     );
   }

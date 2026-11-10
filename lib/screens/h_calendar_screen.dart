@@ -23,6 +23,7 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../channels.dart';
+import '../l10n/l10n.dart';
 import '../logic/restock.dart';
 import '../marks.dart';
 import '../models.dart';
@@ -39,7 +40,8 @@ DateTime get calendarToday {
   return DateTime(n.year, n.month, n.day);
 }
 
-const _weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+List<String> get _weekdays =>
+    byLang(ko: const ['일', '월', '화', '수', '목', '금', '토'], zh: const ['日', '一', '二', '三', '四', '五', '六']);
 
 /// 달력 한 줄의 일정 (발매 상품 또는 공식 예고)
 class _Event {
@@ -61,7 +63,7 @@ class _Event {
   /// 달력 점 색: 파랑 발매 · 회색 예고 · 빨강 PB 예약 마감 · 민트 산 날
   final Color dot;
 
-  /// 줄 알약 글자 (비면 발매 / 예고 단계)
+  /// 줄 알약 글자 (비면 발매 / 예고 단계) — 한국어 그대로 비교에 쓰고, 보일 때 tr
   final String tag;
   final String title;
   final String image;
@@ -173,7 +175,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
             _Event(
               title: k.name,
               image: k.image,
-              sub: 'PB 예약 마감',
+              sub: tr('PB 예약 마감'),
               kit: k,
               day: dayOf(k.pbCloses),
               dot: Gp.danger,
@@ -183,7 +185,13 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
         }
         if (k.date.startsWith(ym)) {
           out.add(
-            _Event(title: k.name, image: k.image, sub: joinDot([k.line, yen(k.priceJpy)]), kit: k, day: dayOf(k.date)),
+            _Event(
+              title: k.name,
+              image: k.image,
+              sub: joinDot([tr(k.line), yen(k.priceJpy)]),
+              kit: k,
+              day: dayOf(k.date),
+            ),
           );
         }
         // H-9b 예약 도착 예정 (하루까지 정하지 않았으면 날짜 미정)
@@ -193,7 +201,10 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
             _Event(
               title: k.name,
               image: k.image,
-              sub: joinDot([pre.shop, pre.due > 0 ? '낼 돈 ${won(pre.due)}' : (pre.paid ? '결제 완료' : '')]),
+              sub: joinDot([
+                pre.shop,
+                pre.due > 0 ? trf('낼 돈 {money}', {'money': won(pre.due)}) : (pre.paid ? tr('결제 완료') : ''),
+              ]),
               kit: k,
               day: dayOf(pre.arrival),
               dot: Gp.reserve,
@@ -209,7 +220,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
               _Event(
                 title: k.name,
                 image: k.image,
-                sub: joinDot([e.label, if (e.dateEstimated) '날짜 짐작']),
+                sub: joinDot([tr(e.label), if (e.dateEstimated) tr('날짜 짐작')]),
                 kit: k,
                 day: e.day,
                 dot: Gp.resale,
@@ -224,7 +235,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
             _Event(
               title: k.name,
               image: k.image,
-              sub: joinDot([k.line, k.series]),
+              sub: joinDot([tr(k.line), k.seriesLabel]),
               kit: k,
               day: at.day,
               dot: Gp.own,
@@ -241,7 +252,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
           _Event(
             title: k.name,
             image: k.image,
-            sub: joinDot([channelOf(k.franchiseId).label, k.line, yen(k.priceJpy)]),
+            sub: joinDot([tr(channelOf(k.franchiseId).label), tr(k.line), yen(k.priceJpy)]),
             kit: k,
             day: dayOf(k.date),
           ),
@@ -330,7 +341,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
 
   /// H-11 찾기 + 필터 + 전체 / 내 일정 (홈의 검색창 · 전체 소식 / My Page 와 같은 줄)
   Widget _tabs(_CalData d) => FindBar(
-    hint: '일정에서 찾기',
+    hint: tr('일정에서 찾기'),
     onQuery: (q) => setState(() => _find.query = q), // STATE: 찾기 → 달력 점 · 목록
     filterCount: _find.filter.count,
     onFilter: () => _openFilter(d),
@@ -339,8 +350,8 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
         mine: _mine,
         onChanged: (v) => setState(() => _mine = v),
         allIcon: Icons.calendar_month_outlined,
-        allTip: '전체 일정',
-        mineTip: '내 일정',
+        allTip: tr('전체 일정'),
+        mineTip: tr('내 일정'),
       ),
     ],
   );
@@ -363,7 +374,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
           const Icon(Icons.payments_outlined, size: Gp.iM, color: Gp.reserve),
           const SizedBox(width: 8),
           Text(
-            '${_month.month}월 낼 돈',
+            trf('{m}월 낼 돈', {'m': _month.month}),
             style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
           ),
           const Spacer(),
@@ -372,7 +383,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
             style: const TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w700),
           ),
           Text(
-            ' · ${dues.length}건',
+            ' · ${trf('{n}건', {'n': dues.length})}',
             style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
           ),
         ],
@@ -391,7 +402,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
         children: [
           for (final (i, label) in ['전체', '발매', '예고'].indexed)
             UnderlineTab(
-              label: label,
+              label: tr(label),
               count: switch (i) {
                 1 => inDay.where((e) => e.isRelease).length,
                 2 => inDay.where((e) => !e.isRelease).length,
@@ -412,11 +423,13 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
           // H-8 P09
           icon: Icons.event_busy_outlined,
           message: _find.active
-              ? '이 조건의 일정이 없어요'
+              ? tr('이 조건의 일정이 없어요')
               : _mine
-              ? '${_month.month}월에는 좋아요 · 구매함 상품의 일정이 없어요'
-              : (_day == null ? '${_month.month}월에는 발매 · 예고 일정이 없어요' : '${_month.month}월 $_day일에는 일정이 없어요'),
-          detail: _day == null ? '다른 달로 넘기거나 채널을 바꿔 보세요' : '날짜를 다시 누르면 한 달 전체를 봐요',
+              ? trf('{m}월에는 좋아요 · 구매함 상품의 일정이 없어요', {'m': _month.month})
+              : (_day == null
+                    ? trf('{m}월에는 발매 · 예고 일정이 없어요', {'m': _month.month})
+                    : trf('{m}월 {d}일에는 일정이 없어요', {'m': _month.month, 'd': _day})),
+          detail: _day == null ? tr('다른 달로 넘기거나 채널을 바꿔 보세요') : tr('날짜를 다시 누르면 한 달 전체를 봐요'),
         ),
       ];
     }
@@ -429,7 +442,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
           child: Text(
-            '${_month.month}월 $_day일만 보는 중 · 날짜를 다시 누르면 한 달 전체',
+            trf('{m}월 {d}일만 보는 중 · 날짜를 다시 누르면 한 달 전체', {'m': _month.month, 'd': _day}),
             style: const TextStyle(color: Gp.muted, fontSize: Gp.t12),
           ),
         ),
@@ -440,8 +453,8 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
       ],
       if (undated.isNotEmpty) ...[
         SectionHeader(
-          '날짜 미정',
-          subtitle: '${_month.month}월 중',
+          tr('날짜 미정'),
+          subtitle: trf('{m}월 중', {'m': _month.month}),
           padding: const EdgeInsets.fromLTRB(16, 20, 12, 8),
         ), // H-6
         for (final e in undated) _EventRow(event: e, dday: '', loaders: widget.loaders),
@@ -499,21 +512,21 @@ class _MonthCalendar extends StatelessWidget {
         children: [
           Row(
             children: [
-              IconButton(tooltip: '이전 달', onPressed: onPrev, icon: const Icon(Icons.chevron_left)), // H-2 P03
+              IconButton(tooltip: tr('이전 달'), onPressed: onPrev, icon: const Icon(Icons.chevron_left)), // H-2 P03
               Expanded(
                 child: Text(
-                  '${month.year}년 ${month.month}월',
+                  trf('{y}년 {m}월', {'y': month.year, 'm': month.month}),
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w600),
                 ),
               ),
-              IconButton(tooltip: '다음 달', onPressed: onNext, icon: const Icon(Icons.chevron_right)),
+              IconButton(tooltip: tr('다음 달'), onPressed: onNext, icon: const Icon(Icons.chevron_right)),
             ],
           ),
           if (!isThisMonth)
             TextButton(
               onPressed: onToday,
-              child: const Text('오늘로', style: TextStyle(color: Gp.accent)),
+              child: Text(tr('오늘로'), style: const TextStyle(color: Gp.accent)),
             ), // P07
           Row(
             children: [
@@ -639,7 +652,7 @@ class _DayHeader extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 18, 16, 6),
       child: Text(
-        '${date.month}.${date.day.toString().padLeft(2, '0')} (${_weekdays[date.weekday % 7]})',
+        '${date.month}.${date.day.toString().padLeft(2, '0')} (${byLang(ko: '', zh: '周')}${_weekdays[date.weekday % 7]})',
         style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w600),
       ),
     );
@@ -662,7 +675,8 @@ class _EventRow extends StatelessWidget {
       image: event.image,
       title: event.title,
       subtitle: event.sub,
-      tag: event.tag.isNotEmpty ? event.tag : (kit != null ? '발매' : (ann?.status ?? '예고')), // 발매 = 검정, 예고 = 회색
+      // 발매 = 검정, 예고 = 회색 (알약 글자 · 예고 단계는 한국어 값 — 보일 때 tr)
+      tag: tr(event.tag.isNotEmpty ? event.tag : (kit != null ? '발매' : (ann?.status ?? '예고'))),
       tagStrong: kit != null,
       tagColor: event.dot == Gp.reserve || event.dot == Gp.resale ? event.dot : null, // 예약 · 재판매 = 상세와 같은 색 꼬리표
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -678,15 +692,15 @@ class _EventRow extends StatelessWidget {
   }
 }
 
-/// H-12 ? 도움말 (위 줄 ? 의 "캘린더" 묶음 — s_app_shell.dart). 점 색 뜻도 여기에
-const calendarHelp = <HelpItem>[
-  HelpItem(Icons.tune, '필터'),
-  HelpItem(Icons.calendar_month_outlined, '전체 일정'),
-  HelpItem(Icons.person_outline, '내 일정 (좋아요 · 구매함)'),
-  HelpItem.dot(Gp.accent, '발매'),
-  HelpItem.dot(Gp.faint, '공식 예고 · 공지'),
-  HelpItem.dot(Gp.danger, 'PB 예약 마감 (내 일정)'),
-  HelpItem.dot(Gp.own, '산 날 (내 일정)'),
-  HelpItem.dot(Gp.reserve, '예약 도착 (내 일정)'),
-  HelpItem.dot(Gp.resale, '재판매 (내 일정)'),
+/// H-12 ? 도움말 (위 줄 ? 의 "캘린더" 묶음 — s_app_shell.dart). 점 색 뜻도 여기에. 열 때마다 만든다 (화면 언어)
+List<HelpItem> get calendarHelp => [
+  HelpItem(Icons.tune, tr('필터')),
+  HelpItem(Icons.calendar_month_outlined, tr('전체 일정')),
+  HelpItem(Icons.person_outline, tr('내 일정 (좋아요 · 구매함)')),
+  HelpItem.dot(Gp.accent, tr('발매')),
+  HelpItem.dot(Gp.faint, tr('공식 예고 · 공지')),
+  HelpItem.dot(Gp.danger, tr('PB 예약 마감 (내 일정)')),
+  HelpItem.dot(Gp.own, tr('산 날 (내 일정)')),
+  HelpItem.dot(Gp.reserve, tr('예약 도착 (내 일정)')),
+  HelpItem.dot(Gp.resale, tr('재판매 (내 일정)')),
 ];

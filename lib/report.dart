@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'l10n/l10n.dart';
 import 'models.dart';
 import 'theme.dart';
 import 'widgets.dart';
@@ -23,7 +24,7 @@ enum ReportKind {
   guide,
 }
 
-/// 고를 수 있는 "무엇이 틀렸나" (짧게)
+/// 고를 수 있는 "무엇이 틀렸나" (짧게) — 이슈에는 한국어 그대로 (데이터 저장소 쪽이 읽는다), 시트에는 tr
 List<String> reportChoices(ReportKind kind) => switch (kind) {
   ReportKind.wrongInfo => const ['이름', '가격', '발매일', '사진', '작품 · 라인', '기타'],
   ReportKind.missingKit => const ['상품이 없어요', '바코드가 다른 상품', '기타'],
@@ -88,7 +89,7 @@ Future<bool> reportDataIssue(
     detail: picked.$2,
   );
   final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-  if (context.mounted) showToast(context, ok ? 'GitHub 에서 확인하고 보내 주세요' : 'GitHub 를 열지 못했어요');
+  if (context.mounted) showToast(context, ok ? tr('GitHub 에서 확인하고 보내 주세요') : tr('GitHub 를 열지 못했어요'));
   return ok;
 }
 
@@ -120,7 +121,7 @@ class _ReportSheetState extends State<_ReportSheet> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SectionHeader(
-            '제보',
+            tr('제보'),
             subtitle: widget.subject,
             padding: const EdgeInsets.fromLTRB(0, 0, 0, 12),
             trailing: const Icon(Icons.flag_outlined, size: Gp.iM, color: Gp.muted),
@@ -131,7 +132,7 @@ class _ReportSheetState extends State<_ReportSheet> {
             children: [
               for (final c in reportChoices(widget.kind))
                 ChoiceChip(
-                  label: Text(c),
+                  label: Text(tr(c)),
                   selected: c == _problem,
                   showCheckmark: false,
                   selectedColor: Gp.accent.withValues(alpha: 0.14),
@@ -146,14 +147,14 @@ class _ReportSheetState extends State<_ReportSheet> {
             controller: _detail,
             maxLines: 3,
             minLines: 1,
-            decoration: const InputDecoration(hintText: '맞는 값 · 출처 (선택)', border: OutlineInputBorder()),
+            decoration: InputDecoration(hintText: tr('맞는 값 · 출처 (선택)'), border: const OutlineInputBorder()),
           ),
           const SizedBox(height: 12),
           FilledButton.icon(
             onPressed: () => Navigator.pop(context, (_problem, _detail.text)),
             style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(46)),
             icon: const Icon(Icons.north_east, size: Gp.iM),
-            label: const Text('GitHub 에서 보내기'),
+            label: Text(tr('GitHub 에서 보내기')),
           ),
         ],
       ),

@@ -6,6 +6,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+import '../l10n/l10n.dart';
 import '../theme.dart';
 import 'feed_rules.dart' show SystemAlert;
 
@@ -24,40 +25,41 @@ class LocalNotifier {
   /// res/drawable/ic_stat_notify.xml (흰 실루엣 종). res/raw/keep.xml 로 R8 이 지우지 않게 해 두었다.
   static const _icon = 'ic_stat_notify';
 
-  static const channels = <String, AndroidNotificationChannel>{
+  /// 채널 이름 · 설명은 고른 화면 언어로 (id 는 그대로 — 같은 id 로 다시 만들면 안드로이드가 이름만 바꾼다)
+  static Map<String, AndroidNotificationChannel> get channels => {
     'catalog': AndroidNotificationChannel(
       'catalog_updates',
-      '새 상품 · 변경',
-      description: '내 채널과 알림 규칙(PB · SEED/00 · BBX …)에 맞는 새 상품과 바뀐 상품',
+      tr('새 상품 · 변경'),
+      description: tr('내 채널과 알림 규칙(PB · SEED/00 · BBX …)에 맞는 새 상품과 바뀐 상품'),
     ),
     'wanted': AndroidNotificationChannel(
       'wanted_changes',
-      '좋아요한 상품',
-      description: '좋아요한 상품의 가격 · 발매일 · 판매처가 바뀌면',
+      tr('좋아요한 상품'),
+      description: tr('좋아요한 상품의 가격 · 발매일 · 판매처가 바뀌면'),
       importance: Importance.high,
     ),
     'pb': AndroidNotificationChannel(
       'pb_windows',
-      '프리미엄 반다이 예약',
-      description: '좋아요한 PB 상품의 예약 시작 · 마감 임박 (Wayback 기록이라 늦거나 틀릴 수 있어요)',
+      tr('프리미엄 반다이 예약'),
+      description: tr('좋아요한 PB 상품의 예약 시작 · 마감 임박 (Wayback 기록이라 늦거나 틀릴 수 있어요)'),
       importance: Importance.high,
     ),
     'restock': AndroidNotificationChannel(
       'restocks',
-      '재판매',
-      description: '좋아요 · 구매함 상품의 재판매(再販) 소식',
+      tr('재판매'),
+      description: tr('좋아요 · 구매함 상품의 재판매(再販) 소식'),
       importance: Importance.high,
     ),
     'preorder': AndroidNotificationChannel(
       'preorder_arrivals',
-      '예약 도착',
-      description: '예약한 상품의 도착 달 · 도착 날 (내가 적은 도착 예정)',
+      tr('예약 도착'),
+      description: tr('예약한 상품의 도착 달 · 도착 날 (내가 적은 도착 예정)'),
       importance: Importance.high,
     ),
     'ann': AndroidNotificationChannel(
       'announcement_stages',
-      '알림 받는 공식 예고',
-      description: '알림 받기를 누른 공식 예고가 상품화 확정 · 예약 시작 · 발매로 넘어가면',
+      tr('알림 받는 공식 예고'),
+      description: tr('알림 받기를 누른 공식 예고가 상품화 확정 · 예약 시작 · 발매로 넘어가면'),
       importance: Importance.high,
     ),
   };
@@ -115,8 +117,9 @@ class LocalNotifier {
   static Future<void> post(List<SystemAlert> alerts, {bool foreground = true}) async {
     if (!supported || alerts.isEmpty) return;
     await init(foreground: foreground);
+    final all = channels;
     for (final a in alerts) {
-      final ch = channels[a.channel] ?? channels['catalog']!;
+      final ch = all[a.channel] ?? all['catalog']!;
       try {
         await _plugin.show(
           id: a.id,

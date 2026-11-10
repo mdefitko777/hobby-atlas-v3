@@ -8,6 +8,7 @@
 import 'package:flutter/cupertino.dart' show CupertinoPageRoute;
 import 'package:flutter/material.dart';
 
+import 'l10n/l10n.dart';
 import 'theme.dart';
 
 /// 오른쪽 자세히 칸의 Navigator — 앱에 칸은 하나뿐. 넓은 화면에서만 붙어 있다(아니면 currentState == null)
@@ -136,22 +137,22 @@ class _EmptyPane extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const ColoredBox(
+    return ColoredBox(
       color: Gp.bg,
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.view_in_ar_outlined, size: 72, color: Gp.ghost),
-            SizedBox(height: 10),
-            Text(
+            const Icon(Icons.view_in_ar_outlined, size: 72, color: Gp.ghost),
+            const SizedBox(height: 10),
+            const Text(
               'Hobby Atlas',
               style: TextStyle(fontSize: Gp.t24, fontWeight: FontWeight.w800, letterSpacing: 1.5, color: Gp.ghost),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text(
-              '상품 · 공고 · 친구를 고르면 여기에 보여요',
-              style: TextStyle(fontSize: Gp.t12, color: Gp.faint),
+              tr('상품 · 공고 · 친구를 고르면 여기에 보여요'),
+              style: const TextStyle(fontSize: Gp.t12, color: Gp.faint),
             ),
           ],
         ),
