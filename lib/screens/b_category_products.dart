@@ -14,6 +14,7 @@
 // 데이터: 앞 화면이 고른 상품을 그대로 받는다 (다시 부르지 않음). 기체별로 묶기만 Loaders.guideIndex 를 처음 켤 때 한 번.
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../api.dart';
 import '../detail_pane.dart';
 import '../logic/category_browse.dart';
@@ -109,7 +110,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
             ],
             Flexible(
               child: Text(
-                widget.title,
+                tr(widget.title),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w600),
@@ -119,7 +120,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
         ),
         actions: [
           HelpButton(
-            title: widget.title,
+            title: tr(widget.title),
             items: categoryProductsHelp(groupByUnit: widget.groupByUnit),
           ), // B-23e
           const SizedBox(width: 6),
@@ -132,7 +133,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
             // B-23a 검색 결과와 같은 줄
             field: GpSearchBar(
               controller: _controller,
-              hint: '${widget.title}에서 찾기',
+              hint: trf('{name}에서 찾기', {'name': tr(widget.title)}),
               onChanged: (q) => setState(() => _query = q.trim()), // STATE: 찾기 → 상품
             ),
             tools: [
@@ -166,7 +167,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                   for (final c in ['', ..._choices])
                     UnderlineTab(
                       key: ValueKey('sub-$c'),
-                      label: c.isEmpty ? '전체' : c,
+                      label: c.isEmpty ? tr('전체') : tr(c),
                       fontSize: Gp.t14,
                       selected: _choice == c,
                       onTap: () => setState(() => _choice = c), // STATE: 세부 시리즈 → 상품
@@ -187,7 +188,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
               _index ??= widget.loaders.guideIndex().catchError((Object _) => GuideIndex.empty);
             }),
             icon: Icon(_grouped ? Icons.account_tree : Icons.account_tree_outlined, size: Gp.iS),
-            label: Text(_grouped ? '기체별로 묶는 중' : '기체별로 묶기', style: const TextStyle(fontSize: Gp.t12)),
+            label: Text(_grouped ? tr('기체별로 묶는 중') : tr('기체별로 묶기'), style: const TextStyle(fontSize: Gp.t12)),
           ),
       ],
     ),
@@ -197,7 +198,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
   Widget _listBody(List<Kit> kits) => SectionListView(
     tools: _tools,
     titleRow: false,
-    title: widget.title,
+    title: tr(widget.title),
     kits: kits,
     query: _query,
     loaders: widget.loaders,
@@ -217,7 +218,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
             for (final k in kits)
               if (f.matches(k) && kitMatches(k, _query)) k,
           ];
-          if (shown.isEmpty) return const EmptyView(icon: Icons.search_off, message: '이 조건의 상품이 없어요');
+          if (shown.isEmpty) return EmptyView(icon: Icons.search_off, message: tr('이 조건의 상품이 없어요'));
           return GroupedResults(kits: shown, index: s.data!, loaders: widget.loaders);
         },
       );
@@ -227,13 +228,13 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
 
 /// B-23e 분류 상품 ? — 검색 결과와 같은 아이콘
 List<HelpItem> categoryProductsHelp({bool groupByUnit = false}) => [
-  const HelpItem(Icons.tune, '필터 (상태: 좋아요 · 구매함 · 아직 · 발매 · 판매 · 종류 · 가격)'),
-  const HelpItem(Icons.grid_view_outlined, '격자로 보기'),
-  const HelpItem(Icons.view_list_outlined, '목록으로 보기'),
-  const HelpItem(Icons.swap_vert, '정렬: 최신 · 발매일 · 가격'),
-  const HelpItem(Icons.segment, '위 줄 = 세부 시리즈 (HGUC · HGCE … · $pbChoice)'),
-  if (groupByUnit) const HelpItem(Icons.account_tree_outlined, '기체별로 묶기'),
-  const HelpItem.group('상품 사진 위'),
-  const HelpItem(Icons.favorite_border, '좋아요 (사진 왼쪽 아래)', color: Gp.accent),
-  const HelpItem(Icons.bookmark_border, '구매함 (사진 왼쪽 위 리본)', color: Gp.own),
+  HelpItem(Icons.tune, tr('필터 (상태: 좋아요 · 구매함 · 아직 · 발매 · 판매 · 종류 · 가격)')),
+  HelpItem(Icons.grid_view_outlined, tr('격자로 보기')),
+  HelpItem(Icons.view_list_outlined, tr('목록으로 보기')),
+  HelpItem(Icons.swap_vert, tr('정렬: 최신 · 발매일 · 가격')),
+  HelpItem(Icons.segment, trf('위 줄 = 세부 시리즈 (HGUC · HGCE … · {pb})', {'pb': tr(pbChoice)})),
+  if (groupByUnit) HelpItem(Icons.account_tree_outlined, tr('기체별로 묶기')),
+  HelpItem.group(tr('상품 사진 위')),
+  HelpItem(Icons.favorite_border, tr('좋아요 (사진 왼쪽 아래)'), color: Gp.accent),
+  HelpItem(Icons.bookmark_border, tr('구매함 (사진 왼쪽 위 리본)'), color: Gp.own),
 ];

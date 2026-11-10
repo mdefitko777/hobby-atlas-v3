@@ -18,6 +18,7 @@
 // 데이터는 부모 화면이 받은 목록을 그대로 쓴다(다시 받지 않음).
 import 'package:flutter/material.dart';
 
+import '../l10n/l10n.dart';
 import '../api.dart';
 import '../logic/kit_rules.dart';
 import '../marks.dart';
@@ -35,10 +36,10 @@ enum KitSort { newest, release, priceLow, priceHigh }
 
 extension on KitSort {
   String get label => switch (this) {
-    KitSort.newest => '최신순',
-    KitSort.release => '발매일순',
-    KitSort.priceLow => '가격 낮은순',
-    KitSort.priceHigh => '가격 높은순',
+    KitSort.newest => tr('최신순'),
+    KitSort.release => tr('발매일순'),
+    KitSort.priceLow => tr('가격 낮은순'),
+    KitSort.priceHigh => tr('가격 높은순'),
   };
 }
 
@@ -84,8 +85,8 @@ class ListToolIcons extends StatelessWidget {
           onChanged: (list) => tools.setGrid(!list), // STATE: 보기 방식
           allIcon: Icons.grid_view_outlined,
           mineIcon: Icons.view_list_outlined,
-          allTip: '격자로 보기',
-          mineTip: '목록으로 보기',
+          allTip: tr('격자로 보기'),
+          mineTip: tr('목록으로 보기'),
         ),
       ],
     ),
@@ -210,11 +211,11 @@ class _SectionListViewState extends State<SectionListView> {
       // O-6 P05
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('최근 본 기록을 지울까요?'),
-        content: const Text('상품은 그대로이고, 이 목록만 비워져요.'),
+        title: Text(tr('최근 본 기록을 지울까요?')),
+        content: Text(tr('상품은 그대로이고, 이 목록만 비워져요.')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('취소')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('지우기')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr('취소'))),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(tr('지우기'))),
         ],
       ),
     );
@@ -224,7 +225,7 @@ class _SectionListViewState extends State<SectionListView> {
     setState(() => _cleared = widget.kits); // STATE: 기록 지우기 → 빈 목록
     showToast(
       context,
-      '최근 본 기록을 지웠어요',
+      tr('최근 본 기록을 지웠어요'),
       onUndo: () {
         me.restoreRecentViewed(before);
         if (mounted) setState(() => _cleared = const []);
@@ -257,7 +258,7 @@ class _SectionListViewState extends State<SectionListView> {
               children: [
                 if (widget.onBack case final back?)
                   IconButton(
-                    tooltip: '돌아가기',
+                    tooltip: tr('돌아가기'),
                     onPressed: back,
                     icon: const Icon(Icons.arrow_back_ios_new, size: Gp.iM),
                   )
@@ -266,22 +267,25 @@ class _SectionListViewState extends State<SectionListView> {
                 Container(width: 3, height: 16, color: Gp.accent), // 홈 줄 제목과 같은 색 막대
                 const SizedBox(width: 8),
                 Text(
-                  widget.title,
+                  tr(widget.title),
                   style: const TextStyle(fontSize: Gp.t19, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    joinDot([widget.subtitle, '$count개']),
+                    joinDot([
+                      widget.subtitle,
+                      trf('{n}개', {'n': count}),
+                    ]),
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: Gp.t12, color: Gp.accent, fontWeight: FontWeight.w500),
                   ),
                 ),
                 if (widget.history && _kits.isNotEmpty)
-                  TextButton(onPressed: _clearHistory, child: const Text('기록 지우기')), // O-6
+                  TextButton(onPressed: _clearHistory, child: Text(tr('기록 지우기'))), // O-6
                 if (anns == null && _kits.isNotEmpty && widget.tools == null) ...[
                   IconButton(
-                    tooltip: '필터',
+                    tooltip: tr('필터'),
                     onPressed: _openFilter,
                     icon: Badge(
                       isLabelVisible: _filter.count > 0,
@@ -291,7 +295,7 @@ class _SectionListViewState extends State<SectionListView> {
                     ),
                   ),
                   IconButton(
-                    tooltip: _grid ? '목록으로 보기' : '격자로 보기',
+                    tooltip: _grid ? tr('목록으로 보기') : tr('격자로 보기'),
                     onPressed: () => setState(() => _grid = !_grid), // STATE: 보기 방식
                     icon: Icon(_grid ? Icons.view_list_outlined : Icons.grid_view_outlined, color: Gp.muted),
                   ),
@@ -311,8 +315,8 @@ class _SectionListViewState extends State<SectionListView> {
       return EmptyView(
         // O-8
         icon: widget.history ? Icons.history : Icons.inbox_outlined,
-        message: widget.history ? '최근 본 상품이 없어요' : '표시할 상품이 없어요',
-        detail: widget.history ? '상품 상세를 열면 여기에 남아요' : '',
+        message: widget.history ? tr('최근 본 상품이 없어요') : tr('표시할 상품이 없어요'),
+        detail: widget.history ? tr('상품 상세를 열면 여기에 남아요') : '',
       );
     }
     final visible = _visibleKits();
@@ -325,14 +329,14 @@ class _SectionListViewState extends State<SectionListView> {
           Expanded(
             child: labels.isEmpty
                 ? Text(
-                    '${visible.length}개',
+                    trf('{n}개', {'n': visible.length}),
                     style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
                   )
                 : Row(
                     children: [
                       Flexible(
                         child: Text(
-                          '${labels.join(' · ')}  ${visible.length}개',
+                          '${labels.map(tr).join(' · ')}  ${trf('{n}개', {'n': visible.length})}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontSize: Gp.t12, color: Gp.accent),
@@ -354,7 +358,7 @@ class _SectionListViewState extends State<SectionListView> {
             onTap: () async {
               final s = await showPickSheet(
                 context,
-                title: '정렬',
+                title: tr('정렬'),
                 values: KitSort.values,
                 current: _sort,
                 label: (s) => s.label,
@@ -382,9 +386,11 @@ class _SectionListViewState extends State<SectionListView> {
     final empty = EmptyView(
       // O-8
       icon: Icons.search_off,
-      message: _filter.count > 0 ? '이 조건의 상품이 없어요' : '「${widget.query}」 결과가 ${widget.title}에 없어요',
+      message: _filter.count > 0
+          ? tr('이 조건의 상품이 없어요')
+          : trf('「{q}」 결과가 {name}에 없어요', {'q': widget.query, 'name': tr(widget.title)}),
       action: _filter.count > 0
-          ? OutlinedButton(onPressed: () => setState(() => _filter = KitFilter()), child: const Text('필터 초기화'))
+          ? OutlinedButton(onPressed: () => setState(() => _filter = KitFilter()), child: Text(tr('필터 초기화')))
           : null,
     );
     return LayoutBuilder(
@@ -440,11 +446,15 @@ class _SectionListViewState extends State<SectionListView> {
     title: k.name,
     titleLines: 2,
     size: 64,
-    subtitle: joinDot([channelOf(k.franchiseId).label, kitWork(k), k.line]),
+    subtitle: joinDot([
+      tr(channelOf(k.franchiseId).label),
+      kitWork(k) == k.series ? k.seriesLabel : kitWork(k),
+      tr(k.line),
+    ]),
     tag: Marks.of(context).owned(k)
-        ? '구매함'
+        ? tr('구매함')
         : Marks.of(context).liked(k)
-        ? '좋아요'
+        ? tr('좋아요')
         : '',
     trailing: Column(
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -484,7 +494,7 @@ class _SectionListViewState extends State<SectionListView> {
               children: [
                 for (final s in ['', ...statuses])
                   UnderlineTab(
-                    label: s.isEmpty ? '전체' : s,
+                    label: s.isEmpty ? tr('전체') : tr(s),
                     count: s.isEmpty ? all.length : all.where((a) => a.status == s).length,
                     fontSize: Gp.t14,
                     selected: _annStatus == s,
@@ -496,7 +506,7 @@ class _SectionListViewState extends State<SectionListView> {
         ),
         Expanded(
           child: list.isEmpty
-              ? const EmptyView(icon: Icons.search_off, message: '이 조건의 예고가 없어요')
+              ? EmptyView(icon: Icons.search_off, message: tr('이 조건의 예고가 없어요'))
               : LayoutBuilder(
                   builder: (context, box) {
                     final cols = box.maxWidth >= 720 ? 2 : 1;
@@ -521,11 +531,11 @@ class _SectionListViewState extends State<SectionListView> {
                               const SizedBox(height: 8),
                               Row(
                                 children: [
-                                  SoftTag(a.status, color: stageColor(a.status)),
+                                  SoftTag(tr(a.status), color: stageColor(a.status)),
                                   const SizedBox(width: 6),
                                   Expanded(
                                     child: Text(
-                                      joinDot([channelOf(a.franchiseId).label, dateDot(a.date), a.source]),
+                                      joinDot([tr(channelOf(a.franchiseId).label), dateDot(a.date), a.source]),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),

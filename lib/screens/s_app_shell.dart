@@ -27,6 +27,7 @@ import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
 
+import '../l10n/l10n.dart';
 import '../api.dart';
 import '../data/catalog.dart';
 import '../data/user_store.dart';
@@ -80,13 +81,13 @@ const _tabs = <(IconData, IconData, String)>[
 ];
 
 /// S-19 위 줄 아이콘 뜻 (네 탭 공통)
-const _topRowHelp = <HelpItem>[
-  HelpItem.group('위 줄'),
-  HelpItem(Icons.account_circle_outlined, '친구 · 내 정보'),
-  HelpItem.widget(LevelChip(level: 1, small: true), '수집 레벨'),
-  HelpItem(Icons.system_update_alt, '새 버전 (있을 때만)'),
-  HelpItem(Icons.notifications_none, '알림 · 친구 요청'),
-  HelpItem(Icons.settings_outlined, '설정'),
+List<HelpItem> get _topRowHelp => [
+  HelpItem.group(tr('위 줄')),
+  HelpItem(Icons.account_circle_outlined, tr('친구 · 내 정보')),
+  HelpItem.widget(const LevelChip(level: 1, small: true), tr('수집 레벨')),
+  HelpItem(Icons.system_update_alt, tr('새 버전 (있을 때만)')),
+  HelpItem(Icons.notifications_none, tr('알림 · 친구 요청')),
+  HelpItem(Icons.settings_outlined, tr('설정')),
 ];
 
 class _AppShellState extends State<AppShell> {
@@ -201,7 +202,7 @@ class _AppShellState extends State<AppShell> {
       _notify.markKitRead(kitId);
       // 「새 상품」은 이 기기 목록에 아직 없을 수 있다 — 새 데이터를 받아 찾는 동안 기다린다는 것을 알려 준다
       final slow = Timer(const Duration(milliseconds: 800), () {
-        if (mounted) showToast(context, '새 데이터를 받는 중이에요 · 잠시만요');
+        if (mounted) showToast(context, tr('새 데이터를 받는 중이에요 · 잠시만요'));
       });
       try {
         final kits = await widget.loaders.kitsByIds([kitId]);
@@ -290,12 +291,12 @@ class _AppShellState extends State<AppShell> {
       fallback: 'A',
       size: 34,
       ringWidth: 2,
-      tooltip: '친구 · 내 정보',
+      tooltip: tr('친구 · 내 정보'),
       onTap: () => _scaffold.currentState?.openDrawer(),
     );
     final bell = IconButton(
       // S-9 알림 (N)
-      tooltip: '알림',
+      tooltip: tr('알림'),
       onPressed: () =>
           openNotifications(context, myChannels: _myChannels, loaders: widget.loaders, notify: _notify), // N
       icon: ListenableBuilder(
@@ -314,7 +315,7 @@ class _AppShellState extends State<AppShell> {
     );
     final gear = IconButton(
       // S-10 설정
-      tooltip: '설정',
+      tooltip: tr('설정'),
       onPressed: () => openSettings(context),
       icon: const Icon(Icons.settings_outlined, color: Gp.ink),
     );
@@ -331,10 +332,10 @@ class _AppShellState extends State<AppShell> {
         gear,
         HelpButton(
           // S-19 ? 위 줄 + 이 탭 아이콘 뜻 (탭마다 내용만 바뀌고 자리는 같다)
-          title: _tabs[_tab].$3,
+          title: tr(_tabs[_tab].$3),
           items: [
             ..._topRowHelp,
-            HelpItem.group(_tabs[_tab].$3),
+            HelpItem.group(tr(_tabs[_tab].$3)),
             ...switch (_tab) {
               0 => homeHelp,
               1 => searchHelp(),
@@ -471,7 +472,7 @@ class _AppShellState extends State<AppShell> {
                                 NavigationRailDestination(
                                   icon: Icon(t.$1),
                                   selectedIcon: Icon(t.$2),
-                                  label: Text(t.$3),
+                                  label: Text(tr(t.$3)),
                                 ),
                             ],
                           ),
@@ -533,7 +534,7 @@ class _CameraButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return RaisedCircleButton(
-      tooltip: '찍어서 찾기',
+      tooltip: tr('찍어서 찾기'),
       size: _cameraSize,
       onTap: onTap,
       child: const Icon(Icons.photo_camera_outlined, color: Gp.ink, size: Gp.iL),
@@ -636,14 +637,14 @@ class _BottomBar extends StatelessWidget {
           child: Semantics(
             selected: on,
             button: true,
-            label: t.$3,
+            label: tr(t.$3),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(on ? t.$2 : t.$1, size: Gp.iL, color: on ? Gp.ink : Gp.navIdle),
                 const SizedBox(height: 3),
                 Text(
-                  t.$3,
+                  tr(t.$3),
                   style: TextStyle(
                     fontSize: Gp.t11,
                     letterSpacing: 0.4,
@@ -704,20 +705,20 @@ class AddSheet extends StatelessWidget {
           children: [
             ListTile(
               leading: const Icon(Icons.center_focus_strong_outlined),
-              title: const Text('사진으로 찾기'),
-              subtitle: const Text('상자나 실물을 찍으면 후보를 보여 줘요'),
+              title: Text(tr('사진으로 찾기')),
+              subtitle: Text(tr('상자나 실물을 찍으면 후보를 보여 줘요')),
               onTap: () => onPick('photo'),
             ),
             ListTile(
               leading: const Icon(Icons.qr_code_scanner),
-              title: const Text('바코드 스캔'),
-              subtitle: const Text('상자 뒷면 바코드로 정확히 찾기'),
+              title: Text(tr('바코드 스캔')),
+              subtitle: Text(tr('상자 뒷면 바코드로 정확히 찾기')),
               onTap: () => onPick('barcode'),
             ),
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('앨범에서 선택'),
-              subtitle: const Text('저장해 둔 사진·캡처로 찾기'),
+              title: Text(tr('앨범에서 선택')),
+              subtitle: Text(tr('저장해 둔 사진·캡처로 찾기')),
               onTap: () => onPick('album'),
             ),
           ],

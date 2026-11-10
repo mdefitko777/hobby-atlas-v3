@@ -16,6 +16,7 @@
 // 전환: 사진 칸 → 쌓기(push). 넣기 · 상품 잇기 → 덮기(바텀 시트). 지우기 → 확인 대화상자.
 library;
 
+import '../l10n/l10n.dart';
 import '../logic/kit_rules.dart';
 import 'dart:async';
 import 'dart:ui' as ui;
@@ -77,7 +78,7 @@ Future<PhotoChoice?> askPhotoSource(BuildContext context, {bool remove = false})
                     children: [
                       Icon(icon, size: Gp.iL, color: c == PhotoChoice.remove ? Gp.danger : Gp.ink),
                       const SizedBox(height: 6),
-                      Text(label, style: const TextStyle(fontSize: Gp.t12)),
+                      Text(tr(label), style: const TextStyle(fontSize: Gp.t12)),
                     ],
                   ),
                 ),
@@ -103,7 +104,7 @@ Future<MyPhoto?> addMyPhoto(BuildContext context, {String kitId = '', String uni
   try {
     bytes = await photoPicker(source);
   } on Object catch (e) {
-    if (context.mounted) showToast(context, '사진을 가져오지 못했어요 ($e)');
+    if (context.mounted) showToast(context, trf('사진을 가져오지 못했어요 ({error})', {'error': e}));
     return null;
   }
   if (bytes == null || bytes.isEmpty || !context.mounted) return null;
@@ -162,7 +163,7 @@ class PhotoWall extends StatelessWidget {
               ?extra,
               if (onAdd != null)
                 IconButton(
-                  tooltip: '사진 넣기',
+                  tooltip: tr('사진 넣기'),
                   visualDensity: VisualDensity.compact,
                   onPressed: onAdd,
                   icon: const Icon(Icons.add_a_photo_outlined, size: Gp.iM, color: Gp.ink),
@@ -305,7 +306,7 @@ class _PhotoViewScreenState extends State<PhotoViewScreen> {
     setState(() => _saving = true);
     try {
       final src = widget.friend != null ? await _friendBytes! : await PhotoFiles.instance.readOrFetch(_photo!.file);
-      if (src == null) throw StateError('사진 파일이 없어요');
+      if (src == null) throw StateError(tr('사진 파일이 없어요'));
       final out = watermark ? await composeWatermark(src, mark) : src;
       final id = widget.mine ?? widget.friend!.id;
       final uri = await FilePicker.saveFile(
@@ -313,9 +314,9 @@ class _PhotoViewScreenState extends State<PhotoViewScreen> {
         bytes: out,
         mimeType: watermark ? 'image/png' : 'image/jpeg',
       );
-      if (mounted && uri != null) showToast(context, '저장했어요');
+      if (mounted && uri != null) showToast(context, tr('저장했어요'));
     } on Object catch (e) {
-      if (mounted) showToast(context, '저장하지 못했어요: $e');
+      if (mounted) showToast(context, trf('저장하지 못했어요: {error}', {'error': e}));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -325,13 +326,13 @@ class _PhotoViewScreenState extends State<PhotoViewScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (dialog) => AlertDialog(
-        title: const Text('사진을 지울까요?'),
+        title: Text(tr('사진을 지울까요?')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialog, false), child: const Text('취소')),
+          TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(tr('취소'))),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Gp.danger),
             onPressed: () => Navigator.pop(dialog, true),
-            child: const Text('지우기'),
+            child: Text(tr('지우기')),
           ),
         ],
       ),
@@ -350,7 +351,7 @@ class _PhotoViewScreenState extends State<PhotoViewScreen> {
       for (final id in store.idsWith(const {CollectStatus.owned})) ?cat.byId[id],
     ];
     if (owned.isEmpty) {
-      showToast(context, '구매함이 비어 있어요');
+      showToast(context, tr('구매함이 비어 있어요'));
       return;
     }
     final kit = await showGpSheet<Kit>(
@@ -412,7 +413,7 @@ class _PhotoViewScreenState extends State<PhotoViewScreen> {
     if (p == null && f == null) {
       return Scaffold(
         appBar: AppBar(),
-        body: const EmptyView(message: '지운 사진이에요'),
+        body: EmptyView(message: tr('지운 사진이에요')),
       );
     }
     final mark = markFor(f?.owner ?? account.handle);
@@ -427,13 +428,13 @@ class _PhotoViewScreenState extends State<PhotoViewScreen> {
         title: f == null ? null : Text('@${f.owner}', style: const TextStyle(fontSize: Gp.t16)),
         actions: [
           IconButton(
-            tooltip: '저장',
+            tooltip: tr('저장'),
             onPressed: _saving ? null : () => _save(mark, watermark),
             icon: _saving ? const MiniSpinner(size: 18) : const Icon(Icons.download_outlined, size: Gp.iL),
           ),
           if (p != null)
             IconButton(
-              tooltip: '지우기',
+              tooltip: tr('지우기'),
               onPressed: () => _delete(p),
               icon: const Icon(Icons.delete_outline, size: Gp.iL),
             ),
@@ -466,7 +467,7 @@ class _PhotoViewScreenState extends State<PhotoViewScreen> {
               ),
               title: Row(
                 children: [
-                  const Text('친구에게 보이기', style: TextStyle(fontSize: Gp.t14)),
+                  Text(tr('친구에게 보이기'), style: const TextStyle(fontSize: Gp.t14)),
                   if (p.shared && account.photos.warn) ...[
                     const SizedBox(width: 6),
                     Tooltip(
@@ -504,7 +505,7 @@ class _PhotoViewScreenState extends State<PhotoViewScreen> {
               trailing: p == null
                   ? null
                   : IconButton(
-                      tooltip: '상품 끊기',
+                      tooltip: tr('상품 끊기'),
                       onPressed: () => _update(p.copyWith(kitId: ''), reupload: p.shared),
                       icon: const Icon(Icons.link_off, size: Gp.iM, color: Gp.muted),
                     ),
@@ -513,7 +514,7 @@ class _PhotoViewScreenState extends State<PhotoViewScreen> {
           else if (p != null)
             ListTile(
               leading: const Icon(Icons.link, size: Gp.iM, color: Gp.muted),
-              title: const Text('상품 잇기', style: TextStyle(fontSize: Gp.t14)),
+              title: Text(tr('상품 잇기'), style: const TextStyle(fontSize: Gp.t14)),
               onTap: () => _link(p),
             ),
         ],
@@ -522,8 +523,9 @@ class _PhotoViewScreenState extends State<PhotoViewScreen> {
   }
 }
 
-String _warnText(PhotoShareService s) =>
-    s.missing ? '서버에 사진 공유가 아직 없어요 · 사진은 이 기기에만 있어요' : '올리지 못했어요 · 다음에 다시 올려요 (${s.message})';
+String _warnText(PhotoShareService s) => s.missing
+    ? tr('서버에 사진 공유가 아직 없어요 · 사진은 이 기기에만 있어요')
+    : trf('올리지 못했어요 · 다음에 다시 올려요 ({message})', {'message': s.message});
 
 /// T-7 ⚠ 툴팁 글 — 서버에 없음 · 실패일 때만 (아니면 '')
 String photoWarn(PhotoShareService s) => s.warn ? _warnText(s) : '';
@@ -593,7 +595,7 @@ class KitPhotoStrip extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         children: [
           Tooltip(
-            message: '내 사진 넣기',
+            message: tr('내 사진 넣기'),
             child: InkWell(
               borderRadius: BorderRadius.circular(Gp.rSmall),
               onTap: () => addMyPhoto(context, kitId: kitId),
