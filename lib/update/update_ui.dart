@@ -89,14 +89,14 @@ Future<void> showUpdateSheet(BuildContext context, UpdateInfo info, {AppUpdate? 
                   ]),
                   style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
                 ),
-                if (info.notes.isNotEmpty) ...[
+                if (info.shownNotes.isNotEmpty) ...[
                   const SizedBox(height: 14),
                   Text(
                     tr('바뀐 점'),
                     style: const TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 6),
-                  for (final n in info.notes)
+                  for (final n in info.shownNotes)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
                       child: Text(

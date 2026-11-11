@@ -44,7 +44,8 @@ class Catalog extends ChangeNotifier {
   /// 13: goodsmile.com 상세 사진을 다시 보이기 (점검이 끝남)
   /// 14: 공식 조립 설명서 번호 (manualId)
   /// 15: 찾기 글자(blob)의 전각 영숫자를 반각으로 (ＨＷＳ Ｖｅｒ．Ｋａ → hws ver.ka)
-  static const mapVersion = 16;
+  /// 17: 찾기 낱말의 중국어(names.zh · labels.zh · search_zh)를 뒤로 모으고 그 자리(zhKeywordsFrom)
+  static const mapVersion = 17;
 
   CatalogPhase phase = CatalogPhase.empty;
   String error = '';
@@ -242,6 +243,9 @@ class Catalog extends ChangeNotifier {
     if (v != null) _aux[file] = v; // 못 받았으면 기억하지 않는다 (다음에 다시)
     return v;
   }
+
+  /// 이미 푼 보조 파일 (아직이면 null) — 기다릴 수 없는 곳(설정 목록의 글자)에서
+  Object? auxLoaded(String file) => _aux[file];
 
   /// 보조 파일의 기기 캐시 이름 — `atlas/…` 처럼 폴더가 붙은 이름도 한 파일로 (`/` → `__`)
   static String auxKey(String file) => 'aux_${file.replaceAll('/', '__')}';

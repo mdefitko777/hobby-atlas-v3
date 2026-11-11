@@ -74,6 +74,7 @@ class Kit {
     this.manualId = 0,
     this.nameZh = '',
     this.seriesZh = '',
+    this.zhKeywordsFrom = -1,
   }) : nameKo = name;
 
   final String id;
@@ -118,6 +119,10 @@ class Kit {
   final bool month;
   final Market? market;
   final List<String> keywords;
+
+  /// [keywords] 중 이 자리부터는 중국어 (names.zh · labels.zh · search_zh). -1 = 나누지 않음 (가짜 상품 · 옛 캐시).
+  /// 설명으로 찾기가 중국어 이름의 일부(水伊布 · 正义女神)를 한국어 · 일본어 낱말로 잘못 맞추지 않게 따로 본다
+  final int zhKeywordsFrom;
 
   /// 구매함일 때 내가 실제로 낸 돈(원). 없으면 null
   final int? purchaseKrw;
@@ -192,6 +197,7 @@ class Kit {
       month: date.startsWith(monthPrefix),
       market: null,
       keywords: _strs(j['keywords']),
+      zhKeywordsFrom: _iOrNull(j, 'zhKeywordsFrom') ?? -1,
       seriesKey: jStr(j['seriesKey']),
       priceKrw: _iOrNull(j, 'priceKrw'),
       pbOpens: jStr(j['pbOpens']),

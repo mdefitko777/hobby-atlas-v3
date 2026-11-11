@@ -1,5 +1,8 @@
 // 설명으로 찾기 — 중국어로 친 문장도 한국어 문장과 같은 뜻으로 (화면 언어와 상관없이), 이유는 화면 언어로
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hobby_atlas/data/gunpula.dart';
 import 'package:hobby_atlas/l10n/l10n.dart';
 import 'package:hobby_atlas/l10n/zh_text.dart';
 import 'package:hobby_atlas/logic/sentence_search.dart';
@@ -18,6 +21,7 @@ Kit kit(
   String type = '',
   String date = '',
   String blob = '',
+  List<String> zhWords = const [],
 }) => Kit(
   id: id,
   franchiseId: franchise,
@@ -40,7 +44,9 @@ Kit kit(
   recent: false,
   month: false,
   market: null,
-  keywords: const [],
+  // 실제 데이터처럼 중국어 낱말(search_zh)은 키워드 뒤쪽에 (lib/data/gunpula.dart mapKitsJob)
+  keywords: zhWords,
+  zhKeywordsFrom: 0,
   seriesKey: seriesKey,
   blob: blob,
 );
@@ -126,6 +132,145 @@ void main() {
     expect(sentenceSearch('금색 아머드 코어', [metal, gold]).map((h) => h.kit.id), ['acvi-gold']);
     expect(sentenceSearch('金色 装甲核心', [metal, gold]).map((h) => h.kit.id), ['acvi-gold']);
     expect(sentenceSearch('금색 아머드 코어', [metal]), isEmpty);
+  });
+
+  group('중국어 이름의 일부를 한국어 · 일본어 낱말로 맞추지 않는다 (2026-11-11 실제 데이터)', () {
+    Kit poke(String id, String ko, String zh, {List<String> zhWords = const [], String type = '인형'}) =>
+        kit(id, name: ko, nameZh: zh, franchise: 'pokemon', type: type, zhWords: zhWords, blob: '$ko $zh');
+    final eevee = poke('pokemon-kr-132147673', '포켓몬센터 보들보들 봉제인형 이브이', '宝可梦中心 软绵绵 毛绒玩偶 伊布');
+    final eeveelutions = [
+      poke('pokemon-kr-137529057', '포켓몬센터 반짝반짝☆ 글리터 봉제인형 샤미드', '宝可梦中心 闪闪亮亮☆ 闪粉 毛绒玩偶 水伊布'),
+      poke('pokemon-kr-131038482', '포켓몬센터 보들보들 봉제인형 에브이', '宝可梦中心 软绵绵 毛绒玩偶 太阳伊布'),
+      poke('pokemon-kr-128563818', '포켓몬센터 카라비너 마스코트 쥬피썬더', '宝可梦中心 登山扣 挂件 雷伊布'),
+      poke(
+        'pokemon-center-4521329339771',
+        '470 봉제인형 Pokémon fit 리피아',
+        '470 毛绒玩偶 宝可梦 fit 叶伊布',
+        zhWords: ['毛绒公仔', '葉伊布', '叶精灵'],
+      ),
+    ];
+
+    test('이브이 인형 — 水伊布 · 太阳伊布 · 雷伊布 · 葉伊布 는 이브이가 아니다', () {
+      for (final q in ['이브이 인형', '伊布 玩偶']) {
+        final hits = sentenceSearch(q, [eevee, ...eeveelutions], limit: 99);
+        expect(hits.first.kit.id, eevee.id, reason: q);
+        expect(hits.first.score, 100, reason: q);
+        for (final h in hits.skip(1)) {
+          expect(h.matched, isNot(contains('이브이')), reason: '$q ${h.kit.id}');
+        }
+      }
+    });
+
+    test('저스티스 — 正义女神高达(아스트레아)는 아니다', () {
+      final astraea = kit(
+        'pbandai-wb-1000255655',
+        name: 'MG 1/100 건담 아스트레아+프로토 GN 트윈 브로드 블레이드',
+        nameJa: 'ＭＧ 1 / 100 ガンダムアストレア＋プロトＧＮツインブロードブレイド',
+        nameZh: 'MG 1 / 100 正义女神高达+原型GN双阔刃剑',
+        zhWords: ['Astraea'],
+      );
+      final justice = kit('tamashii-14747', name: '저스티스 건담(리얼 타입 컬러)', nameZh: '正义高达(写实配色)');
+      for (final q in ['저스티스 건담', '正义 高达']) {
+        expect(sentenceSearch(q, [astraea, justice]).map((h) => h.kit.id), [justice.id], reason: q);
+      }
+    });
+
+    test('드래곤 · 파랑 · 날개 · 보라 · 스트라이크 — search_zh 와 중국어 이름의 한자는 일본어 낱말이 아니다', () {
+      final brachio = kit(
+        'beyblade-x-cx18',
+        name: 'CX-18 랜덤 부스터 브라키오윕 셀렉트',
+        nameJa: 'CX-18 ランダムブースター ブラキオウィップセレクト',
+        nameZh: 'CX-18 随机补充包 腕龙鞭打精选',
+        franchise: 'beyblade',
+        zhWords: ['腕龍鞭打', 'Brachio Whip', '腕龙古鞭'],
+      );
+      final dragoon = kit(
+        'beyblade-x-bx00-drgs',
+        name: 'BX-00 드라군스톰 4-60RA',
+        nameJa: 'BX-00 ドラグーンストーム4-60RA',
+        nameZh: 'BX-00 龙骑士4-60RA',
+        franchise: 'beyblade',
+        zhWords: ['青龙', '青龙风暴', 'Dragoon', '龍騎士'],
+      );
+      final jurassic = kit(
+        'beyblade-x-bx00-jsq',
+        name: 'BX-00 【B4 스토어 한정】 쥬라기 월드 스피노사우루스 / 케찰코아틀루스',
+        nameJa: 'BX-00 【B4ストア限定】 ジュラシック・ワールド スピノサウルス / ケツァルコアトルス',
+        nameZh: 'BX-00 【B4商店限定】 侏罗纪世界 棘龙 / 风神翼龙',
+        franchise: 'beyblade',
+      );
+      final charizard = poke('pokemon-kr-charizard', '포켓몬센터 봉제인형 리자몽', '宝可梦中心 毛绒玩偶 喷火龙', zhWords: ['噴火龍']);
+      final murasaki = kit(
+        'goodsmile-fate-g1140864',
+        name: '무라사키 시키부: 바니걸 스타일',
+        nameJa: 'Murasaki Shikibu: Bunny Girl Style',
+        nameZh: '紫式部: 兔女郎风格',
+        franchise: 'fate',
+        type: '피규어',
+      );
+      final whiteBase = kit(
+        'converge-sb01',
+        name: 'FW GUNDAM CONVERGE SB 페가수스급 강습양륙함 2번함 화이트 베이스',
+        nameJa: 'FW GUNDAM CONVERGE SB ペガサス級強襲揚陸艦2番艦 ホワイトベース',
+        nameZh: 'FW GUNDAM CONVERGE SB 飞马级强袭登陆舰2号舰 白色基地',
+      );
+      final strike = kit('tamashii-16166', name: '스트라이크건담 ENGINEERING EDITION', nameZh: '强袭高达 ENGINEERING EDITION');
+      final all = [brachio, dragoon, jurassic, charizard, murasaki, whiteBase, strike];
+      List<String> idsWith(String q, String label) => [
+        for (final h in sentenceSearch(q, all, limit: 99))
+          if (h.matched.contains(label)) h.kit.id,
+      ];
+      expect(idsWith('드래곤 블레이드 베이', '드래곤'), [dragoon.id], reason: '腕龍鞭打 의 龍');
+      expect(idsWith('드래곤 인형', '드래곤'), isNot(contains(charizard.id)), reason: '噴火龍 의 龍');
+      expect(idsWith('파란 드래곤 베이', '파랑'), isEmpty, reason: '青龙 의 青');
+      expect(idsWith('날개 베이', '날개'), isEmpty, reason: '风神翼龙 의 翼');
+      expect(idsWith('보라색 피규어', '보라'), isEmpty, reason: '紫式部 의 紫');
+      expect(idsWith('스트라이크 건담', '스트라이크'), [strike.id], reason: '强袭登陆舰');
+      expect(idsWith('强袭 高达', '스트라이크'), [strike.id]);
+    });
+
+    test('일본어 이름의 한 글자 한자는 그대로 뜻으로 (赤 · 龍)', () {
+      final red = kit('jp-red', name: 'HG 赤いザク', line: 'HG');
+      final ryu = kit('jp-ryu', name: '포켓몬 용', nameJa: 'ポケモン 龍のぬいぐるみ', franchise: 'pokemon', type: '인형');
+      expect(sentenceSearch('빨간 자쿠', [red]).single.score, 100);
+      expect(sentenceSearch('드래곤 인형', [ryu]).single.score, 100);
+    });
+
+    test('실제 데이터 모양(mapKitsJob): 중국어 낱말은 키워드 뒤쪽 · 이브이 문장에 샤미드가 안 나온다', () {
+      Map<String, Object?> raw(String id, String ko, String zh, List<String> searchZh) => {
+        'kit_id': id,
+        'franchise': 'pokemon',
+        'names': {'ja': ko, 'en': ko, 'zh': zh, 'ko': ko},
+        'series': {
+          'key': 'pokemon',
+          'labels': {'zh': '宝可梦', 'en': 'Pokemon', 'ja': 'ポケモン', 'ko': '포켓몬'},
+        },
+        'search_zh': searchZh,
+      };
+      final kits = [
+        for (final j in mapKitsJob({
+          'raw': jsonEncode({
+            'kits': [
+              raw('pokemon-kr-132147673', '포켓몬센터 보들보들 봉제인형 이브이', '宝可梦中心 软绵绵 毛绒玩偶 伊布', ['伊布']),
+              raw('pokemon-kr-137529057', '포켓몬센터 반짝반짝☆ 글리터 봉제인형 샤미드', '宝可梦中心 闪闪亮亮☆ 闪粉 毛绒玩偶 水伊布', ['水精灵']),
+            ],
+          }),
+        }))
+          Kit.fromSlim(j, recentSince: '', monthPrefix: '2026-11'),
+      ];
+      final showers = kits.last;
+      expect(showers.keywords.skip(showers.zhKeywordsFrom), containsAll(['水精灵', '宝可梦']));
+      expect(showers.keywords.take(showers.zhKeywordsFrom), isNot(contains('水精灵')));
+      expect(showers.blob, contains('水精灵'), reason: '이름 찾기(blob)에는 그대로');
+      final hits = sentenceSearch('이브이 인형', kits, limit: 99);
+      expect(
+        [
+          for (final h in hits)
+            if (h.matched.contains('이브이')) h.kit.id,
+        ],
+        ['pokemon-kr-132147673'],
+      );
+    });
   });
 
   test('찾기 화면 예시 문장의 중국어도 같은 뜻 (중국어 화면 예시 = sentenceExamplesZh)', () {

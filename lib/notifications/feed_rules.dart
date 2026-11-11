@@ -13,7 +13,7 @@
 //   · 좋아요 · 구매함 상품의 재판매(change_reasons 'restock', 규칙 '재판매') — "재판매 · 「이름」 YYYY.MM"
 //   · 예약한 상품의 도착 달 · 도착 날 (기기에 적은 예약, 규칙 '예약 도착')
 // 이 파일은 Flutter 위젯을 쓰지 않는다 (백그라운드 isolate · 단위 테스트).
-import '../data/gunpula.dart' show correctedCode, lineLabel, pickName;
+import '../data/gunpula.dart' show correctedCode, lineLabel, pickName, unescapeHtml;
 import '../l10n/l10n.dart';
 import '../logic/lego_scope.dart';
 import 'notify_models.dart';
@@ -42,6 +42,10 @@ class FeedItem {
     this.subline = '',
     this.nameJa = '',
     this.groups = const [],
+    this.nameKo = '',
+    this.nameZh = '',
+    this.seriesKo = '',
+    this.seriesZh = '',
   });
 
   final String kitId;
@@ -49,7 +53,15 @@ class FeedItem {
   /// added · changed
   final String changeType;
   final String franchise;
+
+  /// 지금 화면 언어의 이름 (휴대폰 알림)
   final String name;
+
+  /// 한국어 · 중국어 순서로 고른 이름 · 작품 — 알림함 줄은 보일 때 화면 언어로 고른다 ([NoticePart.value])
+  final String nameKo;
+  final String nameZh;
+  final String seriesKo;
+  final String seriesZh;
   final String seriesKey;
   final String seriesLabel;
   final String releaseDate;
@@ -90,16 +102,28 @@ class FeedItem {
     final id = jStr(j['kit_id']);
     if (id.isEmpty) return null;
     final restock = _restockOf(j);
-    // 휴대폰 알림 제목 · 둘째 줄의 이름도 고른 화면 언어로 (Kit.name 과 같은 순서 — lib/data/gunpula.dart)
-    final name = pickName(j['names'], L10n.isZh ? const ['zh', 'ja', 'en', 'ko'] : const ['ko', 'ja', 'en', 'zh']);
+    // 휴대폰 알림 제목 · 둘째 줄의 이름도 고른 화면 언어로 (Kit.name 과 같은 순서 — lib/data/gunpula.dart).
+    // 이름에 남은 HTML 엔티티(Pok&eacute;mon)는 상품 목록처럼 푼다
+    String named(List<String> order) {
+      final n = unescapeHtml(pickName(j['names'], order));
+      return n.isEmpty ? id : n;
+    }
+
+    final nameKo = named(const ['ko', 'ja', 'en', 'zh']);
+    final nameZh = named(const ['zh', 'ja', 'en', 'ko']);
+    final seriesKo = pickName(j['series_labels']);
     final seriesZh = jStr(jMap(j['series_labels'])['zh']);
     return FeedItem(
       kitId: id,
       changeType: jStr(j['change_type']).isEmpty ? changeType : jStr(j['change_type']),
       franchise: jStr(j['franchise']),
-      name: name.isEmpty ? id : name,
+      name: L10n.isZh ? nameZh : nameKo,
+      nameKo: nameKo,
+      nameZh: nameZh,
+      seriesKo: seriesKo,
+      seriesZh: seriesZh,
       seriesKey: jStr(j['series_key']),
-      seriesLabel: L10n.isZh && seriesZh.isNotEmpty ? seriesZh : trData(pickName(j['series_labels'])),
+      seriesLabel: L10n.isZh && seriesZh.isNotEmpty ? seriesZh : trData(seriesKo),
       releaseDate: jStr(j['release_date']),
       priceJpy: j['price_jpy'] is num ? (j['price_jpy']! as num).toInt() : null,
       isLimited: j['is_limited'] == true,
@@ -291,17 +315,20 @@ NoticeRecord? recordForItem(FeedItem it, FeedEntry e, NotifyConfig c, {bool seen
   if (!it.meaningful) return null;
   if (restockHit(it, c)) {
     final owned = c.owned.contains(it.kitId);
+    final parts = [
+      const NoticePart.key('재판매'),
+      if (it.restockDate.isNotEmpty) NoticePart.value(_ymDot(it.restockDate)),
+      NoticePart.key(owned ? '구매함 상품' : '좋아요한 상품'),
+      if (_restockKinds[it.restockKind] case final k?) NoticePart.key(k),
+    ];
     return NoticeRecord(
       id: 'feed-${e.date}-${it.kitId}',
       kind: 'restock',
       kitId: it.kitId,
       title: it.name,
-      body: [
-        tr('재판매'),
-        if (it.restockDate.isNotEmpty) _ymDot(it.restockDate),
-        owned ? tr('구매함 상품') : tr('좋아요한 상품'),
-        ?_trOrNull(_restockKinds[it.restockKind]),
-      ].join(' · '),
+      body: _shown(parts),
+      titlePart: _titleOf(it),
+      bodyParts: parts,
       at: e.generatedAt ?? DateTime.parse('${e.date}T00:00:00Z'),
       franchise: it.franchise,
       // 재판매 날짜 (휴대폰 알림 제목의 YYYY.MM) — 모르면 피드 날짜
@@ -315,12 +342,15 @@ NoticeRecord? recordForItem(FeedItem it, FeedEntry e, NotifyConfig c, {bool seen
   final wanted = wantedHit(it, c);
   final hits = ruleHits(it, c);
   if (!wanted && hits.isEmpty) return null;
+  final parts = itemBodyParts(it, wanted: wanted);
   return NoticeRecord(
     id: 'feed-${e.date}-${it.kitId}',
     kind: it.changeType,
     kitId: it.kitId,
     title: it.name,
-    body: itemBody(it, wanted: wanted),
+    body: _shown(parts),
+    titlePart: _titleOf(it),
+    bodyParts: parts,
     at: e.generatedAt ?? DateTime.parse('${e.date}T00:00:00Z'),
     franchise: it.franchise,
     date: e.date,
@@ -333,35 +363,50 @@ NoticeRecord? recordForItem(FeedItem it, FeedEntry e, NotifyConfig c, {bool seen
 }
 
 /// 알림 둘째 줄: "좋아요한 상품 · 가격 변경 ¥5,940 · 프리미엄 반다이 · SEED"
-String itemBody(FeedItem it, {bool wanted = false}) {
-  final reasons = it.changeType == 'added'
-      ? [tr('새로 수록')]
-      : [
-          for (final r in it.reasons)
-            if (!quietReasons.contains(r)) _reasonLabel(r, it),
-        ];
-  return [
-    if (wanted) tr('좋아요한 상품'),
-    ...reasons,
-    if (it.isPb) tr('프리미엄 반다이'),
-    if (it.seriesLabel.isNotEmpty && it.franchise != 'pokemon') it.seriesLabel,
-    if (it.changeType == 'added' && it.releaseDate.isNotEmpty) trf('{date} 발매', {'date': it.releaseDate}),
-  ].join(' · ');
-}
+String itemBody(FeedItem it, {bool wanted = false}) => _shown(itemBodyParts(it, wanted: wanted));
 
-String _reasonLabel(String r, FeedItem it) => switch (r) {
-  'price' => it.priceJpy == null ? tr('가격 변경') : trf('가격 변경 {price}', {'price': '¥${_comma(it.priceJpy!)}'}),
-  'release' => it.releaseDate.isEmpty ? tr('발매일 변경') : trf('발매일 {date}', {'date': it.releaseDate}),
-  'limited' => it.isLimited ? tr('한정 표시') : tr('한정 해제'),
-  'source' => tr('판매처 · 출처 변경'),
+/// [itemBody] 의 조각 — 알림함에는 이것을 두고 보일 때 화면 언어로 만든다
+List<NoticePart> itemBodyParts(FeedItem it, {bool wanted = false}) => [
+  if (wanted) const NoticePart.key('좋아요한 상품'),
+  if (it.changeType == 'added')
+    const NoticePart.key('새로 수록')
+  else
+    for (final r in it.reasons)
+      if (!quietReasons.contains(r)) ..._reasonParts(r, it),
+  if (it.isPb) const NoticePart.key('프리미엄 반다이'),
+  if (it.seriesLabel.isNotEmpty && it.franchise != 'pokemon')
+    it.seriesKo.isEmpty && it.seriesZh.isEmpty
+        ? NoticePart.value(it.seriesLabel)
+        : NoticePart.value(it.seriesKo, it.seriesZh),
+  if (it.changeType == 'added' && it.releaseDate.isNotEmpty) NoticePart.key('{date} 발매', {'date': it.releaseDate}),
+];
+
+List<NoticePart> _reasonParts(String r, FeedItem it) => switch (r) {
+  'price' => [
+    it.priceJpy == null
+        ? const NoticePart.key('가격 변경')
+        : NoticePart.key('가격 변경 {price}', {'price': '¥${_comma(it.priceJpy!)}'}),
+  ],
+  'release' => [
+    it.releaseDate.isEmpty ? const NoticePart.key('발매일 변경') : NoticePart.key('발매일 {date}', {'date': it.releaseDate}),
+  ],
+  'limited' => [NoticePart.key(it.isLimited ? '한정 표시' : '한정 해제')],
+  'source' => const [NoticePart.key('판매처 · 출처 변경')],
   'restock' => [
-    it.restockDate.isEmpty ? tr('재판매') : trf('재판매 {date}', {'date': _ymDot(it.restockDate)}),
-    ?_trOrNull(_restockShort[it.restockKind]),
-  ].join(' · '),
-  _ => tr('정보 변경'),
+    it.restockDate.isEmpty
+        ? const NoticePart.key('재판매')
+        : NoticePart.key('재판매 {date}', {'date': _ymDot(it.restockDate)}),
+    if (_restockShort[it.restockKind] case final k?) NoticePart.key(k),
+  ],
+  _ => const [NoticePart.key('정보 변경')],
 };
 
-String? _trOrNull(String? ko) => ko == null ? null : tr(ko);
+/// 조각 → 지금 화면 언어의 글 (휴대폰 알림 · 옛 앱이 읽는 body 칸)
+String _shown(List<NoticePart> parts, [String sep = ' · ']) => parts.map((p) => p.shown).join(sep);
+
+/// 상품 이름 조각 — 피드에서 읽은 줄은 한국어 · 중국어 이름이 다 있다 (직접 만든 FeedItem 은 [FeedItem.name] 하나)
+NoticePart _titleOf(FeedItem it) =>
+    it.nameKo.isEmpty && it.nameZh.isEmpty ? NoticePart.value(it.name) : NoticePart.value(it.nameKo, it.nameZh);
 
 /// PB 예약 기간 알림에 붙는 말 (Wayback 에서 읽은 날짜라)
 String get pbStaleNote => tr('Wayback 기록이라 바뀌었을 수 있어요');
@@ -380,35 +425,41 @@ List<NoticeRecord> pbWindowRecords(NotifyConfig c, Set<String> known, DateTime n
       final id = 'pb-open-${w.id}-${w.opens}';
       if (d <= 1 && d >= -2 && (cl == null || !today.isAfter(cl)) && !known.contains(id)) {
         final when = d == 1
-            ? trf('내일 예약 시작 ({date})', {'date': _md(w.opens)})
-            : (d == 0 ? tr('오늘 예약 시작') : trf('예약 중 ({date} 시작)', {'date': _md(w.opens)}));
-        out.add(_pbRecord(id, 'pb_open', w, w.opens, '$when · $pbStaleNote', now));
+            ? NoticePart.key('내일 예약 시작 ({date})', {'date': _md(w.opens)})
+            : (d == 0 ? const NoticePart.key('오늘 예약 시작') : NoticePart.key('예약 중 ({date} 시작)', {'date': _md(w.opens)}));
+        out.add(_pbRecord(id, 'pb_open', w, w.opens, when, now));
       }
     }
     if (cl != null) {
       final d = cl.difference(today).inDays;
       final id = 'pb-close-${w.id}-${w.closes}';
       if (d >= 0 && d <= 3 && !known.contains(id)) {
-        final when = d == 0 ? tr('오늘 예약 마감') : trf('예약 마감 D-{n} ({date})', {'n': d, 'date': _md(w.closes)});
-        out.add(_pbRecord(id, 'pb_close', w, w.closes, '$when · $pbStaleNote', now));
+        final when = d == 0
+            ? const NoticePart.key('오늘 예약 마감')
+            : NoticePart.key('예약 마감 D-{n} ({date})', {'n': d, 'date': _md(w.closes)});
+        out.add(_pbRecord(id, 'pb_close', w, w.closes, when, now));
       }
     }
   }
   return out;
 }
 
-NoticeRecord _pbRecord(String id, String kind, PbWindow w, String date, String body, DateTime now) => NoticeRecord(
-  id: id,
-  kind: kind,
-  kitId: w.id,
-  title: w.name,
-  body: body,
-  at: now.toUtc(),
-  franchise: w.franchise,
-  date: date,
-  pb: true,
-  wanted: true,
-);
+NoticeRecord _pbRecord(String id, String kind, PbWindow w, String date, NoticePart when, DateTime now) {
+  final parts = [when, const NoticePart.key('Wayback 기록이라 바뀌었을 수 있어요')];
+  return NoticeRecord(
+    id: id,
+    kind: kind,
+    kitId: w.id,
+    title: w.name,
+    body: _shown(parts),
+    bodyParts: parts,
+    at: now.toUtc(),
+    franchise: w.franchise,
+    date: date,
+    pb: true,
+    wanted: true,
+  );
+}
 
 /// 좋아요한 상품의 발매 알림: 7–2일 전 한 번(D-7) · 하루 전(D-1) · 당일. 이미 알린 것([known])은 빼고.
 /// 12시간마다 확인하니, 휴대폰이 꺼져 있던 날은 다음 확인 때 그 단계로 한 번만.
@@ -422,21 +473,23 @@ List<NoticeRecord> releaseRecords(NotifyConfig c, Set<String> known, DateTime no
     if (day == null) continue;
     final d = day.difference(today).inDays;
     final (stage, body) = switch (d) {
-      0 => ('d0', tr('오늘 발매')),
-      1 => ('d1', trf('내일 발매 ({date})', {'date': _md(r.date)})),
-      >= 2 && <= 7 => ('d7', trf('D-{n} · {date} 발매', {'n': d, 'date': _md(r.date)})),
-      _ => ('', ''),
+      0 => ('d0', const NoticePart.key('오늘 발매')),
+      1 => ('d1', NoticePart.key('내일 발매 ({date})', {'date': _md(r.date)})),
+      >= 2 && <= 7 => ('d7', NoticePart.key('D-{n} · {date} 발매', {'n': d, 'date': _md(r.date)})),
+      _ => ('', const NoticePart.value('')),
     };
     if (stage.isEmpty) continue;
     final id = 'rel-${r.id}-${r.date}-$stage';
     if (known.contains(id)) continue;
+    final parts = [const NoticePart.key('좋아요한 상품'), body];
     out.add(
       NoticeRecord(
         id: id,
         kind: 'release',
         kitId: r.id,
         title: r.name,
-        body: '${tr('좋아요한 상품')} · $body',
+        body: _shown(parts),
+        bodyParts: parts,
         at: now.toUtc(),
         franchise: r.franchise,
         date: r.date,
@@ -457,20 +510,22 @@ List<NoticeRecord> preorderRecords(NotifyConfig c, Set<String> known, DateTime n
   for (final p in c.preorders) {
     if (!p.arrival.startsWith(ym)) continue;
     final exact = p.arrival.length == 10;
-    final money = p.due > 0 ? trf('낼 돈 {n}원', {'n': _comma(p.due)}) : tr('결제 완료');
+    final money = p.due > 0 ? NoticePart.key('낼 돈 {n}원', {'n': _comma(p.due)}) : const NoticePart.key('결제 완료');
     for (final (stage, label) in [
-      ('month', exact ? trf('{date} 도착 예정', {'date': _md(p.arrival)}) : tr('이번 달 도착 예정')),
-      if (exact && p.arrival == today) ('d0', tr('오늘 도착 예정')),
+      ('month', exact ? NoticePart.key('{date} 도착 예정', {'date': _md(p.arrival)}) : const NoticePart.key('이번 달 도착 예정')),
+      if (exact && p.arrival == today) ('d0', const NoticePart.key('오늘 도착 예정')),
     ]) {
       final id = 'pre-${p.id}-${p.arrival}-$stage';
       if (known.contains(id)) continue;
+      final parts = [const NoticePart.key('예약'), label, if (p.shop.isNotEmpty) NoticePart.value(p.shop), money];
       out.add(
         NoticeRecord(
           id: id,
           kind: 'preorder',
           kitId: p.id,
           title: p.name,
-          body: [tr('예약'), label, if (p.shop.isNotEmpty) p.shop, money].join(' · '),
+          body: _shown(parts),
+          bodyParts: parts,
           at: now.toUtc(),
           franchise: p.franchise,
           date: p.arrival,
@@ -516,7 +571,9 @@ List<NoticeRecord> annStageRecords(NotifyConfig config, Object? announcements, S
             kitId: '',
             annId: e.key,
             title: e.value.title,
-            body: '${tr(annStageLabels[e.value.stage] ?? '공식 발표')} → ${tr(annStageLabels[stage] ?? stage)}',
+            body: _shown(_annParts(e.value.stage, stage), ' → '),
+            bodyParts: _annParts(e.value.stage, stage),
+            bodySep: ' → ',
             at: now,
             franchise: e.value.franchise,
             reasons: [stage],
@@ -524,6 +581,12 @@ List<NoticeRecord> annStageRecords(NotifyConfig config, Object? announcements, S
           ),
   ];
 }
+
+/// 예고 단계 줄의 둘째 줄: "공식 발표 → 예약 시작"
+List<NoticePart> _annParts(String from, String to) => [
+  NoticePart.key(annStageLabels[from] ?? '공식 발표'),
+  NoticePart.key(annStageLabels[to] ?? to),
+];
 
 /// 처음 실행 때 채우는 지난 소식 · 오래 꺼져 있다 켜졌을 때 조용히 넣는 범위 (가장 새 피드 날짜 기준)
 const catchUpDays = 7;

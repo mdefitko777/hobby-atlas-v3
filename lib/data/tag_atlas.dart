@@ -276,6 +276,10 @@ const _seriesLabels = {
   'gorgeousstar': '고저스스타',
 };
 
+/// 같은 시리즈의 중국어 이름 (docs/terms.md) — 데이터에 탄 이름 zh 가 없을 때 「<시리즈>第N弹」 으로 (데이터의 星尘第1弹 처럼 붙여 쓴다).
+/// 일본판 슈퍼태그 · 더블체인 · 고저스스타는 공식 중국어판이 없어 영어로 섞여 보였다 (2026-11-11 점검)
+const _seriesZh = {'stardust': '星尘', 'galaxy': '银河', 'supertag': '超级搭档', 'doublechain': '双重连锁', 'gorgeousstar': '华丽之星'};
+
 /// 찾기 글자: 소문자 · 띄어쓰기 · 가운뎃점 없앰
 String normalizeQuery(String s) => s.toLowerCase().replaceAll(RegExp(r'[\s·・]+'), '');
 
@@ -293,13 +297,15 @@ String _zhName(Map<String, Object?> names) {
   return '';
 }
 
-/// 탄 이름의 중국어판 — 데이터 중국어 → '3탄' 같은 번호만인 것 → 영어 이름 ('' = 한국어 이름을 번역 표로)
-String _setZh(Map<String, Object?> names, String ko, {bool promo = false}) {
+/// 탄 이름의 중국어판 — 데이터 중국어 → '3탄' 같은 번호만인 것 · [series] 를 아는 '슈퍼태그 3탄' → 영어 이름
+/// ('' = 한국어 이름을 번역 표로)
+String _setZh(Map<String, Object?> names, String ko, {bool promo = false, String series = ''}) {
   final zh = _zhName(names);
   if (zh.isNotEmpty) return zh;
   if (promo) return '';
-  final no = RegExp(r'^(\d+)탄$').firstMatch(ko);
-  if (no != null) return '第${no.group(1)}弹';
+  final m = RegExp(r'^(?:(.+) )?(\d+)탄$').firstMatch(ko);
+  final head = m?.group(1) == null ? '' : _seriesZh[series];
+  if (m != null && head != null) return '$head第${m.group(2)}弹';
   return jStr(names['en']).trim();
 }
 
@@ -391,7 +397,7 @@ TagBook parseMezastar(Object? json, TagRegion region) {
       TagSet(
         id: id,
         name: name,
-        nameZh: _setZh(names, name, promo: promo),
+        nameZh: _setZh(names, name, promo: promo, series: series),
         local: jStr(mine['local_name']).isNotEmpty ? jStr(mine['local_name']) : jStr(names['ja']),
         date: jStr(mine['date']),
         ordinal: jInt(s['ordinal']),

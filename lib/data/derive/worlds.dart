@@ -68,6 +68,20 @@ List<World> _atlasWorlds(String channelId, Map<String, Object?> atlas) {
   ];
 }
 
+/// atlas 묶음 하나의 이름 (atlas-groups.json `franchises.<채널>[].labels`) — [zh] 면 중국어 먼저.
+/// 알림 조건은 묶음 id 를 두고 이름은 보일 때 이것으로 (고를 때 언어로 적어 두면 언어를 바꿔도 그대로였다).
+/// 파일을 아직 풀지 않았거나 그 묶음이 없으면 null
+String? atlasGroupLabel(String channelId, String groupId, {required bool zh}) {
+  final atlas = jMap(jMap(_cat.auxLoaded('atlas-groups.json'))['franchises']);
+  for (final grp in jList(atlas[channelId])) {
+    final m = jMap(grp);
+    if (jStr(m['id']) != groupId) continue;
+    final name = atlasName(m['labels'], zh: zh);
+    return name.isEmpty ? null : name;
+  }
+  return null;
+}
+
 /// 묶음의 상품 id — 레고는 설정 › 레고 범위에서 보이는 것만
 List<String> _worldIds(String channelId, Object? grp) {
   final ids = jList(jMap(grp)['kit_ids']).whereType<String>();

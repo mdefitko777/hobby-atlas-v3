@@ -81,14 +81,17 @@ jobs:
           prev=$(jq -r '.sha // empty' prev.json)
           if [ -n "$prev" ] && git cat-file -e "$prev" 2>/dev/null; then range="$prev..HEAD"; else range="-5"; fi
           git log --no-merges --format=%s $range -- lib android assets pubspec.yaml | sed -e 's/^v3: //' -e 's/ — .*//' | head -8 > notes.txt
+          # 중국어 화면의 바뀐 점 = 같은 커밋들 본문의 "zh: …" 줄 (없으면 빈 목록 → 앱이 중국어 화면에서 칸을 숨긴다)
+          git log --no-merges --format=%B $range -- lib android assets pubspec.yaml | tr -d '\r' | sed -n -E 's/^zh:[[:space:]]*//p' | head -8 > notes_zh.txt
           major=true
           if git log -1 --format=%s | grep -q '\[minor\]'; then major=false; fi
           jq -n --argjson build ${{ github.run_number }} --arg version "$APP_VERSION" --arg sha "$GITHUB_SHA" \
             --arg built "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --argjson major $major \
             --arg sha256 "$(sha256sum hobby-atlas.apk | cut -d' ' -f1)" --argjson size $(stat -c %s hobby-atlas.apk) \
-            --rawfile notes notes.txt \
+            --rawfile notes notes.txt --rawfile notes_zh notes_zh.txt \
             '{build:$build, version:$version, sha:$sha, built_at:$built, major:$major, apk:"hobby-atlas.apk", sha256:$sha256, size:$size,
-              notes:($notes | split("\n") | map(select(length > 0)))}' > version.json
+              notes:($notes | split("\n") | map(select(length > 0))),
+              notes_zh:($notes_zh | split("\n") | map(select(length > 0)))}' > version.json
           cat version.json
 
       - uses: actions/upload-artifact@v4

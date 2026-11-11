@@ -17,6 +17,7 @@ class Concept {
     this.terms, {
     this.field = ConceptField.name,
     this.needles = const [],
+    this.zh = const [],
     this.weight = 2,
     this.hint = '',
   });
@@ -28,8 +29,12 @@ class Concept {
   final List<String> terms;
   final ConceptField field;
 
-  /// 상품에서 찾는 글자 (비면 [terms]). series = series_key, franchise = 채널 id
+  /// 상품에서 찾는 글자 (비면 [terms]). series = series_key, franchise = 채널 id.
+  /// name 이면 한국어 · 일본어 · 영어 글자에서만 (한 글자 한자는 일본어 이름에서만)
   final List<String> needles;
+
+  /// name: 상품의 중국어 글자(이름 · 작품 · search_zh)에서 찾는 글자 — 두 글자 이상만
+  final List<String> zh;
   final double weight;
 
   /// 이 말이 나오면 그 채널 상품만 (자쿠 → 건담, 피카츄 → 포켓몬). 비면 채널을 가리지 않는다
@@ -41,8 +46,10 @@ class Concept {
 const _color = 1.0;
 
 /// 낱말 표 — 짧게 유지한다. 이름 쪽은 한국어 이름이 없는(일본어만 있는) 상품도 찾히게 표기를 모은다.
-/// 중국어 한 글자(红 · 金 · 粉 · 龙 …)는 [Concept.terms](문장 쪽)에만 — 상품 쪽 [Concept.needles] 에는 두 글자 이상만
-/// (상품 글자에 중국어 이름이 들어 있어 奥伯龙 · 金属 · 闪粉 · 黑胶 가 드래곤 · 금색 · 분홍 · 검정으로 잡혔다, 2026-11-11 점검).
+/// 상품 쪽은 글자가 어느 말인지 나눠 본다 (상품 글자에 중국어 이름 · search_zh 가 다 들어와 水伊布 · 正义女神 · 腕龍鞭打 ·
+/// 紫式部 가 이브이 · 저스티스 · 드래곤 · 보라로 잡혔다, 2026-11-11 점검):
+///   [Concept.needles] = 한국어 · 일본어 · 영어 글자에서만, 그중 한 글자 한자(赤 · 青 · 翼 · 龍 …)는 일본어 이름에서만
+///   [Concept.zh] = 중국어 이름 · 작품 · search_zh 에서만, 두 글자 이상 + [_zhGuards] 의 앞뒤 글자 규칙
 /// 문장 쪽 한 글자 한자도 띄어 쓴 낱말(또는 한 글자 한자 · 군말만으로 된 덩어리)일 때만 뜻으로 본다 — [_singleHanRun]
 const sentenceConcepts = <Concept>[
   // ── 색 ──
@@ -50,113 +57,159 @@ const sentenceConcepts = <Concept>[
     '흰색',
     ['하얀', '흰색', '흰', '화이트', 'white', '白', 'ホワイト', '白色'],
     needles: ['white', 'ホワイト', '白', '화이트', '흰'],
+    zh: ['白色'],
     weight: _color,
   ),
   Concept(
     '검정',
     ['검은', '검정', '까만', '블랙', 'black', '黒', 'ブラック', '黑色', '黑'],
-    needles: ['black', 'ブラック', '黒', '블랙', '黑色'],
+    needles: ['black', 'ブラック', '黒', '블랙'],
+    zh: ['黑色'],
     weight: _color,
   ),
   Concept(
     '빨강',
     ['빨간', '빨강', '붉은', '레드', 'red', '赤', 'レッド', '红色', '红'],
-    needles: ['red', 'レッド', '赤', '레드', '빨간', '红色'],
+    needles: ['red', 'レッド', '赤', '레드', '빨간'],
+    zh: ['红色'],
     weight: _color,
   ),
   Concept(
     '파랑',
     ['파란', '파랑', '푸른', '블루', 'blue', '青', 'ブルー', '蓝色', '蓝'],
-    needles: ['blue', 'ブルー', '青', '블루', '파란', '蓝色'],
+    needles: ['blue', 'ブルー', '青', '블루', '파란'],
+    zh: ['蓝色'],
     weight: _color,
   ),
   Concept(
     '초록',
     ['초록', '녹색', '그린', 'green', '緑', 'グリーン', '绿色', '绿'],
-    needles: ['green', 'グリーン', '緑', '그린', '绿色'],
+    needles: ['green', 'グリーン', '緑', '그린'],
+    zh: ['绿色'],
     weight: _color,
   ),
   Concept(
     '노랑',
     ['노란', '노랑', '옐로', 'yellow', '黄', 'イエロー', '黄色'],
     needles: ['yellow', 'イエロー', '黄', '옐로'],
+    zh: ['黄色'],
     weight: _color,
   ),
   Concept(
     '금색',
     ['금색', '골드', '황금', 'gold', '金', 'ゴールド', '金色', '黄金'],
     // 金 한 글자는 일본어 · 중국어 이름의 金属(메탈) · 金型 에도 있어 뺀다
-    needles: ['gold', 'ゴールド', '金色', '黄金', '金メッキ', '镀金', '골드', '금색'],
+    needles: ['gold', 'ゴールド', '金色', '黄金', '金メッキ', '골드', '금색'],
+    zh: ['金色', '黄金', '镀金'],
     weight: _color,
   ),
   Concept(
     '은색',
     ['은색', '실버', 'silver', '銀', 'シルバー', '银色', '银'],
-    needles: ['silver', 'シルバー', '銀', '실버', '银色'],
+    needles: ['silver', 'シルバー', '銀', '실버'],
+    zh: ['银色'],
     weight: _color,
   ),
   Concept(
     '분홍',
     ['분홍', '핑크', 'pink', 'ピンク', '粉红色', '粉红', '粉色', '粉'],
-    needles: ['pink', 'ピンク', '핑크', '粉色', '粉红'],
+    needles: ['pink', 'ピンク', '핑크'],
+    zh: ['粉色', '粉红'],
     weight: _color,
   ),
-  Concept('보라', ['보라', '퍼플', 'purple', '紫', 'パープル', '紫色'], needles: ['purple', 'パープル', '紫', '퍼플'], weight: _color),
-  Concept('투명', ['투명', '클리어', 'clear', 'クリア', '透明色', '透明'], needles: ['clear', 'クリア', '클리어', '透明'], weight: _color),
+  Concept(
+    '보라',
+    ['보라', '퍼플', 'purple', '紫', 'パープル', '紫色'],
+    needles: ['purple', 'パープル', '紫', '퍼플'],
+    zh: ['紫色'],
+    weight: _color,
+  ),
+  Concept(
+    '투명',
+    ['투명', '클리어', 'clear', 'クリア', '透明色', '透明'],
+    needles: ['clear', 'クリア', '클리어', '透明'],
+    zh: ['透明'],
+    weight: _color,
+  ),
   Concept(
     '메탈',
     ['메탈릭', '메탈', '도금', '코팅', 'metallic', 'メタリック', 'メッキ', 'コーティング', '金属色', '金属', '电镀', '涂层'],
-    needles: ['metal', 'メタリック', 'メッキ', 'コーティング', '메탈', '코팅', '金属', '电镀'],
+    needles: ['metal', 'メタリック', 'メッキ', 'コーティング', '메탈', '코팅', '金属'],
+    zh: ['金属', '电镀'],
     weight: _color,
   ),
   // ── 생김새 · 별명 (이름에 들어가는 말) ──
   Concept(
     '날개',
     ['날개', 'wing', 'ウイング', 'ウィング', '翼', '翅膀', '羽翼'],
-    needles: ['wing', 'ウイング', 'ウィング', '翼', '윙', '날개', '翅膀'],
+    needles: ['wing', 'ウイング', 'ウィング', '翼', '윙', '날개'],
+    zh: ['翅膀'],
   ),
   Concept(
     '드래곤',
     ['드래곤', '드라군', '용 모양', 'dragon', 'ドラゴン', 'ドラン', '竜', '龍', '龙'],
-    needles: ['dragon', 'ドラゴン', 'ドラン', 'ドラグーン', '竜', '龍', '드래곤', '드랜', '드라군', 'dran', '飞龙'],
+    needles: ['dragon', 'ドラゴン', 'ドラン', 'ドラグーン', '竜', '龍', '드래곤', '드랜', '드라군', 'dran'],
+    zh: ['飞龙'],
   ),
-  Concept('자쿠', ['자쿠', 'zaku', 'ザク', '扎古'], needles: ['zaku', 'ザク', '자쿠', '扎古'], hint: 'gundam'),
+  Concept('자쿠', ['자쿠', 'zaku', 'ザク', '扎古'], needles: ['zaku', 'ザク', '자쿠'], zh: ['扎古'], hint: 'gundam'),
   Concept(
     '건담 Mk-II',
     ['마크투', '마크2', 'mk-ii', 'mk2', '马克二'],
     needles: ['mk-ii', 'mk-2', 'mk-ⅱ', 'マークii', 'マークⅱ', '마크 ii', '마크2'],
     hint: 'gundam',
   ),
-  Concept('프리덤', ['프리덤', 'freedom', 'フリーダム', '自由高达', '自由'], needles: ['freedom', 'フリーダム', '프리덤', '自由'], hint: 'gundam'),
-  Concept('스트라이크', ['스트라이크', 'strike', 'ストライク', '强袭'], needles: ['strike', 'ストライク', '스트라이크', '强袭']),
+  Concept(
+    '프리덤',
+    ['프리덤', 'freedom', 'フリーダム', '自由高达', '自由'],
+    needles: ['freedom', 'フリーダム', '프리덤'],
+    zh: ['自由'],
+    hint: 'gundam',
+  ),
+  Concept('스트라이크', ['스트라이크', 'strike', 'ストライク', '强袭'], needles: ['strike', 'ストライク', '스트라이크'], zh: ['强袭']),
   Concept(
     '저스티스',
     ['저스티스', 'justice', 'ジャスティス', '正义高达', '正义'],
-    needles: ['justice', 'ジャスティス', '저스티스', '正义'],
+    needles: ['justice', 'ジャスティス', '저스티스'],
+    zh: ['正义'],
     hint: 'gundam',
   ),
-  Concept('에어리얼', ['에어리얼', 'aerial', 'エアリアル', '风灵'], needles: ['aerial', 'エアリアル', '에어리얼', '风灵'], hint: 'gundam'),
+  Concept('에어리얼', ['에어리얼', 'aerial', 'エアリアル', '风灵'], needles: ['aerial', 'エアリアル', '에어리얼'], zh: ['风灵'], hint: 'gundam'),
   Concept(
     '바르바토스',
     ['바르바토스', '발바토스', 'barbatos', 'バルバトス', '巴巴托斯'],
-    needles: ['barbatos', 'バルバトス', '바르바토스', '巴巴托斯'],
+    needles: ['barbatos', 'バルバトス', '바르바토스'],
+    zh: ['巴巴托斯'],
     hint: 'gundam',
   ),
-  Concept('엑시아', ['엑시아', 'exia', 'エクシア', '能天使'], needles: ['exia', 'エクシア', '엑시아', '能天使'], hint: 'gundam'),
-  Concept('사자비', ['사자비', 'sazabi', 'サザビー', '沙扎比'], needles: ['sazabi', 'サザビー', '사자비', '沙扎比'], hint: 'gundam'),
+  Concept('엑시아', ['엑시아', 'exia', 'エクシア', '能天使'], needles: ['exia', 'エクシア', '엑시아'], zh: ['能天使'], hint: 'gundam'),
+  Concept('사자비', ['사자비', 'sazabi', 'サザビー', '沙扎比'], needles: ['sazabi', 'サザビー', '사자비'], zh: ['沙扎比'], hint: 'gundam'),
   Concept(
     'ν건담',
     ['뉴건담', 'ν건담', 'νガンダム', 'nu gundam', 'hi-ν', '하이뉴', 'ν高达', '牛高达'],
-    needles: ['ν', 'hi-ν', '뉴 건담', '뉴건담', '牛高达'],
+    needles: ['ν', 'hi-ν', '뉴 건담', '뉴건담'],
+    zh: ['牛高达'],
     hint: 'gundam',
   ),
-  Concept('샤아', ['샤아', '샤아 전용', 'char', 'シャア', '夏亚专用', '夏亚'], needles: ['シャア', 'char', '샤아', '夏亚'], hint: 'gundam'),
-  Concept('피카츄', ['피카츄', 'pikachu', 'ピカチュウ', '皮卡丘'], needles: ['pikachu', 'ピカチュウ', '피카츄', '皮卡丘'], hint: 'pokemon'),
-  Concept('이브이', ['이브이', 'eevee', 'イーブイ', '伊布'], needles: ['eevee', 'イーブイ', '이브이', '伊布'], hint: 'pokemon'),
+  Concept(
+    '샤아',
+    ['샤아', '샤아 전용', 'char', 'シャア', '夏亚专用', '夏亚'],
+    needles: ['シャア', 'char', '샤아'],
+    zh: ['夏亚'],
+    hint: 'gundam',
+  ),
+  Concept(
+    '피카츄',
+    ['피카츄', 'pikachu', 'ピカチュウ', '皮卡丘'],
+    needles: ['pikachu', 'ピカチュウ', '피카츄'],
+    zh: ['皮卡丘'],
+    hint: 'pokemon',
+  ),
+  Concept('이브이', ['이브이', 'eevee', 'イーブイ', '伊布'], needles: ['eevee', 'イーブイ', '이브이'], zh: ['伊布'], hint: 'pokemon'),
   Concept(
     '잠자는',
     ['자고 있는', '자는', '잠자는', '잠든', 'sleep', 'おやすみ', 'すやすや', '寝', '睡觉', '睡着', '睡姿', '睡'],
-    needles: ['sleep', 'おやすみ', 'すやすや', '寝', '잠', '자는', '睡姿', '睡着', '熟睡', '睡觉'],
+    needles: ['sleep', 'おやすみ', 'すやすや', '寝', '잠', '자는'],
+    zh: ['睡姿', '睡着', '熟睡', '睡觉'],
   ),
   Concept('세이버', ['세이버', 'saber', 'セイバー'], needles: ['saber', 'セイバー', '세이버']),
   Concept('블레이드', ['블레이드', 'blade', 'ブレード', '战刃'], needles: ['blade', 'ブレード', '블레이드']),
@@ -480,19 +533,77 @@ class SentenceHit {
 
 final _labels = {for (final c in sentenceConcepts) c.label};
 
-/// 상품 글자 (소문자 한 줄) — 실제 데이터는 미리 만든 blob, 테스트용 가짜 상품은 칸을 이어 붙인다.
-/// 화면 언어에 따라 바뀌지 않게 [Kit.nameKo] (중국어 이름은 [_zhName] 으로 따로)
-String _hay(Kit k) =>
-    k.blob.isNotEmpty ? k.blob : [k.nameKo, k.nameJa, k.series, k.line, k.type, ...k.keywords].join(' ').toLowerCase();
+/// 상품 글자를 말별로 (소문자 · 반각). blob 은 다 섞여 있어 쓰지 않는다 — 화면 언어와도 상관없이 [Kit.nameKo]
+class _KitText {
+  _KitText(Kit k)
+    : other = normalizeSentence(
+        [k.nameKo, k.nameJa, k.series, k.line, k.type, ...k.keywords.take(_zhFrom(k))].join(' '),
+      ),
+      zh = normalizeSentence([k.nameZh, k.seriesZh, ...k.keywords.skip(_zhFrom(k))].join(' ')),
+      // 일본어 이름이 따로 없으면 이름이 일본어 원문 (한국어 이름이 없는 상품)
+      ja = normalizeSentence(k.nameJa.isNotEmpty ? k.nameJa : k.nameKo);
 
-/// 중국어 이름 — blob 에 없어서 따로 본다 (중국어로 친 이름 · 별명이 중국어 이름만 있는 상품에도 맞게)
-String _zhName(Kit k) => k.nameZh.toLowerCase();
+  /// 한국어 · 일본어 · 영어 (이름 · 작품 · 라인 · 종류 · 중국어가 아닌 키워드)
+  final String other;
 
-bool _hits(Concept c, Kit k, String hay, String zh) => switch (c.field) {
-  ConceptField.name => c.look.any((n) {
-    final l = n.toLowerCase();
-    return hay.contains(l) || zh.contains(l);
-  }),
+  /// 중국어 (이름 · 작품 · search_zh)
+  final String zh;
+
+  /// 일본어 이름 — 한 글자 한자(赤 · 翼 · 龍)는 여기서만
+  final String ja;
+
+  static int _zhFrom(Kit k) => k.zhKeywordsFrom < 0 ? k.keywords.length : k.zhKeywordsFrom;
+}
+
+/// 같은 상품 객체는 한 번만 만든다 (문장을 고칠 때마다 39k 개를 다시 잇지 않게)
+final _texts = Expando<_KitText>();
+_KitText _textOf(Kit k) => _texts[k] ??= _KitText(k);
+
+/// 중국어 낱말의 앞뒤 글자 규칙 — 이 글자가 붙은 자리는 그 뜻이 아니다 (2026-11-11 실제 데이터 점검):
+/// 水伊布 · 雷伊布 · 太阳伊布 · 葉伊布(search_zh 번체) · 仙子伊布 (이브이 진화형) / 正义女神高达 (아스트레아) / 三角强袭(베이) · 强袭登陆舰(화이트 베이스)
+const _zhGuards = <String, ({List<String> before, List<String> after})>{
+  '伊布': (before: ['水', '雷', '火', '阳', '陽', '亮', '叶', '葉', '冰', '仙子'], after: []),
+  '正义': (before: [], after: ['女神']),
+  '强袭': (before: ['三角'], after: ['登陆', '扬陆', '揚陸']),
+};
+
+bool _zhHit(String text, String needle) {
+  final guard = _zhGuards[needle];
+  if (guard == null) return text.contains(needle);
+  for (var i = text.indexOf(needle); i >= 0; i = text.indexOf(needle, i + 1)) {
+    final end = i + needle.length;
+    final bad =
+        guard.before.any((b) => i >= b.length && text.startsWith(b, i - b.length)) ||
+        guard.after.any((a) => text.startsWith(a, end));
+    if (!bad) return true;
+  }
+  return false;
+}
+
+/// 뜻마다 상품 쪽 글자를 한 번만 나눠 둔다 (상품 39k 개 × 낱말마다 소문자 · 한자 검사를 하지 않게)
+class _Needles {
+  _Needles(Concept c)
+    : other = [
+        for (final n in c.look)
+          if (!_isSingleHan(n)) n.toLowerCase(),
+      ],
+      ja = [
+        for (final n in c.look)
+          if (_isSingleHan(n)) n,
+      ];
+  final List<String> other;
+  final List<String> ja;
+}
+
+final _needles = Expando<_Needles>();
+
+bool _nameHit(Concept c, _KitText t) {
+  final n = _needles[c] ??= _Needles(c);
+  return n.other.any(t.other.contains) || n.ja.any(t.ja.contains) || c.zh.any((z) => _zhHit(t.zh, z));
+}
+
+bool _hits(Concept c, Kit k, _KitText t) => switch (c.field) {
+  ConceptField.name => _nameHit(c, t),
   ConceptField.series =>
     c.look.contains(k.seriesKey) || (k.seriesKey.isEmpty && c.terms.any((t) => k.series.toLowerCase().contains(t))),
   ConceptField.line => c.look.any((n) => k.line.toLowerCase().startsWith(n)),
@@ -513,20 +624,20 @@ List<SentenceHit> sentenceSearch(String sentence, Iterable<Kit> kits, {int limit
   final hits = <SentenceHit>[];
   for (final k in kits) {
     if (only.isNotEmpty && !only.contains(k.franchiseId)) continue;
-    final hay = _hay(k);
-    final zh = _zhName(k);
+    final t = _textOf(k);
     var got = 0.0;
     var strong = false;
     final matched = <String>[];
     for (final c in q.concepts) {
-      if (_hits(c, k, hay, zh)) {
+      if (_hits(c, k, t)) {
         got += c.weight;
         matched.add(c.label);
         if (c.field != ConceptField.franchise) strong = true;
       }
     }
     for (final w in q.words) {
-      if (hay.contains(w) || zh.contains(w)) {
+      // 표에 없는 낱말은 어느 말 글자에서든 (중국어 이름만 있는 상품도 중국어 낱말로)
+      if (t.other.contains(w) || t.zh.contains(w)) {
         got += _wordWeight;
         matched.add(w);
         strong = true;

@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hobby_atlas/data/gunpula.dart';
+import 'package:hobby_atlas/l10n/l10n.dart';
 import 'package:hobby_atlas/logic/ocr_lookup.dart';
 import 'package:hobby_atlas/logic/url_lookup.dart';
 import 'package:hobby_atlas/models.dart';
@@ -75,7 +76,14 @@ final catalog = [
     date: '2023-04',
   ),
   k('rg-rg-1-144-4549660303633000', 'RG 1 / 144 사자비', 'RG 1 / 144 サザビー', line: 'RG', scale: '1/144', date: '2019-11'),
-  k('hg-hguc-1-144-4543112544995000', 'HGUC 1 / 144 사자비', 'HGUC 1 / 144 サザビー', line: 'HG', scale: '1/144', date: '2008-01'),
+  k(
+    'hg-hguc-1-144-4543112544995000',
+    'HGUC 1 / 144 사자비',
+    'HGUC 1 / 144 サザビー',
+    line: 'HG',
+    scale: '1/144',
+    date: '2008-01',
+  ),
   k('mg-mg-msn-04-4902425770727000', 'MG MSN-04 사자비', 'MG MSN-04 サザビー', line: 'MG', scale: '1/100', date: '2000-03'),
   k('mg-mg-1-100-4543112480835000', 'MG 1 / 100 스트라이크 프리덤건담', 'MG 1 / 100 ストライクフリーダムガンダム', line: 'MG', scale: '1/100'),
   k('hg-hg-1-144-4543112341136000', 'HG 1 / 144 스트라이크 프리덤건담', 'HG 1 / 144 ストライクフリーダムガンダム', line: 'HG', scale: '1/144'),
@@ -189,7 +197,13 @@ void main() {
 
     test('등급 묶음: REAL GRADE · RG → RG, HGUC → HG', () {
       final t = extractOcrTokens('REAL GRADE\nHGUC 1/144');
-      expect({for (final x in t) if (x.kind == OcrKind.grade) x.group}, {'RG', 'HG'});
+      expect(
+        {
+          for (final x in t)
+            if (x.kind == OcrKind.grade) x.group,
+        },
+        {'RG', 'HG'},
+      );
     });
 
     test('스크린숏: 시각 · 배터리 · 가격 · 가게 버튼은 지우고 전각 이름은 고친다', () {
@@ -215,7 +229,13 @@ void main() {
 
     test('형식번호 무늬: ZGMF-X10A · GN-001 · RX-0 · MS-06S, 숫자뿐 · 날짜는 아님', () {
       final t = extractOcrTokens('ZGMF-X10A GN-001 RX-0 MS-06S 2024-05 VER-2');
-      expect([for (final x in t) if (x.kind == OcrKind.model) x.label], ['ZGMF-X10A', 'GN-001', 'RX-0', 'MS-06S']);
+      expect(
+        [
+          for (final x in t)
+            if (x.kind == OcrKind.model) x.label,
+        ],
+        ['ZGMF-X10A', 'GN-001', 'RX-0', 'MS-06S'],
+      );
     });
   });
 
@@ -323,13 +343,69 @@ void main() {
       expect(identical(OcrIndex.of(catalog), a), isTrue);
       expect(identical(OcrIndex.of([...catalog.reversed]), a), isFalse);
     });
+
+    test('찾기 표는 화면 언어와 상관없이 한국어 · 일본어 · 중국어 이름을 다 넣는다 (중국어 화면에서 한국어 상자 글자)', () {
+      addTearDown(() => L10n.debugSet(AppLang.ko));
+      Kit named(String id, Map<String, String> names) => Kit(
+        id: id,
+        franchiseId: 'gundam',
+        name: names['ko']!,
+        nameJa: names['ja']!,
+        nameZh: names['zh']!,
+        series: '',
+        line: 'HG',
+        type: '프라모델',
+        scale: '1/144',
+        universe: '',
+        date: '',
+        priceJpy: null,
+        image: '',
+        gallery: const [],
+        limited: false,
+        pb: false,
+        status: CollectStatus.none,
+        wantedQty: 0,
+        recent: false,
+        month: false,
+        market: null,
+        keywords: const [],
+      );
+      final kits = [
+        named('hg-hgce-1-144-4549660094272000', {
+          'ko': 'HGCE 1/144 스트라이크 프리덤건담',
+          'ja': 'HGCE 1 / 144 ストライクフリーダムガンダム',
+          'zh': 'HGCE 1 / 144 强袭自由高达',
+        }),
+        named('hg-hguc-1-144-1-2-ver-gft-4543112934925000', {
+          'ko': 'HGUC 1/144 유니콘 건담 1호기 & 2호기 Ver.GFT [스트라이크스 오다이바 세트]',
+          'ja': 'HGUC 1 / 144 ユニコーンガンダム1号機&2号機 Ver.GFT [ストライクス オダイバセット]',
+          'zh': 'HGUC 1 / 144 独角兽高达1号机&2号机 Ver.GFT [STRIKES 台场套装]',
+        }),
+      ];
+      L10n.debugSet(AppLang.ko);
+      final rowsKo = ocrRows(kits);
+      final built = OcrIndex.of(kits);
+      L10n.debugSet(AppLang.zh);
+      expect(ocrRows(kits), rowsKo, reason: '언어를 바꿔도 같은 줄 → 지난 표를 다시 써도 된다');
+      expect(identical(OcrIndex.of(kits), built), isTrue);
+      for (final index in [built, OcrIndex(kits)]) {
+        final ko = index.lookUp(extractOcrTokens('스트라이크 프리덤건담\n1/144'));
+        expect(ko.first.kit.id, 'hg-hgce-1-144-4549660094272000');
+        expect(ko.first.score, greaterThanOrEqualTo(80));
+        final zh = index.lookUp(extractOcrTokens('强袭自由高达\nHGCE 1/144'));
+        expect(zh.first.kit.id, 'hg-hgce-1-144-4549660094272000');
+      }
+    });
   });
 
   group('주소로 찾기', () {
     final urls = UrlIndex(catalog);
 
     test('주소 열쇠: https · www · 언어 칸 · 끝 / · 추적 값을 뗀다', () {
-      expect(urlKey('https://www.goodsmile.com/ja/product/1145956/?utm_source=x'), urlKey('https://goodsmile.com/en/product/1145956'));
+      expect(
+        urlKey('https://www.goodsmile.com/ja/product/1145956/?utm_source=x'),
+        urlKey('https://goodsmile.com/en/product/1145956'),
+      );
       expect(
         urlKey('https://www.bandaispirits.co.jp/products/search/detail.php?grp_id=1&prd_id=4573102630308000'),
         urlKey('https://www.bandaispirits.co.jp/products/search/detail.php?prd_id=4573102630308000'),
@@ -340,8 +416,14 @@ void main() {
     });
 
     test('출처 주소와 같으면 그 상품 (프리미엄 반다이 · 베이 · 굿스마일)', () {
-      expect(urls.find('https://p-bandai.jp/item/item-1000188677/?spec=pc').single.kit.id, 'hg-hg-1-144-4573102630308000');
-      expect(urls.find('https://beyblade.takaratomy.co.jp/beyblade-x/lineup/bx01.html').single.kit.id, 'beyblade-x-bx01');
+      expect(
+        urls.find('https://p-bandai.jp/item/item-1000188677/?spec=pc').single.kit.id,
+        'hg-hg-1-144-4573102630308000',
+      );
+      expect(
+        urls.find('https://beyblade.takaratomy.co.jp/beyblade-x/lineup/bx01.html').single.kit.id,
+        'beyblade-x-bx01',
+      );
       expect(urls.find('https://www.goodsmile.com/ja/product/1145956').single.how, '주소');
     });
 

@@ -509,15 +509,11 @@ List<Map<String, Object?>> mapKitsJob(Map<String, String> msg) {
     final type = goodsKind.isEmpty
         ? typeLabel(code, grades[code] ?? '', '${jStr(names['ja'])} ${jStr(names['ko'])}')
         : (goodsKind == 'card_game' ? '카드' : '굿즈');
-    final keywords = <String>{
+    final other = <String>{
       jStr(names['en']),
-      jStr(names['zh']),
       jStr(labels['ja']),
       jStr(labels['en']),
-      jStr(labels['zh']),
       jStr(r['work_title']),
-      // 중국어 별명 · 다른 지역 이름 (沙煲 · 海牛 …, Gunpula apply_zh_names.mjs search_zh) — 찾기에만
-      ...jList(r['search_zh']).map(jStr),
       code,
       subline,
       // 상품 번호 · 형번 (레고 세트 번호 75192 …)으로도 찾는다
@@ -525,6 +521,16 @@ List<Map<String, Object?>> mapKitsJob(Map<String, String> msg) {
       if (jan.isNotEmpty) jan,
       ...brands,
     }.where((s) => s.isNotEmpty).toList();
+    // 중국어는 뒤에 모은다 (zhKeywordsFrom) — 설명으로 찾기가 한국어 · 일본어 낱말을 중국어 이름의 일부에 맞추지 않게
+    final keywords = [
+      ...other,
+      ...<String>{
+        jStr(names['zh']),
+        jStr(labels['zh']),
+        // 중국어 별명 · 다른 지역 이름 (沙煲 · 海牛 …, Gunpula apply_zh_names.mjs search_zh) — 찾기에만
+        ...jList(r['search_zh']).map(jStr),
+      }.where((s) => s.isNotEmpty && !other.contains(s)),
+    ];
     out.add({
       'id': id,
       'franchiseId': jStr(r['franchise']),
@@ -560,6 +566,7 @@ List<Map<String, Object?>> mapKitsJob(Map<String, String> msg) {
       'brands': brands,
       'firstSeen': jStr(firstSeen[id]),
       'keywords': keywords,
+      'zhKeywordsFrom': other.length,
       // 검색 글자 — 전각(ＨＷＳ Ｖｅｒ．Ｋａ · ［Ｕ.Ｃ.００８８］)도 반각으로 접어 'hws' · 'ver.ka' · '0088' 로 찾힌다 (검색어도 kitMatches 에서 접는다)
       'blob': _halfWidth([name, nameJa, seriesLabel, line, type, ...keywords].join(' ')).toLowerCase(),
       // 레고 보기 범위 (lib/logic/lego_scope.dart) — 세트 번호 · 등급 코드

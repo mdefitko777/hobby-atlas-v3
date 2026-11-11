@@ -1,4 +1,5 @@
-// 중국어 화면 번역 표 검사 — 코드의 tr('…') · trf('…') 글이 모두 번역됐나, 번역끼리 어긋나지 않나.
+// 중국어 화면 번역 표 검사 — 코드의 tr('…') · trf('…') · NoticePart.key('…')(알림함 글 조각, 보일 때 tr) 글이
+// 모두 번역됐나, 번역끼리 어긋나지 않나.
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -7,7 +8,7 @@ import 'package:hobby_atlas/l10n/zh_text.dart';
 import 'package:hobby_atlas/models.dart';
 
 final _hangul = RegExp(r'[가-힣]');
-final _call = RegExp(r"""\btrf?\(\s*'((?:[^'\\\n]|\\.)*)'""");
+final _call = RegExp(r"""(?:\btrf?|\bNoticePart\.key)\(\s*'((?:[^'\\\n]|\\.)*)'""");
 final _slot = RegExp(r'\{(\w+)\}');
 
 Set<String> _slots(String s) => {for (final m in _slot.allMatches(s)) m[1]!};

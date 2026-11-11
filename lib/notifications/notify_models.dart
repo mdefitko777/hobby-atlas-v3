@@ -72,7 +72,8 @@ class NotifyCondition {
   final String franchise;
   final String scope;
 
-  /// 보이는 이름 (SEED · 호무라) — 고를 때 적어 둔다
+  /// 고를 때 적어 둔 한국어 이름 (SEED · 호무라). 화면에는 scope 로 다시 찾은 화면 언어 이름 (notify_condition_sheet.dart scopeShown),
+  /// 못 찾을 때만 이것 — 2026-11-11 전 중국어 화면에서 고른 조건은 중국어로 적혀 있다
   final String scopeLabel;
   final String line;
 
@@ -312,14 +313,48 @@ class FollowedAnn {
   }
 }
 
+/// 알림 글 한 조각 — 알림함 줄은 120일 남아서 다 만든 글 대신 재료로 두고, 보일 때 그 화면 언어로 만든다
+/// (글로 두었더니 언어를 바꿔도 옛 알림이 옛 언어 그대로였다, 2026-11-11 점검)
+class NoticePart {
+  /// 번역 표의 한국어 말 — 값이 있으면 `{이름}` 자리를 채운다 (trf)
+  const NoticePart.key(this.ko, [this.args = const {}]) : zh = '', isKey = true;
+
+  /// 말마다 다른 값 (상품 이름 · 작품 이름) · 번역하지 않는 값 (날짜 · 가게) — 중국어가 없으면 trData(한국어)
+  const NoticePart.value(this.ko, [this.zh = '']) : args = const {}, isKey = false;
+
+  final String ko;
+  final String zh;
+  final Map<String, Object> args;
+  final bool isKey;
+
+  String get shown =>
+      isKey ? (args.isEmpty ? tr(ko) : trf(ko, args)) : (L10n.isZh ? (zh.isNotEmpty ? zh : trData(ko)) : ko);
+
+  Map<String, Object?> toJson() =>
+      isKey ? {'k': ko, if (args.isNotEmpty) 'a': args} : {'v': ko, if (zh.isNotEmpty) 'zh': zh};
+
+  static NoticePart? fromJson(Object? json) {
+    final j = jMap(json);
+    if (j['k'] is String) {
+      return NoticePart.key(jStr(j['k']), {
+        for (final e in jMap(j['a']).entries)
+          if (e.value case final Object v) e.key: v,
+      });
+    }
+    return j['v'] is String ? NoticePart.value(jStr(j['v']), jStr(j['zh'])) : null;
+  }
+
+  static List<NoticePart> listOf(Object? json) => [for (final p in jList(json)) ?fromJson(p)];
+}
+
 /// 알림함 한 줄 — 만들어진 뒤 바뀌지 않는다 (읽음 · 지움은 [NoticeFlag] 로 따로)
 class NoticeRecord {
   const NoticeRecord({
     required this.id,
     required this.kind,
     required this.kitId,
-    required this.title,
-    required this.body,
+    required String title,
+    required String body,
     required this.at,
     this.franchise = '',
     this.date = '',
@@ -329,7 +364,11 @@ class NoticeRecord {
     this.watched = false,
     this.seen = false,
     this.annId = '',
-  });
+    this.titlePart,
+    this.bodyParts = const [],
+    this.bodySep = ' · ',
+  }) : _title = title,
+       _body = body;
 
   /// `feed-<피드 날짜>-<kit_id>` · `pb-open-<kit_id>-<날짜>` · `pb-close-<kit_id>-<날짜>` · `ann-<예고 id>-<단계>` ·
   /// `rel-<kit_id>-<발매일>-d7|d1|d0` · `pre-<kit_id>-<도착 예정>-month|d0`
@@ -341,8 +380,20 @@ class NoticeRecord {
   /// ann_stage: 공식 예고 id (단계는 [reasons] 첫 칸)
   final String annId;
   final String kitId;
-  final String title;
-  final String body;
+
+  /// 만들 때의 글 — [titlePart] · [bodyParts] 가 없는 옛 줄(2026-11-11 전)은 이 글 그대로
+  final String _title;
+  final String _body;
+
+  /// 상품 이름 (한국어 · 중국어) — 보일 때 화면 언어로
+  final NoticePart? titlePart;
+
+  /// 둘째 줄 조각들 — 보일 때 화면 언어로 만들어 [bodySep] 으로 잇는다
+  final List<NoticePart> bodyParts;
+  final String bodySep;
+
+  String get title => titlePart?.shown ?? _title;
+  String get body => bodyParts.isEmpty ? _body : bodyParts.map((p) => p.shown).join(bodySep);
 
   /// 알림 시각 (피드: 피드를 만든 시각, PB: 확인한 시각)
   final DateTime at;
@@ -385,8 +436,11 @@ class NoticeRecord {
     'id': id,
     'kind': kind,
     'kit': kitId,
-    'title': title,
-    'body': body,
+    'title': _title,
+    'body': _body,
+    if (titlePart != null) 'title_part': titlePart!.toJson(),
+    if (bodyParts.isNotEmpty) 'body_parts': [for (final p in bodyParts) p.toJson()],
+    if (bodyParts.isNotEmpty && bodySep != ' · ') 'body_sep': bodySep,
     'at': at.toUtc().toIso8601String(),
     if (franchise.isNotEmpty) 'franchise': franchise,
     if (date.isNotEmpty) 'date': date,
@@ -418,6 +472,9 @@ class NoticeRecord {
       watched: j['watched'] == true,
       seen: j['seen'] == true,
       annId: jStr(j['ann']),
+      titlePart: NoticePart.fromJson(j['title_part']),
+      bodyParts: NoticePart.listOf(j['body_parts']),
+      bodySep: j['body_sep'] is String ? jStr(j['body_sep']) : ' · ',
     );
   }
 }

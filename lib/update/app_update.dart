@@ -38,6 +38,7 @@ class UpdateInfo {
     required this.sha256,
     required this.size,
     required this.notes,
+    this.notesZh = const [],
   });
 
   final int build;
@@ -53,8 +54,14 @@ class UpdateInfo {
   final String sha256;
   final int size;
 
-  /// 바뀐 점 (커밋 제목, 8개까지)
+  /// 바뀐 점 (커밋 제목, 8개까지 — 한국어)
   final List<String> notes;
+
+  /// 바뀐 점 중국어 (커밋 본문의 `zh: …` 줄, .github/workflows/android-apk.yml). 옛 version.json · 그런 줄이 없으면 빈 목록
+  final List<String> notesZh;
+
+  /// 화면 언어의 바뀐 점 — 중국어 화면은 [notesZh] 만 (없으면 빈 목록 = 칸을 숨긴다, 한국어 커밋 제목을 보이지 않게)
+  List<String> get shownNotes => L10n.isZh ? notesZh : notes;
 
   String get sizeLabel => size <= 0 ? '' : '${(size / 1048576).toStringAsFixed(0)} MB';
 
@@ -71,6 +78,7 @@ class UpdateInfo {
       sha256: jStr(j['sha256']),
       size: jInt(j['size']),
       notes: jList(j['notes']).whereType<String>().toList(),
+      notesZh: jList(j['notes_zh']).whereType<String>().toList(),
     );
   }
 }

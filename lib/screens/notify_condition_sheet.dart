@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../channels.dart';
 import '../data/catalog.dart';
-import '../data/derive.dart' show deriveWorlds;
+import '../data/derive.dart' show atlasGroupLabel, deriveWorlds;
 import '../l10n/l10n.dart';
 import '../logic/category_browse.dart' show isBeyLineWorld;
 import '../models.dart' show Kit;
@@ -65,12 +65,14 @@ class _ConditionSheetState extends State<_ConditionSheet> {
       final keys = count.keys.toList()..sort((a, b) => count[b]!.compareTo(count[a]!));
       return [for (final key in keys) ('series:$key', label[key]!)];
     }
-    // 베이 = 블레이더 묶음만 (라인 BX · UX · CX 는 종류에서 고른다)
+    // 베이 = 블레이더 묶음만 (라인 BX · UX · CX 는 종류에서 고른다).
+    // 조건에는 묶음 id 와 한국어 이름 (보일 때 scopeShown 이 화면 언어로)
     final worlds = await deriveWorlds(channel);
     return [
       for (final w in worlds)
         if (w.total > 0 && !(channel == 'beyblade' && isBeyLineWorld(w.id)))
-          ('group:${w.id.substring(channel.length + 1)}', w.label),
+          if (w.id.substring(channel.length + 1) case final id)
+            ('group:$id', atlasGroupLabel(channel, id, zh: false) ?? w.label),
     ];
   }
 
@@ -127,7 +129,7 @@ class _ConditionSheetState extends State<_ConditionSheet> {
                     [
                       _chip(tr('전부'), _scope.$1.isEmpty, () => setState(() => _scope = ('', ''))),
                       for (final s in _scopes)
-                        _chip(scopeShown(s.$1, s.$2), _scope.$1 == s.$1, () => setState(() => _scope = s)),
+                        _chip(scopeShown(ch, s.$1, s.$2), _scope.$1 == s.$1, () => setState(() => _scope = s)),
                     ],
                   ),
                 if (ch != null && _lines.isNotEmpty)
@@ -160,12 +162,17 @@ class _ConditionSheetState extends State<_ConditionSheet> {
 /// 조건 한 줄 글자: "건담 · SEED · HG" (빈 칸 = 전부)
 String conditionLabel(NotifyCondition x) => [
   tr(channelOf(x.franchise).label),
-  x.scope.isEmpty ? tr('전부') : scopeShown(x.scope, x.scopeLabel),
+  x.scope.isEmpty ? tr('전부') : scopeShown(x.franchise, x.scope, x.scopeLabel),
   x.line.isEmpty ? tr('전부') : tr(x.line),
 ].join(' · ');
 
-/// 작품 이름 (화면) — 조건에는 한국어 작품 이름을 저장하고 (기기 · 언어가 바뀌어도 같은 값), 중국어 화면에서는 상품의 중국어 작품 이름으로
-String scopeShown(String scope, String label) {
+/// 작품 이름 (화면) — 조건에는 한국어 이름을 저장하고 (기기 · 언어가 바뀌어도 같은 값), 보일 때 화면 언어로:
+///   series: = 상품의 중국어 작품 이름 / group: = atlas 묶음 이름 (전에 중국어 화면에서 고른 조건도 id 로 다시 찾는다)
+/// 찾지 못하면 적어 둔 이름 그대로
+String scopeShown(String franchise, String scope, String label) {
+  if (scope.startsWith('group:')) {
+    return atlasGroupLabel(franchise, scope.substring('group:'.length), zh: L10n.isZh) ?? label;
+  }
   if (!L10n.isZh || !scope.startsWith('series:')) return label;
   return _seriesZhByKey()[scope.substring('series:'.length)] ?? label;
 }

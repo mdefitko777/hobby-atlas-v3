@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hobby_atlas/l10n/l10n.dart';
 import 'package:hobby_atlas/theme.dart';
 import 'package:hobby_atlas/update/app_update.dart';
 import 'package:hobby_atlas/update/update_ui.dart';
@@ -106,5 +107,20 @@ void main() {
     await tester.tap(find.text('나중에'));
     await tester.pumpAndSettle();
     expect(find.text('새 버전이 있어요'), findsNothing);
+  });
+
+  test('바뀐 점: 중국어 화면은 notes_zh 만 (없으면 빈 목록 = 칸 숨김) · 한국어 화면은 notes', () {
+    addTearDown(() => L10n.debugSet(AppLang.ko));
+    final withZh = UpdateInfo.fromJson({
+      ...jsonDecode(_json) as Map<String, Object?>,
+      'notes_zh': ['通知跟随语言'],
+    })!;
+    final old = UpdateInfo.fromJson(jsonDecode(_json))!; // notes_zh 가 없는 version.json
+    L10n.debugSet(AppLang.ko);
+    expect(withZh.shownNotes, withZh.notes);
+    expect(old.shownNotes, hasLength(2));
+    L10n.debugSet(AppLang.zh);
+    expect(withZh.shownNotes, ['通知跟随语言']);
+    expect(old.shownNotes, isEmpty, reason: '한국어 커밋 제목은 중국어 화면에 보이지 않는다');
   });
 }

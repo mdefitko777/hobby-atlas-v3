@@ -68,7 +68,7 @@ void main() {
 
     L10n.debugSet(AppLang.zh);
     expect((pika.name, pika.nameKo, kr.sets.first.name), ('皮卡丘', '피카츄', '星塵第1彈'));
-    expect(jp.sets.map((s) => s.name), ['第1弹', 'Gorgeous Star Set 5', '特典卡匣']);
+    expect(jp.sets.map((s) => s.name), ['第1弹', '华丽之星第5弹', '特典卡匣']); // 데이터에 zh 가 없는 일본판 시리즈도 영어가 아니게
     expect(f.sets.first.name, '第1弹');
     final star = jp.cards.firstWhere((c) => c.grade == null && c.rarity.isNotEmpty, orElse: () => jp.cards.first);
     expect(_hangul.hasMatch(star.badge), isFalse);

@@ -134,6 +134,16 @@ void main() {
       expect(jp.defaultSet, 'mz-jp:gorgeousstar-5');
     });
 
+    test('메자스타 일본: 탄 이름 중국어 — 데이터 names.zh 먼저, 없으면 「<시리즈>第N弹」 (영어로 섞이지 않게)', () {
+      final jp = parseMezastar(_files[mezastarJpFile], _region('JP'));
+      expect(jp.sets.map((s) => s.nameZh), ['第1弹', '华丽之星第5弹', '']);
+      final root = jsonDecode(jsonEncode(_files[mezastarJpFile])) as Map<String, Object?>;
+      for (final s in (root['sets']! as List).cast<Map<String, Object?>>()) {
+        if (s['id'] == 'mz-jp:gorgeousstar-5') (s['names']! as Map)['zh'] = '华丽星星5弹';
+      }
+      expect(parseMezastar(root, _region('JP')).set('mz-jp:gorgeousstar-5')!.nameZh, '华丽星星5弹');
+    });
+
     test('프렌다: 픽 id · 한국어 탄 이름 · 최신 탄 · 등급', () {
       final f = parseFrienda(_files[friendaFile]);
       expect(f.cards.length, 6);
@@ -155,7 +165,15 @@ void main() {
     final root = Map<String, Object?>.from(_files[mezastarIntlFile]! as Map)
       ..['support_tickets'] = [
         {'id': 'mz-support:KR:a', 'region': 'KR', 'name': '창파나이트', 'image': 'https://x/a.jpg', 'status': 'current'},
-        {'id': 'mz-support:KR:dex9', 'region': 'KR', 'name': '거북왕', 'move': '하이드로펌프', 'type': 'Water', 'dex': 9, 'status': 'past'},
+        {
+          'id': 'mz-support:KR:dex9',
+          'region': 'KR',
+          'name': '거북왕',
+          'move': '하이드로펌프',
+          'type': 'Water',
+          'dex': 9,
+          'status': 'past',
+        },
       ];
     final kr = parseMezastar(root, _region('KR'));
     expect(kr.set('mz-support:current')?.name, '서포트 포켓몬 티켓');

@@ -36,6 +36,21 @@ void main() {
   group('GundamAtlas.parse', () {
     final a = _parse();
 
+    test('찾기 글자에 다른 이름(name_aliases)도 — 扎古 로 고친 뒤에도 渣古 · 卡碧尼 로 찾힌다', () {
+      final ms = jsonDecode(jsonEncode(fixture('atlas-gundam-ms.sample.json'))) as Map<String, Object?>;
+      for (final m in (ms['ms']! as List).cast<Map<String, Object?>>()) {
+        if (m['id'] != 'MS-06F Zaku II') continue;
+        (m['names']! as Map)['zh'] = '量产型扎古II';
+        m['name_aliases'] = {
+          'zh': ['渣古II', '绿扎'],
+        };
+      }
+      final atlas = GundamAtlas.parse(ms, fixture('atlas-gundam-kit-ms.sample.json'), knownKit: (_) => true, zh: true);
+      final blob = atlas.units['MS-06F Zaku II']!.blob;
+      expect(blob, allOf(contains('扎古'), contains('渣古'), contains('绿扎')));
+      expect(atlas.units['GAT-X105 Strike Gundam']!.blob, isNot(contains('渣古')));
+    });
+
     test('작품: 시대 순서 → order, 기체 없는 작품은 뺀다', () {
       expect(a.works.map((w) => w.id), ['mobile-suit-gundam', 'v', 'seed', 'seed-destiny', '00', 'build-fighters']);
       expect(a.work('empty-work'), isNull);

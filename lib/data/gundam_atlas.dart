@@ -19,6 +19,14 @@ List<String> atlasNameOrder({required bool zh}) =>
 /// Atlas `names` 에서 화면 언어의 이름
 String atlasName(Object? names, {required bool zh}) => pickName(names, atlasNameOrder(zh: zh));
 
+/// Atlas `name_aliases` ({zh: [...], ja: [...]} · 목록 · 글 하나)의 이름 전부 — 찾기에만
+Iterable<String> _aliases(Object? v) => switch (v) {
+  final String s => [s],
+  final List<Object?> l => l.expand(_aliases),
+  final Map<String, Object?> m => m.values.expand(_aliases),
+  _ => const [],
+};
+
 /// 앱이 받는 Atlas 파일 (data/ 아래 경로 = Catalog.aux 이름)
 const atlasMsFile = 'atlas/gundam-ms.json';
 const atlasKitMsFile = 'atlas/gundam-kit-ms.json';
@@ -412,6 +420,8 @@ class GundamAtlas {
           id,
           ...models,
           for (final v in names.values) jStr(v),
+          // 다른 이름 (name_aliases {zh: [渣古 …]}) — 이름을 扎古 로 고친 뒤에도 옛 이름으로 찾힌다
+          ..._aliases(m['name_aliases']),
         }.where((s) => s.isNotEmpty).join(' ').toLowerCase(),
       );
     }

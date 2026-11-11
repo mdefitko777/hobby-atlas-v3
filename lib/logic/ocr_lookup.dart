@@ -89,7 +89,9 @@ final _strip = <RegExp>[
   RegExp(r'https?://\S+|www\.\S+', caseSensitive: false),
   RegExp(r'[(（]\s*(?:税込|税抜|税別)[^)）]*[)）]|税込|税抜|税別|送料無料|送料'),
   RegExp(r'[¥￥$₩]\s*[\d,]+(?:\.\d+)?|[\d,]+\s*(?:円|원|엔|yen|jpy|krw)', caseSensitive: false),
-  RegExp(r'\d{4}\s*[年/.\-]\s*\d{1,2}(?:\s*[月/.\-]\s*\d{1,2}\s*日?)?|\d{1,2}\s*月(?:\s*\d{1,2}\s*日)?|\d{1,2}\s*월(?:\s*\d{1,2}\s*일)?'),
+  RegExp(
+    r'\d{4}\s*[年/.\-]\s*\d{1,2}(?:\s*[月/.\-]\s*\d{1,2}\s*日?)?|\d{1,2}\s*月(?:\s*\d{1,2}\s*日)?|\d{1,2}\s*월(?:\s*\d{1,2}\s*일)?',
+  ),
   RegExp(r'\d{1,2}:\d{2}|\d+\s*%'),
   RegExp(
     r'bandai\s*spirits|bandai\s*namco|バンダイ\s*スピリッツ|バンダイナムコ|プレミアムバンダイ|premium\s*bandai|프리미엄\s*반다이|'
@@ -208,10 +210,52 @@ final _asciiOnly = RegExp(r'^[a-z0-9]+$');
 
 /// 낱말로 두지 않는 말 (접은 글자)
 const _stopWords = {
-  'the', 'and', 'for', 'with', 'new', 'ver', 'version', 'edition', 'japan', 'china', 'vietnam', 'plastic', 'model', 'kit',
-  'figure', 'scale', 'nonscale', 'item', 'product', 'products', 'official', 'shop', 'store', 'online', 'limited', 'only',
-  'ガンプラ', 'プラモデル', 'プラモ', 'フィギュア', '限定', '商品', '組立', '組み立て', '接着剤不要', '色分け済み', 'スケール', 'ノンスケール',
-  '건프라', '프라모델', '피규어', '상품', '한정', '조립', '판매중', '팝니다',
+  'the',
+  'and',
+  'for',
+  'with',
+  'new',
+  'ver',
+  'version',
+  'edition',
+  'japan',
+  'china',
+  'vietnam',
+  'plastic',
+  'model',
+  'kit',
+  'figure',
+  'scale',
+  'nonscale',
+  'item',
+  'product',
+  'products',
+  'official',
+  'shop',
+  'store',
+  'online',
+  'limited',
+  'only',
+  'ガンプラ',
+  'プラモデル',
+  'プラモ',
+  'フィギュア',
+  '限定',
+  '商品',
+  '組立',
+  '組み立て',
+  '接着剤不要',
+  '色分け済み',
+  'スケール',
+  'ノンスケール',
+  '건프라',
+  '프라모델',
+  '피규어',
+  '상품',
+  '한정',
+  '조립',
+  '판매중',
+  '팝니다',
 };
 
 /// 읽은 글(사진 글자 · 공유로 받은 글) → 조각 (읽은 차례, 같은 것은 한 번)
@@ -380,9 +424,13 @@ List<_Part> _nameParts(String normalized) {
 List<String> _scriptSplit(String w) {
   int cls(int c) {
     if ((c >= 0x30A0 && c <= 0x30FF) || c == 0x30FC) return 1;
-    if ((c >= 0x3040 && c <= 0x309F) || (c >= 0x4E00 && c <= 0x9FFF) || (c >= 0x3400 && c <= 0x4DBF) || c == 0x3005) return 2;
+    if ((c >= 0x3040 && c <= 0x309F) || (c >= 0x4E00 && c <= 0x9FFF) || (c >= 0x3400 && c <= 0x4DBF) || c == 0x3005) {
+      return 2;
+    }
     if ((c >= 0xAC00 && c <= 0xD7AF) || (c >= 0x1100 && c <= 0x11FF) || (c >= 0x3130 && c <= 0x318F)) return 3;
-    if ((c >= 0x30 && c <= 0x39) || (c >= 0x41 && c <= 0x5A) || (c >= 0x61 && c <= 0x7A) || c == 0x2D || c == 0x2F) return 4;
+    if ((c >= 0x30 && c <= 0x39) || (c >= 0x41 && c <= 0x5A) || (c >= 0x61 && c <= 0x7A) || c == 0x2D || c == 0x2F) {
+      return 4;
+    }
     return 0; // 기호 · 그 밖: 앞 조각에 붙인다
   }
 
@@ -422,9 +470,7 @@ class _Entry {
   final Set<String> bbx;
 
   /// 이 상품 이름들의 글자 둘씩 (읽은 조각이 이 상품으로 설명되나) — 후보가 됐을 때만 만든다
-  late final Set<int> grams = {
-    for (final v in variants) ..._grams(v.map((p) => p.key).join()),
-  };
+  late final Set<int> grams = {for (final v in variants) ..._grams(v.map((p) => p.key).join())};
 }
 
 /// 한국어 · 영어로 쓴 기체 이름 → 일본어 표기도 (설명으로 찾기의 낱말 표, 이름 쪽만): "에어리얼" → エアリアル · aerial
@@ -433,7 +479,9 @@ List<String> _aliases(String key) {
   for (final c in sentenceConcepts) {
     if (c.field != ConceptField.name) continue;
     if (c.terms.any((t) => foldKey(t) == key)) {
-      return {for (final n in c.look) foldKey(n)}.where((n) => n.length >= 2 && n != key).toList();
+      return {
+        for (final n in [...c.look, ...c.zh]) foldKey(n),
+      }.where((n) => n.length >= 2 && n != key).toList();
     }
   }
   return const [];
@@ -458,9 +506,11 @@ class OcrIndexData {
   final List<_Entry> _entries;
 }
 
-/// compute() 에 넘길 상품 줄: [id, 이름, 일본어 이름, 라인, 축척]
+/// compute() 에 넘길 상품 줄: [id, 한국어 이름, 일본어 이름, 중국어 이름, 라인, 축척].
+/// 화면 언어를 따르는 [Kit.name] 을 쓰지 않는다 — 중국어 화면에서 한국어 이름이 빠져 한국어 상자 글자를 못 맞췄다
+/// (text_reader_io 가 한국어 모델로 읽은 줄을 일부러 보탠다). 세 이름을 다 넣어 표가 언어와 상관없게
 List<List<String>> ocrRows(List<Kit> kits) => [
-  for (final k in kits) [k.id, k.name, k.nameJa, k.line, k.scale],
+  for (final k in kits) [k.id, k.nameKo, k.nameJa, k.nameZh, k.line, k.scale],
 ];
 
 /// compute() 작업: 상품 줄 + 형식번호 표(접은 형식번호 → 상품 id) → 찾기 표의 상품 쪽 (약 1만 개에 0.5초쯤)
@@ -473,9 +523,10 @@ OcrIndexData buildOcrIndexData(({List<List<String>> rows, Map<String, List<Strin
   }
   final out = <_Entry>[];
   for (var i = 0; i < msg.rows.length; i++) {
-    final [id, name, nameJa, line, scale] = msg.rows[i];
+    final [id, nameKo, nameJa, nameZh, line, scale] = msg.rows[i];
     final names = [
-      for (final n in [name, if (nameJa.isNotEmpty && nameJa != name) nameJa]) normalizeOcr(n),
+      for (final n in {nameKo, nameJa, nameZh})
+        if (n.isNotEmpty) normalizeOcr(n),
     ];
     final variants = [for (final n in names) _nameParts(n)];
     final grades = <String>{?_lineGroup[line]};
@@ -566,9 +617,18 @@ class OcrIndex {
     };
     final qChars = {for (final t in rest) ...t.key.codeUnits};
     final qKeys = {for (final t in rest) t.key};
-    final oGrades = {for (final t in rest) if (t.kind == OcrKind.grade) t.group};
-    final oScales = {for (final t in rest) if (t.kind == OcrKind.scale) t.group};
-    final oModels = [for (final t in rest) if (t.kind == OcrKind.model) t];
+    final oGrades = {
+      for (final t in rest)
+        if (t.kind == OcrKind.grade) t.group,
+    };
+    final oScales = {
+      for (final t in rest)
+        if (t.kind == OcrKind.scale) t.group,
+    };
+    final oModels = [
+      for (final t in rest)
+        if (t.kind == OcrKind.model) t,
+    ];
     final oBbx = {
       for (final t in rest)
         if (t.kind == OcrKind.bbx && RegExp(r'^[a-z]').hasMatch(t.key)) t.key,
