@@ -38,6 +38,8 @@ dependencies:
   cupertino_icons: ^1.0.8
 
   http: ^1.6.0
+  # 보조 파일이 manifest 지문과 같은지 (lib/data/catalog.dart auxMatches) — 이미 간접 의존이던 것
+  crypto: ^3.0.6
   path_provider: ^2.1.6
   url_launcher: ^6.3.3
   file_picker: ^13.3.0

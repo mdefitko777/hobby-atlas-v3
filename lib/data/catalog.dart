@@ -1,5 +1,6 @@
 // Gunpula 상품 카탈로그 — 기기 캐시를 먼저 보여 주고, 뒤에서 GitHub Pages 의 새 데이터를 받는다.
-//   1) split/manifest.json (176 B) 의 updated_at · total · content_hash 가 같으면 아무것도 받지 않는다 (manifestSignature)
+//   1) split/manifest.json 의 updated_at · total · content_hash 가 같으면 상품은 받지 않는다 (manifestSignature).
+//      그래도 manifest `files`(보조 파일마다 지문)가 달라진 보조 파일은 그것만 받는다 ([auxHashes])
 //   2) 다르면 보조 파일(auxFiles) → split/kits-<채널>.json 5개를 받아 compute() 에서 가벼운 모양으로 바꿔 저장
 // 처음 설치(캐시 없음)면 [firstDownload] — 앱은 셸 대신 받는 화면(lib/screens/w_first_run_screen.dart)을 보인다.
 //   진행 = 받은 파일 [filesDone] / [filesTotal] · 받은 바이트 [bytesReceived]
@@ -7,6 +8,7 @@ import '../format.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart' show sha256;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
@@ -317,13 +319,16 @@ class Catalog extends ChangeNotifier {
       _checkedAt = DateTime.now();
       // updated_at · total (+ content_hash — 같은 날 파일만 바뀐 갱신도 받는다)
       final same = manifestSignature(m) == manifestSignature(manifest);
-      if (same && kits.isNotEmpty && !force) return false;
+      if (same && kits.isNotEmpty && !force) return await _refreshAux(m);
+      final hashes = auxHashes(m);
 
       final aux = <String, String>{};
       for (final f in auxFiles) {
         _step(trf('보조 데이터 {file}', {'file': f}));
         final t = await _get('data/$f', count: true);
         if (t != null) aux[f] = t;
+        // 못 받았거나 받은 내용이 지문과 다른 파일은 지문을 적지 않는다 → 다음 확인에서 그 파일만 다시
+        if (t == null || !auxMatches(t, hashes[f])) hashes.remove(f);
         _fileDone();
       }
       final slim = <Map<String, Object?>>[];
@@ -361,16 +366,7 @@ class Catalog extends ChangeNotifier {
         await BlobStore.delete(auxKey(f));
       }
       await BlobStore.write(_kitsKey, slimText);
-      await BlobStore.write(
-        _metaKey,
-        jsonEncode({
-          'manifest': m,
-          'map_version': mapVersion,
-          'franchises': franchiseIds,
-          'fetched_at': DateTime.now().toIso8601String(),
-        }),
-      );
-      manifest = m;
+      await _writeMeta(m.containsKey('files') ? {...m, 'files': hashes} : m);
       _slim = slim;
       _rebuild();
       version++;
@@ -386,6 +382,79 @@ class Catalog extends ChangeNotifier {
       progress = '';
       notifyListeners();
     }
+  }
+
+  /// manifest `files` = 발행된 보조 파일마다 내용 지문 (data/ 아래 경로 → sha256 앞 16자리, Gunpula publish_site.mjs).
+  /// content_hash 는 상품(split · 옛 id)만 덮어, 공식 예고처럼 보조 파일만 바뀐 날은 판이 같아 받지 않았다
+  /// (2026-11-12 — 새 예고 2개가 당겨서 새로 고침에도 안 왔다). raw manifest · 그전 Gunpula 는 이 칸이 없다 → 예전처럼
+  /// 받은 보조 파일이 manifest 지문(발행된 바이트의 sha256 앞 16자리)과 같은가. 지문이 없으면 비교하지 않는다
+  static bool auxMatches(String text, String? hash) =>
+      hash == null || sha256.convert(utf8.encode(text)).toString().substring(0, 16) == hash;
+
+  static Map<String, String> auxHashes(Object? manifest) => {
+    for (final e in jMap(jMap(manifest)['files']).entries)
+      if (e.value case final String h when h.isNotEmpty) e.key: h,
+  };
+
+  /// 판은 같고 보조 파일만 바뀌었을 때 — 그 파일만 받는다 (상품 파일 수십 MB 는 그대로).
+  /// 상품에만 녹이는 파일(mapOnlyAuxFiles)은 받지 않고, 도감 MS 파일도 화면용으로만 받는다 (상품은 그대로).
+  /// 도감 · 박스 아트만 따로 발행되는 날이 잦아(2026-11 한 달 열 번 넘게) 그때마다 상품까지 받기엔 크고,
+  /// 상품은 거의 매일 바뀌어 그때 같이 녹는다
+  Future<bool> _refreshAux(Map<String, Object?> m) async {
+    final hashes = auxHashes(m);
+    final before = auxHashes(manifest);
+    final changed = [
+      for (final f in auxFiles)
+        if (!mapOnlyAuxFiles.contains(f) && hashes[f] != null && hashes[f] != before[f]) f,
+    ];
+    // files 없는 manifest(raw · 그전 Gunpula)도 여기서 끝난다 — 적어 둔 지문은 그대로 두고 다음 Pages 판과 비교
+    if (changed.isEmpty) return false;
+    final got = <String>{};
+    for (final f in changed) {
+      final t = await _get('data/$f');
+      if (t == null) {
+        // 못 받은 파일은 옛 지문으로 두어 다음 확인에서 다시
+        if (before[f] case final h?) {
+          hashes[f] = h;
+        } else {
+          hashes.remove(f);
+        }
+        _checkedAt = null;
+        continue;
+      }
+      await BlobStore.write(auxKey(f), t);
+      _aux.remove(f); // 다음 aux() 가 새 파일을 푼다
+      got.add(f);
+      if (!auxMatches(t, hashes[f])) {
+        // 발행 직후 CDN 이 옛 파일을 주거나 raw 로 받았다 — 받은 것은 쓰되 옛 지문으로 두어 다음 확인에서 다시
+        if (before[f] case final h?) {
+          hashes[f] = h;
+        } else {
+          hashes.remove(f);
+        }
+        _checkedAt = null;
+      }
+    }
+    await _writeMeta({...m, 'files': hashes});
+    if (got.isEmpty) return false;
+    if (got.contains('kit-aliases.json')) byId = {for (final k in _all) k.id: k}; // 빠진 옛 id 는 떼고 다시 붙인다
+    _loadAuxDerived(aliases: got.contains('kit-aliases.json'));
+    version++; // 앱 셸이 탭 화면을 다시 불러온다 (홈 · 예고 화면의 공식 예고 …)
+    lastChangeQuiet = !_loud;
+    return true;
+  }
+
+  Future<void> _writeMeta(Map<String, Object?> m) async {
+    await BlobStore.write(
+      _metaKey,
+      jsonEncode({
+        'manifest': m,
+        'map_version': mapVersion,
+        'franchises': franchiseIds,
+        'fetched_at': DateTime.now().toIso8601String(),
+      }),
+    );
+    manifest = m;
   }
 
   void _fileDone() {
@@ -447,8 +516,13 @@ class Catalog extends ChangeNotifier {
     phase = CatalogPhase.ready;
     if (list.isNotEmpty) firstDownload = false;
     error = '';
+    _loadAuxDerived();
+  }
+
+  /// 보조 파일에서 오는 값 — 옛 id 연결 · 환율 · 채널 그림
+  void _loadAuxDerived({bool aliases = true}) {
     // 기다리는 쪽(받은 링크 · 알림 → fetchKitsByIds)이 오류를 받지 않게 여기서 삼킨다 (네트워크로 받은 파일이 깨졌을 때 등)
-    _aliasesLoad = _applyAliases().catchError((Object e) => debugPrint('[catalog] 옛 id 를 못 붙임: $e'));
+    if (aliases) _aliasesLoad = _applyAliases().catchError((Object e) => debugPrint('[catalog] 옛 id 를 못 붙임: $e'));
     _loadRates().ignore();
     _loadChannelCovers().ignore();
   }
