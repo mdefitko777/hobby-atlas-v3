@@ -164,7 +164,7 @@ void main() {
 
   test('요약: 설정 줄 "켜짐 · 규칙 n개" · 채널 줄 "전부 · SEED/00 · PB … · 끔"', () {
     final c = NotifyConfig();
-    expect(notifySummary(c), '켜짐 · 규칙 8개'); // 처음 켜져 있는 규칙 8개
+    expect(notifySummary(c), '켜짐 · 규칙 9개'); // 처음 켜져 있는 규칙 9개 (라이브 시작 전 포함)
     expect(notifySummary(c, permitted: false), '꺼짐');
     expect(channelNotifySummary(c, 'gundam', mine: true), 'SEED/00 · PB · PB 예약');
     expect(channelNotifySummary(c, 'beyblade', mine: true), 'BBX');
@@ -175,7 +175,7 @@ void main() {
     expect(channelNotifySummary(c, 'gundam', mine: false), 'PB 예약');
     c.conditions.add(const NotifyCondition(franchise: 'fate', scope: 'group:saber', scopeLabel: '세이버'));
     expect(channelNotifySummary(c, 'fate', mine: false), '조건 1개');
-    expect(notifySummary(c), '켜짐 · 규칙 10개');
+    expect(notifySummary(c), '켜짐 · 규칙 11개');
     c.enabled = false;
     expect(notifySummary(c), '꺼짐');
   });

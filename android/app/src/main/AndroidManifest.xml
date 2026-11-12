@@ -2,7 +2,8 @@
     xmlns:tools="http://schemas.android.com/tools">
     <!-- Gunpula 데이터(GitHub Pages) · 이미지 · 동기화 -->
     <uses-permission android:name="android.permission.INTERNET"/>
-    <!-- 새 소식 알림: 안드로이드 13+ 알림 권한 · WorkManager 12시간 확인(인터넷 연결 조건 · 재부팅 뒤 다시 등록) -->
+    <!-- 새 소식 알림: 안드로이드 13+ 알림 권한 · WorkManager 12시간 확인(인터넷 연결 조건 · 재부팅 뒤 다시 등록)
+         · 재부팅 뒤 라이브 시작 전 알림 다시 걸기 (RECEIVE_BOOT_COMPLETED) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
@@ -87,6 +88,18 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/filepaths" />
         </provider>
+        <!-- 라이브 시작 전 알림 (flutter_local_notifications zonedSchedule, lib/notifications/local_notifier.dart applyLive):
+             정한 시각에 알림을 띄우는 수신기 + 재부팅 · 앱 업데이트 뒤 걸어 둔 알림을 다시 거는 수신기.
+             정확한 알람 권한(SCHEDULE_EXACT_ALARM)은 쓰지 않는다 — inexactAllowWhileIdle 이라 몇 분 늦을 수 있다 -->
+        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

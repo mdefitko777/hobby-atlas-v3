@@ -17,6 +17,7 @@ import '../logic/lego_scope.dart';
 import '../logic/preorder.dart' show Preorder;
 import '../models.dart';
 import 'feed_rules.dart' show annRank, annStageKey;
+import 'live_reminders.dart' show liveRule;
 import 'local_notifier.dart';
 import 'notify_models.dart';
 
@@ -68,7 +69,7 @@ class NotifyStore extends ChangeNotifier {
     await load();
     await meLoaded;
     me.addListener(_scheduleConfig);
-    Catalog.instance.addListener(_scheduleConfig);
+    Catalog.instance.addListener(_onCatalog);
     L10n.notifier.addListener(_onLanguage);
     await LocalNotifier.init();
     await _writeConfig();
@@ -76,7 +77,13 @@ class NotifyStore extends ChangeNotifier {
     // 백그라운드에서 다녀온 사이 생긴 알림을 읽고, 오래됐으면 한 번 더 확인
     _life = AppLifecycleListener(onResume: () => unawaited(_onResume()));
     // 좋아요한 PB 상품의 예약 기간은 카탈로그에서 오므로 카탈로그가 준비된 뒤 첫 확인 (못 받아도 확인은 한다)
-    unawaited(Catalog.instance.ensureLoaded().then((_) {}, onError: (Object _) {}).whenComplete(() => checkNow()));
+    // 그 확인이 간격 때문에 건너뛰어졌어도, 받아 둔 예고 파일이 라이브 알림을 건 판보다 새것이면 한 번 본다 (_onCatalog)
+    unawaited(
+      Catalog.instance.ensureLoaded().then((_) {}, onError: (Object _) {}).whenComplete(() async {
+        await checkNow();
+        _onCatalog();
+      }),
+    );
   }
 
   /// 화면 언어를 바꾸면: notify_config.json 의 상품 이름(PB 예약 · 발매 D-n · 예약 도착 알림 제목)을 새 언어로 다시 쓰고,
@@ -84,6 +91,29 @@ class NotifyStore extends ChangeNotifier {
   void _onLanguage() {
     _scheduleConfig();
     unawaited(LocalNotifier.renameChannels());
+  }
+
+  /// 앱이 받아 둔 예고 파일이 라이브 알림을 건 판보다 새것이다 (홈에서 당겨서 새로 고침 …) → 20분을 기다리지 않고 바로 확인해
+  /// 오늘 잡힌 라이브도 시작 전 알림이 걸리게 한다. 그 지문 하나에 한 번만 (확인이 실패해도 되풀이하지 않는다)
+  void _onCatalog() {
+    _scheduleConfig();
+    final hash = Catalog.auxHashes(Catalog.instance.manifest)['announcements.json'];
+    if (hash == null || hash == state.liveKey || hash == _liveAsked || !config.rule(liveRule)) return;
+    _liveAsked = hash;
+    _checkLive();
+  }
+
+  String _liveAsked = '';
+  bool _liveAgain = false;
+
+  /// 라이브 알림 계획을 지금 다시 (규칙 · 새 소식 알림 스위치를 바꿨을 때도 — 꺼 놓고 걸린 알림이 뜨면 안 된다).
+  /// 확인 중이면 끝난 뒤에 한 번 더
+  void _checkLive() {
+    if (checking) {
+      _liveAgain = true;
+    } else {
+      unawaited(checkNow(force: true));
+    }
   }
 
   Future<void> _onResume() async {
@@ -197,6 +227,10 @@ class NotifyStore extends ChangeNotifier {
     } finally {
       checking = false;
       notifyListeners();
+      if (_liveAgain) {
+        _liveAgain = false;
+        unawaited(checkNow(force: true));
+      }
     }
   }
 
@@ -234,6 +268,7 @@ class NotifyStore extends ChangeNotifier {
     config.enabled = on;
     _configChanged();
     await scheduleCatalogCheck(enabled: on);
+    _checkLive(); // 걸어 둔 라이브 알림을 거두거나 다시 건다
     return true;
   }
 
@@ -245,6 +280,7 @@ class NotifyStore extends ChangeNotifier {
   void setRule(String key, bool v) {
     config.rules[key] = v;
     _configChanged();
+    if (key == liveRule) _checkLive();
   }
 
   /// 내가 만든 알림 조건 — 같은 조건은 한 번만

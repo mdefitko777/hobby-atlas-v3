@@ -12,10 +12,12 @@
 //   · 좋아요한 상품의 발매 D-7 · D-1 · 당일 (발매일이 하루까지 정해진 것만, 기기 안에서 날짜만 비교)
 //   · 좋아요 · 구매함 상품의 재판매(change_reasons 'restock', 규칙 '재판매') — "재판매 · 「이름」 YYYY.MM"
 //   · 예약한 상품의 도착 달 · 도착 날 (기기에 적은 예약, 규칙 '예약 도착')
+//   · 내 채널 공식 라이브: 처음 보인 라이브 · 시작 30분 전 (규칙 '라이브 시작 전' — live_reminders.dart)
 // 이 파일은 Flutter 위젯을 쓰지 않는다 (백그라운드 isolate · 단위 테스트).
 import '../data/gunpula.dart' show correctedCode, lineLabel, pickName, unescapeHtml;
 import '../l10n/l10n.dart';
 import '../logic/lego_scope.dart';
+import 'live_reminders.dart';
 import 'notify_models.dart';
 import '../json_util.dart';
 
@@ -602,7 +604,20 @@ class CheckPlan {
     this.error = '',
     this.source = '',
     this.pending = '',
-  });
+    this.liveKey = '',
+    this.liveStreams = const [],
+    this.reminders = const LiveReminderPlan(),
+  }) : liveScheduled = {...reminders.scheduled};
+
+  /// 라이브: 읽은 예고 파일의 지문 · 그때의 라이브 (NotifyState.liveKey · liveStreams)
+  final String liveKey;
+  final List<LiveStream> liveStreams;
+
+  /// 시작 전 알림 — 걸 것 · 거둘 것 (확인하는 쪽이 LocalNotifier.applyLive 로 한다)
+  final LiveReminderPlan reminders;
+
+  /// 걸려 있는 것으로 적을 표 — 걸지 못한 것은 확인하는 쪽이 빼서 다음 확인에서 다시 걸게 한다
+  final Map<String, String> liveScheduled;
 
   /// 새로 알림함에 들어갈 줄 (seen = 조용히 넣는 지난 소식)
   final List<NoticeRecord> records;
@@ -633,6 +648,9 @@ class CheckPlan {
       lastNew: liveCount,
       lastSource: source.isEmpty ? state.lastSource : source,
       pending: pending,
+      liveKey: liveKey,
+      liveStreams: liveStreams,
+      liveScheduled: liveScheduled,
       seenFeed: seenFeed,
       inbox: records,
     ),
@@ -644,6 +662,7 @@ class CheckPlan {
 ///  - 다음부터: lastSeen 날짜 이후(같은 날짜 포함 — 하루에 두 번 돌면 같은 날짜에 상품이 늘어난다)에서 아직 없는 줄만
 ///  - 오래 꺼져 있었으면 [catchUpDays] 일보다 오래된 날짜는 조용히(읽음으로) 넣는다
 /// 피드를 받지 못했거나 manifest 가 그대로라 받지 않았으면 [entries] 는 비어 있다 (PB 기간만 본다).
+/// [streams] = 이번에 예고 파일에서 읽은 라이브 (안 읽었으면 null → 지난번 것으로 계획만 다시), [liveKey] = 그 파일의 지문
 CheckPlan planCheck({
   required NotifyConfig config,
   required NotifyState state,
@@ -654,6 +673,8 @@ CheckPlan planCheck({
   String source = '',
   String pending = '',
   Object? announcements,
+  List<LiveStream>? streams,
+  String? liveKey,
 }) {
   final known = {for (final r in state.inbox) r.id, ...state.seenFeed};
   final first = state.lastSeen.isEmpty;
@@ -678,6 +699,17 @@ CheckPlan planCheck({
   records.addAll(releaseRecords(config, known, now));
   records.addAll(preorderRecords(config, known, now));
   records.addAll(annStageRecords(config, announcements, known, now));
+  // 라이브: 지난번에 본 것은 알림함 줄이 지워졌어도 다시 넣지 않는다. 처음 읽는 날은 조용히
+  final live = streams ?? state.liveStreams;
+  records.addAll(
+    liveRecords(
+      config,
+      live,
+      {...known, for (final s in state.liveStreams) 'stream-${s.id}'},
+      now,
+      quiet: state.liveKey.isEmpty,
+    ),
+  );
   return CheckPlan(
     records: records,
     lastSeen: lastSeen,
@@ -687,6 +719,16 @@ CheckPlan planCheck({
     error: error,
     source: source,
     pending: pending,
+    liveKey: liveKey ?? state.liveKey,
+    liveStreams: live,
+    reminders: planLiveReminders(
+      streams: live,
+      scheduled: state.liveScheduled,
+      channels: config.channels,
+      enabled: config.enabled && config.rule(liveRule), // 휴대폰 알림이라 새 소식 알림 스위치도 본다
+      now: now,
+      lang: L10n.current.name,
+    ),
   );
 }
 
@@ -703,7 +745,7 @@ class SystemAlert {
   /// 같은 id 면 앞의 알림을 바꿔 쓴다 — 상품마다 · 요약마다 다른 id 라 앞 알림을 지우지 않는다
   final int id;
 
-  /// catalog · wanted · pb · ann
+  /// catalog · wanted · pb · restock · preorder · ann · live
   final String channel;
   final String title;
   final String body;
@@ -867,6 +909,18 @@ List<SystemAlert> buildAlerts(Iterable<NoticeRecord> fresh) {
         ),
       );
     }
+  }
+  // 처음 보인 라이브: 제목 = 때 ("라이브 예정 · 11/14 21:00"), 둘째 줄 = 방송 이름. 누르면 그 예고
+  for (final r in live.where((r) => r.channel == 'live')) {
+    out.add(
+      SystemAlert(
+        id: stableId(r.id),
+        channel: 'live',
+        title: r.bodyParts.firstOrNull?.shown ?? r.body,
+        body: r.title,
+        payload: 'ann:${r.franchise}:${r.annId}',
+      ),
+    );
   }
   return out;
 }

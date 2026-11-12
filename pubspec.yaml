@@ -51,6 +51,8 @@ dependencies:
   flutter_secure_storage: ^11.2.0
   # 새 소식 알림 (Phase 4a): 휴대폰 알림 · 채널 · 누르면 이동 / 앱이 꺼져 있어도 12시간마다 확인 (안드로이드 WorkManager)
   flutter_local_notifications: ^22.3.2
+  # 라이브 시작 전 알림을 미리 걸어 둘 때 시각 모양 (zonedSchedule 의 TZDateTime) — 이미 위 플러그인이 쓰던 것
+  timezone: ^0.11.2
   workmanager: ^0.10.10
   webview_flutter: ^4.14.1
   ota_update: ^7.1.0

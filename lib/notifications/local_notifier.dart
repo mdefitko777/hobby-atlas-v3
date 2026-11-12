@@ -1,14 +1,17 @@
 // 휴대폰 알림 (flutter_local_notifications) — 안드로이드에서만. 웹 미리보기 · 테스트(Windows)에서는 아무것도 하지 않는다.
-// 채널(안드로이드 설정 › 알림에서 따로 끌 수 있는 묶음): 새 상품 · 변경 / 좋아요한 상품 / PB 예약 / 재판매 / 예약 도착
+// 채널(안드로이드 설정 › 알림에서 따로 끌 수 있는 묶음): 새 상품 · 변경 / 좋아요한 상품 / PB 예약 / 재판매 / 예약 도착 / 라이브
 // 누르면 payload 로 이동: kit:<kit_id> → 상품 상세, ann:<franchise>:<id> → 공식 예고, inbox → 알림 화면 (앱 셸이 [taps] 를 듣는다)
+// 라이브 시작 전 알림만 미리 걸어 둔다 (zonedSchedule — AndroidManifest 의 ScheduledNotification…Receiver 가 띄우고, 재부팅 뒤 다시 건다)
 import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/timezone.dart' as tz;
 
 import '../l10n/l10n.dart';
 import '../theme.dart';
 import 'feed_rules.dart' show SystemAlert;
+import 'live_reminders.dart';
 
 class LocalNotifier {
   LocalNotifier._();
@@ -60,6 +63,12 @@ class LocalNotifier {
       'announcement_stages',
       tr('알림 받는 공식 예고'),
       description: tr('알림 받기를 누른 공식 예고가 상품화 확정 · 예약 시작 · 발매로 넘어가면'),
+      importance: Importance.high,
+    ),
+    'live': AndroidNotificationChannel(
+      'live_streams',
+      tr('라이브'),
+      description: tr('내 채널 공식 라이브: 새로 올라온 라이브 · 시작 30분쯤 전'),
       importance: Importance.high,
     ),
   };
@@ -133,29 +142,65 @@ class LocalNotifier {
     await init(foreground: foreground);
     final all = channels;
     for (final a in alerts) {
-      final ch = all[a.channel] ?? all['catalog']!;
       try {
         await _plugin.show(
           id: a.id,
           title: a.title,
           body: a.body,
           payload: a.payload,
-          notificationDetails: NotificationDetails(
-            android: AndroidNotificationDetails(
-              ch.id,
-              ch.name,
-              channelDescription: ch.description,
-              importance: ch.importance,
-              priority: ch.importance == Importance.high ? Priority.high : Priority.defaultPriority,
-              styleInformation: BigTextStyleInformation(a.body),
-              color: Gp.accent,
-              category: AndroidNotificationCategory.recommendation,
-            ),
-          ),
+          notificationDetails: _details(all[a.channel] ?? all['catalog']!, a.body),
         );
       } on Object catch (e) {
         debugPrint('[notify] 알림을 띄우지 못함: $e');
       }
     }
+  }
+
+  static NotificationDetails _details(AndroidNotificationChannel ch, String body) => NotificationDetails(
+    android: AndroidNotificationDetails(
+      ch.id,
+      ch.name,
+      channelDescription: ch.description,
+      importance: ch.importance,
+      priority: ch.importance == Importance.high ? Priority.high : Priority.defaultPriority,
+      styleInformation: BigTextStyleInformation(body),
+      color: Gp.accent,
+      category: AndroidNotificationCategory.recommendation,
+    ),
+  );
+
+  /// 라이브 시작 전 알림을 계획대로 걸고 거둔다 (live_reminders.dart planLiveReminders). 걸지 못한 예고 id 를 돌려준다 →
+  /// 부르는 쪽이 "걸려 있음"에서 빼 두어 다음 확인에서 다시 건다.
+  /// inexactAllowWhileIdle: 정확한 알람 권한(SCHEDULE_EXACT_ALARM · 안드로이드 12+ 는 따로 허락)을 쓰지 않는다 —
+  /// 대신 몇 분 늦게 뜰 수 있다 (30분 전 알림이라 괜찮다). 시각은 UTC 한 점으로 넘겨 시간대 표(tz database)가 필요 없다
+  static Future<Set<String>> applyLive(LiveReminderPlan plan, {bool foreground = true}) async {
+    if (!supported || plan.isEmpty) return const {};
+    await init(foreground: foreground);
+    for (final id in plan.cancel) {
+      try {
+        await _plugin.cancel(id: id);
+      } on Object catch (e) {
+        debugPrint('[notify] 라이브 알림을 거두지 못함: $e');
+      }
+    }
+    final ch = channels['live']!;
+    final failed = <String>{};
+    for (final r in plan.schedule) {
+      try {
+        await _plugin.zonedSchedule(
+          id: r.id,
+          title: r.title,
+          body: r.body,
+          payload: r.payload,
+          scheduledDate: tz.TZDateTime.from(r.at, tz.UTC),
+          notificationDetails: _details(ch, r.body),
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        );
+      } on Object catch (e) {
+        debugPrint('[notify] 라이브 알림을 걸지 못함: $e');
+        failed.add(r.annId);
+      }
+    }
+    return failed;
   }
 }

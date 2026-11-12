@@ -555,6 +555,8 @@ class Announcement {
     required this.hero,
     this.url = '',
     this.video = '',
+    this.liveAt,
+    this.liveState = '',
   });
 
   /// 공식 원문 (뉴스 · 유튜브)
@@ -574,6 +576,30 @@ class Announcement {
   /// 가로로 넓은 고화질 배너 — 홈 맨 위 큰 사진에 쓴다
   final bool hero;
 
+  /// 라이브(방송) 예고만: 시작 시각 (기기 시간대, 시간 미정이면 null)
+  final DateTime? liveAt;
+
+  /// 라이브 예고만: 데이터의 live_state — upcoming · live · ended (하루 한 번 적힌 값. 지금 단계는 lib/logic/live_stream.dart)
+  final String liveState;
+
+  bool get isStream => liveState.isNotEmpty;
+
+  /// 홈 배너에 올릴 예고로 (줄을 세운 뒤에 정한다 — lib/data/derive/announcements.dart)
+  Announcement asHero() => Announcement(
+    id: id,
+    franchiseId: franchiseId,
+    title: title,
+    status: status,
+    date: date,
+    source: source,
+    image: image,
+    hero: true,
+    url: url,
+    video: video,
+    liveAt: liveAt,
+    liveState: liveState,
+  );
+
   static Announcement? fromJson(Object? json) {
     if (json is! Map<String, Object?>) return null;
     final id = json['id'];
@@ -587,6 +613,8 @@ class Announcement {
       source: jStr(json['source']),
       image: jStr(json['image']),
       hero: _b(json, 'hero'),
+      liveAt: DateTime.tryParse(jStr(json['liveAt']))?.toLocal(),
+      liveState: jStr(json['liveState']),
     );
   }
 }

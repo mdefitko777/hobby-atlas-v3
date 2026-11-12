@@ -12,18 +12,20 @@
 // │ H-3b │ 전체 · 발매 · 예고 밑줄 탭            │ 일정 종류 거르기                        │ P06 · P07     │
 // │ H-4  │ 날짜 누르기 (다시 누르면 해제)        │ 그날만 보기 / 한 달 전체 보기           │ P03           │
 // │ H-5  │ 날짜별 묶음 목록 + 종류 알약 + D-n    │ 발매(검정 알약) · 예고 단계(회색 알약)   │ P01 · P02     │
+// │ H-5b │ 예고 줄: 색 꼬리표 "21:00 라이브"     │ 공식 라이브 — 발표일이 아니라 방송하는 날에 (시간 미정은 없음) │ P01 │
 // │ H-6  │ "날짜 미정 · n월 중" 묶음            │ 날짜가 정해지지 않은 발매               │ P01 · P10     │
 // │ H-7  │ LayoutBuilder ≥720dp                │ 넓은 화면: 달력 왼쪽 · 목록 오른쪽       │ 적응형        │
 // │ H-8  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 이 달 일정 없음     │ P01 · P09     │
 // │ H-12 │ 위 줄 ? (S-19, calendarHelp)        │ 아이콘 뜻 + 점 색 (달력 위 ? 를 합침)      │ P10 · P01     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
-// 전환: 발매 줄 → D 상품 상세(쌓기). 예고 줄 → J 공식 예고 상세(쌓기).
+// 전환: 발매 줄 → D 상품 상세(쌓기). 예고 · 라이브 줄 → J 공식 예고 상세(쌓기).
 // 왜 이렇게: 발매 정보를 목록 한구석이 아니라 날짜로 보게.
 import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../channels.dart';
 import '../l10n/l10n.dart';
+import '../logic/live_stream.dart';
 import '../logic/restock.dart';
 import '../marks.dart';
 import '../models.dart';
@@ -55,7 +57,15 @@ class _Event {
     this.dot = Gp.accent,
     this.tag = '',
     this.due = 0,
+    this.time = '',
+    this.tagColor,
   });
+
+  /// 라이브 줄: 시작 시각 '21:00' (알약 앞에 붙는다)
+  final String time;
+
+  /// 뜻이 색으로 정해진 꼬리표 (예약 · 재판매 · 라이브 단계) — 없으면 테두리 알약
+  final Color? tagColor;
 
   /// 예약 도착 줄: 아직 낼 돈 (원)
   final int due;
@@ -208,6 +218,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
               kit: k,
               day: dayOf(pre.arrival),
               dot: Gp.reserve,
+              tagColor: Gp.reserve,
               tag: '예약',
               due: pre.due,
             ),
@@ -224,6 +235,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
                 kit: k,
                 day: e.day,
                 dot: Gp.resale,
+                tagColor: Gp.resale,
                 tag: '재판매',
               ),
             );
@@ -257,8 +269,22 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
             day: dayOf(k.date),
           ),
       for (final a in d.announcements)
-        if (a.date.startsWith(ym) && _hitAnn(a))
-          _Event(title: a.title, image: a.image, sub: a.source, ann: a, day: dayOf(a.date), dot: Gp.faint),
+        // H-5b 라이브는 방송하는 날에 (시간 미정이면 announcementDay 가 비어 캘린더에 없다)
+        if (announcementDay(a) case final date when date.startsWith(ym) && _hitAnn(a))
+          if (annLiveStage(a, appNow()) case final stage?)
+            _Event(
+              title: a.title,
+              image: a.image,
+              sub: a.source,
+              ann: a,
+              day: dayOf(date),
+              dot: Gp.faint,
+              tag: '라이브',
+              time: liveClock(a.liveAt!),
+              tagColor: liveColor(stage),
+            )
+          else
+            _Event(title: a.title, image: a.image, sub: a.source, ann: a, day: dayOf(date), dot: Gp.faint),
     ];
   }
 
@@ -677,10 +703,13 @@ class _EventRow extends StatelessWidget {
       image: event.image,
       title: event.title,
       subtitle: event.sub,
-      // 발매 = 검정, 예고 = 회색 (알약 글자 · 예고 단계는 한국어 값 — 보일 때 tr)
-      tag: tr(event.tag.isNotEmpty ? event.tag : (kit != null ? '발매' : (ann?.status ?? '예고'))),
+      // 발매 = 검정, 예고 = 회색 (알약 글자 · 예고 단계는 한국어 값 — 보일 때 tr). 라이브는 시각을 앞에: "21:00 라이브"
+      tag: [
+        if (event.time.isNotEmpty) event.time,
+        tr(event.tag.isNotEmpty ? event.tag : (kit != null ? '발매' : (ann?.status ?? '예고'))),
+      ].join(' '),
       tagStrong: kit != null,
-      tagColor: event.dot == Gp.reserve || event.dot == Gp.resale ? event.dot : null, // 예약 · 재판매 = 상세와 같은 색 꼬리표
+      tagColor: event.tagColor, // 예약 · 재판매 = 상세와 같은 색 꼬리표, 라이브 = 단계 색
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       onTap: () {
         if (kit != null) {
@@ -700,7 +729,7 @@ List<HelpItem> get calendarHelp => [
   HelpItem(Icons.calendar_month_outlined, tr('전체 일정')),
   HelpItem(Icons.person_outline, tr('내 일정 (좋아요 · 구매함)')),
   HelpItem.dot(Gp.accent, tr('발매')),
-  HelpItem.dot(Gp.faint, tr('공식 예고 · 공지')),
+  HelpItem.dot(Gp.faint, tr('공식 예고 · 공지 · 라이브 (방송하는 날)')),
   HelpItem.dot(Gp.danger, tr('PB 예약 마감 (내 일정)')),
   HelpItem.dot(Gp.own, tr('산 날 (내 일정)')),
   HelpItem.dot(Gp.reserve, tr('예약 도착 (내 일정)')),

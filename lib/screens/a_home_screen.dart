@@ -5,7 +5,7 @@
 // │ A-1  │ ChannelHeader                      │ 아바타 줄 + 내 채널 바 (C-0 공용)       │ P04 · P06     │
 // │ A-2  │ GpSearchBar 입구 (탭하면 검색 탭)   │ 검색창(검색 화면과 같은 모양) · 카메라  │ P07 · P04     │
 // │ A-3  │ PageView(화면 끝까지) + 점 표시     │ 공식 예고 배너 (4초마다 다음 장, 끝없이) │ P08 · P02     │
-// │ A-4  │ 배너 아래 상태 · 제목               │ 예고 상태(공식 발표·상품화 확정·예약)   │ P01           │
+// │ A-4  │ 배너 아래 AnnTag · 제목             │ 예고 상태(공식 발표·상품화 확정·예약) · 라이브면 때 │ P01 │
 // │ A-5  │ SectionHeader (색 막대 + ›)         │ 줄 이름 · 전체 보기 → O 전체 목록(홈 안)  │ P06 · P07     │
 // │ A-6  │ 가로 ListView + ProductTile         │ 최근 추가 · 10월 발매 · 공식 예고 · 최근 본 │ P08        │
 // │ A-7  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 빈 채널           │ P01 · P09     │
@@ -518,7 +518,7 @@ class _HeroBannerState extends State<_HeroBanner> {
                                 padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
                                 child: Row(
                                   children: [
-                                    SoftTag(tr(a.status), color: stageColor(a.status)), // A-4 P01 단계 = 다른 꼬리표와 같은 모양
+                                    AnnTag(a), // A-4 P01 단계(라이브면 때) = 다른 꼬리표와 같은 모양
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
@@ -588,7 +588,15 @@ class _HorizontalRow extends StatelessWidget {
                 openAnnouncement(context, ann, loaders: loaders, list: [for (final it in row.items) ?it.ann]);
               }
             },
-            marks: kit == null ? null : QuickMarks(kit: kit), // A-9 P07
+            // A-9 P07 상품 = 리본 · ♡ / 라이브 예고 = 사진 귀퉁이에 때 (보통 예고는 사진 + 이름만)
+            marks: kit != null
+                ? QuickMarks(kit: kit)
+                : (item.ann?.isStream ?? false)
+                ? Align(
+                    alignment: Alignment.topLeft,
+                    child: Padding(padding: const EdgeInsets.all(6), child: AnnTag(item.ann!, onPhoto: true)),
+                  )
+                : null,
           );
         },
       ),

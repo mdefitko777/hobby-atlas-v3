@@ -2,7 +2,7 @@
 //
 // ┌──────── 디자인 가이드 대응표: J 공식 예고 상세 ────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
-// │ J-1  │ 위 띠: 뒤로 · 제목 한 줄 · SoftTag · 날짜 │ 예고 요약 (한 줄)                     │ P01 · P03     │
+// │ J-1  │ 위 띠: 뒤로 · 제목 한 줄 · AnnTag · 날짜 │ 예고 요약 (한 줄, 라이브면 때)         │ P01 · P03     │
 // │ J-2  │ WebViewWidget (+ 읽는 중 가는 줄)     │ 공식 원문 (글 · 사진 · 영상)            │ P02 · P10     │
 // │ J-2b │ 요약 화면 (BlurFitImage · 단계 줄)     │ 원문을 열 수 없을 때 · 웹 미리보기       │ P09           │
 // │ J-3  │ 아래 띠: TogglePill(알림 받기)        │ 다음 단계가 되면 휴대폰 알림 (진짜)      │ P03 · P07     │
@@ -501,7 +501,7 @@ class _TopBar extends StatelessWidget {
                 const SizedBox(height: 3),
                 Row(
                   children: [
-                    SoftTag(tr(item.status), color: stageColor(item.status)),
+                    AnnTag(item),
                     const SizedBox(width: 6),
                     Flexible(
                       child: Text(

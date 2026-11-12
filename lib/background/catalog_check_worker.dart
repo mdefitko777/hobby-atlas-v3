@@ -4,11 +4,14 @@
 //      data/update-feed-lite.json (날짜마다 20개까지) 으로 채운다 — 지난번 본 날짜 이후만 거른다 (lib/notifications/feed_rules.dart)
 //   3) 같은 판의 피드를 못 받았으면(Pages · Gunpula Atlas 작업이 늦음) manifest 를 "다 봤다"고 적지 않는다 → 다음 확인에서 다시
 //   3b) 알림 받는 공식 예고가 있으면 data/announcements.json 도 받아 단계가 넘어간 것을 알림으로
+//   3c) 공식 라이브(규칙 「라이브 시작 전」): manifest 의 예고 파일 지문이 지난번과 다를 때만 예고 파일을 받아 라이브를 읽고,
+//       처음 보인 라이브는 알림함에 · 시작 30분 전 알림은 안드로이드에 미리 걸어 둔다 (lib/notifications/live_reminders.dart)
 //   4) notify_state.json 에 합쳐 쓰고(잠금 · 다시 읽어 합치기), 알림이 켜져 있으면 휴대폰 알림
 // 백그라운드에서는 notify_config.json(앱 화면이 써 둔 설정 · 내 채널 · 좋아요)만 읽는다. user.json · 카탈로그는 열지 않는다.
 import 'dart:convert';
 import 'dart:ui' show DartPluginRegistrant;
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:workmanager/workmanager.dart';
@@ -16,7 +19,9 @@ import 'package:workmanager/workmanager.dart';
 import '../data/blob_store.dart';
 import '../data/gunpula.dart' show gunpulaBase, gunpulaRawBase, gunpulaUserAgent, manifestSignature;
 import '../l10n/l10n.dart';
+import '../json_util.dart';
 import '../notifications/feed_rules.dart';
+import '../notifications/live_reminders.dart';
 import '../notifications/local_notifier.dart';
 import '../notifications/notify_models.dart';
 
@@ -154,8 +159,16 @@ Object? _decode(String? text) {
   }
 }
 
+/// 라이브 시작 전 알림을 걸고 거두는 함수 (기본: 휴대폰 — LocalNotifier.applyLive). 걸지 못한 예고 id 를 돌려준다
+typedef ApplyLive = Future<Set<String>> Function(LiveReminderPlan plan);
+
 /// 파일 → 계산 → 파일 (+ 휴대폰 알림). 앱 화면 · 백그라운드 공통.
-Future<CheckOutcome> runCatalogCheck({bool background = false, DateTime? now, FetchText? fetch}) async {
+Future<CheckOutcome> runCatalogCheck({
+  bool background = false,
+  DateTime? now,
+  FetchText? fetch,
+  ApplyLive? applyLive,
+}) async {
   final at = now ?? DateTime.now();
   final get = fetch ?? fetchGunpula;
   // 백그라운드(새 isolate)는 앱이 고른 화면 언어를 모른다 — 알림 글을 그 언어로 쓰려고 기기 파일에서 읽는다
@@ -198,9 +211,19 @@ Future<CheckOutcome> runCatalogCheck({bool background = false, DateTime? now, Fe
     }
   }
 
-  // 알림 받는 예고가 있으면 예고 파일도 (단계가 넘어갔는지)
-  final announcements = config.followed.isEmpty ? null : _decode(await get(announcementsPath));
+  // 알림 받는 예고가 있으면 예고 파일도 (단계가 넘어갔는지). 라이브는 예고 파일이 바뀐 때만 —
+  // manifest `files` 지문이 없으면(raw · 인터넷 없음) 이번에는 받지 않고 지난번에 읽은 라이브로 계획만 다시 한다
+  final annHash = jStr(jMap(jMap(manifest)['files'])['announcements.json']);
+  final liveChanged = config.rule(liveRule) && annHash.isNotEmpty && annHash != before.liveKey;
+  final annText = config.followed.isEmpty && !liveChanged ? null : await get(announcementsPath);
+  final announcements = _decode(annText);
+  final gotLive = annText != null && jMap(announcements)['announcements'] is List;
+  // 발행 직후 CDN 이 옛 파일을 주면(지문이 다름) 읽은 것은 쓰되 지문은 적지 않는다 → 다음 확인에서 다시 받는다
+  final verified =
+      gotLive && annHash.isNotEmpty && sha256.convert(utf8.encode(annText)).toString().substring(0, 16) == annHash;
   final plan = planCheck(
+    streams: gotLive ? parseLiveStreams(announcements, at) : null,
+    liveKey: verified ? annHash : (gotLive && before.liveKey.isEmpty ? '-' : null), // '-' = 읽기는 했다 (처음이 아님)
     announcements: announcements,
     config: config,
     state: before,
@@ -211,6 +234,9 @@ Future<CheckOutcome> runCatalogCheck({bool background = false, DateTime? now, Fe
     source: source,
     pending: pending,
   );
+  // 시작 전 알림을 먼저 걸고 거둔다 — 걸지 못한 것은 "걸려 있음"에 적지 않아 다음 확인에서 다시 건다
+  final failed = await (applyLive ?? (p) => LocalNotifier.applyLive(p, foreground: !background))(plan.reminders);
+  plan.liveScheduled.removeWhere((id, _) => failed.contains(id));
   // 쓰기 직전에 잠그고 파일을 다시 읽어 합친다 (그 사이 앱 화면 · 다른 확인이 썼을 수 있다)
   final fresh = await BlobStore.locked(notifyStateKey, () async {
     final disk = NotifyState.fromJson(_decode(await BlobStore.read(notifyStateKey)));

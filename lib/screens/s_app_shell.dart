@@ -187,7 +187,7 @@ class _AppShellState extends State<AppShell> {
     final payload = LocalNotifier.taps.value;
     if (payload == null || !mounted) return;
     LocalNotifier.taps.value = null;
-    // ann:<franchise>:<예고 id> → 공식 예고 (예고 단계 알림)
+    // ann:<franchise>:<예고 id> → 공식 예고 (예고 단계 알림 · 라이브 예정 · 라이브 시작 전)
     if (payload.split(':') case ['ann', final ch, final id]) {
       try {
         final a = (await widget.loaders.announcements([ch])).where((a) => a.id == id).firstOrNull;

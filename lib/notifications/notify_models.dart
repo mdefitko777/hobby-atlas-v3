@@ -6,6 +6,7 @@
 
 import '../json_util.dart';
 import '../l10n/l10n.dart';
+import '../logic/live_stream.dart';
 
 const notifyConfigKey = 'notify_config.json';
 const notifyStateKey = 'notify_state.json';
@@ -22,6 +23,8 @@ const notifyRuleDefaults = <String, bool>{
   'restock': true,
   // 예약한 상품의 도착 달 · 도착 날 (기기에 적은 예약 — lib/logic/preorder.dart)
   'preorder_arrival': true,
+  // 내 채널 공식 라이브: 처음 보인 라이브 · 시작 30분 전 (lib/notifications/live_reminders.dart)
+  'live_soon': true,
   'gundam': false,
   'armored_core': false,
   'pokemon': false,
@@ -40,12 +43,14 @@ const notifyInterestRules = [
   'release_soon',
   'restock',
   'preorder_arrival',
+  'live_soon',
 ];
 const notifyWorldRules = ['gundam', 'armored_core', 'pokemon', 'fate', 'madoka', 'lego'];
 
 /// 알림 화면(k_notify_settings.dart)의 자리 — 내 상품 = 채널과 상관없이, 나머지는 채널 시트.
 /// 키 · 저장 모양은 그대로 두고 화면에서 묶는 곳만 나눴다 (2026-11-12, 한 줄 칩 목록이 길어서)
-const notifyMineRules = ['wanted', 'release_soon', 'restock', 'preorder_arrival'];
+/// 「라이브 시작 전」은 상품이 아니라 내 채널의 방송이지만, 채널마다 켜고 끄는 것이 아니라 이 묶음 끝에 둔다
+const notifyMineRules = ['wanted', 'release_soon', 'restock', 'preorder_arrival', 'live_soon'];
 const notifyChannelRules = <String, List<String>>{
   'gundam': ['seed_00', 'premium_bandai', 'pb_window'],
   'beyblade': ['bbx'],
@@ -60,6 +65,7 @@ const notifyRuleLabels = <String, String>{
   'release_soon': '발매 D-7 · D-1',
   'restock': '재판매',
   'preorder_arrival': '예약 도착',
+  'live_soon': '라이브 시작 전',
   'gundam': '건담 전체',
   'armored_core': '아머드 코어 전체',
   'pokemon': '포켓몬 전체',
@@ -200,6 +206,63 @@ class PreorderDue {
       arrival: arrival,
       due: j['due'] is num ? (j['due']! as num).toInt() : 0,
       shop: jStr(j['shop']),
+    );
+  }
+}
+
+/// 라이브 한 개 — announcements.json 에서 알림에 쓰는 것만 (notify_state.json `live_streams`, 고르기 · 계획은 live_reminders.dart)
+class LiveStream {
+  const LiveStream({
+    required this.id,
+    required this.franchise,
+    required this.title,
+    this.titleZh = '',
+    this.at,
+    this.state = 'upcoming',
+    this.source = '',
+  });
+
+  final String id;
+  final String franchise;
+
+  /// 한국어 화면 이름 · 중국어 화면 이름 (없으면 [title])
+  final String title;
+  final String titleZh;
+
+  /// 시작 시각 (기기 시간대, 시간 미정이면 null)
+  final DateTime? at;
+
+  /// 데이터의 live_state
+  final String state;
+  final String source;
+
+  LiveStage stage(DateTime now) => liveStageOf(state: state, at: at, now: now);
+
+  /// 지금 화면 언어의 이름 (휴대폰 알림)
+  String get shown => L10n.isZh && titleZh.isNotEmpty ? titleZh : title;
+
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'franchise': franchise,
+    'title': title,
+    if (titleZh.isNotEmpty) 'title_zh': titleZh,
+    if (at != null) 'at': at!.toUtc().toIso8601String(),
+    'state': state,
+    if (source.isNotEmpty) 'source': source,
+  };
+
+  static LiveStream? fromJson(Object? json) {
+    final j = jMap(json);
+    final id = jStr(j['id']);
+    if (id.isEmpty) return null;
+    return LiveStream(
+      id: id,
+      franchise: jStr(j['franchise']),
+      title: jStr(j['title']),
+      titleZh: jStr(j['title_zh']),
+      at: parseLiveAt(j['at']),
+      state: jStr(j['state']),
+      source: jStr(j['source']),
     );
   }
 }
@@ -379,13 +442,13 @@ class NoticeRecord {
        _body = body;
 
   /// `feed-<피드 날짜>-<kit_id>` · `pb-open-<kit_id>-<날짜>` · `pb-close-<kit_id>-<날짜>` · `ann-<예고 id>-<단계>` ·
-  /// `rel-<kit_id>-<발매일>-d7|d1|d0` · `pre-<kit_id>-<도착 예정>-month|d0`
+  /// `rel-<kit_id>-<발매일>-d7|d1|d0` · `pre-<kit_id>-<도착 예정>-month|d0` · `stream-<예고 id>`
   final String id;
 
-  /// added · changed · pb_open · pb_close · ann_stage · release · restock(재판매) · preorder(예약 도착)
+  /// added · changed · pb_open · pb_close · ann_stage · release · restock(재판매) · preorder(예약 도착) · live(처음 보인 라이브)
   final String kind;
 
-  /// ann_stage: 공식 예고 id (단계는 [reasons] 첫 칸)
+  /// ann_stage · live: 공식 예고 id (ann_stage 의 단계는 [reasons] 첫 칸)
   final String annId;
   final String kitId;
 
@@ -427,11 +490,14 @@ class NoticeRecord {
   bool get isAnnStage => kind == 'ann_stage';
   bool get isRestock => kind == 'restock';
   bool get isPreorder => kind == 'preorder';
+  bool get isLive => kind == 'live';
 
   /// 휴대폰 알림 채널 — catalog(새 상품 · 변경) · wanted(좋아요한 상품) · pb(PB 예약) · ann(알림 받는 공식 예고) ·
-  /// restock(재판매) · preorder(예약 도착)
+  /// restock(재판매) · preorder(예약 도착) · live(라이브)
   String get channel => isAnnStage
       ? 'ann'
+      : isLive
+      ? 'live'
       : isPbWindow
       ? 'pb'
       : isRestock
@@ -518,10 +584,15 @@ class NotifyState {
     this.lastNew = 0,
     this.lastSource = '',
     this.pending = '',
+    this.liveKey = '',
+    List<LiveStream>? liveStreams,
+    Map<String, String>? liveScheduled,
     Set<String>? seenFeed,
     List<NoticeRecord>? inbox,
     Map<String, NoticeFlag>? flags,
-  }) : seenFeed = seenFeed ?? {},
+  }) : liveStreams = liveStreams ?? const [],
+       liveScheduled = liveScheduled ?? const {},
+       seenFeed = seenFeed ?? {},
        inbox = inbox ?? [],
        flags = flags ?? {};
 
@@ -546,6 +617,16 @@ class NotifyState {
   /// `<manifest 서명>|<처음 본 시각>` — manifest 는 바뀌었는데 같은 판의 피드를 아직 못 받았다 (Pages 가 늦거나
   /// Gunpula 의 Atlas 작업이 아직 안 돌았다). 다음 확인에서 다시 받고, 오래 지나면 그만 기다린다. 다 받았으면 빈 글자.
   String pending;
+
+  /// 마지막으로 라이브를 읽은 예고 파일의 지문 (manifest files['announcements.json']) — 같으면 예고 파일을 다시 받지 않는다.
+  /// 비어 있으면 아직 한 번도 안 읽음 → 처음 읽는 라이브는 조용히(읽음으로) 넣는다
+  String liveKey;
+
+  /// 그때 읽은 아직 안 끝난 라이브 (모든 채널)
+  List<LiveStream> liveStreams;
+
+  /// 안드로이드에 걸어 둔 시작 전 알림: 예고 id → 지문 (live_reminders.dart liveReminderSig)
+  Map<String, String> liveScheduled;
 
   /// [lastSeen] 날짜에서 이미 본 상품 줄 id (규칙에 안 걸린 것도). 같은 날짜를 다시 볼 때 늘어난 상품만 보려고 —
   /// 그 사이 규칙을 켜거나 좋아요를 눌러도 이미 지나간 소식으로 휴대폰이 울리지 않게.
@@ -572,6 +653,9 @@ class NotifyState {
     'last_new': lastNew,
     if (lastSource.isNotEmpty) 'last_source': lastSource,
     if (pending.isNotEmpty) 'pending': pending,
+    if (liveKey.isNotEmpty) 'live_key': liveKey,
+    if (liveStreams.isNotEmpty) 'live_streams': [for (final s in liveStreams) s.toJson()],
+    if (liveScheduled.isNotEmpty) 'live_scheduled': liveScheduled,
     'seen_feed': seenFeed.toList(),
     'inbox': [for (final r in inbox) r.toJson()],
     'flags': {for (final e in flags.entries) e.key: e.value.toJson()},
@@ -587,6 +671,12 @@ class NotifyState {
       lastNew: j['last_new'] is num ? (j['last_new']! as num).toInt() : 0,
       lastSource: jStr(j['last_source']),
       pending: jStr(j['pending']),
+      liveKey: jStr(j['live_key']),
+      liveStreams: jList(j['live_streams']).map(LiveStream.fromJson).nonNulls.toList(),
+      liveScheduled: {
+        for (final e in jMap(j['live_scheduled']).entries)
+          if (e.value case final String v) e.key: v,
+      },
       seenFeed: jList(j['seen_feed']).whereType<String>().toSet(),
       inbox: jList(j['inbox']).map(NoticeRecord.fromJson).nonNulls.toList(),
       flags: {for (final e in jMap(j['flags']).entries) e.key: ?NoticeFlag.fromJson(e.value)},
@@ -617,6 +707,9 @@ class NotifyState {
       lastNew: newer.lastNew,
       lastSource: newer.lastSource,
       pending: newer.pending,
+      liveKey: newer.liveKey,
+      liveStreams: newer.liveStreams,
+      liveScheduled: newer.liveScheduled,
       seenFeed: {if (a.lastSeen == lastSeen) ...a.seenFeed, if (b.lastSeen == lastSeen) ...b.seenFeed},
       inbox: byId.values.toList(),
       flags: flags,
@@ -647,7 +740,8 @@ class NotifyState {
       id.startsWith('pb-') ||
       id.startsWith('ann-') ||
       id.startsWith('rel-') ||
-      id.startsWith('pre-');
+      id.startsWith('pre-') ||
+      id.startsWith('stream-');
 }
 
 /// 32비트 FNV-1a — 휴대폰 알림 id 가 isolate · 실행마다 같도록 (String.hashCode 는 보장되지 않음)

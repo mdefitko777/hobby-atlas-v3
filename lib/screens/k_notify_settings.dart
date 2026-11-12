@@ -5,7 +5,7 @@
 // ┌──────── 디자인 가이드 대응표: K 설정 (알림) ───────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
 // │ K-1  │ SwitchListTile × 2                 │ 새 소식 알림(휴대폰) · 내 채널 소식만      │ P03 · P07     │
-// │ K-8  │ SwitchListTile × 4                 │ 내 상품: 좋아요한 상품 소식 · 발매 D-7 · D-1 · 재판매 · 예약 도착 │ P03 · P07 │
+// │ K-8  │ SwitchListTile × 5                 │ 내 상품: 좋아요한 상품 소식 · 발매 D-7 · D-1 · 재판매 · 예약 도착 · 라이브 시작 전 │ P03 · P07 │
 // │ K-9  │ ListTile(채널 그림 · 요약 · ›)       │ 새 상품 (채널별): 내 채널 → 더 많은 채널, 요약 = 전부 · SEED/00 · PB … · 끔 │ P01 · P06 │
 // │ K-5  │ 아래 시트: SwitchListTile + 조건 줄  │ 채널 규칙: <채널> 전체 · SEED / 00 · PB · PB 예약 기간 · BBX + 골라서 알림(조건 시트) │ P04 · P05 │
 // │ K-6  │ ListTile · 지금 확인                │ 마지막 확인 · 지금 확인 · 휴대폰 알림 권한  │ P10           │
@@ -189,6 +189,12 @@ class _NotifySettingsScreenState extends State<NotifySettingsScreen> {
               _ruleSwitch('release_soon', Icons.today_outlined, tr('발매 D-7 · D-1 · 당일 (발매일이 정해진 것만)')),
               _ruleSwitch('restock', Icons.replay, tr('좋아요 · 구매함 상품의 재판매(再販) 소식')),
               _ruleSwitch('preorder_arrival', Icons.local_shipping_outlined, tr('예약한 상품의 도착 달 · 도착 날 (내가 적은 도착 예정)')),
+              // 데이터는 하루 한 번 · 뒤 확인은 12시간마다라 당일에 올라온 라이브는 놓칠 수 있다 — 그대로 적어 둔다
+              _ruleSwitch(
+                'live_soon',
+                Icons.live_tv_outlined,
+                tr('내 채널 공식 라이브 30분쯤 전 · 새로 올라온 라이브 (당일에 올라온 것은 앱을 열지 않으면 놓칠 수 있어요)'),
+              ),
             ],
           ),
         ),

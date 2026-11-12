@@ -43,7 +43,7 @@
 - `lib/data/` 데이터 — 받기 · 캐시 · 파싱 · 저장만. `catalog`(Gunpula Pages) · `gunpula` · `gundam_atlas` · `tag_atlas` · `blob_store` · `photo_files` · `social_local`.
   - `user_store.dart` = 내 기록 핵심(기록 · 저장 · 동기화) + part `user_store/` (atlas_local · history · trash · profile_local · import). 저장 파일 모양은 `test/user_store_golden_test.dart` 골든이 지킨다.
   - `derive.dart` = 카탈로그 + 내 기록 → 화면 모델, part `derive/` (guide · bbx · worlds · announcements · notifications · profile).
-- `lib/logic/` 규칙 — 순수 Dart (위젯 없음): kit_filter · guide_filter · kit_rules(찾기 · 바코드 · 다가오는 날짜) · collection_rules · spend · level_math · friends · announcement_match · sentence_search · bbx_builder · market. 엔진은 `lib/bbx/` · 알림 규칙은 `lib/notifications/` 그대로.
+- `lib/logic/` 규칙 — 순수 Dart (위젯 없음): kit_filter · guide_filter · kit_rules(찾기 · 바코드 · 다가오는 날짜) · collection_rules · spend · level_math · friends · announcement_match · live_stream(공식 라이브: 기기 시계로 본 단계 · 꼬리표 글) · sentence_search · bbx_builder · market. 엔진은 `lib/bbx/` · 알림 규칙은 `lib/notifications/` 그대로.
 - `lib/api.dart` `Loaders` = 화면이 데이터를 받는 입구 (테스트는 가짜 함수). 앱 전체 상태는 `MarksHost`/`UserStore` · `AccountScope` · `NotifyScope`.
 - `lib/widgets/` 공용 조각 — 화면은 묶음 `lib/widgets.dart` 하나만 import. 아래 시트는 `showGpSheet` 로 열고, 고르는 시트는 `GpPickSheet`(제목 · 초기화 · "n개 보기"), 도감 칸은 `TierCell`, 찾기 + 필터 짝은 `KitFind`. 그림 경로(인터넷 · 앱 안 · `local:` 내 사진)는 `images.dart` 한 곳.
 - `lib/screens/` 화면 — 맨 위 화면은 글자 머리(a_ … u_) + 파일 맨 위 디자인 가이드 대응표(`tool/make_guide.py` 가 읽는다). 큰 화면은 하위 폴더로: `guide/`(G 도감, 대응표는 `g_guide_view.dart`) · `bbx_builder/`(T 의 part 파일). 화면 안에 JSON 파싱 · HTTP · BlobStore 를 두지 않는다.

@@ -3730,6 +3730,18 @@
   ],
   "announcements": [
     {
+      "id": "ann10",
+      "franchiseId": "gundam",
+      "date": "2026-10-24",
+      "title": "가르쳐 줘! 건프라 컨시어지!! #283",
+      "status": "공식 발표",
+      "source": "THE GUNDAM BASE YouTube",
+      "image": "assets/gp/ann/yt_ciF6OFBrz4M.jpg",
+      "hero": false,
+      "liveAt": "2026-10-26T21:00:00",
+      "liveState": "upcoming"
+    },
+    {
       "id": "ann01",
       "franchiseId": "gundam",
       "date": "2026-10-16",

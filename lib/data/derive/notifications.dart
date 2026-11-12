@@ -9,8 +9,8 @@ Future<List<AppNotice>> deriveNotifications() async {
   return [for (final r in store.state.inbox) noticeOf(r, _cat.byId[r.kitId])];
 }
 
-/// 알림함 한 줄 → 화면 모델
-AppNotice noticeOf(NoticeRecord r, Kit? kit) => r.isAnnStage
+/// 알림함 한 줄 → 화면 모델 (예고 단계 · 처음 보인 라이브 = 누르면 그 예고)
+AppNotice noticeOf(NoticeRecord r, Kit? kit) => r.isAnnStage || r.isLive
     ? AppNotice(
         id: r.id,
         type: NoticeType.announce,
