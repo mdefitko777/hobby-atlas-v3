@@ -190,7 +190,8 @@ class _AppShellState extends State<AppShell> {
     // ann:<franchise>:<예고 id> → 공식 예고 (예고 단계 알림 · 라이브 예정 · 라이브 시작 전)
     if (payload.split(':') case ['ann', final ch, final id]) {
       try {
-        final a = (await widget.loaders.announcements([ch])).where((a) => a.id == id).firstOrNull;
+        // 뒤 작업이 건 라이브 알림은 이 기기 예고 파일보다 새것일 수 있다 → 없으면 새 데이터를 보고 다시 찾는다
+        final a = await findAnnouncement(widget.loaders, ch, id, onSlow: _toastFetching);
         if (!mounted) return;
         if (a != null) return openAnnouncement(context, a, loaders: widget.loaders);
       } on ApiException catch (e) {
@@ -201,9 +202,7 @@ class _AppShellState extends State<AppShell> {
     if (kitId.isNotEmpty) {
       _notify.markKitRead(kitId);
       // 「새 상품」은 이 기기 목록에 아직 없을 수 있다 — 새 데이터를 받아 찾는 동안 기다린다는 것을 알려 준다
-      final slow = Timer(const Duration(milliseconds: 800), () {
-        if (mounted) showToast(context, tr('새 데이터를 받는 중이에요 · 잠시만요'));
-      });
+      final slow = Timer(const Duration(milliseconds: 800), _toastFetching);
       try {
         final kits = await widget.loaders.kitsByIds([kitId]);
         slow.cancel();
@@ -220,6 +219,10 @@ class _AppShellState extends State<AppShell> {
       }
     }
     if (mounted) openNotifications(context, myChannels: _myChannels, loaders: widget.loaders, notify: _notify);
+  }
+
+  void _toastFetching() {
+    if (mounted) showToast(context, tr('새 데이터를 받는 중이에요 · 잠시만요'));
   }
 
   /// 다른 앱에서 "공유 → Hobby Atlas" 로 받은 사진 · 글 · 주소 → 사진 · 공유로 찾기 (E-8 · E-15)

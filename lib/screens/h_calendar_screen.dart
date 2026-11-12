@@ -729,7 +729,7 @@ List<HelpItem> get calendarHelp => [
   HelpItem(Icons.calendar_month_outlined, tr('전체 일정')),
   HelpItem(Icons.person_outline, tr('내 일정 (좋아요 · 구매함)')),
   HelpItem.dot(Gp.accent, tr('발매')),
-  HelpItem.dot(Gp.faint, tr('공식 예고 · 공지 · 라이브 (방송하는 날)')),
+  HelpItem.dot(Gp.faint, tr('공식 예고 · 공지 · 라이브 (시작하는 날)')),
   HelpItem.dot(Gp.danger, tr('PB 예약 마감 (내 일정)')),
   HelpItem.dot(Gp.own, tr('산 날 (내 일정)')),
   HelpItem.dot(Gp.reserve, tr('예약 도착 (내 일정)')),

@@ -1,5 +1,7 @@
 // 화면이 부르는 데이터 함수 — v3: Gunpula 실제 데이터(lib/data/catalog.dart) + 내 기록(lib/data/user_store.dart).
 // 화면 코드는 이 파일의 fetch…() 함수만 부른다. 테스트는 Loaders 에 가짜 함수를 넣는다.
+import 'dart:async';
+
 import 'data/bbx_builder_data.dart';
 import 'data/catalog.dart';
 import 'data/derive.dart';
@@ -101,6 +103,26 @@ Future<BbxBuilderData> fetchBbxBuilder() => _guard(deriveBbxBuilder);
 /// 캘린더 · 홈: 공식 예고
 Future<List<Announcement>> fetchAnnouncements(List<String> channelIds) =>
     _guard(() => channelIds.isEmpty ? Future.value(const <Announcement>[]) : deriveAnnouncements(channelIds));
+
+/// 알림(휴대폰 알림 · 알림함)에서 여는 예고 하나. 못 찾으면 이 기기 예고 파일이 옛것일 수 있다 — 라이브 알림은 뒤 작업이
+/// 새 예고 파일을 먼저 보고 보낸다 (상품의 [fetchKitsByIds] 와 같은 길): 받는 중이면 끝날 때까지, 아니면 manifest 를
+/// 한 번 더 보고 바뀌었으면 받은 뒤 다시 찾는다. [onSlow] = 기다림이 길어질 때 한 번 (「받는 중」 토스트)
+Future<Announcement?> findAnnouncement(Loaders loaders, String channelId, String id, {void Function()? onSlow}) async {
+  Future<Announcement?> look() async => (await loaders.announcements([channelId])).where((a) => a.id == id).firstOrNull;
+  final found = await look();
+  if (found != null) return found;
+  final slow = Timer(const Duration(milliseconds: 800), () => onSlow?.call());
+  try {
+    final changed = await Catalog.instance
+        .checkForNewData(maxAge: missingKitRecheck)
+        .timeout(missingKitWait, onTimeout: () => false);
+    return changed ? await look() : null;
+  } on CatalogException {
+    return null; // 인터넷이 없다 — 없는 것으로 (부르는 쪽이 알림 화면으로)
+  } finally {
+    slow.cancel();
+  }
+}
 
 /// 알림: 최근 것부터
 Future<List<AppNotice>> fetchNotifications() => _guard(deriveNotifications);

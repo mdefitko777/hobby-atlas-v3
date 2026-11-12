@@ -11,12 +11,12 @@
 import 'dart:convert';
 import 'dart:ui' show DartPluginRegistrant;
 
-import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:workmanager/workmanager.dart';
 
 import '../data/blob_store.dart';
+import '../data/catalog.dart' show Catalog;
 import '../data/gunpula.dart' show gunpulaBase, gunpulaRawBase, gunpulaUserAgent, manifestSignature;
 import '../l10n/l10n.dart';
 import '../json_util.dart';
@@ -219,8 +219,7 @@ Future<CheckOutcome> runCatalogCheck({
   final announcements = _decode(annText);
   final gotLive = annText != null && jMap(announcements)['announcements'] is List;
   // 발행 직후 CDN 이 옛 파일을 주면(지문이 다름) 읽은 것은 쓰되 지문은 적지 않는다 → 다음 확인에서 다시 받는다
-  final verified =
-      gotLive && annHash.isNotEmpty && sha256.convert(utf8.encode(annText)).toString().substring(0, 16) == annHash;
+  final verified = gotLive && annHash.isNotEmpty && Catalog.auxMatches(annText, annHash);
   final plan = planCheck(
     streams: gotLive ? parseLiveStreams(announcements, at) : null,
     liveKey: verified ? annHash : (gotLive && before.liveKey.isEmpty ? '-' : null), // '-' = 읽기는 했다 (처음이 아님)

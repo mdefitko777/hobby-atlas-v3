@@ -193,7 +193,7 @@ class _NotifySettingsScreenState extends State<NotifySettingsScreen> {
               _ruleSwitch(
                 'live_soon',
                 Icons.live_tv_outlined,
-                tr('내 채널 공식 라이브 30분쯤 전 · 새로 올라온 라이브 (당일에 올라온 것은 앱을 열지 않으면 놓칠 수 있어요)'),
+                tr('내 채널 공식 라이브 시작 30분쯤 전 · 새로 올라온 라이브 (당일에 올라온 것은 앱을 열지 않으면 놓칠 수 있어요)'),
               ),
             ],
           ),

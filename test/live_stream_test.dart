@@ -194,14 +194,14 @@ void main() {
     test('오늘 · 내일 · 그 밖은 날짜', () {
       expect(label(DateTime(2026, 11, 14, 9)), '라이브 · 오늘 21:00');
       expect(label(DateTime(2026, 11, 13, 23, 30)), '라이브 · 내일 21:00');
-      expect(label(DateTime(2026, 11, 10)), '라이브 · 11/14 21:00');
+      expect(label(DateTime(2026, 11, 10)), '라이브 · 11.14 21:00');
       expect(label(DateTime(2026, 11, 14, 9), when: DateTime(2026, 11, 14, 9, 5)), '라이브 · 오늘 09:05');
     });
 
     test('하는 중 · 끝남 · 시간 미정', () {
       expect(label(DateTime(2026, 11, 14, 21, 30)), '라이브 중');
-      expect(label(DateTime(2026, 11, 15)), '다시보기 · 11/14');
-      expect(label(DateTime(2026, 11, 10), state: 'ended'), '다시보기 · 11/14');
+      expect(label(DateTime(2026, 11, 15)), '다시보기 · 11.14');
+      expect(label(DateTime(2026, 11, 10), state: 'ended'), '다시보기 · 11.14');
       expect(liveLabel(LiveStage.undated, null, DateTime(2026, 11, 10)), '라이브 예정 · 시간 미정');
       expect(liveLabel(LiveStage.ended, null, DateTime(2026, 11, 10)), '다시보기');
     });
@@ -210,9 +210,9 @@ void main() {
       L10n.debugSet(AppLang.zh);
       expect(label(DateTime(2026, 11, 14, 9)), '直播 · 今天 21:00');
       expect(label(DateTime(2026, 11, 13, 9)), '直播 · 明天 21:00');
-      expect(label(DateTime(2026, 11, 10)), '直播 · 11/14 21:00');
+      expect(label(DateTime(2026, 11, 10)), '直播 · 11.14 21:00');
       expect(label(DateTime(2026, 11, 14, 21, 30)), '直播中');
-      expect(label(DateTime(2026, 11, 15)), '回放 · 11/14');
+      expect(label(DateTime(2026, 11, 15)), '回放 · 11.14');
       expect(liveLabel(LiveStage.undated, null, DateTime(2026, 11, 10)), '即将直播 · 时间未定');
     });
   });
@@ -402,6 +402,18 @@ void main() {
       expect(pulled.cancel, [liveReminderId('live-ebd6d015a6')]);
       expect(pulled.schedule, isEmpty);
       expect(pulled.scheduled.keys, ['live-5b79e87f56']);
+      // 당겨져서 벌써 하는 중이어도 거둔다 — 그대로 두면 옛 시각 30분 전에 "라이브 21:00 시작"이 뒤늦게 뜬다
+      final started = plan(
+        first.scheduled,
+        list: [streams[0], moved(streams[1], now.subtract(const Duration(minutes: 10)))],
+      );
+      expect(started.cancel, [liveReminderId('live-ebd6d015a6')]);
+      expect(started.schedule, isEmpty);
+      expect(started.scheduled.keys, ['live-5b79e87f56']);
+      // 시각은 그대로인데 언어만 바꾼 뒤 방송 중이면 떠 있는 알림을 건드리지 않는다
+      final onAir = plan(first.scheduled, at: _day1.add(const Duration(minutes: 5)), lang: 'zh');
+      expect(onAir.cancel, isEmpty);
+      expect(onAir.scheduled['live-ebd6d015a6'], first.scheduled['live-ebd6d015a6']);
     });
 
     test('화면 언어를 바꾸면 새 언어로 다시 건다', () {
@@ -435,11 +447,11 @@ void main() {
       expect(r.kind, 'live');
       expect(r.channel, 'live');
       expect(r.seen, isFalse);
-      expect(r.body, '라이브 예정 · 11/${_day1.day} ${liveClock(_day1)} · TAMASHII NATION 2026');
+      expect(r.body, '라이브 예정 · 11.${_day1.day} ${liveClock(_day1)} · TAMASHII NATION 2026');
       expect(NotifyState.isInboxId(r.id), isTrue);
       final alert = buildAlerts([r]).single;
       expect(alert.channel, 'live');
-      expect(alert.title, '라이브 예정 · 11/${_day1.day} ${liveClock(_day1)}');
+      expect(alert.title, '라이브 예정 · 11.${_day1.day} ${liveClock(_day1)}');
       expect(alert.body, 'TAMASHII NATION 2026 Live Stream from AKIHABARA DAY1');
       expect(alert.payload, 'ann:gundam:live-ebd6d015a6');
       final notice = noticeOf(NoticeRecord.fromJson(r.toJson())!, null);

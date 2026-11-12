@@ -910,7 +910,7 @@ List<SystemAlert> buildAlerts(Iterable<NoticeRecord> fresh) {
       );
     }
   }
-  // 처음 보인 라이브: 제목 = 때 ("라이브 예정 · 11/14 21:00"), 둘째 줄 = 방송 이름. 누르면 그 예고
+  // 처음 보인 라이브: 제목 = 때 ("라이브 예정 · 11.14 21:00"), 둘째 줄 = 방송 이름. 누르면 그 예고
   for (final r in live.where((r) => r.channel == 'live')) {
     out.add(
       SystemAlert(

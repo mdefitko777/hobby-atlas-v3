@@ -79,7 +79,7 @@ Color liveColor(LiveStage stage) => switch (stage) {
   _ => Gp.muted,
 };
 
-/// 공식 예고 꼬리표 하나 — 라이브면 때(라이브 · 오늘 21:00 · 라이브 중 · 다시보기 · 11/12), 아니면 예고 단계.
+/// 공식 예고 꼬리표 하나 — 라이브면 때(라이브 · 오늘 21:00 · 라이브 중 · 다시보기 · 11.12), 아니면 예고 단계.
 /// 홈 배너 · 예고 목록 · 예고 상세 위 띠가 같은 것을 쓴다. [onPhoto] = 사진 위에 올릴 때 (흰 반투명 알약)
 class AnnTag extends StatelessWidget {
   const AnnTag(this.item, {super.key, this.onPhoto = false});

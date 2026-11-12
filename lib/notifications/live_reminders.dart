@@ -1,5 +1,5 @@
 // 공식 라이브 알림 — 규칙 「라이브 시작 전」(live_soon) 하나로:
-//   · 처음 보인 라이브 → 알림함 줄 `stream-<예고 id>` ("라이브 예정 · 11/14 21:00"). id 에 상태를 넣지 않아
+//   · 처음 보인 라이브 → 알림함 줄 `stream-<예고 id>` ("라이브 예정 · 11.14 21:00"). id 에 상태를 넣지 않아
 //     live_state 가 upcoming → live → ended 로 바뀌어도 다시 울리지 않는다
 //   · 시작 30분 전 휴대폰 알림 → 안드로이드에 미리 맡겨 둔다 (LocalNotifier.applyLive, 앱이 꺼져 있어도 뜬다).
 //     무엇을 걸고 · 다시 걸고 · 거둘지는 여기서 정한다 (planLiveReminders)
@@ -126,7 +126,7 @@ String liveReminderSig(DateTime at, String lang) => '${at.toUtc().toIso8601Strin
 ///  - 건다: 내 채널 · 시작 시각이 있고 · 아직 시작 전 · 알릴 시각(시작 30분 전)이 [liveMargin] 넘게 남은 것.
 ///    걸려 있지 않거나 지문이 다르면(시각이 바뀜 · 언어를 바꿈) 다시
 ///  - 거둔다: [enabled] 가 꺼짐(새 소식 알림 · 규칙) · 목록에서 사라짐 · 끝남 · 내 채널에서 빠짐 · 시간 미정이 됨 ·
-///    시각이 바뀌었는데 새 알릴 시각이 이미 지남
+///    시각이 바뀌었는데 새 알릴 시각이 이미 지남(당겨져 벌써 하는 중인 것 포함)
 ///  - 그대로: 알릴 시각이 지났고(떴거나 곧 뜬다) 아직 안 끝난 것 — 거두면 떠 있는 알림이 지워진다
 LiveReminderPlan planLiveReminders({
   required List<LiveStream> streams,
@@ -151,11 +151,14 @@ LiveReminderPlan planLiveReminders({
       continue;
     }
     final sameTime = e.value.split('|').first == at.toUtc().toIso8601String();
-    final late = !_canRemind(at, now);
-    if (e.value == liveReminderSig(at, lang) || s.stage(now) == LiveStage.live || (sameTime && late)) {
+    // 이제는 새로 걸 수 없다 — 알릴 시각이 지났거나 이미 하는 중
+    final late = !_canRemind(at, now) || s.stage(now) != LiveStage.upcoming;
+    if (e.value == liveReminderSig(at, lang) || (sameTime && late)) {
       next[e.key] = e.value; // 언어만 바뀌었는데 이미 떴으면 그대로 둔다
     } else if (late) {
-      cancel.add(liveReminderId(e.key)); // 옛 시각에 걸린 것 — 새 시각에는 이미 늦었다
+      // 옛 시각에 걸린 것 — 새 시각에는 이미 늦었다. 당겨져서 벌써 하는 중일 때도 거둔다
+      // (그대로 두면 옛 시각 30분 전에 "라이브 21:00 시작"이 뒤늦게 뜬다)
+      cancel.add(liveReminderId(e.key));
     }
   }
   for (final s in byId.values) {

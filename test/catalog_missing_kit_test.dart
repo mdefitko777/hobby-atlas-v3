@@ -5,6 +5,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hobby_atlas/api.dart';
 import 'package:hobby_atlas/data/blob_store.dart';
@@ -171,5 +172,67 @@ void main() {
     expect(await quiet, isFalse);
     expect(kitGets, k0 + 1);
     expect(c.lastChangeQuiet, isFalse);
+  });
+
+  test('알림의 예고(라이브)가 이 기기 예고 파일에 없으면 → 새 예고 파일을 받아 찾는다', () async {
+    // 뒤 작업은 새 announcements.json 으로 「라이브 예정」 · 시작 전 알림을 건다 — 그 알림을 눌렀을 때 앱의 예고 파일은 옛것
+    BlobStore.debugDirectory = Directory.systemTemp.createTempSync('ha_missing_ann');
+    Map<String, Object?> ann(String id) => {
+      'id': id,
+      'franchise': 'gundam',
+      'names': {'ja': id},
+      'status': 'announced',
+      'announced_at': '2026-11-12',
+    };
+    var anns = jsonEncode({
+      'announcements': [ann('news-old')],
+    });
+    var annGets = 0;
+    Catalog.debugClient = MockClient((req) async {
+      final p = req.url.path;
+      if (p.endsWith('split/manifest.json')) {
+        final hash = sha256.convert(utf8.encode(anns)).toString().substring(0, 16);
+        return http.Response('{"updated_at":"2026-11-12","total":1,"files":{"announcements.json":"$hash"}}', 200);
+      }
+      if (p.endsWith('split/kits-fate.json')) {
+        return http.Response(
+          jsonEncode({
+            'kits': [_kit('fate-old', '세이버')],
+          }),
+          200,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        );
+      }
+      if (p.contains('split/kits-')) return http.Response('{"kits":[]}', 200);
+      if (p.endsWith('data/announcements.json')) {
+        annGets++;
+        return http.Response(anns, 200, headers: {'content-type': 'application/json; charset=utf-8'});
+      }
+      return http.Response('', 404);
+    });
+    addTearDown(() => Catalog.debugClient = null);
+    final c = Catalog.instance..debugForget();
+    await c.ensureLoaded();
+    const loaders = Loaders();
+    expect((await findAnnouncement(loaders, 'gundam', 'news-old'))?.id, 'news-old');
+    final gets = annGets;
+    // 방금 확인한 목록에 없는 id — 1분 안에는 다시 받지 않는다
+    var slow = 0;
+    expect(await findAnnouncement(loaders, 'gundam', 'live-new', onSlow: () => slow++), isNull);
+    expect(annGets, gets);
+
+    // 새 라이브가 올라왔다 (상품은 그대로 · 예고 파일 지문만 바뀜). 앱을 새로 켠 것처럼: 캐시 → 뒤에서 받는 중
+    anns = jsonEncode({
+      'announcements': [
+        ann('news-old'),
+        {...ann('live-new'), 'live_at': '2026-11-13T21:00:00+09:00', 'live_state': 'upcoming'},
+      ],
+    });
+    c.debugForget();
+    final found = await findAnnouncement(loaders, 'gundam', 'live-new', onSlow: () => slow++);
+    expect(found?.id, 'live-new');
+    expect(found?.isStream, isTrue);
+    expect(annGets, gets + 1);
+    expect(slow, 0, reason: '금방 끝난 받기에는 「받는 중」을 띄우지 않는다');
   });
 }

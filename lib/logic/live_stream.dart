@@ -31,20 +31,21 @@ LiveStage? annLiveStage(Announcement a, DateTime now) =>
 /// '21:00'
 String liveClock(DateTime at) => shortDateTime(at).split(' ').last;
 
-/// 시작 때: 오늘 21:00 · 내일 21:00 · 11/14 21:00 ([relative] 를 끄면 늘 날짜 — 알림함처럼 오래 남는 글)
+/// 시작 때: 오늘 21:00 · 내일 21:00 · 11.14 21:00 ([relative] 를 끄면 늘 날짜 — 알림함처럼 오래 남는 글)
 String liveWhen(DateTime at, DateTime now, {bool relative = true}) {
-  final days = DateTime(at.year, at.month, at.day).difference(DateTime(now.year, now.month, now.day)).inDays;
+  // 날짜 차이는 UTC 자정끼리 — 서머타임이 바뀌는 날(하루가 23시간)에도 내일이 0일로 세어지지 않게
+  final days = DateTime.utc(at.year, at.month, at.day).difference(DateTime.utc(now.year, now.month, now.day)).inDays;
   final time = liveClock(at);
   if (relative && days == 0) return trf('오늘 {time}', {'time': time});
   if (relative && days == 1) return trf('내일 {time}', {'time': time});
-  return '${at.month}/${at.day} $time';
+  return '${at.month}.${at.day} $time';
 }
 
-/// 꼬리표 글: 라이브 · 오늘 21:00 / 라이브 중 / 다시보기 · 11/12 / 라이브 예정 · 시간 미정
+/// 꼬리표 글: 라이브 · 오늘 21:00 / 라이브 중 / 다시보기 · 11.12 / 라이브 예정 · 시간 미정
 String liveLabel(LiveStage stage, DateTime? at, DateTime now) => switch (stage) {
   LiveStage.upcoming when at != null => trf('라이브 · {when}', {'when': liveWhen(at, now)}),
   LiveStage.live => tr('라이브 중'),
-  LiveStage.ended => at == null ? tr('다시보기') : trf('다시보기 · {date}', {'date': '${at.month}/${at.day}'}),
+  LiveStage.ended => at == null ? tr('다시보기') : trf('다시보기 · {date}', {'date': '${at.month}.${at.day}'}),
   _ => tr('라이브 예정 · 시간 미정'),
 };
 

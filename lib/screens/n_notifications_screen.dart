@@ -237,8 +237,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           showToast(context, tr('이 상품은 지금 카탈로그에 없어요'));
         }
       } else if (n.annId.isNotEmpty) {
-        final anns = await widget.loaders.announcements([n.franchiseId]);
-        final a = anns.where((a) => a.id == n.annId).firstOrNull;
+        // 라이브 줄은 뒤 작업이 새 예고 파일로 만든다 — 이 기기 파일에 없으면 새 데이터를 보고 다시 찾는다
+        final a = await findAnnouncement(
+          widget.loaders,
+          n.franchiseId,
+          n.annId,
+          onSlow: () {
+            if (mounted) showToast(context, tr('새 데이터를 받는 중이에요 · 잠시만요'));
+          },
+        );
         if (mounted && a != null) openAnnouncement(context, a, loaders: widget.loaders);
       } else if (n.friend.isNotEmpty) {
         final p = await widget.loaders.profile();
