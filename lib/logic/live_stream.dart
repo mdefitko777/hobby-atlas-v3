@@ -31,6 +31,8 @@ LiveStage? annLiveStage(Announcement a, DateTime now) =>
 /// '21:00'
 String liveClock(DateTime at) => shortDateTime(at).split(' ').last;
 
+/// 시작 때: 오늘 21:00 · 내일 21:00 · 11.14 21:00 ([relative] 를 끄면 늘 날짜 — 알림함처럼 오래 남는 글).
+/// 날짜는 앱의 다른 날짜(dateDot)처럼 점으로 쓴다
 /// 시작 때: 오늘 21:00 · 내일 21:00 · 11.14 21:00 ([relative] 를 끄면 늘 날짜 — 알림함처럼 오래 남는 글)
 String liveWhen(DateTime at, DateTime now, {bool relative = true}) {
   // 날짜 차이는 UTC 자정끼리 — 서머타임이 바뀌는 날(하루가 23시간)에도 내일이 0일로 세어지지 않게
