@@ -7,7 +7,7 @@
 // │ N-3  │ 알림 줄: 사진 · 제목 · 한 줄 · 시간 · 점 │ 안 읽음 = 굵은 제목 + 하늘색 점          │ P01 · P04     │
 // │ N-4  │ 줄 누르기 → 읽음 + 이동               │ 상품 상세 · 공고 · 친구 프로필 · 친구 요청 │ P07          │
 // │ N-5  │ Dismissible → 토스트(되돌리기)        │ 밀어서 지우기                           │ P03 · P05     │
-// │ N-6  │ AppBar: 모두 읽음 · ⚙                │ 한 번에 읽음 · 알림 설정(K)              │ P07           │
+// │ N-6  │ AppBar: 모두 읽음 · ⚙                │ 한 번에 읽음 · 알림 설정(K 알림 페이지)    │ P07           │
 // │ N-10 │ AppBar 오른쪽 ? (HelpButton)       │ 알림 종류 아이콘 · 밀어서 지우기 · ⚙      │ P10           │
 // │ N-9  │ RefreshIndicator                   │ 당겨서 새 소식 확인                      │ P10           │
 // │ N-7  │ 바텀 시트: 수락 · 거절                │ 친구 요청 응답 (Gunpula v3 respond_friend) │ P05        │
@@ -34,7 +34,7 @@ import '../widgets.dart';
 import 'd_kit_detail_screen.dart';
 import 'i_profile_screen.dart';
 import 'j_announcement_screen.dart';
-import 'k_settings_screen.dart';
+import 'k_notify_settings.dart';
 import '../clock.dart';
 
 /// 프로토타입의 "지금" (캘린더의 오늘과 같은 날 저녁)
@@ -337,7 +337,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               ),
               IconButton(
                 tooltip: tr('알림 설정'),
-                onPressed: () => openSettings(context),
+                onPressed: () => openNotifySettings(context, notify: _store),
                 icon: const Icon(Icons.settings_outlined),
               ),
               HelpButton(title: tr('알림'), items: notificationsHelp), // N-10

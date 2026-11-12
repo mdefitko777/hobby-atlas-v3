@@ -18,6 +18,7 @@ import 'package:hobby_atlas/screens/d_kit_detail_screen.dart';
 import 'package:hobby_atlas/screens/f_collection_screen.dart';
 import 'package:hobby_atlas/screens/g_guide_view.dart';
 import 'package:hobby_atlas/screens/i_profile_screen.dart';
+import 'package:hobby_atlas/screens/k_notify_settings.dart';
 import 'package:hobby_atlas/screens/k_settings_screen.dart';
 import 'package:hobby_atlas/screens/l_friend_collection_screen.dart';
 import 'package:hobby_atlas/screens/n_notifications_screen.dart';
@@ -112,7 +113,8 @@ void main() {
       loaders: fakeLoaders,
       notify: NotifyStore.memory(),
     ),
-    '설정 (알림 규칙)': () => SettingsScreen(notify: NotifyStore.memory()),
+    '설정': () => SettingsScreen(notify: NotifyStore.memory()),
+    '알림 설정 (내 상품 · 채널별)': () => NotifySettingsScreen(notify: NotifyStore.memory()),
     '작품 도감': () => WorkGuideScreen(work: seed, loaders: fakeLoaders),
   };
 

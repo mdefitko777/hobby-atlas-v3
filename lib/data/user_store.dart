@@ -88,7 +88,7 @@ class UserStore extends ChangeNotifier with _AtlasLocal, _History, _ProfileLocal
   /// 내 채널 (채널 바 · 알림 범위). 처음 설치하면 건담 · 베이블레이드 · 포켓몬
   final List<String> myChannels = [...defaultMyChannels];
 
-  /// 레고 보기 범위 (설정 › 데이터) — 처음 값은 최근 정식 세트
+  /// 레고 보기 범위 (검색 탭 › 레고) — 처음 값은 최근 정식 세트
   LegoScope legoScope = LegoScope.recent;
 
   /// 친구 쪽 기기 기록 (아바타 · 배경 · 사진 공개 범위 · 알 수도 있는 친구 닫음 · 서랍 본 시각) — lib/data/social_local.dart

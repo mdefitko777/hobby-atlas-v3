@@ -13,6 +13,7 @@
 // │ B-9  │ 탭 "전체" (처음) → SectionListView │ 내 채널 상품 전부                        │ P07 · P06     │
 // │ B-14 │ UnderlineTab 전체 · 종류 · 세대      │ 둘러보기 세 가지 (검색창 줄 아래, 컬렉션 탭 줄과 같은 자리) │ P06 · P04 │
 // │ B-15 │ 탭 "종류" · "세대" → TypeBrowse · EraBrowse (B-20 · B-21) │ 공식 그림 + 이름만 → 그 분류 상품 (같은 필터) │ P06 · P08 │
+// │ B-16 │ B-14 줄 오른쪽 글자 단추 → 아래 시트   │ 레고 채널만: 레고 범위 (최근 정식 세트 · 전부) — 검색창 줄 아이콘은 세 칸 그대로 │ P06 · P10 │
 // │ B-12 │ GuideHits (guide/guide_search.dart) │ 검색어에 맞는 작품 · 기체 → 도감(그 기체 시트) │ P07 · P06 │
 // │ B-13 │ 결과 위 "기체별로 묶기" + GroupedResults │ 결과를 기체별로 묶기 (상품 n · 가짐 m) — 검색창 폭은 그대로 │ P01 · P07 │
 // │ B-8  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 결과 없음          │ P01 · P09     │
@@ -29,6 +30,7 @@ import '../api.dart';
 import '../data/user_store.dart';
 import '../channels.dart';
 import '../logic/kit_rules.dart';
+import '../logic/lego_scope.dart';
 import '../marks.dart';
 import '../models.dart';
 import '../logic/sentence_search.dart';
@@ -238,7 +240,7 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
     );
   }
 
-  /// B-14 전체 · 종류 · 세대 (컬렉션의 좋아요 · 예약 · 구매함과 같은 밑줄 탭)
+  /// B-14 전체 · 종류 · 세대 (컬렉션의 좋아요 · 예약 · 구매함과 같은 밑줄 탭) + 레고 채널이면 B-16 범위
   Widget _viewTabs() => Padding(
     padding: const EdgeInsets.fromLTRB(6, 2, 6, 2),
     child: Row(
@@ -252,12 +254,65 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             onTap: () => setState(() => _view = i), // STATE: 둘러보기 → 전체 · 종류 · 세대
           ),
+        if (channel == 'lego') ...[const Spacer(), _legoScopeButton()],
       ],
     ),
   );
 
-  /// B-14 · B-15 둘러보기 본문 — 전체 = 상품 목록, 종류 · 세대 = 분류 칸 (같은 필터)
-  Widget _browse(List<Kit> kits) => switch (_view) {
+  /// B-16 레고 범위 — 설정에 있던 것을 레고 채널 안으로 (2026-11-12). 검색창 줄은 모든 탭이 아이콘 세 칸이라
+  /// (test/find_filter_test.dart) 넷째 아이콘 대신 둘러보기 줄 오른쪽 글자 단추
+  Widget _legoScopeButton() => Tooltip(
+    message: tr('레고 범위'),
+    child: TextButton.icon(
+      key: const Key('lego-scope'),
+      style: TextButton.styleFrom(foregroundColor: Gp.muted, padding: const EdgeInsets.symmetric(horizontal: 8)),
+      icon: const Icon(Icons.toys_outlined, size: Gp.iS),
+      label: Text(_legoScopeLabel(UserStore.instance.legoScope), style: const TextStyle(fontSize: Gp.t12)),
+      onPressed: _pickLegoScope,
+    ),
+  );
+
+  static String _legoScopeLabel(LegoScope v) => v == LegoScope.recent ? tr('최근 정식 세트') : tr('전부');
+
+  Future<void> _pickLegoScope() async {
+    // Catalog 가 듣는 것은 UserStore.instance (기기 저장 · 계정 맞추기 lego_scope)
+    final me = UserStore.instance;
+    final picked = await showGpSheet<LegoScope>(
+      context,
+      builder: (sheet) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SectionHeader(tr('레고 범위'), padding: const EdgeInsets.fromLTRB(20, 0, 8, 4)),
+            for (final v in LegoScope.values)
+              ListTile(
+                key: Key('lego-scope-${v.name}'),
+                title: Text(_legoScopeLabel(v)),
+                subtitle: Text(
+                  v == LegoScope.all
+                      ? tr('Rebrickable 의 레고 전부 (굿즈 · 책 · 옛 세트까지)')
+                      : trf('{year}년부터 나온 정식 세트 · 미니피규어', {'year': legoRecentFromYear}),
+                ),
+                trailing: v == me.legoScope ? const Icon(Icons.check, color: Gp.accent) : null,
+                onTap: () => Navigator.pop(sheet, v),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (picked == null || picked == me.legoScope || !mounted) return;
+    // STATE: 레고 범위 (저장 · 동기화) → Catalog 가 바로 다시 거르고, 이 화면은 그 목록을 다시 부른다.
+    // 앱 셸은 보고 있는 탭을 다시 만들지 않는다 (만들면 고른 채널이 전체로 돌아간다 — Catalog.refilter)
+    me.setLegoScope(picked);
+    setState(reloadScope);
+  }
+
+  /// B-14 · B-15 둘러보기 본문 — 전체 = 상품 목록, 종류 · 세대 = 분류 칸 (같은 필터).
+  /// 레고 범위가 바뀌면 통째로 새로 (종류 · 세대 칸은 채널이 바뀔 때만 다시 묶는다)
+  Widget _browse(List<Kit> kits) => KeyedSubtree(key: ValueKey(UserStore.instance.legoScope), child: _browseView(kits));
+
+  Widget _browseView(List<Kit> kits) => switch (_view) {
     1 => ListenableBuilder(
       // B-15 종류 (B-20 · 검색창 줄 필터가 칸을 거른다)
       listenable: _tools,
@@ -552,4 +607,5 @@ List<HelpItem> searchHelp() => [
   HelpItem(Icons.view_list_outlined, tr('목록으로 보기')),
   HelpItem(Icons.account_tree_outlined, tr('검색 결과를 기체별로 묶기')),
   HelpItem(Icons.manage_search, tr('설명으로 찾기 예')),
+  HelpItem(Icons.toys_outlined, tr('레고 채널: 레고 범위 (최근 정식 세트 · 전부)')),
 ];

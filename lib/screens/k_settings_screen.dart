@@ -3,14 +3,13 @@
 // ┌──────── 디자인 가이드 대응표: K 설정 ──────────────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
 // │ K-0  │ ListTile × 3 (로그인 · 상태 · 로그아웃) │ 계정 · 동기화 (옛 Gunpula 와 같은 계정)   │ P01 · P05 · P10 │
-// │ K-1  │ SwitchListTile × 2                 │ 새 소식 알림(휴대폰) · 내 채널 소식만      │ P03 · P07     │
-// │ K-5  │ FilterChip 묶음 2개                 │ 알림 규칙: 관심 항목 · 세계관 전체          │ P04 · P05     │
-// │ K-6  │ ListTile · 대화상자                  │ 마지막 확인 · 지금 확인                  │ P10           │
+// │ K-3  │ ListTile(요약 · ›) → 알림(쌓기)      │ 알림: 켜짐 · 규칙 n개 / 꺼짐 (k_notify_settings.dart) │ P01 · P07 │
 // │ K-2  │ ListTile → 고르는 시트              │ 언어: 한국어(기본) · 中文                │ P04 · P10     │
 // │ K-4  │ ListTile                           │ 상품 데이터 기준일 · 지금 새로 받기 · 버전 │ P10           │
 // │ K-7  │ ListTile → HelpScreen(쌓기)          │ 도움말: 도감 칸(늘 컬러 · ♡ · 리본 · 내 사진) · 색 · 데이터 출처 · 알림 · 업데이트 │ P10 │
 // └──────────────────────────────────────────────────────────────────────────────────┘
-// 전환: 앱 셸 ⚙ → 쌓기(push, 오른쪽에서). 도움말 → 쌓기.
+// 전환: 앱 셸 ⚙ → 쌓기(push, 오른쪽에서). 알림 · 도움말 → 쌓기.
+// 레고 범위는 검색 탭 레고 채널로 옮겼다 (2026-11-12, 레고 설정은 레고에서).
 // 언어: 한국어(기본) · 中文. 중국어면 화면 글(lib/l10n) · 상품 이름(Gunpula names.zh) · 공지 번역(ML Kit 일→중) · 알림이 중국어.
 // 기기마다 따로 고른다 (lang.json, 계정에 맞추지 않음).
 // 로그인 → P 로그인 화면(쌓기). 로그아웃 → 확인 대화상자(덮기).
@@ -23,15 +22,12 @@ import '../l10n/l10n.dart';
 import '../sync/account.dart';
 import '../sync/sync_service.dart';
 import '../notifications/local_notifier.dart';
-import '../notifications/notify_models.dart';
 import '../notifications/notify_store.dart';
 import '../theme.dart';
 import '../update/update_ui.dart';
 import '../widgets.dart';
-import 'notify_condition_sheet.dart';
+import 'k_notify_settings.dart';
 import 'p_sign_in_screen.dart';
-import '../data/user_store.dart' show UserStore;
-import '../logic/lego_scope.dart';
 
 void openSettings(BuildContext context) {
   openPage(context, const SettingsScreen());
@@ -51,44 +47,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late final NotifyStore _n = widget.notify ?? NotifyScope.read(context);
   bool _refreshing = false;
 
-  /// 휴대폰 설정에서 이 앱 알림이 켜져 있나 (안드로이드에서만, 모르면 null)
+  /// 휴대폰 설정에서 이 앱 알림이 켜져 있나 (안드로이드에서만, 모르면 null) — 꺼져 있으면 알림 줄 요약이 "꺼짐"
   bool? _permitted;
+  late bool _wasEnabled = _n.config.enabled;
 
   @override
   void initState() {
     super.initState();
     _checkPermission();
+    _n.addListener(_onNotify);
+  }
+
+  @override
+  void dispose() {
+    _n.removeListener(_onNotify);
+    super.dispose();
+  }
+
+  /// 알림 페이지에서 켜며 권한을 받고 돌아오면 요약이 "꺼짐"으로 남지 않게 — 켜고 끌 때만 권한을 다시 본다
+  void _onNotify() {
+    if (_n.config.enabled == _wasEnabled) return;
+    _wasEnabled = _n.config.enabled;
+    _checkPermission();
   }
 
   Future<void> _checkPermission() async {
     final p = await LocalNotifier.permitted();
-    if (mounted && p != _permitted) setState(() => _permitted = p); // STATE: 휴대폰 알림 권한 → 안내 문구
-  }
-
-  /// K-1 새 소식 알림: 켜면 안드로이드 13+ 권한 창
-  Future<void> _setNotify(bool on) async {
-    final ok = await _n.setEnabled(on);
-    if (!mounted) return;
-    await _checkPermission();
-    if (!mounted) return;
-    if (!ok) {
-      showToast(context, tr('알림 권한이 꺼져 있어요 · 휴대폰 설정 › 애플리케이션 › Hobby Atlas › 알림에서 켤 수 있어요'));
-    } else if (on && !LocalNotifier.supported) {
-      showToast(context, tr('웹 미리보기에서는 휴대폰 알림을 보내지 않아요 · 알림 화면에는 모여요'));
-    }
-  }
-
-  Future<void> _checkNow() async {
-    final r = await _n.checkNow(force: true);
-    if (!mounted) return;
-    showToast(
-      context,
-      r == null
-          ? tr('이미 확인 중이에요')
-          : (r.error.isNotEmpty
-                ? r.error
-                : (r.liveCount == 0 ? tr('새 소식이 없어요') : trf('새 알림 {n}개', {'n': r.liveCount}))),
-    );
+    if (mounted && p != _permitted) setState(() => _permitted = p); // STATE: 휴대폰 알림 권한 → 알림 줄 요약
   }
 
   Future<void> _refresh() async {
@@ -201,99 +186,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  /// K-1 · K-5 · K-6 알림
-  Widget _notifySection() {
-    final c = _n.config;
-    Widget chip(String key) => FilterChip(
-      label: Text(tr(notifyRuleLabels[key] ?? key)),
-      selected: c.rule(key),
-      showCheckmark: false,
-      selectedColor: Gp.accent.withValues(alpha: 0.14),
-      side: BorderSide(color: c.rule(key) ? Gp.accent : Gp.line),
-      onSelected: (v) => _n.setRule(key, v), // STATE: 규칙 → 다음 확인부터 (저장)
-    );
-    Widget chips(String title, List<String> keys) => Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
-          ),
-          const SizedBox(height: 6),
-          Wrap(spacing: 6, runSpacing: 6, children: [for (final k in keys) chip(k)]),
-        ],
-      ),
-    );
-    final blocked = c.enabled && _permitted == false;
-    return SectionPanel(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SectionHeader(tr('알림')),
-          SwitchListTile(
-            // K-1 P03
-            secondary: const Icon(Icons.notifications_none),
-            title: Text(tr('새 소식 알림')),
-            subtitle: blocked ? Text(tr('휴대폰 설정에서 알림이 꺼져 있어요')) : null,
-            value: c.enabled && _permitted != false,
-            activeThumbColor: Gp.accent,
-            onChanged: _setNotify, // STATE: 알림 스위치 (저장 · 권한 요청)
-          ),
-          SwitchListTile(
-            secondary: const Icon(Icons.filter_alt_outlined),
-            title: Text(tr('내 채널 소식만')),
-            value: c.onlyMine,
-            activeThumbColor: Gp.accent,
-            onChanged: _n.setOnlyMine, // STATE: 채널 범위 (저장)
-          ),
-          // K-5 어떤 새 상품이 나오면 알릴지 (켠 것만)
-          chips(tr('이런 새 상품이 나오면 알림'), notifyInterestRules),
-          chips(tr('이 채널 새 상품은 전부 알림'), notifyWorldRules),
-          // 내가 만든 조건: 채널 · 작품(캐릭터) · 종류
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 2),
-            child: Text(
-              tr('골라서 알림 (채널 · 작품 · 종류)'),
-              style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
-            ),
-          ),
-          for (final x in c.conditions)
-            ListTile(
-              dense: true,
-              leading: const Icon(Icons.notifications_active_outlined, size: 20),
-              title: Text(conditionLabel(x)),
-              trailing: IconButton(
-                tooltip: tr('지우기'),
-                icon: const Icon(Icons.close, size: 18, color: Gp.faint),
-                onPressed: () => _n.removeCondition(x.id), // STATE: 조건 지우기 (저장)
-              ),
-            ),
-          ListTile(
-            dense: true,
-            leading: const Icon(Icons.add, size: 20, color: Gp.accent),
-            title: Text(tr('조건 추가'), style: const TextStyle(color: Gp.accent)),
-            onTap: () async {
-              final x = await pickNotifyCondition(context);
-              if (x != null) _n.addCondition(x); // STATE: 조건 추가 (저장)
-            },
-          ),
-          ListTile(
-            // K-6
-            leading: const Icon(Icons.history),
-            title: Text(tr('새 소식 확인')),
-            subtitle: Text(_n.shortStatus),
-            trailing: _n.checking
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                : TextButton(onPressed: _checkNow, child: Text(tr('지금 확인'))),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final cat = Catalog.instance;
@@ -323,33 +215,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                       : TextButton(onPressed: _refresh, child: Text(tr('지금 새로 받기'))),
                 ),
-                // 레고: 최근 정식 세트(2015~, 굿즈 · 책 · 폴리백 빼고) · 전부 (Rebrickable 2.8만 개)
-                ListTile(
-                  leading: const Icon(Icons.toys_outlined),
-                  title: Text(tr('레고 범위')),
-                  subtitle: Text(
-                    UserStore.instance.legoScope == LegoScope.all
-                        ? tr('Rebrickable 의 레고 전부 (굿즈 · 책 · 옛 세트까지)')
-                        : trf('{year}년부터 나온 정식 세트 · 미니피규어', {'year': legoRecentFromYear}),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                  child: SquareSegments<LegoScope>(
-                    values: LegoScope.values,
-                    current: UserStore.instance.legoScope,
-                    child: (v) => Text(v == LegoScope.recent ? tr('최근 정식 세트') : tr('전부')),
-                    // STATE: 레고 범위 (저장 · 동기화) — 목록은 Catalog 가 UserStore 를 듣고 다시 거른다
-                    onPick: (v) => setState(() => UserStore.instance.setLegoScope(v)),
-                  ),
-                ),
               ],
             ),
           ),
-          ListenableBuilder(
-            // 알림 설정은 NotifyStore 한 벌 (🔔 · 알림 화면과 같은 값, 기기에 저장)
-            listenable: _n,
-            builder: (context, _) => _notifySection(),
+          SectionPanel(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: ListenableBuilder(
+              // 알림 설정은 NotifyStore 한 벌 (🔔 · 알림 화면과 같은 값, 기기에 저장)
+              listenable: _n,
+              builder: (context, _) => ListTile(
+                // K-3 P07 — 규칙 · 채널별 설정은 알림 페이지에
+                key: const Key('settings-notify'),
+                leading: const Icon(Icons.notifications_none),
+                title: Text(tr('알림')),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      notifySummary(_n.config, permitted: _permitted),
+                      style: const TextStyle(color: Gp.muted),
+                    ),
+                    const Icon(Icons.chevron_right, color: Gp.faint),
+                  ],
+                ),
+                onTap: () => openNotifySettings(context, notify: _n),
+              ),
+            ),
           ),
           SectionPanel(
             padding: const EdgeInsets.only(bottom: 6),
@@ -470,6 +361,7 @@ class HelpScreen extends StatelessWidget {
                   tr('Gunpula 가 공식 사이트에서 매일 모아요 (BANDAI SPIRITS · 포켓몬센터 …)'),
                 ),
                 tip(Icons.toys_outlined, tr('레고 정보'), tr('Rebrickable (rebrickable.com) 의 레고 카탈로그 데이터를 써요')),
+                tip(Icons.toys_outlined, tr('레고 범위'), tr('검색 탭 › 레고 채널 › 전체 · 종류 · 세대 줄 오른쪽')),
                 tip(Icons.payments_outlined, tr('가격'), tr('일본 정가만 · 국내 시세는 상세에서 검색으로')),
                 tip(Icons.flag_outlined, tr('틀린 정보'), tr('상품 상세 맨 아래 › 제보 (GitHub)')),
               ],
@@ -483,6 +375,7 @@ class HelpScreen extends StatelessWidget {
                 SectionHeader(tr('알림')),
                 tip(Icons.schedule, tr('12시간마다 확인'), tr('앱을 열 때도 한 번 더')),
                 tip(Icons.today_outlined, tr('좋아요한 상품'), tr('발매 D-7 · D-1 · 당일 (발매일이 정해진 것만)')),
+                tip(Icons.notifications_none, tr('새 상품 (채널별)'), tr('설정 › 알림 › 채널을 누르면 전부 · 규칙 · 골라서 알림')),
               ],
             ),
           ),

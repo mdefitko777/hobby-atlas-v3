@@ -43,11 +43,19 @@ const notifyInterestRules = [
 ];
 const notifyWorldRules = ['gundam', 'armored_core', 'pokemon', 'fate', 'madoka', 'lego'];
 
+/// 알림 화면(k_notify_settings.dart)의 자리 — 내 상품 = 채널과 상관없이, 나머지는 채널 시트.
+/// 키 · 저장 모양은 그대로 두고 화면에서 묶는 곳만 나눴다 (2026-11-12, 한 줄 칩 목록이 길어서)
+const notifyMineRules = ['wanted', 'release_soon', 'restock', 'preorder_arrival'];
+const notifyChannelRules = <String, List<String>>{
+  'gundam': ['seed_00', 'premium_bandai', 'pb_window'],
+  'beyblade': ['bbx'],
+};
+
 const notifyRuleLabels = <String, String>{
   'premium_bandai': 'PB (프리미엄 반다이)',
   'seed_00': 'SEED / 00',
   'bbx': 'BBX',
-  'wanted': '좋아요한 상품',
+  'wanted': '좋아요한 상품 소식',
   'pb_window': 'PB 예약 기간',
   'release_soon': '발매 D-7 · D-1',
   'restock': '재판매',
@@ -251,7 +259,7 @@ class NotifyConfig {
   /// 내가 만든 알림 조건 (내 채널 소식만이어도 채널과 상관없이 본다)
   final List<NotifyCondition> conditions;
 
-  /// 설정 › 레고 범위가 "전부"인지 (최근 정식 세트면 그 밖의 레고는 알리지 않는다)
+  /// 레고 범위(검색 탭 › 레고)가 "전부"인지 (최근 정식 세트면 그 밖의 레고는 알리지 않는다)
   bool legoAll;
 
   bool rule(String key) => rules[key] ?? notifyRuleDefaults[key] ?? false;

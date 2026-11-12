@@ -6,14 +6,16 @@ import 'package:hobby_atlas/clock.dart';
 import 'package:hobby_atlas/data/derive.dart' show noticeOf;
 import 'package:hobby_atlas/data/user_store.dart';
 import 'package:hobby_atlas/detail_pane.dart';
-import 'package:hobby_atlas/logic/lego_scope.dart';
 import 'package:hobby_atlas/marks.dart';
 import 'package:hobby_atlas/notifications/notify_models.dart';
 import 'package:hobby_atlas/notifications/notify_store.dart';
+import 'package:hobby_atlas/screens/k_notify_settings.dart';
 import 'package:hobby_atlas/screens/k_settings_screen.dart';
+import 'package:hobby_atlas/screens/notify_condition_sheet.dart' show conditionLabel;
 import 'package:hobby_atlas/screens/n_notifications_screen.dart';
 import 'package:hobby_atlas/screens/s_app_shell.dart';
 import 'package:hobby_atlas/theme.dart';
+import 'package:hobby_atlas/widgets.dart' show GradientButton;
 
 import 'layout_test.dart' show fakeLoaders;
 
@@ -154,36 +156,108 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('설정: 알림 규칙 칩 · 내 채널 소식만 스위치가 알림 설정에 남는다', (tester) async {
+  test('알림 페이지 자리: 규칙 키는 하나도 빠지지 않고 내 상품 · 채널 전체 · 채널 규칙 중 한 곳에', () {
+    final placed = [...notifyMineRules, ...notifyWorldRules, for (final l in notifyChannelRules.values) ...l];
+    expect(placed.toSet(), notifyRuleDefaults.keys.toSet());
+    expect(placed, hasLength(notifyRuleDefaults.length), reason: '두 곳에 있으면 한쪽만 바뀌어 보인다');
+  });
+
+  test('요약: 설정 줄 "켜짐 · 규칙 n개" · 채널 줄 "전부 · SEED/00 · PB … · 끔"', () {
+    final c = NotifyConfig();
+    expect(notifySummary(c), '켜짐 · 규칙 8개'); // 처음 켜져 있는 규칙 8개
+    expect(notifySummary(c, permitted: false), '꺼짐');
+    expect(channelNotifySummary(c, 'gundam', mine: true), 'SEED/00 · PB · PB 예약');
+    expect(channelNotifySummary(c, 'beyblade', mine: true), 'BBX');
+    expect(channelNotifySummary(c, 'fate', mine: true), '끔');
+    c.rules['gundam'] = true;
+    expect(channelNotifySummary(c, 'gundam', mine: true), '전부');
+    // 내 채널 소식만 + 내 채널 밖: 규칙은 걸리지 않는다 (PB 예약 기간 · 내가 만든 조건만)
+    expect(channelNotifySummary(c, 'gundam', mine: false), 'PB 예약');
+    c.conditions.add(const NotifyCondition(franchise: 'fate', scope: 'group:saber', scopeLabel: '세이버'));
+    expect(channelNotifySummary(c, 'fate', mine: false), '조건 1개');
+    expect(notifySummary(c), '켜짐 · 규칙 10개');
+    c.enabled = false;
+    expect(notifySummary(c), '꺼짐');
+  });
+
+  Finder inRow(Key row, String text) => find.descendant(of: find.byKey(row), matching: find.text(text));
+
+  testWidgets('설정: 알림은 한 줄 (요약 · ›) → 알림 페이지', (tester) async {
     final store = NotifyStore.memory();
-    await pumpApp(tester, SettingsScreen(notify: store), size: const Size(390, 1800));
-    expect(find.text('PB (프리미엄 반다이)'), findsOneWidget);
-    expect(store.config.rule('gundam'), isFalse);
-    await tester.tap(find.text('건담 전체'));
+    await pumpApp(tester, SettingsScreen(notify: store), size: const Size(390, 1400));
+    const row = Key('settings-notify');
+    expect(inRow(row, notifySummary(store.config)), findsOneWidget);
+    expect(find.byType(SwitchListTile), findsNothing, reason: '규칙 스위치 · 칩은 알림 페이지에');
+    store.setRule('wanted', false);
     await tester.pump();
-    expect(store.config.rule('gundam'), isTrue);
-    await tester.tap(find.text('SEED / 00'));
-    await tester.pump();
-    expect(store.config.rule('seed_00'), isFalse);
-    await tester.tap(find.text('내 채널 소식만'));
-    await tester.pump();
-    expect(store.config.onlyMine, isFalse);
-    expect(find.text('아직 확인하지 않았어요'), findsOneWidget);
+    expect(inRow(row, notifySummary(store.config)), findsOneWidget);
+    await tester.tap(find.byKey(row));
+    for (var i = 0; i < 4; i++) {
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+    expect(find.byType(NotifySettingsScreen), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('설정: 레고 범위 — 전부 · 최근 정식 세트', (tester) async {
-    await pumpApp(tester, SettingsScreen(notify: NotifyStore.memory()), size: const Size(390, 1800));
-    expect(UserStore.instance.legoScope, LegoScope.recent);
-    expect(find.text('$legoRecentFromYear년부터 나온 정식 세트 · 미니피규어'), findsOneWidget);
-    await tester.tap(find.text('전부'));
+  testWidgets('알림 페이지: 내 상품 스위치 · 내 채널 소식만 · 확인 줄이 NotifyConfig 에 남는다', (tester) async {
+    final store = NotifyStore.memory();
+    await pumpApp(tester, NotifySettingsScreen(notify: store), size: const Size(390, 2000));
+    for (final k in notifyMineRules) {
+      expect(store.config.rule(k), isTrue);
+      await tester.tap(find.byKey(Key('rule-$k')));
+      await tester.pump();
+      expect(store.config.rule(k), isFalse, reason: k);
+    }
+    await tester.tap(find.byKey(const Key('notify-only-mine')));
     await tester.pump();
-    expect(UserStore.instance.legoScope, LegoScope.all);
-    expect(find.text('Rebrickable 의 레고 전부 (굿즈 · 책 · 옛 세트까지)'), findsOneWidget);
-    await tester.tap(find.text('최근 정식 세트'));
+    expect(store.config.onlyMine, isFalse);
+    expect(find.text(store.shortStatus), findsOneWidget); // 마지막 확인
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('알림 페이지: 채널 줄 요약 → 채널 시트 (전체 · 채널 규칙 · 그 채널 조건 · 조건 추가)', (tester) async {
+    final seed = const NotifyCondition(franchise: 'gundam', scope: 'series:seed', scopeLabel: 'SEED');
+    final fate = const NotifyCondition(franchise: 'fate', scope: 'group:saber', scopeLabel: '세이버');
+    // 데이터가 없는 채널에 남은 조건 (예전에 고른 것) — 지울 줄이 있어야 한다
+    final rider = const NotifyCondition(franchise: 'kamen_rider');
+    final store = NotifyStore.memory(config: NotifyConfig(conditions: [seed, fate, rider]));
+    await pumpApp(tester, NotifySettingsScreen(notify: store), size: const Size(390, 2400));
+    const gundam = Key('notify-channel-gundam');
+    expect(inRow(gundam, channelNotifySummary(store.config, 'gundam', mine: true)), findsOneWidget);
+    expect(find.byKey(const Key('notify-channel-lego')), findsOneWidget, reason: '내 채널 밖도 (더 많은 채널)');
+    expect(find.byKey(const Key('notify-channel-kamen_rider')), findsOneWidget, reason: '조건이 남은 채널');
+    expect(find.byKey(const Key('notify-channel-zoids')), findsNothing, reason: '데이터도 조건도 없는 채널');
+
+    Future<void> settle() async {
+      for (var i = 0; i < 4; i++) {
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+    }
+
+    await tester.tap(find.byKey(gundam));
+    await settle();
+    for (final k in ['gundam', 'seed_00', 'premium_bandai', 'pb_window']) {
+      expect(find.byKey(Key('rule-$k')), findsOneWidget, reason: k);
+    }
+    expect(find.byKey(const Key('rule-bbx')), findsNothing);
+    expect(find.text(conditionLabel(seed)), findsOneWidget);
+    expect(find.text(conditionLabel(fate)), findsNothing, reason: '다른 채널 조건은 그 채널 시트에');
+
+    await tester.tap(find.byKey(const Key('rule-gundam')));
     await tester.pump();
-    expect(UserStore.instance.legoScope, LegoScope.recent);
-    await tester.pump(const Duration(seconds: 1)); // 저장 (0.4초 뒤)
+    expect(store.config.rule('gundam'), isTrue);
+    expect(inRow(gundam, channelNotifySummary(store.config, 'gundam', mine: true)), findsOneWidget);
+
+    // 조건 추가 = 조건 시트 그대로, 채널은 정해져 있다
+    await tester.tap(find.byKey(const Key('notify-add-condition')));
+    await settle();
+    await tester.tap(find.byType(GradientButton));
+    await settle();
+    expect(store.config.conditions.map((x) => x.id), contains('gundam||'));
+
+    await tester.tap(find.byIcon(Icons.close).first); // SEED 조건 지우기
+    await tester.pump();
+    expect(store.config.conditions.map((x) => x.id), isNot(contains(seed.id)));
     expect(tester.takeException(), isNull);
   });
 

@@ -13,12 +13,16 @@ import '../notifications/notify_models.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
-/// 조건 하나를 골라 돌려준다 (닫으면 null)
-Future<NotifyCondition?> pickNotifyCondition(BuildContext context) =>
-    showGpSheet<NotifyCondition>(context, heightFactor: gpSheetHeight, builder: (_) => const _ConditionSheet());
+/// 조건 하나를 골라 돌려준다 (닫으면 null). [channel] 을 주면 그 채널로 정해 두고 채널 줄은 숨긴다 (알림 › 채널 시트)
+Future<NotifyCondition?> pickNotifyCondition(BuildContext context, {String? channel}) => showGpSheet<NotifyCondition>(
+  context,
+  heightFactor: gpSheetHeight,
+  builder: (_) => _ConditionSheet(channel: channel),
+);
 
 class _ConditionSheet extends StatefulWidget {
-  const _ConditionSheet();
+  const _ConditionSheet({this.channel});
+  final String? channel;
 
   @override
   State<_ConditionSheet> createState() => _ConditionSheetState();
@@ -33,16 +37,31 @@ class _ConditionSheetState extends State<_ConditionSheet> {
   (String, String) _scope = ('', '');
   String _line = '';
 
-  Future<void> _pickChannel(String id) async {
-    setState(() {
-      _channel = id;
-      _scope = ('', '');
-      _line = '';
-      _scopes = const [];
-      _lines = _linesOf(id);
-    });
+  @override
+  void initState() {
+    super.initState();
+    if (widget.channel case final id?) {
+      _select(id);
+      _loadScopes(id);
+    }
+  }
+
+  void _select(String id) {
+    _channel = id;
+    _scope = ('', '');
+    _line = '';
+    _scopes = const [];
+    _lines = _linesOf(id);
+  }
+
+  Future<void> _loadScopes(String id) async {
     final scopes = await _scopesOf(id);
     if (mounted && _channel == id) setState(() => _scopes = scopes);
+  }
+
+  void _pickChannel(String id) {
+    setState(() => _select(id));
+    _loadScopes(id);
   }
 
   static List<String> _linesOf(String channel) {
@@ -113,10 +132,11 @@ class _ConditionSheetState extends State<_ConditionSheet> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
               children: [
-                _step(tr('채널'), [
-                  for (final c in allChannels)
-                    if (c.hasData) _chip(tr(c.label), ch == c.id, () => _pickChannel(c.id)),
-                ]),
+                if (widget.channel == null)
+                  _step(tr('채널'), [
+                    for (final c in allChannels)
+                      if (c.hasData) _chip(tr(c.label), ch == c.id, () => _pickChannel(c.id)),
+                  ]),
                 if (ch != null && _scopes.isNotEmpty)
                   _step(
                     switch (ch) {

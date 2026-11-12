@@ -284,7 +284,7 @@ void main() {
       expect(ruleHits(set, c), contains('lego'));
       expect(ruleHits(gear, c), isEmpty);
       expect(ruleHits(old, c), isEmpty);
-      c.legoAll = true; // 설정 › 레고 범위 › 전부
+      c.legoAll = true; // 레고 범위 › 전부 (검색 탭 › 레고)
       expect(ruleHits(gear, c), contains('lego'));
       expect(NotifyConfig.fromJson(c.toJson()).legoAll, isTrue);
     });

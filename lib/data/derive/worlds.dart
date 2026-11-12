@@ -82,7 +82,7 @@ String? atlasGroupLabel(String channelId, String groupId, {required bool zh}) {
   return null;
 }
 
-/// 묶음의 상품 id — 레고는 설정 › 레고 범위에서 보이는 것만
+/// 묶음의 상품 id — 레고는 레고 범위(검색 탭 › 레고)에서 보이는 것만
 List<String> _worldIds(String channelId, Object? grp) {
   final ids = jList(jMap(grp)['kit_ids']).whereType<String>();
   return channelId == 'lego'

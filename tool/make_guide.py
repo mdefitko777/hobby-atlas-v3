@@ -27,7 +27,7 @@ SCREENS = [
     ('I', '내 정보 (친구 보기 · 사진 보기 포함)', ['lib/screens/i_profile_screen.dart']),
     ('L', '친구 컬렉션', ['lib/screens/l_friend_collection_screen.dart']),
     ('N', '알림', ['lib/screens/n_notifications_screen.dart']),
-    ('K', '설정', ['lib/screens/k_settings_screen.dart']),
+    ('K', '설정 (알림 페이지 포함)', ['lib/screens/k_settings_screen.dart', 'lib/screens/k_notify_settings.dart']),
     ('V', '공유 카드 (내 컬렉션 · 도감 진행 그림)', ['lib/screens/v_share_sheet.dart']),
     ('W', '처음 데이터 받기', ['lib/screens/w_first_run_screen.dart']),
     ('X', '조립 설명서', ['lib/screens/x_manual_screen.dart']),

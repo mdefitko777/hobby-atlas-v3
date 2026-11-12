@@ -28,6 +28,7 @@ import 'package:hobby_atlas/screens/g_guide_view.dart';
 import 'package:hobby_atlas/screens/h_calendar_screen.dart';
 import 'package:hobby_atlas/screens/i_profile_screen.dart';
 import 'package:hobby_atlas/screens/j_announcement_screen.dart';
+import 'package:hobby_atlas/screens/k_notify_settings.dart';
 import 'package:hobby_atlas/screens/k_settings_screen.dart';
 import 'package:hobby_atlas/screens/l_friend_collection_screen.dart';
 import 'package:hobby_atlas/screens/m_friends_drawer.dart';
@@ -271,6 +272,21 @@ void main() {
     await t.enterText(find.byType(TextField), _noHit);
     await settle(t);
     snap(t, '검색 결과 없음');
+    // 레고 채널: 둘러보기 줄 오른쪽 범위 · 그 시트
+    await show(
+      t,
+      '검색 레고',
+      Scaffold(
+        body: SearchScreen(
+          myChannels: const ['lego'],
+          onMyChannelsChanged: (_) {},
+          onCamera: () {},
+          loaders: fakeLoaders,
+        ),
+      ),
+    );
+    await tap(t, '검색 레고', find.byWidgetPredicate((w) => w is UnderlineTab && w.label == tr('레고')));
+    await tap(t, '레고 범위', find.byKey(const Key('lego-scope')));
   });
 
   testWidgets('상품 상세', (t) async {
@@ -282,6 +298,7 @@ void main() {
 
   testWidgets('설정 · 로그인', (t) async {
     await explore(t, '설정', () => SettingsScreen(notify: NotifyStore.memory()), rows: true);
+    await explore(t, '알림 설정', () => NotifySettingsScreen(notify: NotifyStore.memory()), rows: true);
     await show(t, '도움말', const HelpScreen());
     await show(t, '로그인', const SignInScreen());
   });

@@ -74,7 +74,7 @@ class Catalog extends ChangeNotifier {
 
   /// 마지막 [version] 변화가 뒤에서 알아서 받은 것인가 (켤 때 · 돌아올 때 · 알림 상품 찾기).
   /// 앱 셸은 이때 지금 보고 있는 탭을 바로 다시 만들지 않는다 (검색어 · 스크롤을 지킨다).
-  /// false = 사람이 고른 것 (당겨서 새로 고침 · 지금 새로 받기 · 레고 범위)
+  /// false = 사람이 고른 것 (당겨서 새로 고침 · 지금 새로 받기)
   bool lastChangeQuiet = false;
 
   List<Kit> kits = const [];
@@ -153,12 +153,14 @@ class Catalog extends ChangeNotifier {
     });
   }
 
-  /// 레고 범위를 바꾸면 보이는 목록(kits)만 다시 거른다 — Kit 은 다시 만들지 않는다
+  /// 레고 범위를 바꾸면 보이는 목록(kits)만 다시 거른다 — Kit 은 다시 만들지 않는다.
+  /// 조용히(quiet): 범위는 검색 탭 레고 채널에서 고르고 그 화면이 스스로 다시 부른다 — 앱 셸이 보고 있는 탭을
+  /// 다시 만들면 고른 채널이 전체로 돌아간다 (2026-11-12). 다른 탭 · 다른 기기에서 맞춘 것은 떠날 때 다시 만든다
   void refilter() {
     if (_all.isEmpty) return;
     _applyScope();
     version++;
-    lastChangeQuiet = false;
+    lastChangeQuiet = true;
     notifyListeners();
   }
 
@@ -497,7 +499,7 @@ class Catalog extends ChangeNotifier {
         : DateTime.parse(latest).subtract(const Duration(days: 2)).toIso8601String().substring(0, 10);
     final now = DateTime.now();
     final monthPrefix = monthKey(now);
-    // 레고는 설정 › 레고 범위 (최근 정식 세트 · 전부) — 상품은 다 만들어 두고(byId: 좋아요 · 구매함 · 알림이
+    // 레고는 레고 범위 (검색 탭 › 레고, 최근 정식 세트 · 전부) — 상품은 다 만들어 두고(byId: 좋아요 · 구매함 · 알림이
     // 범위 밖 상품도 찾는다) 둘러보는 목록(kits)만 거른다
     final outOfScope = <String>{};
     for (final s in _slim) {

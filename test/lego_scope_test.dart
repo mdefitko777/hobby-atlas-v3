@@ -1,8 +1,19 @@
-// 레고 보기 범위 — 최근 정식 세트 (2015~, 번호 4~6자리, 폴리백 · 굿즈 · 책 빼고)
+// 레고 보기 범위 — 최근 정식 세트 (2015~, 번호 4~6자리, 폴리백 · 굿즈 · 책 빼고) · 고르는 곳 = 검색 탭 레고 채널
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hobby_atlas/clock.dart';
 import 'package:hobby_atlas/data/catalog.dart';
 import 'package:hobby_atlas/data/user_store.dart';
+import 'package:hobby_atlas/detail_pane.dart';
+import 'package:hobby_atlas/l10n/l10n.dart';
 import 'package:hobby_atlas/logic/lego_scope.dart';
+import 'package:hobby_atlas/marks.dart';
+import 'package:hobby_atlas/screens/b_search_screen.dart';
+import 'package:hobby_atlas/sync/device_state.dart';
+import 'package:hobby_atlas/theme.dart';
+import 'package:hobby_atlas/widgets.dart';
+
+import 'layout_test.dart' show fakeLoaders;
 
 Map<String, Object?> lego(String number, String date, {String code = 'LEGO_SET', String series = 'lego_city'}) => {
   'franchiseId': 'lego',
@@ -54,6 +65,8 @@ void main() {
     expect(c.hiddenByScope('lego-75192-1'), isFalse);
     UserStore.instance.setLegoScope(LegoScope.all); // Catalog 가 듣고 목록만 다시 거른다
     expect(c.kits.map((k) => k.id), contains('lego-6089-1'));
+    // 조용히: 앱 셸이 보고 있는 탭(범위를 고른 검색 탭 레고 채널)을 다시 만들지 않는다
+    expect(c.lastChangeQuiet, isTrue);
     expect(c.hiddenByScope('lego-6089-1'), isFalse);
     UserStore.instance.setLegoScope(LegoScope.recent);
     expect(c.kits.map((k) => k.id), isNot(contains('lego-6089-1')));
@@ -63,5 +76,59 @@ void main() {
     UserStore.instance.setLegoScope(LegoScope.recent);
     final local = UserStore.instance.toJson()['local_state'] as Map;
     expect(local['lego_scope'], 'recent');
+  });
+
+  testWidgets('검색 탭 레고 채널: 둘러보기 줄 오른쪽에서 범위를 고른다 (검색창 줄 아이콘은 세 칸 그대로)', (tester) async {
+    fixedNow = DateTime(2026, 10, 25, 21);
+    UserStore.instance.setLegoScope(LegoScope.recent);
+    addTearDown(() => UserStore.instance.setLegoScope(LegoScope.recent));
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildGpTheme(),
+        builder: (context, child) => MarksHost(
+          store: UserStore.memory(),
+          child: PaneHost(child: child!),
+        ),
+        home: Scaffold(
+          body: SearchScreen(
+            myChannels: const ['gundam', 'lego'],
+            onMyChannelsChanged: (_) {},
+            onCamera: () {},
+            loaders: fakeLoaders,
+          ),
+        ),
+      ),
+    );
+    Future<void> settle() async {
+      for (var i = 0; i < 4; i++) {
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+    }
+
+    await settle();
+    const button = Key('lego-scope');
+    expect(find.byKey(button), findsNothing, reason: '레고 채널에서만');
+    await tester.tap(find.byWidgetPredicate((w) => w is UnderlineTab && w.label == tr('레고')));
+    await settle();
+    expect(find.byKey(button), findsOneWidget);
+    final row = find.byType(ToolRow).first;
+    expect(find.descendant(of: row, matching: find.byType(ToolIcon)), findsNWidgets(3));
+
+    final before = UserStore.instance.revision;
+    await tester.tap(find.byKey(button));
+    await settle();
+    await tester.tap(find.byKey(const Key('lego-scope-all')));
+    await settle();
+    expect(UserStore.instance.legoScope, LegoScope.all);
+    expect(UserStore.instance.revision, greaterThan(before)); // 저장 · 계정 맞추기 (lego_scope)
+    expect((UserStore.instance.toJson()['local_state'] as Map)['lego_scope'], 'all');
+    expect(builtInDeviceSections.map((s) => s.key), contains('lego_scope'));
+    expect(find.descendant(of: find.byKey(button), matching: find.text(tr('전부'))), findsOneWidget);
+    expect(find.byKey(button), findsOneWidget, reason: '고른 채널(레고)은 그대로');
+    await tester.pump(const Duration(seconds: 1));
+    expect(tester.takeException(), isNull);
   });
 }

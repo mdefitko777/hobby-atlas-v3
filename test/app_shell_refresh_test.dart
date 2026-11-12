@@ -109,7 +109,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('사람이 고른 새로 받기(당겨서 새로 고침 · 지금 새로 받기 · 레고 범위)는 보고 있는 탭도 바로 — 탭은 그대로', (tester) async {
+  testWidgets('사람이 고른 새로 받기(당겨서 새로 고침 · 지금 새로 받기)는 보고 있는 탭도 바로 — 탭은 그대로', (tester) async {
     var kitLoads = 0;
     await _pump(
       tester,

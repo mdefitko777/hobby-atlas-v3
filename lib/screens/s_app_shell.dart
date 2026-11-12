@@ -95,7 +95,7 @@ class _AppShellState extends State<AppShell> {
 
   /// 새 데이터(Catalog.version)를 받으면 탭 화면만 다시 만든다 — 셸(지금 탭 · 서랍 · 연 시트 · 오른쪽 칸)은 그대로.
   /// 탭마다 그 화면을 만든 데이터 세대. 뒤에서 알아서 받은 데이터(lastChangeQuiet)면 지금 보고 있는 탭은
-  /// 떠날 때 다시 만든다 (검색어 · 스크롤 · 연 목록을 지킨다). 당겨서 새로 고침 · 지금 새로 받기 · 레고 범위는 바로.
+  /// 떠날 때 다시 만든다 (검색어 · 스크롤 · 연 목록을 지킨다). 당겨서 새로 고침 · 지금 새로 받기는 바로.
   int _dataVersion = Catalog.instance.version;
   late final List<int> _pageGen = List.filled(_tabs.length, _dataVersion);
 
