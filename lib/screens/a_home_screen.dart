@@ -568,6 +568,8 @@ class _HorizontalRow extends StatelessWidget {
     final third = ((MediaQuery.sizeOf(context).width - 32 - 20) / 3).clamp(92.0, 150.0);
     final width = row.wide ? 232.0 : third;
     final aspect = row.wide ? 232 / 132 : 1.0;
+    // 화면 밖 몇 칸도 미리 받아 둔다 — 옆으로 밀거나 「전체 보기」를 열면 바로 보이게
+    prefetchImages(context, [for (final it in row.items.take(12)) it.image], size: width);
     return SizedBox(
       height: width / aspect + 32,
       child: ListView.separated(

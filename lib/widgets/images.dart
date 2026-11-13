@@ -1,13 +1,18 @@
 // 그림 한 곳 — 인터넷(캐시) · 앱 안 그림 · 내 사진(`local:파일`) 경로를 여기서만 가른다
-import 'dart:async' show scheduleMicrotask;
+import 'dart:async' show Completer, scheduleMicrotask;
+import 'dart:math' as math;
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'dart:ui' show ImageFilter;
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart' show SynchronousFuture;
 import 'package:flutter/material.dart';
 
 import '../data/catalog.dart' show Catalog;
+import '../data/net_image_files.dart';
 import '../data/photo_files.dart';
+import '../logic/image_size.dart';
 import '../l10n/l10n.dart';
 import '../models.dart' show Kit;
 import '../theme.dart';
@@ -18,6 +23,8 @@ import 'tags.dart' show SoftTag;
 /// [grayscale] = 흑백 (베이 조합 만들기의 안 가진 부품만 — 도감 칸은 늘 컬러)
 /// [nextOnError] = 못 열면 그 상품의 다음 사진으로 (목록 사진 [PhotoThumb] — 대표 사진 주소가 막혀도 회색 칸 대신 공식 사진.
 /// 상세 사진 넘기기 · 크게 보기는 [BrokenImages.keep] 이 장을 빼니 켜지 않는다)
+/// [fullSize] = 원본 주소 · 원본 크기로 풀기 (크게 보기 — 두 손가락으로 키운다). 나머지는 칸 크기만큼만 풀고,
+/// 작은 칸은 작은 그림 주소로 받는다 (lib/logic/image_size.dart)
 class AppImage extends StatelessWidget {
   const AppImage(
     this.path, {
@@ -26,26 +33,62 @@ class AppImage extends StatelessWidget {
     this.placeholder = '',
     this.grayscale = false,
     this.nextOnError = false,
-  }) : _rest = null;
+    this.fullSize = false,
+  }) : _rest = null,
+       _decodeScale = 1,
+       _noThumb = false;
 
   /// 앞 사진이 열리지 않아 이어 그리는 다음 사진 — [rest] = 그다음 후보들
   const AppImage._next(this.path, List<String> rest, {required this.fit, required this.placeholder})
     : grayscale = false,
       nextOnError = true,
-      _rest = rest;
+      fullSize = false,
+      _rest = rest,
+      _decodeScale = 1,
+      _noThumb = false;
+
+  /// 흐리게 깔 뒤 그림 — 칸의 1/4 로만 풀어도 흐림(sigma 18) 뒤에서는 차이가 없다
+  const AppImage._blurred(this.path)
+    : fit = BoxFit.cover,
+      placeholder = '',
+      grayscale = false,
+      nextOnError = false,
+      fullSize = false,
+      _rest = null,
+      _decodeScale = 0.25,
+      _noThumb = false;
+
+  /// 작은 그림이 열리지 않아 다시 그리는 같은 사진 — 원본 주소로 (다음 후보 · 흐린 뒤 그림 크기는 그대로)
+  AppImage._original(AppImage o)
+    : path = o.path,
+      fit = o.fit,
+      placeholder = o.placeholder,
+      grayscale = false, // 흑백은 바깥(처음 그린 쪽)이 이미 씌웠다
+      nextOnError = o.nextOnError,
+      fullSize = o.fullSize,
+      _rest = o._rest,
+      _decodeScale = o._decodeScale,
+      _noThumb = true;
 
   final String path;
   final BoxFit fit;
   final String placeholder;
   final bool grayscale;
   final bool nextOnError;
+  final bool fullSize;
   final List<String>? _rest;
+  final double _decodeScale;
+  final bool _noThumb;
 
-  /// 이 사진 다음 후보 중 아직 열리지 않은 적 없는 것 (앱을 켠 동안 [BrokenImages] 가 기억)
-  List<String> _alive() => [
-    for (final u in _rest ?? (nextOnError ? ImageAlternates.of(path) : const <String>[]))
-      if (u != path && !BrokenImages.has(u)) u,
-  ];
+  /// 이 사진 다음 후보 중 아직 열리지 않은 적 없는 것 (앱을 켠 동안 [BrokenImages] 가 기억).
+  /// 멈춘 서버([ImageHosts])의 사진은 뒤로 — 기다리지 않고 빨리 열리는 쪽부터
+  List<String> _alive() {
+    final all = [
+      for (final u in _rest ?? (nextOnError ? ImageAlternates.of(path) : const <String>[]))
+        if (u != path && !BrokenImages.has(u)) u,
+    ];
+    return [...all.where((u) => !ImageHosts.isDown(u)), ...all.where(ImageHosts.isDown)];
+  }
 
   /// 못 열었을 때 — 다음 후보가 있으면 그것, 없으면 이름 글자 자리표시
   Widget _failed() {
@@ -59,21 +102,12 @@ class AppImage extends StatelessWidget {
   Widget build(BuildContext context) {
     if (path.isEmpty) return _Placeholder(placeholder);
     if (path.startsWith(localPhotoPrefix)) return LocalPhotoImage(path.substring(localPhotoPrefix.length), fit: fit);
-    // 이미 열리지 않은 사진이면 다시 받지 않고 바로 다음 후보 (목록을 내렸다 올릴 때마다 막힌 주소를 또 부르지 않게)
-    final Widget img = nextOnError && BrokenImages.has(path) && _alive().isNotEmpty
+    // 이미 열리지 않은 사진 · 멈춘 서버의 사진이면 다시 받지 않고 바로 다음 후보
+    // (목록을 내렸다 올릴 때마다 막힌 주소를 또 부르지 않게 · 멈춘 서버를 기다리지 않게)
+    final Widget img = nextOnError && (BrokenImages.has(path) || ImageHosts.isDown(path)) && _alive().isNotEmpty
         ? _failed()
-        // 인터넷 사진은 기기에 남겨 두고(비행기 모드에서도 본 것은 보인다), 실패하면 다음 후보 · 이름 글자 자리표시
         : path.startsWith('http')
-        ? CachedNetworkImage(
-            imageUrl: path,
-            fit: fit,
-            fadeInDuration: const Duration(milliseconds: 150),
-            placeholder: (_, _) => const ColoredBox(color: Gp.soft),
-            errorWidget: (_, _, _) {
-              BrokenImages.mark(path);
-              return _failed();
-            },
-          )
+        ? LayoutBuilder(builder: _network)
         : Image.asset(
             path,
             fit: fit,
@@ -112,6 +146,151 @@ class AppImage extends StatelessWidget {
       ),
     );
   }
+
+  /// 인터넷 사진: 기기에 남겨 두고(비행기 모드에서도 본 것은 보인다 — [NetImageFiles]), 칸 크기만큼만 풀고,
+  /// 받는 동안은 바로 회색 칸. 실패하면 작은 그림 → 원본 → 다음 후보 → 이름 글자 자리표시
+  Widget _network(BuildContext context, BoxConstraints box) {
+    final dpr = MediaQuery.devicePixelRatioOf(context) * _decodeScale;
+    final w = decodeBucket(box.maxWidth * dpr);
+    final h = decodeBucket(box.maxHeight * dpr);
+    final url = fullSize || _noThumb ? path : networkImageUrl(path, math.max(w, h));
+    ImageProvider image = CachedNetworkImageProvider(url, cacheManager: NetImageFiles.manager);
+    final rule = _decodeFit(fit);
+    if (!fullSize && rule != null && (w.isFinite || h.isFinite)) {
+      image = BoxDecodeImage(image, width: w, height: h, fit: rule);
+    }
+    return Image(
+      image: image,
+      fit: fit,
+      // 원래는 cached_network_image 가 회색 칸을 그림 위에 얹고 1초 동안 걷어 내서(fadeOut 기본값),
+      // 기기에 있는 그림도 1초씩 늦게 보였다. 메모리에 있으면 바로, 아니면 짧게만 나타나게
+      frameBuilder: (_, child, frame, sync) => sync
+          ? child
+          : frame == null
+          ? const ColoredBox(color: Gp.soft)
+          : _FadeIn(child: child),
+      errorBuilder: (_, error, _) {
+        // 잠깐의 실패(시간 초과 · 멈춘 서버)는 기억하지 않는다 — 다음에 다시 그리면 다시 받는다
+        final transient = NetImageFiles.isTransient(error);
+        if (!transient) BrokenImages.mark(url);
+        // 작은 그림이 안 되면 원본부터 (작은 그림 서버만 느린 때도 — 원본은 다른 서버일 수 있다)
+        if (url != path) return AppImage._original(this);
+        return _failed();
+      },
+    );
+  }
+
+  static DecodeFit? _decodeFit(BoxFit fit) => switch (fit) {
+    BoxFit.cover => DecodeFit.cover,
+    BoxFit.contain || BoxFit.scaleDown => DecodeFit.contain,
+    BoxFit.fitWidth => DecodeFit.width,
+    BoxFit.fitHeight => DecodeFit.height,
+    BoxFit.fill => DecodeFit.fill,
+    BoxFit.none => null, // 원본 크기 그대로 그린다
+  };
+}
+
+/// 칸 긴 변이 [px](물리 px)일 때 받을 주소 — 작은 그림이 있고 열리지 않은 적 · 멈춘 서버가 아니면 그것
+/// (미리 받기도 같은 주소로)
+String networkImageUrl(String path, double px) {
+  final small = imageThumbUrl(path, px);
+  return small != path && !BrokenImages.has(small) && !ImageHosts.isDown(small) ? small : path;
+}
+
+class _FadeIn extends StatelessWidget {
+  const _FadeIn({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
+    tween: Tween(begin: 0, end: 1),
+    duration: const Duration(milliseconds: 120),
+    builder: (_, t, c) => Opacity(opacity: t, child: c),
+    child: child,
+  );
+}
+
+/// [inner] 를 칸([width]×[height] 물리 px)에 [fit] 으로 그릴 만큼만 푼다. Flutter ResizeImage 와 같은 길이지만,
+/// ResizeImage 는 「정확히 이 크기」 · 「안에 맞추기」뿐이라 잘라 채우기(cover)에서 그림이 작아지거나 일그러진다
+@immutable
+class BoxDecodeImage extends ImageProvider<BoxDecodeKey> {
+  const BoxDecodeImage(this.inner, {required this.width, required this.height, required this.fit});
+  final ImageProvider inner;
+  final double width;
+  final double height;
+  final DecodeFit fit;
+
+  @override
+  Future<BoxDecodeKey> obtainKey(ImageConfiguration configuration) {
+    // 안쪽 키가 바로 나오면 이 키도 바로 — 메모리에 있는 그림이 회색 칸 없이 그려지게 (ResizeImage 와 같은 방법)
+    Completer<BoxDecodeKey>? completer;
+    SynchronousFuture<BoxDecodeKey>? result;
+    inner.obtainKey(configuration).then((Object key) {
+      final k = BoxDecodeKey._(key, width, height, fit);
+      if (completer == null) {
+        result = SynchronousFuture<BoxDecodeKey>(k);
+      } else {
+        completer.complete(k);
+      }
+    });
+    if (result != null) return result!;
+    completer = Completer<BoxDecodeKey>();
+    return completer.future;
+  }
+
+  @override
+  ImageStreamCompleter loadImage(BoxDecodeKey key, ImageDecoderCallback decode) {
+    Future<ui.Codec> sized(ui.ImmutableBuffer buffer, {ui.TargetImageSizeCallback? getTargetSize}) => decode(
+      buffer,
+      getTargetSize: (iw, ih) {
+        final s = decodeSize(iw, ih, width, height, fit);
+        return s == null ? ui.TargetImageSize() : ui.TargetImageSize(width: s.width, height: s.height);
+      },
+    );
+    final completer = inner.loadImage(key._inner, sized);
+    // 안쪽(cached_network_image)은 실패하면 자기 키만 메모리 캐시에서 지운다 — 이 키도 지워야 다음에 그릴 때 다시 받는다
+    late final ImageStreamListener once;
+    once = ImageStreamListener(
+      (_, _) => completer.removeListener(once),
+      onError: (_, _) {
+        completer.removeListener(once);
+        scheduleMicrotask(() => PaintingBinding.instance.imageCache.evict(key));
+      },
+    );
+    completer.addListener(once);
+    return completer;
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is BoxDecodeImage &&
+      other.inner == inner &&
+      other.width == width &&
+      other.height == height &&
+      other.fit == fit;
+
+  @override
+  int get hashCode => Object.hash(inner, width, height, fit);
+}
+
+@immutable
+class BoxDecodeKey {
+  const BoxDecodeKey._(this._inner, this.width, this.height, this.fit);
+  final Object _inner;
+  final double width;
+  final double height;
+  final DecodeFit fit;
+
+  @override
+  bool operator ==(Object other) =>
+      other is BoxDecodeKey &&
+      other._inner == _inner &&
+      other.width == width &&
+      other.height == height &&
+      other.fit == fit;
+
+  @override
+  int get hashCode => Object.hash(_inner, width, height, fit);
 }
 
 /// 목록 사진의 다음 후보 — 대표 사진 주소 → 그 상품의 나머지 사진 (Kit.gallery, 대표 사진이 맨 앞).
@@ -318,7 +497,7 @@ class BlurFitImage extends StatelessWidget {
         ClipRect(
           child: ImageFiltered(
             imageFilter: ImageFilter.blur(sigmaX: blur, sigmaY: blur, tileMode: TileMode.clamp),
-            child: Transform.scale(scale: 1.15, child: AppImage(path)), // cover
+            child: Transform.scale(scale: 1.15, child: AppImage._blurred(path)), // cover
           ),
         ),
         ColoredBox(color: Colors.black.withValues(alpha: dim)),
@@ -460,12 +639,23 @@ class _ImageViewerScreenState extends State<ImageViewerScreen> {
           onPageChanged: (i) => setState(() => _page = i), // STATE: 몇 번째 그림
           itemBuilder: (_, i) => InteractiveViewer(
             maxScale: 5,
+            // 두 손가락으로 5배까지 키우니 원본 그대로
             child: Center(
-              child: AppImage(images[i], fit: BoxFit.contain, placeholder: widget.label),
+              child: AppImage(images[i], fit: BoxFit.contain, placeholder: widget.label, fullSize: true),
             ),
           ),
         ),
       );
     },
   );
+}
+
+/// 다음에 열 화면 · 옆으로 밀 줄의 그림을 기기에 받아 둔다 (풀지는 않는다). [size] = 그 사진 칸의 긴 변(dp) —
+/// 작은 그림 주소를 칸과 같게 고르려고. 안드로이드에서만, 지금 화면 그림이 먼저 받도록 조금 뒤에 ([NetImageFiles.prefetch])
+void prefetchImages(BuildContext context, Iterable<String> paths, {required double size}) {
+  final px = decodeBucket(size * MediaQuery.devicePixelRatioOf(context));
+  NetImageFiles.prefetch([
+    for (final p in paths)
+      if (p.startsWith('http')) networkImageUrl(p, px),
+  ]);
 }

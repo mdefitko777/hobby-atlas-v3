@@ -307,6 +307,7 @@ class _AppShellState extends State<AppShell> {
         builder: (context, _) {
           // 안 읽은 알림 + 받은 친구 요청
           final unread = _notify.unreadCount(_myChannels) + account.incomingCount;
+          prefetchNoticeImages(context, _notify, _myChannels); // 🔔 를 누르면 위쪽 알림 사진이 바로 보이게
           return Badge(
             isLabelVisible: unread > 0,
             backgroundColor: Gp.accent, // 안 읽은 알림 수 = 브랜드 색

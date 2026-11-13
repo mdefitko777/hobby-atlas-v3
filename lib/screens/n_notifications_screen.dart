@@ -85,6 +85,19 @@ List<HelpItem> get notificationsHelp => [
   HelpItem(Icons.settings_outlined, tr('알림 설정 (내 채널 소식만 · 알림 규칙)')),
 ];
 
+/// N-3 알림 사진 칸 한 변
+const _thumb = 52.0;
+
+/// 🔔 를 누르기 전에 위쪽 알림의 상품 사진을 기기에 받아 둔다 — 알림 화면을 열면 바로 보이게 (머리 줄 🔔 가 부른다).
+/// 사진은 알림 화면과 같이 카탈로그에서 (예고 · 라이브 줄은 사진이 없다)
+void prefetchNoticeImages(BuildContext context, NotifyStore store, List<String> channels) {
+  final byId = Catalog.instance.byId;
+  prefetchImages(context, [
+    for (final r in store.visible(channels).take(16))
+      if (!r.isAnnStage && !r.isLive) ?byId[r.kitId]?.image,
+  ], size: _thumb);
+}
+
 /// "3시간 전" · "어제" · "10.16"
 String noticeTime(DateTime at) => timeAgo(at, now: noticeNow);
 
@@ -420,40 +433,54 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     for (final n in list) {
       (groups[n.id.startsWith('req-') ? '친구 요청' : _groupOf(n.at)] ??= []).add(n);
     }
-    return ListView(
+    // 한 줄씩 펼쳐 보이는 줄만 만든다 — 알림함은 300줄까지라, 친구 컬렉션을 받을 때마다 300줄을 다시 만들면
+    // 여는 동안 끊겼다 (점검 2026-11-14). 묶음 머리 = String, 알림 = AppNotice, 맨 위 확인 시각 = null
+    final rows = <Object?>[
+      null,
+      for (final e in groups.entries) ...[e.key, ...e.value],
+    ];
+    // 위에 새 알림이 들어오거나 하나를 밀어 지워도 각 줄(밀던 중인 줄 포함)이 제 상태를 지키게 열쇠로 자리를 찾는다
+    // (children 목록은 이것을 알아서 했다)
+    final at = {
+      for (final (i, r) in rows.indexed)
+        if (r is AppNotice) ValueKey(r.id): i,
+    };
+    return ListView.builder(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.only(bottom: 32),
-      children: [
-        Padding(
+      itemCount: rows.length,
+      findChildIndexCallback: (key) => at[key],
+      itemBuilder: (context, i) => switch (rows[i]) {
+        final AppNotice n => Dismissible(
+          // N-5
+          key: ValueKey(n.id),
+          direction: DismissDirection.endToStart,
+          onDismissed: (_) => _remove(n),
+          background: Container(
+            alignment: Alignment.centerRight,
+            padding: const EdgeInsets.only(right: 24),
+            color: Gp.soft,
+            child: const Icon(Icons.delete_outline, color: Gp.danger),
+          ),
+          child: _NoticeRow(
+            notice: n,
+            read: _isRead(n),
+            time: n.id.startsWith('req-') ? tr('누르면 수락 · 거절') : noticeTime(n.at),
+            onTap: () => _open(n),
+          ),
+        ),
+        final String group => SectionHeader(
+          tr(group),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
+        ), // N-2 (묶음 열쇠는 한국어)
+        _ => Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
           child: Text(
             _store.statusLine, // 언제 확인했는지만 — 범위 · 밀기는 ? 에
             style: const TextStyle(fontSize: Gp.t12, color: Gp.faint),
           ),
         ),
-        for (final e in groups.entries) ...[
-          SectionHeader(tr(e.key), padding: const EdgeInsets.fromLTRB(16, 16, 16, 6)), // N-2 (묶음 열쇠는 한국어)
-          for (final n in e.value)
-            Dismissible(
-              // N-5
-              key: ValueKey(n.id),
-              direction: DismissDirection.endToStart,
-              onDismissed: (_) => _remove(n),
-              background: Container(
-                alignment: Alignment.centerRight,
-                padding: const EdgeInsets.only(right: 24),
-                color: Gp.soft,
-                child: const Icon(Icons.delete_outline, color: Gp.danger),
-              ),
-              child: _NoticeRow(
-                notice: n,
-                read: _isRead(n),
-                time: n.id.startsWith('req-') ? tr('누르면 수락 · 거절') : noticeTime(n.at),
-                onTap: () => _open(n),
-              ),
-            ),
-        ],
-      ],
+      },
     );
   }
 }
@@ -473,8 +500,8 @@ class _NoticeRow extends StatelessWidget {
     final n = notice;
     final person = n.type == NoticeType.request || (n.type == NoticeType.friend && n.image.isEmpty);
     final thumb = SizedBox.square(
-      dimension: 52,
-      child: person ? CircleThumb(image: '', label: n.title.characters.first, size: 52) : PhotoThumb(n.image),
+      dimension: _thumb,
+      child: person ? CircleThumb(image: '', label: n.title.characters.first, size: _thumb) : PhotoThumb(n.image),
     );
     return InkWell(
       onTap: onTap,

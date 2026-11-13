@@ -65,7 +65,13 @@ const auxFiles = [
   'atlas/pokemon-frienda.json',
   // 재판매(再販) 소식 — Gunpula 작업 중 (없으면 404 → 상세 · 캘린더의 재판매 칸만 숨김, lib/data/restocks.dart)
   'atlas/restocks.json',
+  // 작은 그림 목록 (원본 주소 → 사진 저장소의 400 px WebP, lib/logic/image_size.dart ThumbIndex) — Pages 에만 있다.
+  // 없으면 404 → 원본 그대로
+  thumbsFile,
 ];
+
+/// 보조 파일 이름 — 작은 그림 목록 (Gunpula publish_site.mjs 가 발행할 때 만든다)
+const thumbsFile = 'thumbs.json';
 
 /// `./assets/…` · `../app/assets/…` 처럼 Gunpula 웹앱 기준 상대 경로 → 전체 주소
 String resolveAsset(Object? url) {

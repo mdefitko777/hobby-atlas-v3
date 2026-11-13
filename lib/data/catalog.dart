@@ -20,6 +20,7 @@ import 'blob_store.dart';
 import 'gundam_atlas.dart' show atlasBoxartFile, atlasKitMsFile, atlasMsFile;
 import 'gunpula.dart';
 import 'user_store.dart';
+import '../logic/image_size.dart' show ThumbIndex, parseThumbIndex;
 import '../logic/lego_scope.dart';
 
 enum CatalogPhase { empty, loading, ready, error }
@@ -527,6 +528,15 @@ class Catalog extends ChangeNotifier {
     if (aliases) _aliasesLoad = _applyAliases().catchError((Object e) => debugPrint('[catalog] 옛 id 를 못 붙임: $e'));
     _loadRates().ignore();
     _loadChannelCovers().ignore();
+    _loadThumbs().ignore();
+  }
+
+  /// 작은 그림 목록 → [ThumbIndex.current]. 2 MB 가 넘는 글이라 aux() 대신 다른 isolate 에서 풀고 Map 으로만 둔다.
+  /// 기기에 없으면(옛 데이터 · 아직 발행 전 · 웹 미리보기) 그대로 원본
+  Future<void> _loadThumbs() async {
+    final text = await BlobStore.read(auxKey(thumbsFile));
+    if (text == null || text.isEmpty) return;
+    ThumbIndex.current = await compute(parseThumbIndex, text);
   }
 
   /// 채널 대표 그림 (atlas-groups.json `channels.<id>.image`, 공식 그림) → channels.dart channelCovers

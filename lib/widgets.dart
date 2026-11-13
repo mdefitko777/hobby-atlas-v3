@@ -1,6 +1,6 @@
 // 공용 화면 조각 한 벌 — 화면은 이 파일 하나만 가져온다 (P04 일관성). 실제 코드는 lib/widgets/ 에 주제별로:
 //   states        LoadingView · ErrorView · EmptyView · MiniSpinner (불러오는 중 · 오류 · 빈 목록, P01 · P09)
-//   images        AppImage(`local:파일` = 내 사진) · LocalPhotoImage · PhotoThumb · CircleThumb · BlurFitImage · ImagePager(사진 넘기기) · openImageViewer(크게 보기)
+//   images        AppImage(`local:파일` = 내 사진) · LocalPhotoImage · PhotoThumb · CircleThumb · BlurFitImage · ImagePager(사진 넘기기) · openImageViewer(크게 보기) · prefetchImages(미리 받기)
 //   tiles         ProductTile 상품 카드 · ThumbRow 목록 한 줄 · CategoryTile · CategoryGrid 분류 칸(그림 + 이름)
 //   mark_overlay  MarkOverlay · QuickMarks (리본 = 구매함 · ♡ = 좋아요) · StatusMarks (보기만)
 //   icons         LikedIcon · OwnedIcon · VerifiedBadge · ChannelGlyph
