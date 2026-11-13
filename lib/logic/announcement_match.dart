@@ -1,4 +1,4 @@
-// 공식 예고 → 상품 잇기 — 제목의 「」 이름으로 상품 찾기 · 같은 IP 새 상품 · 예고 단계 ·
+// 공식 예고 → 상품 잇기 — 이어 둔 상품 · 제목의 「」 이름으로 상품 찾기 · 같은 IP 새 상품 · 예고 단계 ·
 // 비공식 소식 가르기(꼬리표 글 · 줄 제목 · 예고 목록 탭 · 홈 배너) · 이어받은 예고 id (순수 Dart)
 import '../json_util.dart';
 import '../models.dart';
@@ -98,6 +98,17 @@ List<Kit> matchAnnouncementKits(String title, List<Kit> kits) {
     for (final k in kits)
       if ([foldName(k.nameJa), foldName(k.name)] case final own when names.any((n) => own.any((o) => o.contains(n)))) k,
   ]..sort((a, b) => b.date.compareTo(a.date));
+}
+
+/// 이 예고의 상품 — 데이터가 이어 둔 상품(linked_kit_id: 공식 페이지 주소 · 魂ウェブ 번호 · JAN 이 같은 상품)이 먼저,
+/// 그다음 제목 「」 으로 찾은 상품 (같은 상품은 한 번). 이어 둔 상품이 [kits] 에 없으면 제목으로만
+List<Kit> annKits(Announcement a, List<Kit> kits) {
+  final linked = a.linkedKitId.isEmpty ? null : kits.where((k) => k.id == a.linkedKitId).firstOrNull;
+  return [
+    ?linked,
+    for (final k in matchAnnouncementKits(a.title, kits))
+      if (k.id != linked?.id) k,
+  ];
 }
 
 final _nameNoise = RegExp(r'[\s\-_/・·.,:;!?！？()（）\[\]［］<>＜＞〈〉【】"“”＇’~〜]');

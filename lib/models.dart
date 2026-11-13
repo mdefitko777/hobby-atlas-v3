@@ -558,6 +558,11 @@ class Announcement {
     this.liveAt,
     this.liveState = '',
     this.unofficial = false,
+    this.preorderAt,
+    this.preorderDay = '',
+    this.preorderEndAt,
+    this.preorderEndDay = '',
+    this.linkedKitId = '',
   });
 
   /// 원문 (뉴스 · 유튜브)
@@ -589,6 +594,19 @@ class Announcement {
   /// 화면마다 「비공식」 꼬리표로 공식 예고와 가른다 (lib/logic/announcement_match.dart annStageText)
   final bool unofficial;
 
+  /// 예약이 열리는 시각 (데이터의 preorder_at, 기기 시간대). 출처가 시각을 준 것만 — 날짜만 알면 null 이고 [preorderDay]
+  final DateTime? preorderAt;
+
+  /// 예약이 열리는 날 (일본 날짜 'YYYY-MM-DD', 데이터의 preorder_date). 시각을 모르면 이것만 — 00:00 으로 치지 않는다
+  final String preorderDay;
+
+  /// 예약 마감 시각 · 마감일 (preorder_end_at · preorder_end_date, 드물다)
+  final DateTime? preorderEndAt;
+  final String preorderEndDay;
+
+  /// 이 예고의 상품 (데이터의 linked_kit_id, 합쳐진 옛 id 는 남은 id 로). 없으면 빈 글자 → 제목 「」 으로만 찾는다
+  final String linkedKitId;
+
   /// 홈 배너에 올릴 예고로 (줄을 세운 뒤에 정한다 — lib/data/derive/announcements.dart)
   Announcement asHero() => Announcement(
     id: id,
@@ -604,6 +622,11 @@ class Announcement {
     liveAt: liveAt,
     liveState: liveState,
     unofficial: unofficial,
+    preorderAt: preorderAt,
+    preorderDay: preorderDay,
+    preorderEndAt: preorderEndAt,
+    preorderEndDay: preorderEndDay,
+    linkedKitId: linkedKitId,
   );
 
   static Announcement? fromJson(Object? json) {
@@ -622,6 +645,11 @@ class Announcement {
       liveAt: DateTime.tryParse(jStr(json['liveAt']))?.toLocal(),
       liveState: jStr(json['liveState']),
       unofficial: _b(json, 'unofficial'),
+      preorderAt: DateTime.tryParse(jStr(json['preorderAt']))?.toLocal(),
+      preorderDay: jStr(json['preorderDay']),
+      preorderEndAt: DateTime.tryParse(jStr(json['preorderEndAt']))?.toLocal(),
+      preorderEndDay: jStr(json['preorderEndDay']),
+      linkedKitId: jStr(json['linkedKitId']),
     );
   }
 }

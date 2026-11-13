@@ -13,6 +13,7 @@
 // │ H-4  │ 날짜 누르기 (다시 누르면 해제)        │ 그날만 보기 / 한 달 전체 보기           │ P03           │
 // │ H-5  │ 날짜별 묶음 목록 + 종류 알약 + D-n    │ 발매(검정 알약) · 예고 단계(회색 알약)   │ P01 · P02     │
 // │ H-5b │ 예고 줄: 색 꼬리표 "21:00 라이브"     │ 공식 라이브 — 발표일이 아니라 방송하는 날에 (시간 미정은 없음) │ P01 │
+// │ H-5c │ 예고 줄: 색 꼬리표 "18:00 예약 시작"  │ 예약 때를 아는 예고 — 발표일이 아니라 예약이 열리는 날에 │ P01 │
 // │ H-6  │ "날짜 미정 · n월 중" 묶음            │ 날짜가 정해지지 않은 발매               │ P01 · P10     │
 // │ H-7  │ LayoutBuilder ≥720dp                │ 넓은 화면: 달력 왼쪽 · 목록 오른쪽       │ 적응형        │
 // │ H-8  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 이 달 일정 없음     │ P01 · P09     │
@@ -27,6 +28,7 @@ import '../channels.dart';
 import '../l10n/l10n.dart';
 import '../logic/announcement_match.dart';
 import '../logic/live_stream.dart';
+import '../logic/preorder_open.dart';
 import '../logic/restock.dart';
 import '../marks.dart';
 import '../models.dart';
@@ -270,7 +272,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
             day: dayOf(k.date),
           ),
       for (final a in d.announcements)
-        // H-5b 라이브는 방송하는 날에 (시간 미정이면 announcementDay 가 비어 캘린더에 없다)
+        // H-5b 라이브는 방송하는 날에 (시간 미정이면 announcementDay 가 비어 캘린더에 없다), 예약은 열리는 날에
         if (announcementDay(a) case final date when date.startsWith(ym) && _hitAnn(a))
           if (annLiveStage(a, appNow()) case final stage?)
             _Event(
@@ -283,6 +285,19 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
               tag: '라이브',
               time: liveClock(a.liveAt!),
               tagColor: liveColor(stage),
+            )
+          // H-5c 예약 때를 아는 예고는 예약이 열리는 날에 "18:00 예약 시작" (시각을 모르면 "예약 시작"만)
+          else if (annPreorderStage(a, appNow()) case final pre?)
+            _Event(
+              title: a.title,
+              image: a.image,
+              sub: a.source,
+              ann: a,
+              day: dayOf(date),
+              dot: Gp.faint,
+              tag: '예약 시작',
+              time: a.preorderAt == null ? '' : liveClock(a.preorderAt!),
+              tagColor: preorderColor(pre),
             )
           else
             _Event(

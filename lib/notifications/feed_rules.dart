@@ -19,6 +19,7 @@ import '../l10n/l10n.dart';
 import '../logic/announcement_match.dart' show annReplacedOf, annStageText, moveAnnIds, unofficialLabel;
 import '../logic/lego_scope.dart';
 import 'live_reminders.dart';
+import 'preorder_reminders.dart';
 import 'notify_models.dart';
 import '../json_util.dart';
 
@@ -617,7 +618,11 @@ class CheckPlan {
     this.liveKey = '',
     this.liveStreams = const [],
     this.reminders = const LiveReminderPlan(),
-  }) : liveScheduled = {...reminders.scheduled};
+    this.preorderRead = false,
+    this.preorderOpens = const [],
+    this.preorderReminders = const LiveReminderPlan(),
+  }) : liveScheduled = {...reminders.scheduled},
+       preorderScheduled = {...preorderReminders.scheduled};
 
   /// 라이브: 읽은 예고 파일의 지문 · 그때의 라이브 (NotifyState.liveKey · liveStreams)
   final String liveKey;
@@ -628,6 +633,18 @@ class CheckPlan {
 
   /// 걸려 있는 것으로 적을 표 — 걸지 못한 것은 확인하는 쪽이 빼서 다음 확인에서 다시 걸게 한다
   final Map<String, String> liveScheduled;
+
+  /// 예약 시작 전: 예약 시각을 읽은 적이 있나 · 그때의 예약 · 걸 것 거둘 것 · 걸려 있는 것 (라이브와 같은 모양)
+  final bool preorderRead;
+  final List<PreorderOpen> preorderOpens;
+  final LiveReminderPlan preorderReminders;
+  final Map<String, String> preorderScheduled;
+
+  /// 라이브 · 예약 시작 전 알림을 한 번에 걸고 거둘 계획 (LocalNotifier.applyLive 는 알림마다 채널을 본다)
+  LiveReminderPlan get allReminders => LiveReminderPlan(
+    schedule: [...reminders.schedule, ...preorderReminders.schedule],
+    cancel: [...reminders.cancel, ...preorderReminders.cancel],
+  );
 
   /// 새로 알림함에 들어갈 줄 (seen = 조용히 넣는 지난 소식)
   final List<NoticeRecord> records;
@@ -661,6 +678,9 @@ class CheckPlan {
       liveKey: liveKey,
       liveStreams: liveStreams,
       liveScheduled: liveScheduled,
+      preorderRead: preorderRead,
+      preorderOpens: preorderOpens,
+      preorderScheduled: preorderScheduled,
       seenFeed: seenFeed,
       inbox: records,
     ),
@@ -672,7 +692,8 @@ class CheckPlan {
 ///  - 다음부터: lastSeen 날짜 이후(같은 날짜 포함 — 하루에 두 번 돌면 같은 날짜에 상품이 늘어난다)에서 아직 없는 줄만
 ///  - 오래 꺼져 있었으면 [catchUpDays] 일보다 오래된 날짜는 조용히(읽음으로) 넣는다
 /// 피드를 받지 못했거나 manifest 가 그대로라 받지 않았으면 [entries] 는 비어 있다 (PB 기간만 본다).
-/// [streams] = 이번에 예고 파일에서 읽은 라이브 (안 읽었으면 null → 지난번 것으로 계획만 다시), [liveKey] = 그 파일의 지문
+/// [streams] = 이번에 예고 파일에서 읽은 라이브 (안 읽었으면 null → 지난번 것으로 계획만 다시), [liveKey] = 그 파일의 지문,
+/// [opens] = 같은 파일에서 읽은 예약 시각 (안 읽었으면 null → 지난번 것)
 CheckPlan planCheck({
   required NotifyConfig config,
   required NotifyState state,
@@ -685,6 +706,7 @@ CheckPlan planCheck({
   Object? announcements,
   List<LiveStream>? streams,
   String? liveKey,
+  List<PreorderOpen>? opens,
 }) {
   final known = {for (final r in state.inbox) r.id, ...state.seenFeed};
   final first = state.lastSeen.isEmpty;
@@ -736,6 +758,17 @@ CheckPlan planCheck({
       scheduled: state.liveScheduled,
       channels: config.channels,
       enabled: config.enabled && config.rule(liveRule), // 휴대폰 알림이라 새 소식 알림 스위치도 본다
+      now: now,
+      lang: L10n.current.name,
+    ),
+    preorderRead: opens != null || state.preorderRead,
+    preorderOpens: opens ?? state.preorderOpens,
+    preorderReminders: planPreorderReminders(
+      opens: opens ?? state.preorderOpens,
+      scheduled: state.preorderScheduled,
+      followed: config.followed.keys.toSet(),
+      wanted: config.wanted,
+      enabled: config.enabled && config.rule(preorderRule),
       now: now,
       lang: L10n.current.name,
     ),

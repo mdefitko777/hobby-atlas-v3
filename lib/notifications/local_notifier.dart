@@ -171,7 +171,7 @@ class LocalNotifier {
     ),
   );
 
-  /// 라이브 시작 전 알림을 계획대로 걸고 거둔다 (live_reminders.dart planLiveReminders). 걸지 못한 예고 id 를 돌려준다 →
+  /// 라이브 · 예약 시작 전 알림을 계획대로 걸고 거둔다 (live_reminders.dart planStartReminders). 걸지 못한 예고 id 를 돌려준다 →
   /// 부르는 쪽이 "걸려 있음"에서 빼 두어 다음 확인에서 다시 건다.
   /// inexactAllowWhileIdle: 정확한 알람 권한(SCHEDULE_EXACT_ALARM · 안드로이드 12+ 는 따로 허락)을 쓰지 않는다 —
   /// 대신 몇 분 늦게 뜰 수 있다 (30분 전 알림이라 괜찮다). 시각은 UTC 한 점으로 넘겨 시간대 표(tz database)가 필요 없다
@@ -185,9 +185,10 @@ class LocalNotifier {
         debugPrint('[notify] 라이브 알림을 거두지 못함: $e');
       }
     }
-    final ch = channels['live']!;
+    final all = channels;
     final failed = <String>{};
     for (final r in plan.schedule) {
+      final ch = all[r.channel] ?? all['live']!; // 예약 시작 전 = 예고 채널
       try {
         await _plugin.zonedSchedule(
           id: r.id,

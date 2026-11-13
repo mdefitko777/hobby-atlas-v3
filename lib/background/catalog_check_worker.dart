@@ -22,6 +22,7 @@ import '../l10n/l10n.dart';
 import '../json_util.dart';
 import '../notifications/feed_rules.dart';
 import '../notifications/live_reminders.dart';
+import '../notifications/preorder_reminders.dart';
 import '../notifications/local_notifier.dart';
 import '../notifications/notify_models.dart';
 
@@ -211,10 +212,15 @@ Future<CheckOutcome> runCatalogCheck({
     }
   }
 
-  // 알림 받는 예고가 있으면 예고 파일도 (단계가 넘어갔는지). 라이브는 예고 파일이 바뀐 때만 —
-  // manifest `files` 지문이 없으면(raw · 인터넷 없음) 이번에는 받지 않고 지난번에 읽은 라이브로 계획만 다시 한다
+  // 알림 받는 예고가 있으면 예고 파일도 (단계가 넘어갔는지). 라이브 · 좋아요한 상품의 예약 시각은 예고 파일이 바뀐 때만 —
+  // manifest `files` 지문이 없으면(raw · 인터넷 없음) 이번에는 받지 않고 지난번에 읽은 것으로 계획만 다시 한다.
+  // 예약 시각을 아직 한 번도 안 읽은 기기(이 기능 전에 지문을 적음)는 파일이 그대로여도 한 번 받는다
   final annHash = jStr(jMap(jMap(manifest)['files'])['announcements.json']);
-  final liveChanged = config.rule(liveRule) && annHash.isNotEmpty && annHash != before.liveKey;
+  final preorderWatch = config.rule(preorderRule) && config.wanted.isNotEmpty;
+  final fileChanged = annHash != before.liveKey;
+  final liveChanged =
+      annHash.isNotEmpty &&
+      ((config.rule(liveRule) && fileChanged) || (preorderWatch && (fileChanged || !before.preorderRead)));
   final annText = config.followed.isEmpty && !liveChanged ? null : await get(announcementsPath);
   final announcements = _decode(annText);
   final gotLive = annText != null && jMap(announcements)['announcements'] is List;
@@ -222,6 +228,7 @@ Future<CheckOutcome> runCatalogCheck({
   final verified = gotLive && annHash.isNotEmpty && Catalog.auxMatches(annText, annHash);
   final plan = planCheck(
     streams: gotLive ? parseLiveStreams(announcements, at) : null,
+    opens: gotLive ? parsePreorderOpens(announcements, at) : null,
     liveKey: verified ? annHash : (gotLive && before.liveKey.isEmpty ? '-' : null), // '-' = 읽기는 했다 (처음이 아님)
     announcements: announcements,
     config: config,
@@ -233,9 +240,10 @@ Future<CheckOutcome> runCatalogCheck({
     source: source,
     pending: pending,
   );
-  // 시작 전 알림을 먼저 걸고 거둔다 — 걸지 못한 것은 "걸려 있음"에 적지 않아 다음 확인에서 다시 건다
-  final failed = await (applyLive ?? (p) => LocalNotifier.applyLive(p, foreground: !background))(plan.reminders);
+  // 시작 전 알림(라이브 · 예약)을 먼저 걸고 거둔다 — 걸지 못한 것은 "걸려 있음"에 적지 않아 다음 확인에서 다시 건다
+  final failed = await (applyLive ?? (p) => LocalNotifier.applyLive(p, foreground: !background))(plan.allReminders);
   plan.liveScheduled.removeWhere((id, _) => failed.contains(id));
+  plan.preorderScheduled.removeWhere((id, _) => failed.contains(id));
   // 쓰기 직전에 잠그고 파일을 다시 읽어 합친다 (그 사이 앱 화면 · 다른 확인이 썼을 수 있다)
   final fresh = await BlobStore.locked(notifyStateKey, () async {
     final disk = NotifyState.fromJson(_decode(await BlobStore.read(notifyStateKey)));

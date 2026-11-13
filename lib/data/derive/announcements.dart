@@ -21,10 +21,12 @@ Future<Map<String, String>> deriveAnnReplaced() async {
 }
 
 /// announcements.json 한 줄 → 화면 모델. live_state · live_at 이 있으면 라이브(방송) 예고
-/// (유튜브 = source_type youtube + video_id, 프리미엄 반다이 라이브 쇼핑 = news + source_url — 여는 길은 다른 예고와 같다)
+/// (유튜브 = source_type youtube + video_id, 프리미엄 반다이 라이브 쇼핑 = news + source_url — 여는 길은 다른 예고와 같다).
+/// preorder_* 는 예약이 열리는 때 (lib/logic/preorder_open.dart) — 없는 옛 파일이면 빈 값이라 예고 단계 그대로 보인다
 Announcement announcementOf(Map<String, Object?> m) {
   final liveAt = parseLiveAt(m['live_at']);
   final liveState = jStr(m['live_state']);
+  final linked = jStr(m['linked_kit_id']);
   return Announcement(
     id: jStr(m['id']),
     franchiseId: jStr(m['franchise']),
@@ -40,5 +42,14 @@ Announcement announcementOf(Map<String, Object?> m) {
     // 시각만 있고 상태가 빠진 줄도 라이브로 본다 (단계는 기기 시계가 정한다)
     liveState: liveState.isEmpty && liveAt != null ? 'upcoming' : liveState,
     unofficial: m['unofficial'] == true,
+    preorderAt: parseLiveAt(m['preorder_at']),
+    preorderDay: _isoDay(m['preorder_date']),
+    preorderEndAt: parseLiveAt(m['preorder_end_at']),
+    preorderEndDay: _isoDay(m['preorder_end_date']),
+    // 상품 id 는 Gunpula 정리 때 합쳐질 수 있다 — 다른 상품 id 처럼 남은 id 로
+    linkedKitId: _cat.aliases[linked] ?? linked,
   );
 }
+
+/// 'YYYY-MM-DD' 만 (그 밖의 모양은 빈 글자 — 날짜로 견주기 때문에)
+String _isoDay(Object? v) => RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(jStr(v)) ? jStr(v) : '';

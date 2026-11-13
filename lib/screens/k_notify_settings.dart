@@ -5,7 +5,7 @@
 // ┌──────── 디자인 가이드 대응표: K 설정 (알림) ───────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
 // │ K-1  │ SwitchListTile × 2                 │ 새 소식 알림(휴대폰) · 내 채널 소식만      │ P03 · P07     │
-// │ K-8  │ SwitchListTile × 5                 │ 내 상품: 좋아요한 상품 소식 · 발매 D-7 · D-1 · 재판매 · 예약 도착 · 라이브 시작 전 │ P03 · P07 │
+// │ K-8  │ SwitchListTile × 6                 │ 내 상품: 좋아요한 상품 소식 · 발매 D-7 · D-1 · 재판매 · 예약 도착 · 예약 시작 전 · 라이브 시작 전 │ P03 · P07 │
 // │ K-9  │ ListTile(채널 그림 · 요약 · ›)       │ 새 상품 (채널별): 내 채널 → 더 많은 채널, 요약 = 전부 · SEED/00 · PB … · 끔 │ P01 · P06 │
 // │ K-5  │ 아래 시트: SwitchListTile + 조건 줄  │ 채널 규칙: <채널> 전체 · SEED / 00 · PB · PB 예약 기간 · BBX + 골라서 알림(조건 시트) │ P04 · P05 │
 // │ K-6  │ ListTile · 지금 확인                │ 마지막 확인 · 지금 확인 · 휴대폰 알림 권한  │ P10           │
@@ -28,7 +28,7 @@ import 'notify_condition_sheet.dart';
 void openNotifySettings(BuildContext context, {NotifyStore? notify}) =>
     openPage(context, NotifySettingsScreen(notify: notify));
 
-/// 설정 줄 요약: "켜짐 · 규칙 9개" · "꺼짐". 규칙 = 켠 규칙 + 내가 만든 조건
+/// 설정 줄 요약: "켜짐 · 규칙 10개" · "꺼짐". 규칙 = 켠 규칙 + 내가 만든 조건
 String notifySummary(NotifyConfig c, {bool? permitted}) {
   if (!c.enabled || permitted == false) return tr('꺼짐');
   final n = notifyRuleDefaults.keys.where(c.rule).length + c.conditions.length;
@@ -189,6 +189,12 @@ class _NotifySettingsScreenState extends State<NotifySettingsScreen> {
               _ruleSwitch('release_soon', Icons.today_outlined, tr('발매 D-7 · D-1 · 당일 (발매일이 정해진 것만)')),
               _ruleSwitch('restock', Icons.replay, tr('좋아요 · 구매함 상품의 재판매(再販) 소식')),
               _ruleSwitch('preorder_arrival', Icons.local_shipping_outlined, tr('예약한 상품의 도착 달 · 도착 날 (내가 적은 도착 예정)')),
+              // 라이브와 같은 까닭으로 당일에 올라온 예약은 놓칠 수 있다 (GUNDAM.INFO 「本日11時」는 15분 전에 올라온다)
+              _ruleSwitch(
+                'preorder_soon',
+                Icons.alarm,
+                tr('알림 받는 예고 · 좋아요한 상품의 예약 시작 30분쯤 전 (시각이 정해진 것만 · 당일에 올라온 것은 놓칠 수 있어요)'),
+              ),
               // 데이터는 하루 한 번 · 뒤 확인은 12시간마다라 당일에 올라온 라이브는 놓칠 수 있다 — 그대로 적어 둔다
               _ruleSwitch(
                 'live_soon',

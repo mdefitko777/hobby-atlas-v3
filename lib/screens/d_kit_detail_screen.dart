@@ -286,7 +286,8 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
       body: LayoutBuilder(
         builder: (context, box) {
           final wide = box.maxWidth >= detailWideBreakpoint; // D-13
-          final gallery = _Gallery(images: _images, label: tr(k.line), reference: k.imageRef);
+          // D-2 · D-2b · D-2c · D-2d (예고 상품 소개 J-8 과 같은 사진 넘기기)
+          final gallery = ImagePager(images: _images, label: tr(k.line), reference: k.imageRef);
           final info = _info(context);
           return Stack(
             children: [
@@ -592,72 +593,6 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
         ),
       ),
     ];
-  }
-}
-
-/// D-2 공식 사진 넘기기 (정사각형, 전체가 보이게 contain)
-class _Gallery extends StatefulWidget {
-  const _Gallery({required this.images, required this.label, this.reference = false});
-  final List<String> images;
-  final String label;
-
-  /// D-2c 이 상품 사진이 없어 같은 기체의 다른 상품 사진을 빌린 것
-  final bool reference;
-
-  @override
-  State<_Gallery> createState() => _GalleryState();
-}
-
-class _GalleryState extends State<_Gallery> {
-  int _page = 0;
-
-  @override
-  Widget build(BuildContext context) => ValueListenableBuilder<int>(
-    // D-2d 열리지 않는 사진(지워졌거나 없는 번호)은 빼고 점도 그만큼 줄인다
-    valueListenable: BrokenImages.changes,
-    builder: (context, _, _) => _build(context, BrokenImages.keep(widget.images)),
-  );
-
-  Widget _build(BuildContext context, List<String> images) {
-    final page = _page.clamp(0, images.isEmpty ? 0 : images.length - 1);
-    return AspectRatio(
-      aspectRatio: 1,
-      child: Stack(
-        children: [
-          PageView.builder(
-            allowImplicitScrolling: true, // 옆 장을 미리 불러 열리지 않는 사진을 넘기기 전에 뺀다
-            itemCount: images.length,
-            onPageChanged: (i) => setState(() => _page = i), // STATE: 사진 번호 → 점
-            itemBuilder: (context, i) => GestureDetector(
-              // D-2b 누르면 크게 (확대 · 넘기기)
-              onTap: () => openImageViewer(context, images, index: i, label: widget.label),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 56, 16, 28),
-                child: AppImage(images[i], fit: BoxFit.contain, placeholder: widget.label),
-              ),
-            ),
-          ),
-          if (images.length > 1)
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 12,
-              child: PageDots(count: images.length, index: page),
-            ),
-          if (widget.reference)
-            Positioned(
-              // D-2c
-              left: 16,
-              bottom: 10,
-              child: Tooltip(
-                message: tr('공식 사진이 없어 같은 기체의 다른 상품 사진을 보여 줘요'),
-                triggerMode: TooltipTriggerMode.tap,
-                child: SoftTag(tr('참고 그림 · 같은 기체')),
-              ),
-            ),
-        ],
-      ),
-    );
   }
 }
 

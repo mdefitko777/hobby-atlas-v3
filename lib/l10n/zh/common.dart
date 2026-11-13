@@ -176,6 +176,12 @@ const Map<String, String> zhCommon = {
   '라이브 예정 · 시간 미정': '即将直播 · 时间未定',
   '오늘 {time}': '今天 {time}',
   '내일 {time}': '明天 {time}',
+  // 예약 때를 아는 예고 (lib/logic/preorder_open.dart — 꼬리표 · 상세 한 줄)
+  '예약 · {when}': '预订 · {when}',
+  '예약 시작 · ~{when} 마감': '开始预订 · ~{when} 截止',
+  '예약 마감': '预订截止',
+  '예약 시작 {when}': '开始预订 {when}',
+  '마감 {when}': '截止 {when}',
   // 조립 상태 (lib/logic/build_status.dart)
   '조립 중': '组装中',
   '완성': '已完成',

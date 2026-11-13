@@ -9,7 +9,7 @@
 // │ O-2  │ 아래 시트(60%) · 네모 세그먼트 · 체크 2열 · 펼치는 줄 │ 필터: 내 상태 · 발매 · 판매 · 종류 · 라인 · 작품 · 가격 (lib/widgets/kit_filter_sheet.dart) │ P06 · P08 · P01 · P05 │
 // │ O-3  │ 고른 필터 한 줄 + showPickSheet      │ 지금 거르는 조건 · 정렬 4가지 (아래 시트)  │ P01 · P07     │
 // │ O-4  │ 격자 ProductTile(+ ♡) / ThumbRow     │ 상품 (가격 · 발매일 보임) → D 상세       │ P08 · P07     │
-// │ O-5  │ 밑줄 탭 + 16:9 카드 (AnnTag)         │ 예고: 공식 발표 · 상품화 확정 · 예약 · 비공식(있을 때만) · 라이브(곧 할 것이 맨 앞) │ P02 · P06 │
+// │ O-5  │ 밑줄 탭 + 16:9 카드 (AnnTag)         │ 예고: 공식 발표 · 상품화 확정 · 예약(열리는 때 · 날) · 비공식(있을 때만) · 라이브(곧 할 것이 맨 앞) │ P02 · P06 │
 // │ O-6  │ 기록 지우기 → showDialog → 토스트     │ 최근 본 기록 비우기 (기기 기록 · 되돌리기)  │ P05 · P03     │
 // │ O-7  │ 위 검색창 (이 목록 안에서만 찾기)      │ "최근 추가에서 찾기"                     │ P07 · P04     │
 // │ O-8  │ EmptyView                          │ 거른 결과 · 찾은 결과 없음 · 기록 없음     │ P09           │
@@ -22,6 +22,7 @@ import '../l10n/l10n.dart';
 import '../api.dart';
 import '../logic/announcement_match.dart';
 import '../logic/kit_rules.dart';
+import '../logic/preorder_open.dart' show annShownDay;
 import '../marks.dart';
 import '../channels.dart';
 import '../models.dart';
@@ -537,7 +538,7 @@ class _SectionListViewState extends State<SectionListView> {
                                   const SizedBox(width: 6),
                                   Expanded(
                                     child: Text(
-                                      joinDot([tr(channelOf(a.franchiseId).label), dateDot(a.date), a.source]),
+                                      joinDot([tr(channelOf(a.franchiseId).label), dateDot(annShownDay(a)), a.source]),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),

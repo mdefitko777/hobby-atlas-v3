@@ -96,6 +96,7 @@ class LiveReminder {
     required this.title,
     required this.body,
     required this.payload,
+    this.channel = 'live',
   });
 
   final String annId;
@@ -110,6 +111,9 @@ class LiveReminder {
 
   /// `ann:<franchise>:<예고 id>` → 누르면 그 예고 (앱 셸)
   final String payload;
+
+  /// 안드로이드 알림 채널 (local_notifier.dart channels) — 라이브 = live, 예약 시작 전 = ann
+  final String channel;
 }
 
 /// 시작 전 알림 계획 — [schedule] 을 걸고 [cancel] 을 거둔 뒤 [scheduled] 를 notify_state.json 에 적는다
@@ -131,14 +135,9 @@ int liveReminderId(String annId) => stableId('live:$annId');
 /// 걸어 둔 알림의 지문 — 시작 시각이 바뀌거나 화면 언어를 바꾸면 달라져 다시 건다
 String liveReminderSig(DateTime at, String lang) => '${at.toUtc().toIso8601String()}|$lang';
 
-/// [streams](지금 아는 라이브) · [scheduled](걸려 있는 것)를 견주어 걸 것 · 거둘 것을 정한다.
-///  - 건다: 내 채널 · 시작 시각이 있고 · 아직 시작 전 · 알릴 시각(시작 30분 전)이 [liveMargin] 넘게 남은 것.
-///    걸려 있지 않거나 지문이 다르면(시각이 바뀜 · 언어를 바꿈) 다시
-///  - 거둔다: [enabled] 가 꺼짐(새 소식 알림 · 규칙) · 목록에서 사라짐 · 끝남 · 내 채널에서 빠짐 · 시간 미정이 됨 ·
-///    시각이 바뀌었는데 새 알릴 시각이 이미 지남(당겨져 벌써 하는 중인 것 포함)
-///  - 그대로: 알릴 시각이 지났고(떴거나 곧 뜬다) 아직 안 끝난 것 — 거두면 떠 있는 알림이 지워진다
-///  - 옛 id(이어받아 빠진 예고, [LiveStream.replaces])로 걸린 것: 이미 떴으면 옛 id 그대로 두고(누르면 이어받은 예고가 열린다),
-///    아니면 거두고 새 id 로 다시 건다 — 휴대폰 알림 id 가 예고 id 에서 나와 같은 id 로 바꿔 쓸 수 없다
+/// [streams](지금 아는 라이브) · [scheduled](걸려 있는 것)를 견주어 걸 것 · 거둘 것을 정한다 ([planStartReminders]).
+///  - 건다: 내 채널 · 시작 시각이 있고 · 아직 시작 전 · 알릴 시각(시작 30분 전)이 [liveMargin] 넘게 남은 것
+///  - 거둔다: [enabled] 가 꺼짐(새 소식 알림 · 규칙) · 목록에서 사라짐 · 끝남 · 내 채널에서 빠짐 · 시간 미정이 됨
 LiveReminderPlan planLiveReminders({
   required List<LiveStream> streams,
   required Map<String, String> scheduled,
@@ -146,65 +145,119 @@ LiveReminderPlan planLiveReminders({
   required bool enabled,
   required DateTime now,
   String lang = 'ko',
-}) {
-  final byId = {
+}) => planStartReminders(
+  [
     for (final s in streams)
-      if (enabled && channels.contains(s.franchise)) s.id: s,
-  };
+      if (enabled && channels.contains(s.franchise))
+        StartTarget(
+          id: s.id,
+          at: s.at,
+          upcoming: s.stage(now) == LiveStage.upcoming,
+          ended: s.stage(now) == LiveStage.ended,
+          replaces: s.replaces,
+          reminder: (at) => LiveReminder(
+            annId: s.id,
+            id: liveReminderId(s.id),
+            at: at.subtract(liveLead),
+            title: trf('라이브 {time} 시작', {'time': liveClock(at)}),
+            body: liveReminderBody(s),
+            payload: 'ann:${s.franchise}:${s.id}',
+          ),
+        ),
+  ],
+  scheduled: scheduled,
+  now: now,
+  lang: lang,
+  idOf: liveReminderId,
+);
+
+/// 시작 전 알림을 걸 것 하나 — 라이브 · 예약 시작 공통 ([planStartReminders])
+class StartTarget {
+  const StartTarget({
+    required this.id,
+    required this.at,
+    required this.upcoming,
+    required this.ended,
+    required this.reminder,
+    this.replaces = const [],
+  });
+
+  /// 예고 id
+  final String id;
+
+  /// 시작 시각 (모르면 null — 걸지 않고, 걸려 있던 것은 거둔다)
+  final DateTime? at;
+
+  /// 아직 시작 전 (시계로)
+  final bool upcoming;
+
+  /// 다 지나 걸려 있는 것 · 떠 있는 알림을 거둘 때
+  final bool ended;
+
+  /// 이어받은 옛 예고 id
+  final List<String> replaces;
+
+  /// 걸 알림 (시작 시각을 받아 만든다)
+  final LiveReminder Function(DateTime at) reminder;
+}
+
+/// [targets](지금 걸 수 있는 것, 거르기는 부르는 쪽) · [scheduled](걸려 있는 것)를 견주어 걸 것 · 거둘 것을 정한다.
+///  - 건다: 시작 시각이 있고 · 아직 시작 전 · 알릴 시각(시작 30분 전)이 [liveMargin] 넘게 남은 것.
+///    걸려 있지 않거나 지문이 다르면(시각이 바뀜 · 언어를 바꿈) 다시
+///  - 거둔다: 목록에서 사라짐(꺼짐 · 거른 것 포함) · 끝남 · 시각을 모르게 됨 ·
+///    시각이 바뀌었는데 새 알릴 시각이 이미 지남(당겨져 벌써 시작한 것 포함)
+///  - 그대로: 알릴 시각이 지났고(떴거나 곧 뜬다) 아직 안 끝난 것 — 거두면 떠 있는 알림이 지워진다
+///  - 옛 id(이어받아 빠진 예고, [StartTarget.replaces])로 걸린 것: 이미 떴으면 옛 id 그대로 두고(누르면 이어받은 예고가 열린다),
+///    아니면 거두고 새 id 로 다시 건다 — 휴대폰 알림 id 가 예고 id 에서 나와([idOf]) 같은 id 로 바꿔 쓸 수 없다
+LiveReminderPlan planStartReminders(
+  List<StartTarget> targets, {
+  required Map<String, String> scheduled,
+  required DateTime now,
+  required String lang,
+  required int Function(String annId) idOf,
+}) {
+  final byId = {for (final t in targets) t.id: t};
   final heirs = {
-    for (final s in byId.values)
-      for (final old in s.replaces) old: s,
+    for (final t in byId.values)
+      for (final old in t.replaces) old: t,
   };
   final next = <String, String>{};
   final schedule = <LiveReminder>[];
   final cancel = <int>[];
-  final keptOld = <String>{}; // 옛 id 로 걸린 채 두는 라이브 — 새 id 로 또 걸지 않는다
+  final keptOld = <String>{}; // 옛 id 로 걸린 채 두는 것 — 새 id 로 또 걸지 않는다
   for (final e in scheduled.entries) {
     final heir = byId.containsKey(e.key) || scheduled.containsKey(heirs[e.key]?.id) ? null : heirs[e.key];
-    final s = byId[e.key] ?? heir;
-    final at = s?.at;
-    if (s == null || at == null || s.stage(now) == LiveStage.ended) {
-      cancel.add(liveReminderId(e.key));
+    final t = byId[e.key] ?? heir;
+    final at = t?.at;
+    if (t == null || at == null || t.ended) {
+      cancel.add(idOf(e.key));
       continue;
     }
     final sameTime = e.value.split('|').first == at.toUtc().toIso8601String();
-    // 이제는 새로 걸 수 없다 — 알릴 시각이 지났거나 이미 하는 중
-    final late = !_canRemind(at, now) || s.stage(now) != LiveStage.upcoming;
+    // 이제는 새로 걸 수 없다 — 알릴 시각이 지났거나 이미 시작했다
+    final late = !_canRemind(at, now) || !t.upcoming;
     if (heir != null) {
       if (sameTime && late) {
         next[e.key] = e.value;
         keptOld.add(heir.id);
       } else {
-        cancel.add(liveReminderId(e.key)); // 걸 수 있으면 아래에서 새 id 로
+        cancel.add(idOf(e.key)); // 걸 수 있으면 아래에서 새 id 로
       }
     } else if (e.value == liveReminderSig(at, lang) || (sameTime && late)) {
       next[e.key] = e.value; // 언어만 바뀌었는데 이미 떴으면 그대로 둔다
     } else if (late) {
-      // 옛 시각에 걸린 것 — 새 시각에는 이미 늦었다. 당겨져서 벌써 하는 중일 때도 거둔다
+      // 옛 시각에 걸린 것 — 새 시각에는 이미 늦었다. 당겨져서 벌써 시작했을 때도 거둔다
       // (그대로 두면 옛 시각 30분 전에 "라이브 21:00 시작"이 뒤늦게 뜬다)
-      cancel.add(liveReminderId(e.key));
+      cancel.add(idOf(e.key));
     }
   }
-  for (final s in byId.values) {
-    final at = s.at;
-    if (at == null ||
-        next.containsKey(s.id) ||
-        keptOld.contains(s.id) ||
-        s.stage(now) != LiveStage.upcoming ||
-        !_canRemind(at, now)) {
+  for (final t in byId.values) {
+    final at = t.at;
+    if (at == null || next.containsKey(t.id) || keptOld.contains(t.id) || !t.upcoming || !_canRemind(at, now)) {
       continue;
     }
-    next[s.id] = liveReminderSig(at, lang);
-    schedule.add(
-      LiveReminder(
-        annId: s.id,
-        id: liveReminderId(s.id),
-        at: at.subtract(liveLead),
-        title: trf('라이브 {time} 시작', {'time': liveClock(at)}),
-        body: liveReminderBody(s),
-        payload: 'ann:${s.franchise}:${s.id}',
-      ),
-    );
+    next[t.id] = liveReminderSig(at, lang);
+    schedule.add(t.reminder(at));
   }
   return LiveReminderPlan(schedule: schedule, cancel: cancel, scheduled: next);
 }

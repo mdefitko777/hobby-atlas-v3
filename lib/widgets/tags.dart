@@ -1,4 +1,4 @@
-// 작은 꼬리표 — 테두리 알약 · 연한 색 꼬리표 · 날짜 · 공식 예고 단계 색 · 예고 꼬리표(단계 · 라이브 때 · 비공식)
+// 작은 꼬리표 — 테두리 알약 · 연한 색 꼬리표 · 날짜 · 공식 예고 단계 색 · 예고 꼬리표(단계 · 라이브 때 · 예약 때 · 비공식)
 import 'package:flutter/material.dart';
 
 import '../clock.dart';
@@ -6,6 +6,7 @@ import '../format.dart';
 import '../l10n/l10n.dart';
 import '../logic/announcement_match.dart';
 import '../logic/live_stream.dart';
+import '../logic/preorder_open.dart';
 import '../models.dart';
 import '../theme.dart';
 
@@ -81,11 +82,19 @@ Color liveColor(LiveStage stage) => switch (stage) {
   _ => Gp.muted,
 };
 
+/// 예약 단계 색: 시작 전 파랑(아직 못 삼) · 예약 중 민트(예고 단계 「예약 시작」과 같은 색) · 마감 회색
+Color preorderColor(PreorderStage stage) => switch (stage) {
+  PreorderStage.upcoming => Gp.accent,
+  PreorderStage.open => Gp.own,
+  PreorderStage.closed => Gp.muted,
+};
+
 /// 비공식 소식 꼬리표 색 — ⚠ 아이콘과 같은 호박색 (틀린 것은 아니지만 공식과 다를 수 있다)
 const unofficialColor = Gp.star;
 
-/// 예고 꼬리표 하나 — 라이브면 때(라이브 · 오늘 21:00 · 라이브 중 · 다시보기 · 11.12), 아니면 예고 단계.
-/// 비공식 소식은 호박색 「비공식」 · 「비공식 · 예약 시작」 (사진 위는 자리가 좁아 「비공식」만).
+/// 예고 꼬리표 하나 — 라이브면 때(라이브 · 오늘 21:00 · 라이브 중 · 다시보기 · 11.12), 예약 때를 알면
+/// 예약(예약 · 오늘 18:00 · 예약 시작 · ~11.30 23:59 마감 · 예약 마감), 아니면 예고 단계.
+/// 비공식 소식은 호박색 「비공식」 · 「비공식 · 예약 시작」 (사진 위는 자리가 좁아 「비공식」만 — 시작 전 예약은 때가 먼저라 앞에 붙인다).
 /// 홈 배너 · 예고 목록 · 예고 상세 위 띠가 같은 것을 쓴다. [onPhoto] = 사진 위에 올릴 때 (흰 반투명 알약)
 class AnnTag extends StatelessWidget {
   const AnnTag(this.item, {super.key, this.onPhoto = false});
@@ -96,6 +105,13 @@ class AnnTag extends StatelessWidget {
   Widget build(BuildContext context) {
     final now = appNow();
     final stage = annLiveStage(item, now);
+    final pre = annPreorderStage(item, now);
+    if (pre != null && (!onPhoto || pre == PreorderStage.upcoming)) {
+      // 색은 예약 단계 그대로 (비공식이어도 — 라이브와 같게, 언제 열리는지가 먼저 읽혀야 한다)
+      final text = joinDot([if (item.unofficial) tr(unofficialLabel), preorderLabel(item, pre, now)]);
+      final key = ValueKey('preorder-tag-${item.id}');
+      return onPhoto ? TagPill(text, key: key, filled: true) : SoftTag(text, key: key, color: preorderColor(pre));
+    }
     if (stage == null) {
       if (!item.unofficial) return SoftTag(tr(item.status), color: stageColor(item.status));
       final key = ValueKey('unofficial-tag-${item.id}');

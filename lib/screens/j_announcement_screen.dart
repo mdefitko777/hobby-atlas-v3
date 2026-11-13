@@ -2,15 +2,16 @@
 //
 // ┌──────── 디자인 가이드 대응표: J 공식 예고 상세 ────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
-// │ J-1  │ 위 띠: 뒤로 · 제목 한 줄 · AnnTag · 날짜 │ 예고 요약 (한 줄, 라이브면 때)         │ P01 · P03     │
+// │ J-1  │ 위 띠: 뒤로 · 제목 한 줄 · AnnTag · 날짜 │ 예고 요약 (한 줄, 라이브 · 예약이면 때) │ P01 · P03     │
 // │ J-2  │ WebViewWidget (+ 읽는 중 가는 줄)     │ 공식 원문 (글 · 사진 · 영상)            │ P02 · P10     │
-// │ J-2b │ 요약 화면 (BlurFitImage · 단계 줄)     │ 원문을 열 수 없을 때 · 웹 미리보기       │ P09           │
+// │ J-2b │ 요약 화면 (BlurFitImage · 단계 줄)     │ 원문을 열 수 없을 때 · 웹 미리보기 (+ 예약 시작 · 마감 한 줄) │ P09 │
 // │ J-3  │ 아래 띠: TogglePill(알림 받기)        │ 다음 단계가 되면 휴대폰 알림 (진짜)      │ P03 · P07     │
-// │ J-4  │ 아래 띠: 이 예고 · 상품 n → 시트       │ 4단계 진행 줄(비공식이면 안내 한 줄) + 제목 「」 으로 찾은 상품 │ P01 · P06 │
+// │ J-4  │ 아래 띠: 이 예고 · 상품 n → 시트       │ 4단계 진행 줄(비공식이면 안내 한 줄 · 예약 시작 · 마감 한 줄) + 이어진 상품 · 제목 「」 으로 찾은 상품 │ P01 · P06 │
 // │ J-5  │ 아래 띠: 브라우저로 (↗)               │ Chrome 등에서 열기                      │ P10           │
 // │ J-5b │ 아래 띠: 번역 (文A)                   │ 원문 글을 한국어로 · 다시 누르면 원문    │ P02 · P03     │
 // │ J-6  │ PageView (위 띠 · 아래 띠에서)        │ 좌우로 밀어 이전 · 다음 예고            │ P03           │
 // │ J-7  │ 시트 안 가로 ProductTile (최대 12)    │ 같은 IP의 새 상품 (작품 · 없으면 채널)   │ P06 · P08     │
+// │ J-8  │ ExpandRow + AnimatedSize (J-2b · J-4) │ 상품 소개: 사진 · 가격 · 예약 기간 · 발송 · 설명 · 사양 · 구성품 · 공식 상품 페이지 (글은 일본어 그대로, 공식만) │ P02 · P08 │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 홈 배너 · 홈 공식 예고 줄 · 캘린더 예고 줄 · 예고 목록 · 알림에서 쌓기(push, 오른쪽에서).
 import 'dart:async';
@@ -23,14 +24,19 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart' show AndroidWebViewController;
 
 import '../api.dart';
+import '../clock.dart';
+import '../data/announcement_details.dart' show AnnDetail;
 import '../data/page_translate.dart';
 import '../logic/page_text.dart';
 import '../detail_pane.dart';
 import '../channels.dart';
 import '../l10n/l10n.dart';
 import '../logic/announcement_match.dart';
+import '../logic/preorder_open.dart';
 import '../models.dart';
+import '../notifications/live_reminders.dart' show liveLead;
 import '../notifications/notify_store.dart';
+import '../notifications/preorder_reminders.dart' show preorderRule;
 import '../theme.dart';
 import '../widgets.dart';
 import 'd_kit_detail_screen.dart';
@@ -126,8 +132,21 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
       .kits([widget.item.franchiseId])
       .then((kits) => kits, onError: (Object _) => const <Kit>[]);
 
-  /// 제목 「」 으로 찾은 상품
-  late final Future<List<Kit>> _related = _all.then((kits) => matchAnnouncementKits(widget.item.title, kits));
+  /// 이 예고의 상품: 데이터가 이어 둔 상품이 먼저, 그다음 제목 「」 으로 찾은 상품
+  late final Future<List<Kit>> _related = _all.then((kits) => annKits(widget.item, kits));
+
+  /// J-8 상품 소개 + 이어진 상품 (사진 · 가격이 비었을 때 빌린다). 비공식 소식은 늘 없음 — 공식 상품 페이지가 아니다
+  late final Future<_Intro> _intro = widget.item.unofficial
+      ? Future.value((detail: null, kit: null))
+      : Future.wait<Object?>([
+          widget.loaders.annDetails().then<Object?>((m) => m[widget.item.id], onError: (Object _) => null),
+          _all,
+        ]).then(
+          (r) => (
+            detail: r[0] as AnnDetail?,
+            kit: (r[1]! as List<Kit>).where((k) => k.id == widget.item.linkedKitId).firstOrNull,
+          ),
+        );
 
   /// J-7 같은 IP의 새 상품 (제목으로 찾은 상품의 작품, 없으면 채널 전체)
   late final Future<({String label, List<Kit> kits})> _sameIp = Future.wait([
@@ -314,10 +333,19 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
     final before = store.isFollowing(a.id);
     void set(bool on) => store.setFollow(a.id, on, stage: a.status, title: a.title, franchise: a.franchiseId);
     set(!before); // STATE: 알림 받기 → 버튼 채움 (notify_config.json)
+    // 예약이 열리는 시각을 알고 30분 전 알림을 걸 수 있으면 그것을 말한다 (preorder_reminders.dart)
+    final at = a.preorderAt;
+    final remind =
+        at != null &&
+        store.config.enabled &&
+        store.config.rule(preorderRule) &&
+        at.subtract(liveLead).isAfter(appNow());
     showToast(
       context,
       before
           ? tr('이 예고 알림을 껐어요')
+          : remind
+          ? tr('예약 시작 30분쯤 전에 알려 드릴게요')
           : store.config.enabled
           ? tr('다음 단계가 되면 알려 드릴게요')
           : tr('다음 단계가 되면 알림함에 · 휴대폰 알림은 설정에서'),
@@ -346,7 +374,7 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
                     controller: web,
                     gestureRecognizers: {Factory<OneSequenceGestureRecognizer>(EagerGestureRecognizer.new)},
                   )
-                : _Summary(item: a, failed: _failed && _uri != null), // J-2b P09
+                : _Summary(item: a, failed: _failed && _uri != null, intro: _intro), // J-2b P09
           ),
           _BottomBar(
             // J-3 · J-4 · J-5
@@ -394,9 +422,10 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  joinDot([tr(channelOf(a.franchiseId).label), dateDot(a.date), a.source]),
+                  joinDot([tr(channelOf(a.franchiseId).label), dateDot(annShownDay(a)), a.source]),
                   style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
                 ),
+                _PreorderLine(item: a),
                 if (a.unofficial) const _UnofficialNote(),
                 const SizedBox(height: 20),
                 _StageLine(current: stage, unofficial: a.unofficial),
@@ -404,6 +433,7 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
             ),
           ),
           const SizedBox(height: 12),
+          _IntroSlot(item: a, intro: _intro, sheet: true), // J-8
           FutureBuilder<List<Kit>>(
             future: _related,
             builder: (context, snap) {
@@ -506,7 +536,7 @@ class _TopBar extends StatelessWidget {
                     const SizedBox(width: 6),
                     Flexible(
                       child: Text(
-                        joinDot([dateDot(item.date), item.source]),
+                        joinDot([dateDot(annShownDay(item)), item.source]),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontSize: Gp.t11, color: Gp.muted),
@@ -621,9 +651,10 @@ class _BottomBar extends StatelessWidget {
 
 /// J-2b 요약 — 원문을 앱 안에서 열 수 없을 때 (웹 미리보기 · 열기 실패 · 주소 없음)
 class _Summary extends StatelessWidget {
-  const _Summary({required this.item, required this.failed});
+  const _Summary({required this.item, required this.failed, required this.intro});
   final Announcement item;
   final bool failed;
+  final Future<_Intro> intro;
 
   @override
   Widget build(BuildContext context) {
@@ -650,15 +681,18 @@ class _Summary extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                joinDot([tr(channelOf(item.franchiseId).label), dateDot(item.date), item.source]),
+                joinDot([tr(channelOf(item.franchiseId).label), dateDot(annShownDay(item)), item.source]),
                 style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
               ),
+              _PreorderLine(item: item),
               if (item.unofficial) const _UnofficialNote(),
               const SizedBox(height: 20),
               _StageLine(current: stage, unofficial: item.unofficial),
             ],
           ),
         ),
+        _IntroSlot(item: item, intro: intro, sheet: false), // J-8
+        const SizedBox(height: 24),
       ],
     );
   }
@@ -740,4 +774,212 @@ class _StageLine extends StatelessWidget {
       ],
     );
   }
+}
+
+/// 예약 시작 · 마감 한 줄 (요약 · 이 예고 시트) — 「예약 시작 11.13 18:00 · 마감 11.20 23:59」, 예약 때를 모르면 없음
+class _PreorderLine extends StatelessWidget {
+  const _PreorderLine({required this.item});
+  final Announcement item;
+
+  @override
+  Widget build(BuildContext context) {
+    final now = appNow();
+    final stage = annPreorderStage(item, now);
+    if (stage == null) return const SizedBox.shrink();
+    return Padding(
+      key: const ValueKey('preorder-line'),
+      padding: const EdgeInsets.only(top: 8),
+      child: Text(
+        preorderLine(item, now),
+        style: TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w600, color: preorderColor(stage)),
+      ),
+    );
+  }
+}
+
+/// J-8 상품 소개 + 이 예고에 이어진 상품
+typedef _Intro = ({AnnDetail? detail, Kit? kit});
+
+/// J-8 자리 — 읽는 동안 · 상품 소개가 없으면 아무것도 (버튼도 빈 칸 글도 없다)
+class _IntroSlot extends StatelessWidget {
+  const _IntroSlot({required this.item, required this.intro, required this.sheet});
+  final Announcement item;
+  final Future<_Intro> intro;
+  final bool sheet;
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<_Intro>(
+    future: intro,
+    builder: (context, snap) => switch (snap.data) {
+      (detail: final d?, kit: final kit) when !item.unofficial => _ProductIntro(
+        item: item,
+        detail: d,
+        kit: kit,
+        sheet: sheet,
+      ),
+      _ => const SizedBox.shrink(),
+    },
+  );
+}
+
+/// J-8 상품 소개 — 버튼 하나(처음엔 접힘)를 누르면 그 자리에서 펼친다:
+/// 사진 → 가격 · 예약 기간 · 발송 → 설명 → 사양 → 구성품 → 공식 상품 페이지.
+/// 글은 공식 페이지의 일본어 그대로 (번역하지 않는다 — 길게 눌러 고를 수 있게 SelectionArea). 칸 이름만 화면 언어
+class _ProductIntro extends StatefulWidget {
+  const _ProductIntro({required this.item, required this.detail, required this.kit, required this.sheet});
+  final Announcement item;
+  final AnnDetail detail;
+
+  /// 이 예고에 이어진 상품 — 상품 소개에 사진 · 가격이 없을 때 빌린다
+  final Kit? kit;
+
+  /// 이 예고 시트 안 (요약 화면은 위에 큰 사진이 이미 있어 예고 사진으로 채우지 않는다)
+  final bool sheet;
+
+  @override
+  State<_ProductIntro> createState() => _ProductIntroState();
+}
+
+class _ProductIntroState extends State<_ProductIntro> {
+  bool _open = false;
+
+  Future<void> _openPage() async {
+    final u = Uri.tryParse(widget.detail.pageUrl.isNotEmpty ? widget.detail.pageUrl : widget.item.url);
+    final ok = u != null && u.hasScheme && await launchUrl(u, mode: LaunchMode.externalApplication);
+    if (!ok && mounted) showToast(context, tr('브라우저를 열지 못했어요'));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Gp.gutter),
+          child: ExpandRow(
+            key: const ValueKey('ann-detail-toggle'),
+            title: tr('상품 소개'),
+            summary: '',
+            open: _open,
+            onTap: () => setState(() => _open = !_open), // STATE: 상품 소개 펼침 · 접음
+          ),
+        ),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 200),
+          alignment: Alignment.topCenter,
+          child: _open ? _body() : const SizedBox(width: double.infinity),
+        ),
+      ],
+    );
+  }
+
+  Widget _body() {
+    final d = widget.detail;
+    final a = widget.item;
+    final kit = widget.kit;
+    final images = d.gallery.isNotEmpty
+        ? d.gallery
+        : kit != null && kit.gallery.isNotEmpty
+        ? kit.gallery
+        : [if (kit != null && kit.image.isNotEmpty) kit.image else if (widget.sheet && a.image.isNotEmpty) a.image];
+    final price = d.priceJpy ?? kit?.priceJpy;
+    final period = preorderPeriod(a);
+    final rows = [
+      (tr('가격'), price != null ? yen(price) : d.priceText),
+      // 시각은 예고 쪽에만 있다 (상품 페이지는 날짜만) — 있으면 그것, 없으면 페이지 글 그대로
+      (tr('예약 기간'), period.isNotEmpty ? period : d.saleText),
+      (
+        tr(d.releaseKind == 'ship' ? '발송 예정' : '발매 예정'),
+        d.releaseMonth.isNotEmpty ? dateDot(d.releaseMonth) : d.releaseText,
+      ),
+    ].where((r) => r.$2.isNotEmpty);
+    const text = TextStyle(fontSize: Gp.t14, height: 1.6);
+    return Column(
+      key: const ValueKey('ann-detail-body'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (images.isNotEmpty)
+          ImagePager(images: images, label: a.title, padding: const EdgeInsets.fromLTRB(16, 4, 16, 32)),
+        SelectionArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(Gp.gutter, 8, Gp.gutter, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final (label, value) in rows) _InfoRow(label: label, value: value),
+                if (d.lead.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  Text(d.lead, style: text.copyWith(fontWeight: FontWeight.w600)),
+                ],
+                for (final p in d.description) ...[const SizedBox(height: 10), Text(p, style: text)],
+                if (d.spec.isNotEmpty) ...[
+                  _IntroHeader(tr('사양')),
+                  for (final (label, value) in d.spec) _InfoRow(label: label, value: value),
+                ],
+                if (d.contents.isNotEmpty) ...[
+                  _IntroHeader(tr('구성품')),
+                  for (final c in d.contents) Text('・$c', style: text),
+                ],
+              ],
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(Gp.gutter - 8, 8, Gp.gutter, 4),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              key: const ValueKey('ann-detail-page'),
+              onPressed: _openPage,
+              icon: const Icon(Icons.open_in_new, size: Gp.iS),
+              label: Text(tr('공식 상품 페이지')),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// 상품 소개 안 칸 제목 (사양 · 구성품)
+class _IntroHeader extends StatelessWidget {
+  const _IntroHeader(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 18, bottom: 6),
+    child: Text(
+      text,
+      style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w600),
+    ),
+  );
+}
+
+/// 이름 · 값 한 줄 — D-8 공식 정보 시트 아래 줄과 같은 모양 (이름 회색 · 값 본문)
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({required this.label, required this.value});
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 5),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          flex: 2,
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: Gp.t12, color: Gp.muted, height: 1.7),
+          ),
+        ),
+        Expanded(
+          flex: 3,
+          child: Text(value, style: const TextStyle(fontSize: Gp.t14, height: 1.5)),
+        ),
+      ],
+    ),
+  );
 }

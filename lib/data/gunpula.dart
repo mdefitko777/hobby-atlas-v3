@@ -46,6 +46,8 @@ const auxFiles = [
   'grades.json',
   'kit-first-seen.json',
   'announcements.json',
+  // 예고의 상품 소개 (공식 상품 페이지 글 · 사진, lib/data/announcement_details.dart — 없으면 404 → 버튼 숨김)
+  'announcement-details.json',
   'atlas-groups.json',
   // 건담 도감 (lib/data/gundam_atlas.dart): MS 마스터 · 상품↔MS 연결 · 박스 아트(매핑 때만)
   atlasMsFile,

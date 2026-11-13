@@ -23,6 +23,8 @@ const notifyRuleDefaults = <String, bool>{
   'restock': true,
   // 예약한 상품의 도착 달 · 도착 날 (기기에 적은 예약 — lib/logic/preorder.dart)
   'preorder_arrival': true,
+  // 알림 받는 예고 · 좋아요한 상품의 예약 시작 30분 전 — 시각을 아는 것만 (lib/notifications/preorder_reminders.dart)
+  'preorder_soon': true,
   // 내 채널 공식 라이브: 처음 보인 라이브 · 시작 30분 전 (lib/notifications/live_reminders.dart)
   'live_soon': true,
   'gundam': false,
@@ -43,14 +45,16 @@ const notifyInterestRules = [
   'release_soon',
   'restock',
   'preorder_arrival',
+  'preorder_soon',
   'live_soon',
 ];
 const notifyWorldRules = ['gundam', 'armored_core', 'pokemon', 'fate', 'madoka', 'lego'];
 
 /// 알림 화면(k_notify_settings.dart)의 자리 — 내 상품 = 채널과 상관없이, 나머지는 채널 시트.
 /// 키 · 저장 모양은 그대로 두고 화면에서 묶는 곳만 나눴다 (2026-11-12, 한 줄 칩 목록이 길어서)
-/// 「라이브 시작 전」은 상품이 아니라 내 채널의 방송이지만, 채널마다 켜고 끄는 것이 아니라 이 묶음 끝에 둔다
-const notifyMineRules = ['wanted', 'release_soon', 'restock', 'preorder_arrival', 'live_soon'];
+/// 「라이브 시작 전」은 상품이 아니라 내 채널의 방송이지만, 채널마다 켜고 끄는 것이 아니라 이 묶음 끝에 둔다.
+/// 「예약 시작 전」은 그 바로 앞 — 둘 다 시작 30분 전 알림이라 나란히
+const notifyMineRules = ['wanted', 'release_soon', 'restock', 'preorder_arrival', 'preorder_soon', 'live_soon'];
 const notifyChannelRules = <String, List<String>>{
   'gundam': ['seed_00', 'premium_bandai', 'pb_window'],
   'beyblade': ['bbx'],
@@ -65,6 +69,7 @@ const notifyRuleLabels = <String, String>{
   'release_soon': '발매 D-7 · D-1',
   'restock': '재판매',
   'preorder_arrival': '예약 도착',
+  'preorder_soon': '예약 시작 전',
   'live_soon': '라이브 시작 전',
   'gundam': '건담 전체',
   'armored_core': '아머드 코어 전체',
@@ -270,6 +275,75 @@ class LiveStream {
       state: jStr(j['state']),
       source: jStr(j['source']),
       replaces: jList(j['replaces']).whereType<String>().toList(),
+    );
+  }
+}
+
+/// 예약이 열리는 시각을 아는 예고 하나 — announcements.json 의 preorder_at 에서 알림에 쓰는 것만
+/// (notify_state.json `preorder_opens`, 고르기 · 계획은 preorder_reminders.dart)
+class PreorderOpen {
+  const PreorderOpen({
+    required this.id,
+    required this.franchise,
+    required this.title,
+    required this.at,
+    this.titleZh = '',
+    this.kitId = '',
+    this.source = '',
+    this.replaces = const [],
+    this.unofficial = false,
+  });
+
+  final String id;
+  final String franchise;
+
+  /// 한국어 화면 이름 · 중국어 화면 이름 (없으면 [title])
+  final String title;
+  final String titleZh;
+
+  /// 비공식 소식 — 알림 제목 앞에 「비공식」
+  final bool unofficial;
+
+  /// 예약이 열리는 시각 (기기 시간대)
+  final DateTime at;
+
+  /// 이 예고의 상품 (linked_kit_id) — 좋아요한 상품이면 알림 받기를 안 눌러도 알린다
+  final String kitId;
+  final String source;
+
+  /// 이어받은 옛 예고 id (announcements.json `replaced`) — 옛 id 로 알림 받기를 눌러 둔 것도 이것으로 본다
+  final List<String> replaces;
+
+  /// 지금 화면 언어의 이름 (휴대폰 알림)
+  String get shown => L10n.isZh && titleZh.isNotEmpty ? titleZh : title;
+
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'franchise': franchise,
+    'title': title,
+    if (titleZh.isNotEmpty) 'title_zh': titleZh,
+    'at': at.toUtc().toIso8601String(),
+    if (kitId.isNotEmpty) 'kit': kitId,
+    if (source.isNotEmpty) 'source': source,
+    if (replaces.isNotEmpty) 'replaces': replaces,
+    if (unofficial) 'unofficial': true,
+  };
+
+  static PreorderOpen? fromJson(Object? json) {
+    final j = jMap(json);
+    final id = jStr(j['id']);
+    final at = parseLiveAt(j['at']);
+    if (id.isEmpty || at == null) return null;
+    return PreorderOpen(
+      id: id,
+      franchise: jStr(j['franchise']),
+      title: jStr(j['title']),
+      titleZh: jStr(j['title_zh']),
+      at: at,
+      kitId: jStr(j['kit']),
+      source: jStr(j['source']),
+      replaces: jList(j['replaces']).whereType<String>().toList(),
+      unofficial: j['unofficial'] == true,
     );
   }
 }
@@ -598,11 +672,16 @@ class NotifyState {
     this.liveKey = '',
     List<LiveStream>? liveStreams,
     Map<String, String>? liveScheduled,
+    this.preorderRead = false,
+    List<PreorderOpen>? preorderOpens,
+    Map<String, String>? preorderScheduled,
     Set<String>? seenFeed,
     List<NoticeRecord>? inbox,
     Map<String, NoticeFlag>? flags,
   }) : liveStreams = liveStreams ?? const [],
        liveScheduled = liveScheduled ?? const {},
+       preorderOpens = preorderOpens ?? const [],
+       preorderScheduled = preorderScheduled ?? const {},
        seenFeed = seenFeed ?? {},
        inbox = inbox ?? [],
        flags = flags ?? {};
@@ -639,6 +718,15 @@ class NotifyState {
   /// 안드로이드에 걸어 둔 시작 전 알림: 예고 id → 지문 (live_reminders.dart liveReminderSig)
   Map<String, String> liveScheduled;
 
+  /// 예고 파일에서 예약 시각을 한 번이라도 읽었나 — 이 기능 전에 [liveKey] 를 적은 기기는 예고 파일이 그대로여도 한 번 읽는다
+  bool preorderRead;
+
+  /// 그때 읽은 아직 안 지난 예약 시각 (모든 채널 — 누구 것인지는 계획할 때 거른다)
+  List<PreorderOpen> preorderOpens;
+
+  /// 걸어 둔 예약 시작 전 알림: 예고 id → 지문 (라이브와 같은 모양)
+  Map<String, String> preorderScheduled;
+
   /// [lastSeen] 날짜에서 이미 본 상품 줄 id (규칙에 안 걸린 것도). 같은 날짜를 다시 볼 때 늘어난 상품만 보려고 —
   /// 그 사이 규칙을 켜거나 좋아요를 눌러도 이미 지나간 소식으로 휴대폰이 울리지 않게.
   final Set<String> seenFeed;
@@ -667,6 +755,9 @@ class NotifyState {
     if (liveKey.isNotEmpty) 'live_key': liveKey,
     if (liveStreams.isNotEmpty) 'live_streams': [for (final s in liveStreams) s.toJson()],
     if (liveScheduled.isNotEmpty) 'live_scheduled': liveScheduled,
+    // 읽었으면 빈 목록이라도 적는다 (preorderRead)
+    if (preorderRead) 'preorder_opens': [for (final p in preorderOpens) p.toJson()],
+    if (preorderScheduled.isNotEmpty) 'preorder_scheduled': preorderScheduled,
     'seen_feed': seenFeed.toList(),
     'inbox': [for (final r in inbox) r.toJson()],
     'flags': {for (final e in flags.entries) e.key: e.value.toJson()},
@@ -686,6 +777,12 @@ class NotifyState {
       liveStreams: jList(j['live_streams']).map(LiveStream.fromJson).nonNulls.toList(),
       liveScheduled: {
         for (final e in jMap(j['live_scheduled']).entries)
+          if (e.value case final String v) e.key: v,
+      },
+      preorderRead: j['preorder_opens'] is List,
+      preorderOpens: jList(j['preorder_opens']).map(PreorderOpen.fromJson).nonNulls.toList(),
+      preorderScheduled: {
+        for (final e in jMap(j['preorder_scheduled']).entries)
           if (e.value case final String v) e.key: v,
       },
       seenFeed: jList(j['seen_feed']).whereType<String>().toSet(),
@@ -721,6 +818,9 @@ class NotifyState {
       liveKey: newer.liveKey,
       liveStreams: newer.liveStreams,
       liveScheduled: newer.liveScheduled,
+      preorderRead: newer.preorderRead,
+      preorderOpens: newer.preorderOpens,
+      preorderScheduled: newer.preorderScheduled,
       seenFeed: {if (a.lastSeen == lastSeen) ...a.seenFeed, if (b.lastSeen == lastSeen) ...b.seenFeed},
       inbox: byId.values.toList(),
       flags: flags,

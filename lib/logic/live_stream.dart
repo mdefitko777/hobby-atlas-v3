@@ -4,6 +4,7 @@ import '../format.dart';
 import '../json_util.dart';
 import '../l10n/l10n.dart';
 import '../models.dart';
+import 'preorder_open.dart' show annShownDay;
 
 /// 라이브의 지금 단계. undated = 아직 안 했는데 시작 시각을 모른다 (시간 미정)
 enum LiveStage { upcoming, live, ended, undated }
@@ -71,5 +72,5 @@ List<Announcement> liveFirst(List<Announcement> list, DateTime now) {
 }
 
 /// 캘린더 자리 ('2026-11-14'): 라이브는 발표한 날이 아니라 방송하는 날, 시간 미정이면 캘린더에 없다(빈 글자).
-/// 라이브가 아닌 예고는 발표일 그대로
-String announcementDay(Announcement a) => !a.isStream ? a.date : (a.liveAt == null ? '' : dayKey(a.liveAt!));
+/// 라이브가 아닌 예고는 예약이 열리는 날, 모르면 발표일 (preorder_open.dart annShownDay)
+String announcementDay(Announcement a) => !a.isStream ? annShownDay(a) : (a.liveAt == null ? '' : dayKey(a.liveAt!));

@@ -8,8 +8,11 @@ import 'package:flutter/material.dart';
 
 import '../data/catalog.dart' show Catalog;
 import '../data/photo_files.dart';
+import '../l10n/l10n.dart';
 import '../models.dart' show Kit;
 import '../theme.dart';
+import 'sections.dart' show PageDots;
+import 'tags.dart' show SoftTag;
 
 /// 상품·로고 이미지. 경로가 비었거나 못 읽으면 회색 칸 + 글자.
 /// [grayscale] = 흑백 (베이 조합 만들기의 안 가진 부품만 — 도감 칸은 늘 컬러)
@@ -321,6 +324,80 @@ class BlurFitImage extends StatelessWidget {
         ColoredBox(color: Colors.black.withValues(alpha: dim)),
         AppImage(path, fit: BoxFit.contain),
       ],
+    );
+  }
+}
+
+/// 공식 사진 넘기기 (정사각형, 전체가 보이게 contain) — 상품 상세 D-2 · 예고 상품 소개 J-8.
+/// 누르면 크게 보기, 열리지 않는 사진은 빼고 점도 그만큼 줄인다. [padding] = 사진 둘레 (상품 상세는 위에 버튼이 떠 있어 위가 넓다)
+class ImagePager extends StatefulWidget {
+  const ImagePager({
+    super.key,
+    required this.images,
+    required this.label,
+    this.reference = false,
+    this.padding = const EdgeInsets.fromLTRB(16, 56, 16, 28),
+  });
+  final List<String> images;
+  final String label;
+
+  /// D-2c 이 상품 사진이 없어 같은 기체의 다른 상품 사진을 빌린 것
+  final bool reference;
+  final EdgeInsets padding;
+
+  @override
+  State<ImagePager> createState() => _ImagePagerState();
+}
+
+class _ImagePagerState extends State<ImagePager> {
+  int _page = 0;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<int>(
+    // D-2d 열리지 않는 사진(지워졌거나 없는 번호)은 빼고 점도 그만큼 줄인다
+    valueListenable: BrokenImages.changes,
+    builder: (context, _, _) => _build(context, BrokenImages.keep(widget.images)),
+  );
+
+  Widget _build(BuildContext context, List<String> images) {
+    final page = _page.clamp(0, images.isEmpty ? 0 : images.length - 1);
+    return AspectRatio(
+      aspectRatio: 1,
+      child: Stack(
+        children: [
+          PageView.builder(
+            allowImplicitScrolling: true, // 옆 장을 미리 불러 열리지 않는 사진을 넘기기 전에 뺀다
+            itemCount: images.length,
+            onPageChanged: (i) => setState(() => _page = i), // STATE: 사진 번호 → 점
+            itemBuilder: (context, i) => GestureDetector(
+              // D-2b 누르면 크게 (확대 · 넘기기)
+              onTap: () => openImageViewer(context, images, index: i, label: widget.label),
+              child: Padding(
+                padding: widget.padding,
+                child: AppImage(images[i], fit: BoxFit.contain, placeholder: widget.label),
+              ),
+            ),
+          ),
+          if (images.length > 1)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 12,
+              child: PageDots(count: images.length, index: page),
+            ),
+          if (widget.reference)
+            Positioned(
+              // D-2c
+              left: 16,
+              bottom: 10,
+              child: Tooltip(
+                message: tr('공식 사진이 없어 같은 기체의 다른 상품 사진을 보여 줘요'),
+                triggerMode: TooltipTriggerMode.tap,
+                child: SoftTag(tr('참고 그림 · 같은 기체')),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

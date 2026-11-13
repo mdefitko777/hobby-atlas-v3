@@ -2,6 +2,7 @@
 // 화면 코드는 이 파일의 fetch…() 함수만 부른다. 테스트는 Loaders 에 가짜 함수를 넣는다.
 import 'dart:async';
 
+import 'data/announcement_details.dart';
 import 'data/bbx_builder_data.dart';
 import 'data/catalog.dart';
 import 'data/derive.dart';
@@ -155,6 +156,9 @@ Future<List<GuideChapter>> fetchGuideChapters(String workId) => _guard(() => der
 /// 상세 · 캘린더: 재판매 소식 (data/atlas/restocks.json — 없으면 빈 묶음, 오류를 내지 않는다)
 Future<RestockIndex> fetchRestocks() => loadRestocks();
 
+/// 예고의 상품 소개 (예고 id 별, 공식 상품 페이지 글 · 사진) — 없으면 빈 지도
+Future<Map<String, AnnDetail>> fetchAnnDetails() => loadAnnDetails();
+
 /// 화면 사이에 그대로 넘겨 주는 데이터 함수 묶음 (의존성 주입).
 /// 앱은 기본값(실제 데이터)을, 테스트는 가짜 함수를 넣는다.
 class Loaders {
@@ -176,6 +180,7 @@ class Loaders {
     this.kitsByJan = fetchKitsByJan,
     this.restocks = fetchRestocks,
     this.guideIndex = fetchGuideIndex,
+    this.annDetails = fetchAnnDetails,
   });
 
   final Future<List<Kit>> Function(List<String> channelIds) kits;
@@ -205,4 +210,7 @@ class Loaders {
 
   /// 건담 도감 찾아보기 표 (작품 · 기체 · 상품 → 기체)
   final Future<GuideIndex> Function() guideIndex;
+
+  /// 예고 id → 상품 소개 (예고 상세의 「상품 소개」)
+  final Future<Map<String, AnnDetail>> Function() annDetails;
 }

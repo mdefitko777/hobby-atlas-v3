@@ -19,6 +19,7 @@ import '../logic/preorder.dart' show Preorder;
 import '../models.dart';
 import 'feed_rules.dart' show annRank, annStageKey;
 import 'live_reminders.dart' show liveRule;
+import 'preorder_reminders.dart' show preorderFollowTouched, preorderRule, preorderWantedTouched;
 import 'local_notifier.dart';
 import 'notify_models.dart';
 
@@ -95,12 +96,19 @@ class NotifyStore extends ChangeNotifier {
   }
 
   /// 앱이 받아 둔 예고 파일이 라이브 알림을 건 판보다 새것이다 (홈에서 당겨서 새로 고침 …) → 20분을 기다리지 않고 바로 확인해
-  /// 오늘 잡힌 라이브도 시작 전 알림이 걸리게 한다. 그 지문 하나에 한 번만 (확인이 실패해도 되풀이하지 않는다)
+  /// 오늘 잡힌 라이브 · 예약도 시작 전 알림이 걸리게 한다. 그 지문 하나에 한 번만 (확인이 실패해도 되풀이하지 않는다)
   void _onCatalog() {
     _scheduleConfig();
     unawaited(_readReplaced());
     final hash = Catalog.auxHashes(Catalog.instance.manifest)['announcements.json'];
-    if (hash == null || hash == state.liveKey || hash == _liveAsked || !config.rule(liveRule)) return;
+    if (hash == null || hash == _liveAsked) return;
+    final live = config.rule(liveRule) && hash != state.liveKey;
+    // 예약 시각은 알림 받는 예고 · 좋아요한 상품이 있을 때만 쓴다. 아직 한 번도 안 읽었으면 파일이 그대로여도 한 번
+    final preorder =
+        config.rule(preorderRule) &&
+        (config.followed.isNotEmpty || config.wanted.isNotEmpty) &&
+        (hash != state.liveKey || !state.preorderRead);
+    if (!live && !preorder) return;
     _liveAsked = hash;
     _checkLive();
   }
@@ -125,7 +133,7 @@ class NotifyStore extends ChangeNotifier {
     }
   }
 
-  /// 라이브 알림 계획을 지금 다시 (규칙 · 새 소식 알림 스위치를 바꿨을 때도 — 꺼 놓고 걸린 알림이 뜨면 안 된다).
+  /// 라이브 · 예약 시작 전 알림 계획을 지금 다시 (규칙 · 새 소식 알림 스위치 · 알림 받는 예고를 바꿨을 때도 — 꺼 놓고 걸린 알림이 뜨면 안 된다).
   /// 확인 중이면 끝난 뒤에 한 번 더
   void _checkLive() {
     if (checking) {
@@ -299,7 +307,7 @@ class NotifyStore extends ChangeNotifier {
   void setRule(String key, bool v) {
     config.rules[key] = v;
     _configChanged();
-    if (key == liveRule) _checkLive();
+    if (key == liveRule || key == preorderRule) _checkLive();
   }
 
   /// 내가 만든 알림 조건 — 같은 조건은 한 번만
@@ -339,6 +347,20 @@ class NotifyStore extends ChangeNotifier {
       config.followed.remove(annId);
     }
     _configChanged();
+    // 그 예고의 예약 시작 전 알림을 걸거나 거둔다 (적어 둔 예약이 앱의 예고 파일과 같은 판이고 그 예고에 예약 시각이 없으면
+    // 확인을 돌리지 않는다 — 누를 때마다 예고 파일을 받지 않게)
+    final hash = Catalog.auxHashes(Catalog.instance.manifest)['announcements.json'];
+    if (config.enabled &&
+        config.rule(preorderRule) &&
+        preorderFollowTouched(
+          state.preorderOpens,
+          state.preorderScheduled,
+          annId,
+          read: state.preorderRead && (hash == null || hash == state.liveKey),
+          now: DateTime.now(),
+        )) {
+      _checkLive();
+    }
   }
 
   /// 알림함에 들어온 예고 단계 줄 → 알림 받는 예고의 단계를 그만큼 올린다 (알림함 줄이 오래돼 지워져도 다시 울리지 않게)
@@ -382,15 +404,17 @@ class NotifyStore extends ChangeNotifier {
   void _scheduleConfig() {
     if (!persist) return;
     _configTimer?.cancel();
-    _configTimer = Timer(const Duration(milliseconds: 600), () => unawaited(_writeConfig()));
+    _configTimer = Timer(const Duration(milliseconds: 600), () => unawaited(_writeConfig(replan: true)));
   }
 
-  /// 설정 + 내 채널 · 좋아요 · 구매함 id · 좋아요한 PB 상품의 예약 기간 · 예약 도착 → notify_config.json (백그라운드 확인이 읽는다)
-  Future<void> _writeConfig() async {
+  /// 설정 + 내 채널 · 좋아요 · 구매함 id · 좋아요한 PB 상품의 예약 기간 · 예약 도착 → notify_config.json (백그라운드 확인이 읽는다).
+  /// [replan] = 화면에서 바꾼 뒤(확인 안에서 부를 때는 그 확인이 새 좋아요를 이미 본다)
+  Future<void> _writeConfig({bool replan = false}) async {
     _configTimer?.cancel();
     if (!persist) return;
     final me = _me ?? UserStore.instance;
     final wanted = me.idsWith(const {CollectStatus.wanted});
+    final wantedBefore = config.wanted;
     final byId = Catalog.instance.byId;
     config
       ..channels = [...me.myChannels]
@@ -405,6 +429,13 @@ class NotifyStore extends ChangeNotifier {
       ..pb = byId.isEmpty ? config.pb : pbWindowsFor(wanted, byId, DateTime.now())
       ..releases = byId.isEmpty ? config.releases : releaseDaysFor(wanted, byId, DateTime.now());
     await BlobStore.write(notifyConfigKey, jsonEncode(config.toJson()));
+    // 좋아요한 상품의 예약 시작 전 알림을 바로 걸거나 거둔다 (예고 파일은 다시 받지 않고 적어 둔 예약으로)
+    if (replan &&
+        config.enabled &&
+        config.rule(preorderRule) &&
+        preorderWantedTouched(state.preorderOpens, wantedBefore, config.wanted, DateTime.now())) {
+      _checkLive();
+    }
   }
 }
 
