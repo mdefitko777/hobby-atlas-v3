@@ -581,6 +581,103 @@ void main() {
       s = await state();
       expect(s.preorderScheduled.keys, ['tamashii-news-2026-11-13-16258']);
     });
+
+    // 뒤 확인이 3시간마다라 같은 예고 파일을 매번 받지 않는다 (예전에는 알림 받는 예고가 있으면 확인마다 받았다)
+    test('알림 받는 예고: 예고 파일이 바뀐 때만 받고 · 단계 줄과 예약 시작 전 알림을 그때 다시', () async {
+      const id = 'tamashii-news-2026-11-13-16258';
+      final config = NotifyConfig(
+        channels: const ['gundam'],
+        followed: {id: const FollowedAnn(stage: 'product_confirmed', title: 'キュリオス', franchise: 'gundam')},
+        rules: {liveRule: false},
+      );
+      await BlobStore.write(notifyConfigKey, jsonEncode(config.toJson()));
+      var body = jsonEncode({
+        'announcements': [
+          _kyrios(extra: {'status': 'product_confirmed'}),
+        ],
+      });
+      String hash(String text) => sha256.convert(utf8.encode(text)).toString().substring(0, 16);
+      final asked = <String>[];
+      Future<String?> fetch(String path) async {
+        asked.add(path);
+        return switch (path) {
+          'data/split/manifest.json' => jsonEncode({
+            'updated_at': '2026-11-13',
+            'total': 100,
+            'files': {'announcements.json': hash(body)},
+          }),
+          announcementsPath => body,
+          _ => null,
+        };
+      }
+
+      final plans = <LiveReminderPlan>[];
+      Future<Set<String>> apply(LiveReminderPlan p) async {
+        plans.add(p);
+        return const {};
+      }
+
+      Future<NotifyState> state() async => NotifyState.fromJson(jsonDecode((await BlobStore.read(notifyStateKey))!));
+      final t0 = DateTime.utc(2026, 11, 13, 1); // 10:00 JST
+
+      await runCatalogCheck(now: t0, fetch: fetch, applyLive: apply);
+      expect(asked, contains(announcementsPath));
+      expect(plans.single.schedule.single.at.toUtc(), _open.subtract(const Duration(minutes: 30)));
+      expect((await state()).inbox.where((r) => r.isAnnStage), isEmpty);
+
+      // 3시간 뒤 같은 파일: 예고 파일은 받지 않고, 걸어 둔 알림은 그대로
+      asked.clear();
+      await runCatalogCheck(now: t0.add(catalogCheckEvery), fetch: fetch, applyLive: apply);
+      expect(asked, isNot(contains(announcementsPath)));
+      expect(plans.last.isEmpty, isTrue);
+      expect((await state()).preorderScheduled.keys, [id]);
+
+      // 낮에 다시 만든 예고 파일: 예약 시작으로 넘어가고 시각이 19시로 → 받아서 단계 줄 + 알림을 옮겨 건다
+      body = jsonEncode({
+        'announcements': [
+          _kyrios(extra: {'preorder_at': '2026-11-13T19:00:00+09:00'}),
+        ],
+      });
+      asked.clear();
+      await runCatalogCheck(now: t0.add(catalogCheckEvery * 2), fetch: fetch, applyLive: apply);
+      expect(asked, contains(announcementsPath));
+      expect(plans.last.schedule.single.at.toUtc(), DateTime.utc(2026, 11, 13, 9, 30));
+      final s = await state();
+      expect(s.inbox.where((r) => r.isAnnStage).single.id, 'ann-$id-preorder_open');
+      expect(s.liveKey, hash(body));
+    });
+
+    test('예고 파일을 받을까 (shouldFetchAnnouncements)', () {
+      const follow = {'a1': FollowedAnn(stage: 'announced', title: 't', franchise: 'gundam')};
+      final read = NotifyState(liveKey: 'h1', preorderRead: true);
+      bool want(NotifyConfig c, NotifyState s, String h) => shouldFetchAnnouncements(c, s, h);
+      NotifyConfig cfg({
+        Map<String, FollowedAnn> followed = const {},
+        Set<String> wanted = const {},
+        bool live = false,
+      }) => NotifyConfig(followed: {...followed}, wanted: {...wanted}, rules: {liveRule: live});
+
+      // 쓸 곳이 없으면 받지 않는다
+      expect(want(cfg(), NotifyState(), 'h1'), isFalse);
+      // 알림 받는 예고 · 좋아요한 상품 · 라이브 규칙: 읽은 판과 같으면 받지 않고, 다르면 받는다
+      for (final c in [
+        cfg(followed: follow),
+        cfg(wanted: {'k1'}),
+        cfg(live: true),
+      ]) {
+        expect(want(c, read, 'h1'), isFalse);
+        expect(want(c, read, 'h2'), isTrue);
+      }
+      // 예약 시각을 아직 안 읽은 기기는 같은 판이어도 한 번 (규칙을 끄면 아니다)
+      final unread = NotifyState(liveKey: 'h1');
+      expect(want(cfg(followed: follow), unread, 'h1'), isTrue);
+      expect(want(cfg(live: true), unread, 'h1'), isFalse);
+      final off = cfg(followed: follow)..rules[preorderRule] = false;
+      expect(want(off, unread, 'h1'), isFalse);
+      // 지문이 없는 manifest: 알림 받는 예고가 있을 때만
+      expect(want(cfg(followed: follow), read, ''), isTrue);
+      expect(want(cfg(wanted: {'k1'}, live: true), read, ''), isFalse);
+    });
   });
 
   group('화면', () {

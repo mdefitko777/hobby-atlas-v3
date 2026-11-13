@@ -1,6 +1,6 @@
 // 알림 — 앱 전체가 함께 보는 한 벌: 🔔 안 읽은 수 · 알림 화면(읽음 · 지움) · 설정 스위치 · 새 소식 확인.
 // 저장: notify_config.json(설정 + 확인할 대상) · notify_state.json(알림함). 모양은 notify_models.dart.
-// 확인은 lib/background/catalog_check_worker.dart 의 runCatalogCheck — 앱을 열 때 · 돌아올 때(20분에 한 번) + 12시간마다 백그라운드.
+// 확인은 lib/background/catalog_check_worker.dart 의 runCatalogCheck — 앱을 열 때 · 돌아올 때(20분에 한 번) + 3시간마다 백그라운드.
 import '../format.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -63,7 +63,7 @@ class NotifyStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// main.dart 에서 한 번: 파일 읽기 → 알림 준비 → 12시간 확인 등록 → 카탈로그가 준비되면 첫 확인
+  /// main.dart 에서 한 번: 파일 읽기 → 알림 준비 → 뒤 확인 등록(3시간마다) → 카탈로그가 준비되면 첫 확인
   Future<void> start({required UserStore me, required Future<void> meLoaded}) async {
     if (_started || !persist) return;
     _started = true;

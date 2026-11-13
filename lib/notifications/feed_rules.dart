@@ -466,7 +466,7 @@ NoticeRecord _pbRecord(String id, String kind, PbWindow w, String date, NoticePa
 }
 
 /// 좋아요한 상품의 발매 알림: 7–2일 전 한 번(D-7) · 하루 전(D-1) · 당일. 이미 알린 것([known])은 빼고.
-/// 12시간마다 확인하니, 휴대폰이 꺼져 있던 날은 다음 확인 때 그 단계로 한 번만.
+/// 몇 시간마다 확인하니, 휴대폰이 꺼져 있던 날은 다음 확인 때 그 단계로 한 번만.
 List<NoticeRecord> releaseRecords(NotifyConfig c, Set<String> known, DateTime now) {
   if (!c.rule('release_soon')) return const [];
   final today = DateTime.utc(now.year, now.month, now.day);

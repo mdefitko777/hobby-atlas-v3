@@ -1,11 +1,11 @@
-// 새 소식 확인 — 12시간마다 WorkManager(인터넷 연결 시) + 앱을 열 때 · 돌아올 때 같은 함수.
-//   1) data/split/manifest.json (176 B) 의 updated_at|total(+ content_hash) 이 지난번과 같으면 피드는 받지 않는다
+// 새 소식 확인 — 3시간마다 WorkManager(인터넷 연결 시) + 앱을 열 때 · 돌아올 때 같은 함수.
+//   1) data/split/manifest.json (5 KB) 의 updated_at|total(+ content_hash) 이 지난번과 같으면 피드는 받지 않는다
 //   2) 다르면 data/atlas/notify-feed.json (날짜마다 알릴 만한 변화 전부) 을 받는다. 아직 없거나 manifest 보다 옛 판이면
 //      data/update-feed-lite.json (날짜마다 20개까지) 으로 채운다 — 지난번 본 날짜 이후만 거른다 (lib/notifications/feed_rules.dart)
 //   3) 같은 판의 피드를 못 받았으면(Pages · Gunpula Atlas 작업이 늦음) manifest 를 "다 봤다"고 적지 않는다 → 다음 확인에서 다시
-//   3b) 알림 받는 공식 예고가 있으면 data/announcements.json 도 받아 단계가 넘어간 것을 알림으로
-//   3c) 공식 라이브(규칙 「라이브 시작 전」): manifest 의 예고 파일 지문이 지난번과 다를 때만 예고 파일을 받아 라이브를 읽고,
-//       처음 보인 라이브는 알림함에 · 시작 30분 전 알림은 안드로이드에 미리 걸어 둔다 (lib/notifications/live_reminders.dart)
+//   3b) data/announcements.json 은 manifest 의 예고 파일 지문이 지난번에 읽은 판과 다를 때만 받는다 ([shouldFetchAnnouncements]):
+//       알림 받는 예고의 단계가 넘어간 것 · 처음 보인 라이브는 알림함에, 라이브 · 예약 시작 30분 전 알림은 안드로이드에
+//       미리 걸어 둔다 (lib/notifications/live_reminders.dart · preorder_reminders.dart). 안 받은 확인도 지난번 것으로 다시 건다
 //   4) notify_state.json 에 합쳐 쓰고(잠금 · 다시 읽어 합치기), 알림이 켜져 있으면 휴대폰 알림
 // 백그라운드에서는 notify_config.json(앱 화면이 써 둔 설정 · 내 채널 · 좋아요)만 읽는다. user.json · 카탈로그는 열지 않는다.
 import 'dart:convert';
@@ -61,7 +61,12 @@ void catalogCheckDispatcher() {
   });
 }
 
-/// 앱을 켤 때마다 부른다. 켜져 있으면 12시간 주기 등록(이미 있으면 그대로), 꺼져 있으면 지운다.
+/// 뒤 확인 간격. Gunpula 가 공식 예고를 낮 동안 여러 번 새로 만들어(공식 글은 일본 시각 10–13시 · 17–20시에 몰린다),
+/// 저녁에 올라온 「내일 11時 예약」 · 낮에 올라온 「오늘 16時 · 18時 예약」을 30분 전 알림에 걸 수 있게 3시간.
+/// 한 번에 manifest 5 KB, 예고 파일은 바뀐 때만(gzip 51 KB) — 하루 0.5 MB 안쪽. 대기 모드면 안드로이드가 더 늦춘다
+const catalogCheckEvery = Duration(hours: 3);
+
+/// 앱을 켤 때마다 부른다. 켜져 있으면 [catalogCheckEvery] 주기 등록, 꺼져 있으면 지운다.
 Future<void> scheduleCatalogCheck({required bool enabled}) async {
   if (!LocalNotifier.supported) return; // 웹 미리보기 · 테스트
   try {
@@ -70,10 +75,12 @@ Future<void> scheduleCatalogCheck({required bool enabled}) async {
       await Workmanager().registerPeriodicTask(
         catalogCheckUniqueName,
         catalogCheckTask,
-        frequency: const Duration(hours: 12),
+        frequency: catalogCheckEvery,
         initialDelay: const Duration(minutes: 30),
         constraints: Constraints(networkType: NetworkType.connected),
-        existingWorkPolicy: ExistingPeriodicWorkPolicy.keep, // 이미 있으면 그대로 (앱을 열 때마다 주기를 처음부터 다시 세지 않게)
+        // update = 이미 있으면 주기만 바꾸고 처음 등록한 때는 그대로 (앱을 열 때마다 주기를 처음부터 다시 세지 않는다).
+        // keep 이던 때 12시간으로 등록한 폰은 keep 으로는 간격이 영영 안 바뀐다 (WorkManager 2.8+, 플러그인이 이미 지원 — 패치로 된다)
+        existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
         backoffPolicy: BackoffPolicy.exponential,
         backoffPolicyDelay: const Duration(minutes: 30),
       );
@@ -160,6 +167,21 @@ Object? _decode(String? text) {
   }
 }
 
+/// 이번 확인에서 예고 파일(445 KB · gzip 51 KB)을 받을까 — 쓸 곳이 있고, manifest 의 지문이 지난번에 읽은 판([NotifyState.liveKey])과
+/// 다를 때만. 예전에는 알림 받는 예고가 하나라도 있으면 확인마다 받았다 (뒤 확인을 3시간마다로 줄이며 바꿈, 2026-11-14).
+///  - 쓸 곳: 알림 받는 예고(단계) · 라이브 규칙 · 예약 시작 전(알림 받는 예고 · 좋아요한 상품의 예약 시각)
+///  - 예약 시각을 아직 한 번도 안 읽은 기기(이 기능 전에 지문을 적음)는 파일이 그대로여도 한 번
+///  - 지문이 없는 manifest(raw · 옛 판)는 판을 알 수 없다 → 알림 받는 예고가 있을 때만 예전처럼 받는다
+/// 알림 받기를 누를 때의 단계는 앱 화면이 받아 둔 예고에서 온다. 그 판이 여기서 읽은 판보다 옛것이어도 단계가 넘어간 것은
+/// 다음 판을 받을 때 알림이 된다 (예고 파일은 하루에도 여러 번 바뀐다)
+bool shouldFetchAnnouncements(NotifyConfig config, NotifyState state, String annHash) {
+  final follow = config.followed.isNotEmpty;
+  final preorder = config.rule(preorderRule) && (follow || config.wanted.isNotEmpty);
+  if (annHash.isEmpty) return follow;
+  if (preorder && !state.preorderRead) return true;
+  return (follow || preorder || config.rule(liveRule)) && annHash != state.liveKey;
+}
+
 /// 라이브 시작 전 알림을 걸고 거두는 함수 (기본: 휴대폰 — LocalNotifier.applyLive). 걸지 못한 예고 id 를 돌려준다
 typedef ApplyLive = Future<Set<String>> Function(LiveReminderPlan plan);
 
@@ -212,16 +234,9 @@ Future<CheckOutcome> runCatalogCheck({
     }
   }
 
-  // 알림 받는 예고가 있으면 예고 파일도 (단계가 넘어갔는지). 라이브 · 좋아요한 상품의 예약 시각은 예고 파일이 바뀐 때만 —
-  // manifest `files` 지문이 없으면(raw · 인터넷 없음) 이번에는 받지 않고 지난번에 읽은 것으로 계획만 다시 한다.
-  // 예약 시각을 아직 한 번도 안 읽은 기기(이 기능 전에 지문을 적음)는 파일이 그대로여도 한 번 받는다
+  // 예고 파일은 바뀐 때만 받는다 — 안 받으면 지난번에 읽은 라이브 · 예약으로 시작 전 알림 계획만 다시 한다
   final annHash = jStr(jMap(jMap(manifest)['files'])['announcements.json']);
-  final preorderWatch = config.rule(preorderRule) && config.wanted.isNotEmpty;
-  final fileChanged = annHash != before.liveKey;
-  final liveChanged =
-      annHash.isNotEmpty &&
-      ((config.rule(liveRule) && fileChanged) || (preorderWatch && (fileChanged || !before.preorderRead)));
-  final annText = config.followed.isEmpty && !liveChanged ? null : await get(announcementsPath);
+  final annText = shouldFetchAnnouncements(config, before, annHash) ? await get(announcementsPath) : null;
   final announcements = _decode(annText);
   final gotLive = annText != null && jMap(announcements)['announcements'] is List;
   // 발행 직후 CDN 이 옛 파일을 주면(지문이 다름) 읽은 것은 쓰되 지문은 적지 않는다 → 다음 확인에서 다시 받는다

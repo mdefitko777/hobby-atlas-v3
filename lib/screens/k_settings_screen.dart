@@ -373,7 +373,7 @@ class HelpScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SectionHeader(tr('알림')),
-                tip(Icons.schedule, tr('12시간마다 확인'), tr('앱을 열 때도 한 번 더')),
+                tip(Icons.schedule, tr('3시간마다 확인'), tr('앱을 열 때도 한 번 더')),
                 tip(Icons.today_outlined, tr('좋아요한 상품'), tr('발매 D-7 · D-1 · 당일 (발매일이 정해진 것만)')),
                 tip(Icons.notifications_none, tr('새 상품 (채널별)'), tr('설정 › 알림 › 채널을 누르면 전부 · 규칙 · 골라서 알림')),
               ],

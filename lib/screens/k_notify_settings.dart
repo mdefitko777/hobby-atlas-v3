@@ -195,7 +195,7 @@ class _NotifySettingsScreenState extends State<NotifySettingsScreen> {
                 Icons.alarm,
                 tr('알림 받는 예고 · 좋아요한 상품의 예약 시작 30분쯤 전 (시각이 정해진 것만 · 당일에 올라온 것은 놓칠 수 있어요)'),
               ),
-              // 데이터는 하루 한 번 · 뒤 확인은 12시간마다라 당일에 올라온 라이브는 놓칠 수 있다 — 그대로 적어 둔다
+              // 뒤 확인은 3시간마다(대기 모드면 더 늦다)라 시작 몇 시간 전에 올라온 라이브는 놓칠 수 있다 — 그대로 적어 둔다
               _ruleSwitch(
                 'live_soon',
                 Icons.live_tv_outlined,

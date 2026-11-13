@@ -77,7 +77,7 @@ void main() {
     await _pump(tester, const HelpScreen());
     expect(find.text('帮助'), findsOneWidget);
     expect(find.text('图鉴格子'), findsOneWidget);
-    expect(find.text('每 12 小时检查一次'), findsOneWidget);
+    expect(find.text('每 3 小时检查一次'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
