@@ -1,4 +1,4 @@
-// 공식 예고 (announcements.json)
+// 예고 (announcements.json) — 공식 + 비공식(unofficial: true)
 part of '../derive.dart';
 
 /// 내 채널의 예고 — 곧 할 · 하는 중인 라이브가 맨 앞, 나머지는 발표일 새것부터 (lib/logic/live_stream.dart liveFirst)
@@ -9,11 +9,15 @@ Future<List<Announcement>> deriveAnnouncements(List<String> channelIds) async {
     for (final a in jList(jMap(await _cat.aux('announcements.json'))['announcements']))
       if (jMap(a) case final m when set.contains(jStr(m['franchise'])) && jStr(m['id']).isNotEmpty) m,
   ]..sort((a, b) => jStr(b['announced_at']).compareTo(jStr(a['announced_at'])));
-  var heroes = 0;
-  return [
-    for (final a in liveFirst(list.map(announcementOf).toList(), appNow()))
-      a.image.isNotEmpty && heroes++ < 6 ? a.asHero() : a,
-  ];
+  final all = liveFirst(list.map(announcementOf).toList(), appNow());
+  final heroes = annHeroIds(all); // 사진 있는 공식 6개, 모자라면 비공식으로 채움
+  return [for (final a in all) heroes.contains(a.id) ? a.asHero() : a];
+}
+
+/// 공식 쪽이 이어받아 빠진 예고: 옛 id → 새 id (announcements.json `replaced`, 없으면 빈 지도)
+Future<Map<String, String>> deriveAnnReplaced() async {
+  await _cat.ensureLoaded();
+  return annReplacedOf(await _cat.aux('announcements.json'));
 }
 
 /// announcements.json 한 줄 → 화면 모델. live_state · live_at 이 있으면 라이브(방송) 예고
@@ -35,5 +39,6 @@ Announcement announcementOf(Map<String, Object?> m) {
     liveAt: liveAt,
     // 시각만 있고 상태가 빠진 줄도 라이브로 본다 (단계는 기기 시계가 정한다)
     liveState: liveState.isEmpty && liveAt != null ? 'upcoming' : liveState,
+    unofficial: m['unofficial'] == true,
   );
 }

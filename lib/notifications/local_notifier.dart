@@ -61,8 +61,10 @@ class LocalNotifier {
     ),
     'ann': AndroidNotificationChannel(
       'announcement_stages',
-      tr('알림 받는 공식 예고'),
-      description: tr('알림 받기를 누른 공식 예고가 상품화 확정 · 예약 시작 · 발매로 넘어가면'),
+      // 채널 id 는 그대로 (바꾸면 사용자가 꺼 둔 설정이 풀린다). 이름 · 설명은 init · renameChannels 가 같은 id 로 바꿔 쓴다.
+      // 비공식 소식도 이 채널로 와서 「공식」을 뺐다
+      tr('알림 받는 예고'),
+      description: tr('알림 받기를 누른 예고가 상품화 확정 · 예약 시작 · 발매로 넘어가면'),
       importance: Importance.high,
     ),
     'live': AndroidNotificationChannel(

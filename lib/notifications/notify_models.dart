@@ -220,10 +220,15 @@ class LiveStream {
     this.at,
     this.state = 'upcoming',
     this.source = '',
+    this.replaces = const [],
   });
 
   final String id;
   final String franchise;
+
+  /// 이 라이브가 이어받은 옛 예고 id (announcements.json `replaced`) — 옛 id 로 걸어 둔 시작 전 알림 · 「라이브 예정」 줄을
+  /// 이것으로 본다. 예고 파일을 다시 받지 않고 계획만 다시 할 때도 알도록 같이 적어 둔다
+  final List<String> replaces;
 
   /// 한국어 화면 이름 · 중국어 화면 이름 (없으면 [title])
   final String title;
@@ -249,6 +254,7 @@ class LiveStream {
     if (at != null) 'at': at!.toUtc().toIso8601String(),
     'state': state,
     if (source.isNotEmpty) 'source': source,
+    if (replaces.isNotEmpty) 'replaces': replaces,
   };
 
   static LiveStream? fromJson(Object? json) {
@@ -263,6 +269,7 @@ class LiveStream {
       at: parseLiveAt(j['at']),
       state: jStr(j['state']),
       source: jStr(j['source']),
+      replaces: jList(j['replaces']).whereType<String>().toList(),
     );
   }
 }
@@ -316,7 +323,8 @@ class NotifyConfig {
   /// 좋아요한 상품 중 발매일이 아직 안 지난 것 (D-7 · D-1 · 당일 알림)
   List<ReleaseDay> releases;
 
-  /// 알림 받는 공식 예고 (예고 id → 누를 때의 단계). 단계가 넘어가면 알림 (채널 · 규칙과 상관없이)
+  /// 알림 받는 예고 (예고 id → 누를 때의 단계). 단계가 넘어가면 알림 (채널 · 규칙과 상관없이).
+  /// 공식 쪽이 이어받아 빠진 옛 id 는 앱이 새 id 로 옮겨 적는다 (NotifyStore — 그 전에는 확인이 지도로 읽는다)
   final Map<String, FollowedAnn> followed;
 
   /// 내가 만든 알림 조건 (내 채널 소식만이어도 채널과 상관없이 본다)
@@ -367,7 +375,7 @@ class NotifyConfig {
   }
 }
 
-/// 알림 받는 공식 예고 한 개 — [stage] 는 announcements.json 의 status (announced · product_confirmed …)
+/// 알림 받는 예고 한 개 — [stage] 는 announcements.json 의 status (announced · product_confirmed …)
 class FollowedAnn {
   const FollowedAnn({required this.stage, required this.title, required this.franchise});
   final String stage;
@@ -448,7 +456,7 @@ class NoticeRecord {
   /// added · changed · pb_open · pb_close · ann_stage · release · restock(재판매) · preorder(예약 도착) · live(처음 보인 라이브)
   final String kind;
 
-  /// ann_stage · live: 공식 예고 id (ann_stage 의 단계는 [reasons] 첫 칸)
+  /// ann_stage · live: 예고 id (ann_stage 의 단계는 [reasons] 첫 칸, 비공식 소식이면 둘째 칸에 'unofficial')
   final String annId;
   final String kitId;
 
@@ -488,6 +496,9 @@ class NoticeRecord {
 
   bool get isPbWindow => kind == 'pb_open' || kind == 'pb_close';
   bool get isAnnStage => kind == 'ann_stage';
+
+  /// 비공식 소식의 단계 알림 — 휴대폰 알림 제목에 「비공식」 (저장 모양을 늘리지 않으려고 [reasons] 에 싣는다)
+  bool get unofficial => isAnnStage && reasons.contains('unofficial');
   bool get isRestock => kind == 'restock';
   bool get isPreorder => kind == 'preorder';
   bool get isLive => kind == 'live';

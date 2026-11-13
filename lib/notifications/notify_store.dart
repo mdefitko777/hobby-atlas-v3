@@ -13,6 +13,7 @@ import '../data/blob_store.dart';
 import '../data/catalog.dart';
 import '../data/user_store.dart';
 import '../l10n/l10n.dart';
+import '../logic/announcement_match.dart' show annReplacedOf, moveAnnIds;
 import '../logic/lego_scope.dart';
 import '../logic/preorder.dart' show Preorder;
 import '../models.dart';
@@ -97,6 +98,7 @@ class NotifyStore extends ChangeNotifier {
   /// 오늘 잡힌 라이브도 시작 전 알림이 걸리게 한다. 그 지문 하나에 한 번만 (확인이 실패해도 되풀이하지 않는다)
   void _onCatalog() {
     _scheduleConfig();
+    unawaited(_readReplaced());
     final hash = Catalog.auxHashes(Catalog.instance.manifest)['announcements.json'];
     if (hash == null || hash == state.liveKey || hash == _liveAsked || !config.rule(liveRule)) return;
     _liveAsked = hash;
@@ -105,6 +107,23 @@ class NotifyStore extends ChangeNotifier {
 
   String _liveAsked = '';
   bool _liveAgain = false;
+
+  /// [_readReplaced] 가 본 예고 파일 지문 — 카탈로그가 알릴 때마다 파일을 다시 풀지 않게
+  String? _replacedSeen;
+
+  /// 앱이 받아 둔 예고 파일의 `replaced` 로 알림 받는 예고를 옮겨 적는다 ([adoptReplaced]). 알림 받는 예고가 없으면 읽지 않는다
+  Future<void> _readReplaced() async {
+    final hash = Catalog.auxHashes(Catalog.instance.manifest)['announcements.json'] ?? '';
+    if (config.followed.isEmpty || hash == _replacedSeen) return;
+    try {
+      final anns = await Catalog.instance.aux('announcements.json');
+      if (anns == null) return; // 못 읽었으면 다음 알림에서 다시
+      _replacedSeen = hash;
+      adoptReplaced(annReplacedOf(anns));
+    } on Object catch (e) {
+      debugPrint('[notify] 예고 파일을 읽지 못함: $e');
+    }
+  }
 
   /// 라이브 알림 계획을 지금 다시 (규칙 · 새 소식 알림 스위치를 바꿨을 때도 — 꺼 놓고 걸린 알림이 뜨면 안 된다).
   /// 확인 중이면 끝난 뒤에 한 번 더
@@ -295,8 +314,22 @@ class NotifyStore extends ChangeNotifier {
     _configChanged();
   }
 
-  // ── 공식 예고 알림 받기 ──
+  // ── 예고 알림 받기 ──
   bool isFollowing(String annId) => config.followed.containsKey(annId);
+
+  /// 공식 쪽이 이어받아 빠진 예고(announcements.json `replaced`: 옛 id → 새 id)를 알림 받는 목록에서 새 id 로.
+  /// 걸 때의 단계는 그대로 두어 「공식 발표 → 예약 시작」이 한 번 울린다. 옮긴 것이 있을 때만 저장하고 true —
+  /// 옮긴 뒤로는 옛 id 가 없어 같은 지도를 다시 받아도 쓰지 않는다
+  bool adoptReplaced(Map<String, String> replaced) {
+    final moved = moveAnnIds(config.followed, replaced);
+    if (moved == null) return false;
+    config.followed
+      ..clear()
+      ..addAll(moved);
+    _catchUpFollowed(); // 옮기기 전에 뒤 작업이 새 id 로 넣은 단계 줄이 있으면 그만큼 올린다
+    _configChanged();
+    return true;
+  }
 
   /// [stage] = 지금 단계 (화면 글자). 이 단계보다 앞으로 넘어가면 알림
   void setFollow(String annId, bool on, {required String stage, String title = '', String franchise = ''}) {

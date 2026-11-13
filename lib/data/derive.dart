@@ -1,10 +1,11 @@
-// 카탈로그 + 내 기록 → 화면 모델 (도감 · 세계관 · 베이블레이드 · 공식 예고 · 알림 · 내 정보).
+// 카탈로그 + 내 기록 → 화면 모델 (도감 · 세계관 · 베이블레이드 · 예고 · 알림 · 내 정보).
 // 숫자(모은 칸 · 진행도)는 미리 적힌 값이 아니라 매번 내 기록에서 센다.
 // 기능별 part 파일: derive/guide · bbx · worlds · announcements · notifications · profile
 library;
 
 import '../clock.dart';
 import '../l10n/l10n.dart';
+import '../logic/announcement_match.dart' show annHeroIds, annReplacedOf;
 import '../logic/live_stream.dart';
 import '../models.dart';
 import '../notifications/feed_rules.dart' show annStageLabels;

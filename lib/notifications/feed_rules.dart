@@ -16,6 +16,7 @@
 // 이 파일은 Flutter 위젯을 쓰지 않는다 (백그라운드 isolate · 단위 테스트).
 import '../data/gunpula.dart' show correctedCode, lineLabel, pickName, unescapeHtml;
 import '../l10n/l10n.dart';
+import '../logic/announcement_match.dart' show annReplacedOf, annStageText, moveAnnIds, unofficialLabel;
 import '../logic/lego_scope.dart';
 import 'live_reminders.dart';
 import 'notify_models.dart';
@@ -555,6 +556,9 @@ String annStageKey(String label) =>
 int annRank(String stage) => annStageLabels.keys.toList().indexOf(stage);
 
 /// 알림 받는 예고 중 단계가 앞으로 넘어간 것 → 알림함 줄 (`ann-<id>-<단계>`, 이미 있는 줄은 [known] 으로 건너뛴다).
+/// 비공식 소식(unofficial: true)도 같은 규칙 — 줄에 표시만 남겨 둘째 줄 · 휴대폰 알림 제목이 「비공식」으로 시작한다.
+/// 공식 쪽이 이어받아 빠진 옛 id(`replaced`)로 걸어 둔 것은 새 예고로 본다 — 앱이 옮겨 적기 전에 뒤 작업이 먼저 볼 수 있어서.
+/// 걸 때의 단계는 그대로라 「공식 발표 → 예약 시작」이 한 번 울린다.
 /// [announcements] = announcements.json 을 푼 값 (못 받았으면 null → 없음)
 List<NoticeRecord> annStageRecords(NotifyConfig config, Object? announcements, Set<String> known, DateTime now) {
   if (config.followed.isEmpty) return const [];
@@ -562,31 +566,37 @@ List<NoticeRecord> annStageRecords(NotifyConfig config, Object? announcements, S
     for (final a in jList(jMap(announcements)['announcements']))
       if (jMap(a) case final m when jStr(m['id']).isNotEmpty) jStr(m['id']): m,
   };
+  final followed = moveAnnIds(config.followed, annReplacedOf(announcements)) ?? config.followed;
   return [
-    for (final e in config.followed.entries)
+    for (final e in followed.entries)
       if (byId[e.key] case final m?)
         if (jStr(m['status']) case final stage
             when annRank(stage) > annRank(e.value.stage) && !known.contains('ann-${e.key}-$stage'))
-          NoticeRecord(
-            id: 'ann-${e.key}-$stage',
-            kind: 'ann_stage',
-            kitId: '',
-            annId: e.key,
-            title: e.value.title,
-            body: _shown(_annParts(e.value.stage, stage), ' → '),
-            bodyParts: _annParts(e.value.stage, stage),
-            bodySep: ' → ',
-            at: now,
-            franchise: e.value.franchise,
-            reasons: [stage],
-            wanted: true, // 채널과 상관없이 보인다
-          ),
+          _annStageRecord(e.key, e.value, stage, now, unofficial: m['unofficial'] == true),
   ];
 }
 
-/// 예고 단계 줄의 둘째 줄: "공식 발표 → 예약 시작"
-List<NoticePart> _annParts(String from, String to) => [
-  NoticePart.key(annStageLabels[from] ?? '공식 발표'),
+NoticeRecord _annStageRecord(String id, FollowedAnn from, String stage, DateTime now, {required bool unofficial}) {
+  final parts = _annParts(from.stage, stage, unofficial);
+  return NoticeRecord(
+    id: 'ann-$id-$stage',
+    kind: 'ann_stage',
+    kitId: '',
+    annId: id,
+    title: from.title,
+    body: _shown(parts, ' → '),
+    bodyParts: parts,
+    bodySep: ' → ',
+    at: now,
+    franchise: from.franchise,
+    reasons: [stage, if (unofficial) 'unofficial'],
+    wanted: true, // 채널과 상관없이 보인다
+  );
+}
+
+/// 예고 단계 줄의 둘째 줄: "공식 발표 → 예약 시작", 비공식 소식은 "비공식 → 예약 시작" · "비공식 · 상품화 확정 → 예약 시작"
+List<NoticePart> _annParts(String from, String to, bool unofficial) => [
+  NoticePart.key(annStageText(annStageLabels[from] ?? '공식 발표', unofficial: unofficial)),
   NoticePart.key(annStageLabels[to] ?? to),
 ];
 
@@ -892,7 +902,12 @@ List<SystemAlert> buildAlerts(Iterable<NoticeRecord> fresh) {
       SystemAlert(
         id: stableId('ann'),
         channel: 'ann',
-        title: trf('알림 받는 공식 예고 {n}개가 다음 단계로', {'n': ann.length}),
+        // 공식뿐이면 「공식 예고」, 비공식뿐이면 「비공식 예고」, 섞였으면 「예고」
+        title: switch (ann.where((r) => r.unofficial).length) {
+          0 => trf('알림 받는 공식 예고 {n}개가 다음 단계로', {'n': ann.length}),
+          final n when n == ann.length => trf('알림 받는 비공식 예고 {n}개가 다음 단계로', {'n': ann.length}),
+          _ => trf('알림 받는 예고 {n}개가 다음 단계로', {'n': ann.length}),
+        },
         body: _names(ann),
         payload: 'inbox',
       ),
@@ -903,7 +918,12 @@ List<SystemAlert> buildAlerts(Iterable<NoticeRecord> fresh) {
         SystemAlert(
           id: stableId(r.id),
           channel: 'ann',
-          title: '${tr(annStageLabels[r.reasons.firstOrNull] ?? '다음 단계')} · ${r.title}',
+          // "예약 시작 · 이름", 비공식 소식은 "비공식 · 예약 시작 · 이름"
+          title: [
+            if (r.unofficial) tr(unofficialLabel),
+            tr(annStageLabels[r.reasons.firstOrNull] ?? '다음 단계'),
+            r.title,
+          ].join(' · '),
           body: r.body,
           payload: 'ann:${r.franchise}:${r.annId}',
         ),

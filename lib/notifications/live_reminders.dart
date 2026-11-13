@@ -9,6 +9,7 @@
 import '../data/gunpula.dart' show pickName;
 import '../json_util.dart';
 import '../l10n/l10n.dart';
+import '../logic/announcement_match.dart' show annReplacedOf;
 import '../logic/live_stream.dart';
 import 'notify_models.dart';
 
@@ -22,25 +23,33 @@ const liveLead = Duration(minutes: 30);
 const liveMargin = Duration(minutes: 1);
 
 /// announcements.json 을 푼 값에서 아직 안 끝난 라이브 (live_state · live_at 이 있는 줄). 모든 채널 —
-/// 내 채널은 계획할 때 거른다 (채널을 바꿔도 파일을 다시 받지 않게)
-List<LiveStream> parseLiveStreams(Object? announcements, DateTime now) => [
-  for (final a in jList(jMap(announcements)['announcements']))
-    if (jMap(a) case final m when jStr(m['id']).isNotEmpty && (m['live_state'] is String || m['live_at'] is String))
-      if (LiveStream(
-            id: jStr(m['id']),
-            franchise: jStr(m['franchise']),
-            title: pickName(m['names']),
-            titleZh: pickName(m['names'], const ['zh']),
-            at: parseLiveAt(m['live_at']),
-            state: jStr(m['live_state']).isEmpty ? 'upcoming' : jStr(m['live_state']),
-            source: jStr(m['source_name']),
-          )
-          case final s when s.stage(now) != LiveStage.ended)
-        s,
-];
+/// 내 채널은 계획할 때 거른다 (채널을 바꿔도 파일을 다시 받지 않게). 이어받은 옛 id(`replaced`)는 [LiveStream.replaces] 에
+List<LiveStream> parseLiveStreams(Object? announcements, DateTime now) {
+  final heirs = <String, List<String>>{};
+  for (final e in annReplacedOf(announcements).entries) {
+    (heirs[e.value] ??= []).add(e.key);
+  }
+  return [
+    for (final a in jList(jMap(announcements)['announcements']))
+      if (jMap(a) case final m when jStr(m['id']).isNotEmpty && (m['live_state'] is String || m['live_at'] is String))
+        if (LiveStream(
+              id: jStr(m['id']),
+              franchise: jStr(m['franchise']),
+              title: pickName(m['names']),
+              titleZh: pickName(m['names'], const ['zh']),
+              at: parseLiveAt(m['live_at']),
+              state: jStr(m['live_state']).isEmpty ? 'upcoming' : jStr(m['live_state']),
+              source: jStr(m['source_name']),
+              replaces: heirs[jStr(m['id'])] ?? const [],
+            )
+            case final s when s.stage(now) != LiveStage.ended)
+          s,
+  ];
+}
 
 /// 처음 보인 라이브 → 알림함 줄. 곧 할 것(시간 미정 포함)만 — 이미 하는 중 · 끝난 것은 넣지 않는다.
-/// [known] = 알림함 줄 id + 지난번에 본 라이브(`stream-<id>`). [quiet] = 처음 받는 날: 읽음으로만 (휴대폰 알림 없음)
+/// [known] = 알림함 줄 id + 지난번에 본 라이브(`stream-<id>`). [quiet] = 처음 받는 날: 읽음으로만 (휴대폰 알림 없음).
+/// 옛 id 로 이미 알린 라이브를 이어받은 것([LiveStream.replaces])은 같은 방송이라 다시 알리지 않는다
 List<NoticeRecord> liveRecords(
   NotifyConfig config,
   List<LiveStream> streams,
@@ -51,7 +60,7 @@ List<NoticeRecord> liveRecords(
   if (!config.rule(liveRule)) return const [];
   return [
     for (final s in streams)
-      if (config.channels.contains(s.franchise) && !known.contains('stream-${s.id}'))
+      if (config.channels.contains(s.franchise) && ![s.id, ...s.replaces].any((id) => known.contains('stream-$id')))
         if (s.stage(now) case LiveStage.upcoming || LiveStage.undated)
           () {
             final parts = [
@@ -128,6 +137,8 @@ String liveReminderSig(DateTime at, String lang) => '${at.toUtc().toIso8601Strin
 ///  - 거둔다: [enabled] 가 꺼짐(새 소식 알림 · 규칙) · 목록에서 사라짐 · 끝남 · 내 채널에서 빠짐 · 시간 미정이 됨 ·
 ///    시각이 바뀌었는데 새 알릴 시각이 이미 지남(당겨져 벌써 하는 중인 것 포함)
 ///  - 그대로: 알릴 시각이 지났고(떴거나 곧 뜬다) 아직 안 끝난 것 — 거두면 떠 있는 알림이 지워진다
+///  - 옛 id(이어받아 빠진 예고, [LiveStream.replaces])로 걸린 것: 이미 떴으면 옛 id 그대로 두고(누르면 이어받은 예고가 열린다),
+///    아니면 거두고 새 id 로 다시 건다 — 휴대폰 알림 id 가 예고 id 에서 나와 같은 id 로 바꿔 쓸 수 없다
 LiveReminderPlan planLiveReminders({
   required List<LiveStream> streams,
   required Map<String, String> scheduled,
@@ -140,11 +151,17 @@ LiveReminderPlan planLiveReminders({
     for (final s in streams)
       if (enabled && channels.contains(s.franchise)) s.id: s,
   };
+  final heirs = {
+    for (final s in byId.values)
+      for (final old in s.replaces) old: s,
+  };
   final next = <String, String>{};
   final schedule = <LiveReminder>[];
   final cancel = <int>[];
+  final keptOld = <String>{}; // 옛 id 로 걸린 채 두는 라이브 — 새 id 로 또 걸지 않는다
   for (final e in scheduled.entries) {
-    final s = byId[e.key];
+    final heir = byId.containsKey(e.key) || scheduled.containsKey(heirs[e.key]?.id) ? null : heirs[e.key];
+    final s = byId[e.key] ?? heir;
     final at = s?.at;
     if (s == null || at == null || s.stage(now) == LiveStage.ended) {
       cancel.add(liveReminderId(e.key));
@@ -153,7 +170,14 @@ LiveReminderPlan planLiveReminders({
     final sameTime = e.value.split('|').first == at.toUtc().toIso8601String();
     // 이제는 새로 걸 수 없다 — 알릴 시각이 지났거나 이미 하는 중
     final late = !_canRemind(at, now) || s.stage(now) != LiveStage.upcoming;
-    if (e.value == liveReminderSig(at, lang) || (sameTime && late)) {
+    if (heir != null) {
+      if (sameTime && late) {
+        next[e.key] = e.value;
+        keptOld.add(heir.id);
+      } else {
+        cancel.add(liveReminderId(e.key)); // 걸 수 있으면 아래에서 새 id 로
+      }
+    } else if (e.value == liveReminderSig(at, lang) || (sameTime && late)) {
       next[e.key] = e.value; // 언어만 바뀌었는데 이미 떴으면 그대로 둔다
     } else if (late) {
       // 옛 시각에 걸린 것 — 새 시각에는 이미 늦었다. 당겨져서 벌써 하는 중일 때도 거둔다
@@ -163,7 +187,13 @@ LiveReminderPlan planLiveReminders({
   }
   for (final s in byId.values) {
     final at = s.at;
-    if (at == null || next.containsKey(s.id) || s.stage(now) != LiveStage.upcoming || !_canRemind(at, now)) continue;
+    if (at == null ||
+        next.containsKey(s.id) ||
+        keptOld.contains(s.id) ||
+        s.stage(now) != LiveStage.upcoming ||
+        !_canRemind(at, now)) {
+      continue;
+    }
     next[s.id] = liveReminderSig(at, lang);
     schedule.add(
       LiveReminder(

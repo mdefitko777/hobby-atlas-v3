@@ -72,7 +72,7 @@ extension on NoticeType {
     NoticeType.release => tr('발매 (내 채널 · 좋아요한 상품)'),
     NoticeType.reserve => tr('PB 예약 · 재판매 · 예약 도착'), // derive/notifications.dart: isPbWindow · isRestock · isPreorder
     NoticeType.price => tr('가격 변경 (일본 정가)'), // 국내 시세가 아니라 공식 엔화 정가 (feed_rules.dart 'price')
-    NoticeType.announce => tr('공식 예고 · 공지 · 라이브'),
+    NoticeType.announce => tr('예고 · 공지 · 라이브'), // 비공식 소식도 이 묶음
     NoticeType.friend => tr('친구 소식'),
     NoticeType.request => tr('친구 요청'),
   };

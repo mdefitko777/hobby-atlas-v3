@@ -9,7 +9,7 @@
 // │ O-2  │ 아래 시트(60%) · 네모 세그먼트 · 체크 2열 · 펼치는 줄 │ 필터: 내 상태 · 발매 · 판매 · 종류 · 라인 · 작품 · 가격 (lib/widgets/kit_filter_sheet.dart) │ P06 · P08 · P01 · P05 │
 // │ O-3  │ 고른 필터 한 줄 + showPickSheet      │ 지금 거르는 조건 · 정렬 4가지 (아래 시트)  │ P01 · P07     │
 // │ O-4  │ 격자 ProductTile(+ ♡) / ThumbRow     │ 상품 (가격 · 발매일 보임) → D 상세       │ P08 · P07     │
-// │ O-5  │ 밑줄 탭 + 16:9 카드 (AnnTag)         │ 공식 예고: 공식 발표 · 상품화 확정 · 예약 · 라이브(곧 할 것이 맨 앞) │ P02 · P06 │
+// │ O-5  │ 밑줄 탭 + 16:9 카드 (AnnTag)         │ 예고: 공식 발표 · 상품화 확정 · 예약 · 비공식(있을 때만) · 라이브(곧 할 것이 맨 앞) │ P02 · P06 │
 // │ O-6  │ 기록 지우기 → showDialog → 토스트     │ 최근 본 기록 비우기 (기기 기록 · 되돌리기)  │ P05 · P03     │
 // │ O-7  │ 위 검색창 (이 목록 안에서만 찾기)      │ "최근 추가에서 찾기"                     │ P07 · P04     │
 // │ O-8  │ EmptyView                          │ 거른 결과 · 찾은 결과 없음 · 기록 없음     │ P09           │
@@ -20,6 +20,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
 import '../api.dart';
+import '../logic/announcement_match.dart';
 import '../logic/kit_rules.dart';
 import '../marks.dart';
 import '../channels.dart';
@@ -123,7 +124,7 @@ class SectionListView extends StatefulWidget {
   final String subtitle;
   final List<Kit> kits;
 
-  /// 있으면 공식 예고 목록
+  /// 있으면 예고 목록 (공식 · 비공식)
   final List<Announcement>? announcements;
 
   /// 최근 본 기록 (지우기 버튼)
@@ -176,7 +177,8 @@ class _SectionListViewState extends State<SectionListView> {
     super.dispose();
   }
 
-  String _annStatus = '';
+  /// 예고 목록 탭: '' 전체 · 단계 글 · 비공식 (lib/logic/announcement_match.dart announcementTabs)
+  String _annTab = '';
 
   List<Kit> get _kits => [
     for (final k in widget.kits)
@@ -469,7 +471,7 @@ class _SectionListViewState extends State<SectionListView> {
     onTap: () => openKitDetail(context, k, loaders: widget.loaders, list: _shown),
   );
 
-  // ---------- 공식 예고 ----------
+  // ---------- 예고 (공식 · 비공식) ----------
 
   Widget _announcementBody(List<Announcement> all0) {
     final q = widget.query.trim().toLowerCase();
@@ -477,10 +479,9 @@ class _SectionListViewState extends State<SectionListView> {
       for (final a in all0)
         if (q.isEmpty || a.title.toLowerCase().contains(q)) a,
     ];
-    final statuses = {for (final a in all) a.status}.toList(); // 나온 순서대로 한 번씩
     final list = [
       for (final a in all)
-        if (_annStatus.isEmpty || a.status == _annStatus) a,
+        if (inAnnTab(a, _annTab)) a,
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -492,13 +493,14 @@ class _SectionListViewState extends State<SectionListView> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                for (final s in ['', ...statuses])
+                for (final t in announcementTabs(all))
                   UnderlineTab(
-                    label: s.isEmpty ? tr('전체') : tr(s),
-                    count: s.isEmpty ? all.length : all.where((a) => a.status == s).length,
+                    key: ValueKey('ann-tab-${t.tab}'),
+                    label: t.tab.isEmpty ? tr('전체') : tr(t.tab),
+                    count: t.count,
                     fontSize: Gp.t14,
-                    selected: _annStatus == s,
-                    onTap: () => setState(() => _annStatus = s), // STATE: 상태 → 목록
+                    selected: _annTab == t.tab,
+                    onTap: () => setState(() => _annTab = t.tab), // STATE: 상태 → 목록
                   ),
               ],
             ),

@@ -100,15 +100,31 @@ Future<List<BbxTop>> fetchBbxTops() => _guard(deriveBbxTops);
 /// 도감 > 베이블레이드 X > 조합 만들기: 부품 · 규칙
 Future<BbxBuilderData> fetchBbxBuilder() => _guard(deriveBbxBuilder);
 
-/// 캘린더 · 홈: 공식 예고
+/// 캘린더 · 홈: 예고 (공식 · 비공식)
 Future<List<Announcement>> fetchAnnouncements(List<String> channelIds) =>
     _guard(() => channelIds.isEmpty ? Future.value(const <Announcement>[]) : deriveAnnouncements(channelIds));
 
-/// 알림(휴대폰 알림 · 알림함)에서 여는 예고 하나. 못 찾으면 이 기기 예고 파일이 옛것일 수 있다 — 라이브 알림은 뒤 작업이
+/// 공식 쪽이 이어받아 빠진 예고: 옛 id → 새 id (없으면 빈 지도)
+Future<Map<String, String>> fetchAnnReplaced() => _guard(deriveAnnReplaced);
+
+/// 알림(휴대폰 알림 · 알림함)에서 여는 예고 하나. 옛 id(공식 쪽이 이어받아 빠진 것)면 이어받은 예고를 연다 —
+/// 알림 · 걸어 둔 라이브 알림의 `ann:<채널>:<id>` 는 그때의 id 그대로라서.
+/// 못 찾으면 이 기기 예고 파일이 옛것일 수 있다 — 라이브 알림은 뒤 작업이
 /// 새 예고 파일을 먼저 보고 보낸다 (상품의 [fetchKitsByIds] 와 같은 길): 받는 중이면 끝날 때까지, 아니면 manifest 를
 /// 한 번 더 보고 바뀌었으면 받은 뒤 다시 찾는다. [onSlow] = 기다림이 길어질 때 한 번 (「받는 중」 토스트)
 Future<Announcement?> findAnnouncement(Loaders loaders, String channelId, String id, {void Function()? onSlow}) async {
-  Future<Announcement?> look() async => (await loaders.announcements([channelId])).where((a) => a.id == id).firstOrNull;
+  Future<Announcement?> look() async {
+    final list = await loaders.announcements([channelId]);
+    Announcement? byId(String x) => list.where((a) => a.id == x).firstOrNull;
+    if (byId(id) case final a?) return a;
+    // 지도를 못 읽어도(옛 파일 · 오류) 옛 id 를 못 찾은 것일 뿐 — 아래 새 데이터 확인으로 간다
+    final replaced = await loaders.annReplaced().catchError((Object _) => const <String, String>{});
+    return switch (replaced[id]) {
+      final to? => byId(to),
+      null => null,
+    };
+  }
+
   final found = await look();
   if (found != null) return found;
   final slow = Timer(const Duration(milliseconds: 800), () => onSlow?.call());
@@ -152,6 +168,7 @@ class Loaders {
     this.bbxTops = fetchBbxTops,
     this.bbxBuilder = fetchBbxBuilder,
     this.announcements = fetchAnnouncements,
+    this.annReplaced = fetchAnnReplaced,
     this.profile = fetchProfile,
     this.notifications = fetchNotifications,
     this.friendGuide = fetchFriendGuide,
@@ -170,6 +187,9 @@ class Loaders {
   final Future<List<BbxTop>> Function() bbxTops;
   final Future<BbxBuilderData> Function() bbxBuilder;
   final Future<List<Announcement>> Function(List<String> channelIds) announcements;
+
+  /// 옛 예고 id → 이어받은 예고 id (알림 · 링크에 남은 옛 id 로 열 때)
+  final Future<Map<String, String>> Function() annReplaced;
   final Future<Profile> Function() profile;
   final Future<List<AppNotice>> Function() notifications;
   final Future<Map<String, int>> Function(List<String> ownedKitIds) friendGuide;

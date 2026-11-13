@@ -6,7 +6,7 @@
 // │ J-2  │ WebViewWidget (+ 읽는 중 가는 줄)     │ 공식 원문 (글 · 사진 · 영상)            │ P02 · P10     │
 // │ J-2b │ 요약 화면 (BlurFitImage · 단계 줄)     │ 원문을 열 수 없을 때 · 웹 미리보기       │ P09           │
 // │ J-3  │ 아래 띠: TogglePill(알림 받기)        │ 다음 단계가 되면 휴대폰 알림 (진짜)      │ P03 · P07     │
-// │ J-4  │ 아래 띠: 이 예고 · 상품 n → 시트       │ 4단계 진행 줄 + 제목 「」 으로 찾은 상품  │ P01 · P06     │
+// │ J-4  │ 아래 띠: 이 예고 · 상품 n → 시트       │ 4단계 진행 줄(비공식이면 안내 한 줄) + 제목 「」 으로 찾은 상품 │ P01 · P06 │
 // │ J-5  │ 아래 띠: 브라우저로 (↗)               │ Chrome 등에서 열기                      │ P10           │
 // │ J-5b │ 아래 띠: 번역 (文A)                   │ 원문 글을 한국어로 · 다시 누르면 원문    │ P02 · P03     │
 // │ J-6  │ PageView (위 띠 · 아래 띠에서)        │ 좌우로 밀어 이전 · 다음 예고            │ P03           │
@@ -397,8 +397,9 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
                   joinDot([tr(channelOf(a.franchiseId).label), dateDot(a.date), a.source]),
                   style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
                 ),
+                if (a.unofficial) const _UnofficialNote(),
                 const SizedBox(height: 20),
-                _StageLine(current: stage),
+                _StageLine(current: stage, unofficial: a.unofficial),
               ],
             ),
           ),
@@ -652,8 +653,9 @@ class _Summary extends StatelessWidget {
                 joinDot([tr(channelOf(item.franchiseId).label), dateDot(item.date), item.source]),
                 style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
               ),
+              if (item.unofficial) const _UnofficialNote(),
               const SizedBox(height: 20),
-              _StageLine(current: stage),
+              _StageLine(current: stage, unofficial: item.unofficial),
             ],
           ),
         ),
@@ -662,10 +664,28 @@ class _Summary extends StatelessWidget {
   }
 }
 
+/// 비공식 소식 안내 한 줄 (요약 · 이 예고 시트) — 위 띠 꼬리표만으로는 왜 조심해서 봐야 하는지 알 수 없다
+class _UnofficialNote extends StatelessWidget {
+  const _UnofficialNote();
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    key: const ValueKey('unofficial-note'),
+    padding: const EdgeInsets.only(top: 8),
+    child: Text(
+      tr('비공식 소식 · 공식 발표와 다를 수 있어요'),
+      style: const TextStyle(fontSize: Gp.t12, color: unofficialColor),
+    ),
+  );
+}
+
 /// J-4 단계 진행 줄 — 지난 단계 · 지금(브랜드 색) · 남은 단계(회색)
 class _StageLine extends StatelessWidget {
-  const _StageLine({required this.current});
+  const _StageLine({required this.current, this.unofficial = false});
   final int current;
+
+  /// 비공식 소식: 첫 단계 이름이 「공식 발표」가 아니라 「비공식」 (꼬리표와 같은 말)
+  final bool unofficial;
 
   @override
   Widget build(BuildContext context) {
@@ -705,7 +725,7 @@ class _StageLine extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  tr(label), // 단계 이름은 비교 값 — 보이는 곳에서만 번역
+                  tr(i == 0 && unofficial ? unofficialLabel : label), // 단계 이름은 비교 값 — 보이는 곳에서만 번역
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: Gp.t11,

@@ -1,8 +1,10 @@
-// 작은 꼬리표 — 테두리 알약 · 연한 색 꼬리표 · 날짜 · 공식 예고 단계 색 · 공식 예고 꼬리표(단계 또는 라이브 때)
+// 작은 꼬리표 — 테두리 알약 · 연한 색 꼬리표 · 날짜 · 공식 예고 단계 색 · 예고 꼬리표(단계 · 라이브 때 · 비공식)
 import 'package:flutter/material.dart';
 
 import '../clock.dart';
+import '../format.dart';
 import '../l10n/l10n.dart';
+import '../logic/announcement_match.dart';
 import '../logic/live_stream.dart';
 import '../models.dart';
 import '../theme.dart';
@@ -79,7 +81,11 @@ Color liveColor(LiveStage stage) => switch (stage) {
   _ => Gp.muted,
 };
 
-/// 공식 예고 꼬리표 하나 — 라이브면 때(라이브 · 오늘 21:00 · 라이브 중 · 다시보기 · 11.12), 아니면 예고 단계.
+/// 비공식 소식 꼬리표 색 — ⚠ 아이콘과 같은 호박색 (틀린 것은 아니지만 공식과 다를 수 있다)
+const unofficialColor = Gp.star;
+
+/// 예고 꼬리표 하나 — 라이브면 때(라이브 · 오늘 21:00 · 라이브 중 · 다시보기 · 11.12), 아니면 예고 단계.
+/// 비공식 소식은 호박색 「비공식」 · 「비공식 · 예약 시작」 (사진 위는 자리가 좁아 「비공식」만).
 /// 홈 배너 · 예고 목록 · 예고 상세 위 띠가 같은 것을 쓴다. [onPhoto] = 사진 위에 올릴 때 (흰 반투명 알약)
 class AnnTag extends StatelessWidget {
   const AnnTag(this.item, {super.key, this.onPhoto = false});
@@ -90,8 +96,15 @@ class AnnTag extends StatelessWidget {
   Widget build(BuildContext context) {
     final now = appNow();
     final stage = annLiveStage(item, now);
-    if (stage == null) return SoftTag(tr(item.status), color: stageColor(item.status));
-    final text = liveLabel(stage, item.liveAt, now);
+    if (stage == null) {
+      if (!item.unofficial) return SoftTag(tr(item.status), color: stageColor(item.status));
+      final key = ValueKey('unofficial-tag-${item.id}');
+      return onPhoto
+          ? TagPill(tr(unofficialLabel), key: key, filled: true)
+          : SoftTag(tr(annStageText(item.status, unofficial: true)), key: key, color: unofficialColor);
+    }
+    // 비공식이 전한 라이브: 때 앞에 「비공식」 — 색은 라이브 단계 그대로 (하는 중 빨강이 먼저 읽혀야 한다)
+    final text = joinDot([if (item.unofficial) tr(unofficialLabel), liveLabel(stage, item.liveAt, now)]);
     final key = ValueKey('live-tag-${item.id}');
     return onPhoto
         ? TagPill(text, key: key, strong: stage == LiveStage.live, filled: true)

@@ -1,13 +1,13 @@
-// 화면 A: 홈 — 큰 배너(공식 예고) + 종류별 가로 스크롤 줄
+// 화면 A: 홈 — 큰 배너(예고) + 종류별 가로 스크롤 줄
 //
 // ┌──────── 디자인 가이드 대응표: A 홈 ────────────────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
 // │ A-1  │ ChannelHeader                      │ 아바타 줄 + 내 채널 바 (C-0 공용)       │ P04 · P06     │
 // │ A-2  │ GpSearchBar 입구 (탭하면 검색 탭)   │ 검색창(검색 화면과 같은 모양) · 카메라  │ P07 · P04     │
-// │ A-3  │ PageView(화면 끝까지) + 점 표시     │ 공식 예고 배너 (4초마다 다음 장, 끝없이) │ P08 · P02     │
-// │ A-4  │ 배너 아래 AnnTag · 제목             │ 예고 상태(공식 발표·상품화 확정·예약) · 라이브면 때 │ P01 │
+// │ A-3  │ PageView(화면 끝까지) + 점 표시     │ 예고 배너 (공식 먼저 · 모자라면 비공식, 4초마다 다음 장, 끝없이) │ P08 · P02     │
+// │ A-4  │ 배너 아래 AnnTag · 제목             │ 예고 상태(공식 발표·상품화 확정·예약) · 라이브면 때 · 비공식 │ P01 │
 // │ A-5  │ SectionHeader (색 막대 + ›)         │ 줄 이름 · 전체 보기 → O 전체 목록(홈 안)  │ P06 · P07     │
-// │ A-6  │ 가로 ListView + ProductTile         │ 최근 추가 · 10월 발매 · 공식 예고 · 최근 본 │ P08        │
+// │ A-6  │ 가로 ListView + ProductTile         │ 최근 추가 · 10월 발매 · 공식 예고(비공식이 섞이면 예고) · 최근 본 │ P08 │
 // │ A-7  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 빈 채널           │ P01 · P09     │
 // │ A-8  │ 흰 띠(섹션마다) + 회백색 틈          │ 줄과 줄 사이 층 구분                   │ P08 · P04     │
 // │ A-9  │ ProductTile 의 QuickMarks (리본 · ♡)  │ 좋아요 · 구매함 바로 담기 (앱 전체 한 벌)  │ P07 · P04     │
@@ -17,6 +17,7 @@
 // 줄 안에는 날짜·가격을 쓰지 않는다 — 궁금하면 눌러서 상세에서 본다 (P08).
 // 왜 이렇게: 홈은 버전 번호 · 총 개수 · IP 입구 카드 대신 "내 채널의 새 소식"만.
 import '../l10n/l10n.dart';
+import '../logic/announcement_match.dart';
 import '../logic/kit_rules.dart';
 import 'dart:async' show Timer;
 
@@ -95,11 +96,11 @@ class _Item {
   final Announcement? ann;
 }
 
-/// 전체 목록 제목
-String _titleOf(HomeSection s) => switch (s) {
+/// 전체 목록 제목 — 예고 줄은 비공식 소식이 섞였으면 「예고」, 공식뿐이면 「공식 예고」 ([anns] = 지금 채널의 예고)
+String _titleOf(HomeSection s, List<Announcement> anns) => switch (s) {
   HomeSection.recent => tr('최근 추가'),
   HomeSection.month => currentMonthTitle,
-  HomeSection.announcements => tr('공식 예고'),
+  HomeSection.announcements => tr(annSectionTitle(anns)),
   HomeSection.viewed => tr('최근 본'),
 };
 
@@ -273,7 +274,7 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
         field: GpSearchBar(
           // O-7 이 목록 안에서만
           controller: _searchCtrl,
-          hint: trf('{name}에서 찾기', {'name': _titleOf(sec)}),
+          hint: trf('{name}에서 찾기', {'name': _titleOf(sec, data.announcements)}),
           onChanged: (v) => setState(() => _query = v), // STATE: 검색어 → 목록 거르기
           onCamera: widget.onCamera,
         ),
@@ -342,7 +343,7 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
           Expanded(
             child: SectionListView(
               key: ValueKey(sec),
-              title: _titleOf(sec),
+              title: _titleOf(sec, data.announcements),
               subtitle: joinDot([
                 if (channel != allChannelId) tr(channelOf(channel).label),
                 if (sec == HomeSection.recent) recentRangeLabel,
@@ -374,14 +375,14 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
       ),
       _Row(currentMonthTitle, [for (final k in month) kitItem(k)], onMore: () => _openSection(HomeSection.month)),
       _Row(
-        tr('공식 예고'),
+        _titleOf(HomeSection.announcements, data.announcements),
         [for (final a in data.announcements) _Item(a.image, a.title, ann: a)],
         wide: true,
         onMore: () => _openSection(HomeSection.announcements),
       ),
       _Row(tr('최근 본'), [for (final k in viewed) kitItem(k)], onMore: () => _openSection(HomeSection.viewed)),
     ];
-    final heroes = data.announcements.where((a) => a.hero).toList();
+    final heroes = annHeroes(data.announcements); // 공식 먼저, 채운 비공식은 뒤
 
     // 당겨서 새로 고침 = Gunpula 새 데이터 확인 (바뀌면 앱 셸이 화면을 다시 불러온다)
     return RefreshIndicator(
@@ -432,7 +433,8 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
   }
 }
 
-/// A-3 공식 예고 배너 — 화면 끝까지 꽉 찬 16:9 사진, 아래에 상태와 제목
+/// A-3 예고 배너 — 화면 끝까지 꽉 찬 16:9 사진, 아래에 상태와 제목.
+/// 사진 있는 공식 예고가 먼저, 모자랄 때만 비공식 (lib/logic/announcement_match.dart annHeroIds)
 class _HeroBanner extends StatefulWidget {
   const _HeroBanner({required this.items, required this.onTap});
   final List<Announcement> items;
@@ -574,6 +576,7 @@ class _HorizontalRow extends StatelessWidget {
         itemBuilder: (context, i) {
           final item = row.items[i];
           final kit = item.kit;
+          final ann = item.ann;
           return ProductTile(
             image: item.image,
             title: item.title,
@@ -581,20 +584,19 @@ class _HorizontalRow extends StatelessWidget {
             imageAspect: aspect,
             id: kit?.id ?? item.ann?.id,
             onTap: () {
-              final ann = item.ann;
               if (kit != null) {
                 openKitDetail(context, kit, loaders: loaders, list: [for (final it in row.items) ?it.kit]);
               } else if (ann != null) {
                 openAnnouncement(context, ann, loaders: loaders, list: [for (final it in row.items) ?it.ann]);
               }
             },
-            // A-9 P07 상품 = 리본 · ♡ / 라이브 예고 = 사진 귀퉁이에 때 (보통 예고는 사진 + 이름만)
+            // A-9 P07 상품 = 리본 · ♡ / 라이브 예고 = 사진 귀퉁이에 때 / 비공식 소식 = 「비공식」 (보통 예고는 사진 + 이름만)
             marks: kit != null
                 ? QuickMarks(kit: kit)
-                : (item.ann?.isStream ?? false)
+                : ann != null && (ann.isStream || ann.unofficial)
                 ? Align(
                     alignment: Alignment.topLeft,
-                    child: Padding(padding: const EdgeInsets.all(6), child: AnnTag(item.ann!, onPhoto: true)),
+                    child: Padding(padding: const EdgeInsets.all(6), child: AnnTag(ann, onPhoto: true)),
                   )
                 : null,
           );

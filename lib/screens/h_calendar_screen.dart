@@ -25,6 +25,7 @@ import 'package:flutter/material.dart';
 import '../api.dart';
 import '../channels.dart';
 import '../l10n/l10n.dart';
+import '../logic/announcement_match.dart';
 import '../logic/live_stream.dart';
 import '../logic/restock.dart';
 import '../marks.dart';
@@ -45,7 +46,7 @@ DateTime get calendarToday {
 List<String> get _weekdays =>
     byLang(ko: const ['일', '월', '화', '수', '목', '금', '토'], zh: const ['日', '一', '二', '三', '四', '五', '六']);
 
-/// 달력 한 줄의 일정 (발매 상품 또는 공식 예고)
+/// 달력 한 줄의 일정 (발매 상품 또는 예고)
 class _Event {
   const _Event({
     required this.title,
@@ -64,7 +65,7 @@ class _Event {
   /// 라이브 줄: 시작 시각 '21:00' (알약 앞에 붙는다)
   final String time;
 
-  /// 뜻이 색으로 정해진 꼬리표 (예약 · 재판매 · 라이브 단계) — 없으면 테두리 알약
+  /// 뜻이 색으로 정해진 꼬리표 (예약 · 재판매 · 라이브 단계 · 비공식) — 없으면 테두리 알약
   final Color? tagColor;
 
   /// 예약 도착 줄: 아직 낼 돈 (원)
@@ -82,7 +83,7 @@ class _Event {
   /// 발매 상품 (확정된 발매일)
   final Kit? kit;
 
-  /// 공식 예고 · 공지
+  /// 예고 · 공지 (공식 · 비공식)
   final Announcement? ann;
 
   bool get isRelease => kit != null;
@@ -284,7 +285,15 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
               tagColor: liveColor(stage),
             )
           else
-            _Event(title: a.title, image: a.image, sub: a.source, ann: a, day: dayOf(date), dot: Gp.faint),
+            _Event(
+              title: a.title,
+              image: a.image,
+              sub: a.source,
+              ann: a,
+              day: dayOf(date),
+              dot: Gp.faint,
+              tagColor: a.unofficial ? unofficialColor : null, // 예고 목록 꼬리표와 같은 색
+            ),
     ];
   }
 
@@ -703,13 +712,17 @@ class _EventRow extends StatelessWidget {
       image: event.image,
       title: event.title,
       subtitle: event.sub,
-      // 발매 = 검정, 예고 = 회색 (알약 글자 · 예고 단계는 한국어 값 — 보일 때 tr). 라이브는 시각을 앞에: "21:00 라이브"
+      // 발매 = 검정, 예고 = 회색, 비공식 = 호박색 (알약 글자 · 예고 단계는 한국어 값 — 보일 때 tr). 라이브는 시각을 앞에: "21:00 라이브",
+      // 비공식이 전한 라이브는 "21:00 비공식 · 라이브" (색은 라이브 단계 그대로 — 예고 꼬리표 AnnTag 와 같게)
       tag: [
         if (event.time.isNotEmpty) event.time,
-        tr(event.tag.isNotEmpty ? event.tag : (kit != null ? '발매' : (ann?.status ?? '예고'))),
+        if (event.tag.isNotEmpty)
+          joinDot([if (ann?.unofficial ?? false) tr(unofficialLabel), tr(event.tag)])
+        else
+          tr(kit != null ? '발매' : (ann == null ? '예고' : annStageText(ann.status, unofficial: ann.unofficial))),
       ].join(' '),
       tagStrong: kit != null,
-      tagColor: event.tagColor, // 예약 · 재판매 = 상세와 같은 색 꼬리표, 라이브 = 단계 색
+      tagColor: event.tagColor, // 예약 · 재판매 = 상세와 같은 색 꼬리표, 라이브 = 단계 색, 비공식 = 호박색
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       onTap: () {
         if (kit != null) {
@@ -729,7 +742,7 @@ List<HelpItem> get calendarHelp => [
   HelpItem(Icons.calendar_month_outlined, tr('전체 일정')),
   HelpItem(Icons.person_outline, tr('내 일정 (좋아요 · 구매함)')),
   HelpItem.dot(Gp.accent, tr('발매')),
-  HelpItem.dot(Gp.faint, tr('공식 예고 · 공지 · 라이브 (시작하는 날)')),
+  HelpItem.dot(Gp.faint, tr('예고 · 공지 · 라이브 (시작하는 날)')), // 비공식 소식도 같은 점
   HelpItem.dot(Gp.danger, tr('PB 예약 마감 (내 일정)')),
   HelpItem.dot(Gp.own, tr('산 날 (내 일정)')),
   HelpItem.dot(Gp.reserve, tr('예약 도착 (내 일정)')),

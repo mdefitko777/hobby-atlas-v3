@@ -161,6 +161,11 @@ const Map<String, String> zhCommon = {
   // 공식 예고 단계 (announcementStages · annStageLabels, 「공식 발표」 · 「발매」는 위)
   '상품화 확정': '确定商品化',
   '예약 시작': '开始预订',
+  // 비공식 소식 (lib/logic/announcement_match.dart annStageText — 꼬리표 · 예고 목록 탭 · 캘린더 · 알림)
+  '비공식': '非官方',
+  '비공식 · 상품화 확정': '非官方 · 确定商品化',
+  '비공식 · 예약 시작': '非官方 · 开始预订',
+  '비공식 · 발매': '非官方 · 发售',
   // 공식 라이브 꼬리표 (lib/logic/live_stream.dart liveLabel — 홈 · 예고 목록 · 예고 상세 · 캘린더)
   '라이브': '直播',
   '라이브 · {when}': '直播 · {when}',

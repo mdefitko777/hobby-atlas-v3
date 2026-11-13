@@ -542,7 +542,7 @@ class BbxTop {
   }
 }
 
-/// 공식 예고 (반다이 방송·공지)
+/// 예고 — 공식(반다이 방송·공지) + 비공식(취미 매체 · 팬 사이트, [unofficial])
 class Announcement {
   const Announcement({
     required this.id,
@@ -557,9 +557,10 @@ class Announcement {
     this.video = '',
     this.liveAt,
     this.liveState = '',
+    this.unofficial = false,
   });
 
-  /// 공식 원문 (뉴스 · 유튜브)
+  /// 원문 (뉴스 · 유튜브)
   final String url;
 
   /// 유튜브 영상 id (영상 예고만)
@@ -584,6 +585,10 @@ class Announcement {
 
   bool get isStream => liveState.isNotEmpty;
 
+  /// 공식이 아닌 곳(취미 매체 · 팬 사이트)의 소식 — 데이터의 unofficial: true, [source] 가 그 사이트 이름.
+  /// 화면마다 「비공식」 꼬리표로 공식 예고와 가른다 (lib/logic/announcement_match.dart annStageText)
+  final bool unofficial;
+
   /// 홈 배너에 올릴 예고로 (줄을 세운 뒤에 정한다 — lib/data/derive/announcements.dart)
   Announcement asHero() => Announcement(
     id: id,
@@ -598,6 +603,7 @@ class Announcement {
     video: video,
     liveAt: liveAt,
     liveState: liveState,
+    unofficial: unofficial,
   );
 
   static Announcement? fromJson(Object? json) {
@@ -615,6 +621,7 @@ class Announcement {
       hero: _b(json, 'hero'),
       liveAt: DateTime.tryParse(jStr(json['liveAt']))?.toLocal(),
       liveState: jStr(json['liveState']),
+      unofficial: _b(json, 'unofficial'),
     );
   }
 }

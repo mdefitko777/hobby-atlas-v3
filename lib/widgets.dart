@@ -4,7 +4,7 @@
 //   tiles         ProductTile 상품 카드 · ThumbRow 목록 한 줄 · CategoryTile · CategoryGrid 분류 칸(그림 + 이름)
 //   mark_overlay  MarkOverlay · QuickMarks (리본 = 구매함 · ♡ = 좋아요) · StatusMarks (보기만)
 //   icons         LikedIcon · OwnedIcon · VerifiedBadge · ChannelGlyph
-//   tags          TagPill · SoftTag · DateTag · stageColor · AnnTag(공식 예고 꼬리표: 단계 또는 라이브 때) · liveColor
+//   tags          TagPill · SoftTag · DateTag · stageColor · AnnTag(예고 꼬리표: 단계 · 라이브 때 · 비공식) · liveColor · unofficialColor
 //   buttons       RaisedCircleButton · TogglePill · GradientButton
 //   rings         AccentRing · RingAvatar
 //   sections      SectionHeader · SectionPanel · UnderlineTab · PageDots · AccentBar
