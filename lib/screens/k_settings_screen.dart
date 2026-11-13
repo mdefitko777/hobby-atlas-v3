@@ -386,6 +386,7 @@ class HelpScreen extends StatelessWidget {
               children: [
                 SectionHeader(tr('앱 업데이트')),
                 tip(Icons.system_update_outlined, tr('위 줄 ⬇ · 설정 › 앱 › 버전'), tr('새 빌드를 받아 안드로이드 설치 창으로')),
+                tip(Icons.download_done, tr('작은 업데이트 (패치)'), tr('뒤에서 받아 두고 앱을 다시 열면 적용 · 설치 창 없음')),
               ],
             ),
           ),

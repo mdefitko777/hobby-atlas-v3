@@ -68,6 +68,8 @@ dependencies:
   tflite_flutter: 0.12.1
   flutter_svg: ^2.3.2
   google_mlkit_translation: ^0.15.1
+  # 패치(Shorebird 코드 푸시): 패치 번호 읽기 · 지금 확인 (lib/update/app_patch.dart) — 순수 다트, 네이티브 코드 없음
+  shorebird_code_push: ^2.0.7
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -106,6 +108,8 @@ flutter:
     - assets/app_icon.png
     # 계정 · 동기화: Gunpula Supabase 주소 + anon key (공개용 값, lib/sync/supabase_backend.dart)
     - config/supabase.json
+    # Shorebird 코드 푸시: 깔린 앱이 읽는 app_id (shorebird.yaml)
+    - shorebird.yaml
 
   # To add assets to your application, add an assets section, like this:
   # assets:

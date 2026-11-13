@@ -24,8 +24,10 @@
 ## 설치 · 업데이트
 
 - APK: 이 저장소 릴리스 [`apk-latest`](https://github.com/mdefitko777/hobby-atlas-v3/releases/tag/apk-latest) (arm64). 설치한 뒤에는 앱이 새 판을 알려 주고 그 자리에서 받습니다.
-- `main` 에 푸시하면 GitHub Actions(`.github/workflows/android-apk.yml`)가 서명된 APK `1.1.<실행 번호>` 를 만들어 올립니다. 커밋 제목에 `[minor]` 가 있으면 업데이트 알림을 띄우지 않습니다.
-- 위험한 변경(네이티브 · 플러그인)은 다른 가지에 올려 `gh workflow run android-apk.yml --ref <가지>` 로 시험 빌드만 해 봅니다 (릴리스는 건드리지 않음).
+- `main` 에 푸시하면 GitHub Actions(`.github/workflows/android-apk.yml`)가 둘 중 하나로 보냅니다 ([AGENTS.md](AGENTS.md) "릴리스와 패치").
+  - 다트 코드(`lib/`)만 바뀌었으면 **패치**(Shorebird 코드 푸시): 새로 설치하지 않고, 앱이 뒤에서 받아 다음에 열 때 적용합니다.
+  - 네이티브 · 플러그인 · 자산 · `pubspec` 이 바뀌었으면 서명된 **새 APK** `1.1.<실행 번호>`. 커밋 제목에 `[minor]` 가 있으면 업데이트 알림을 띄우지 않습니다.
+- 위험한 변경(네이티브 · 플러그인)은 다른 가지에 올려 `gh workflow run android-apk.yml --ref <가지>` 로 시험 빌드만 해 봅니다 (릴리스 · Shorebird 는 건드리지 않음).
 
 ## 개발
 

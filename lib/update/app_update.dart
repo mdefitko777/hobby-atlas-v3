@@ -3,6 +3,8 @@
 //   · 큰 업데이트(major)면 앱을 열 때 한 번만 묻는다 (같은 빌드는 다시 묻지 않음)
 //   · 업데이트 → 앱 안에서 받기(진행률) → 안드로이드 설치 창 (ota_update). 처음 한 번 "알 수 없는 앱 설치 허용"
 // 내 빌드 번호는 APK 를 만들 때 --dart-define=APP_BUILD 로 넣는다. 0 = 손으로 만든 개발 빌드 → 확인하지 않는다.
+// 다트 코드만 바뀐 업데이트는 새 APK 가 아니라 패치로 온다 (app_patch.dart) — version.json 의 build 는 그대로라
+// 이 파일의 ⬇ · 묻기는 뜨지 않고, patch 칸(번호 · 바뀐 점)만 달라진다.
 import 'dart:async';
 import 'dart:convert';
 
@@ -83,6 +85,32 @@ class UpdateInfo {
   }
 }
 
+/// version.json 의 patch 칸 — 지난 APK([build]) 위에 얹은 패치와 그 바뀐 점. 새 APK 가 나오면 칸이 비워진다
+class PatchInfo {
+  const PatchInfo({required this.build, required this.number, this.notes = const [], this.notesZh = const []});
+
+  /// 패치가 얹힌 APK 의 빌드 번호 — 내 빌드와 같을 때만 내 것
+  final int build;
+  final int number;
+  final List<String> notes;
+  final List<String> notesZh;
+
+  /// 화면 언어의 바뀐 점 ([UpdateInfo.shownNotes] 와 같은 규칙)
+  List<String> get shownNotes => L10n.isZh ? notesZh : notes;
+
+  static PatchInfo? fromJson(Object? json) {
+    final j = jMap(json);
+    final number = jInt(j['number']);
+    if (number <= 0) return null;
+    return PatchInfo(
+      build: jInt(j['build']),
+      number: number,
+      notes: jList(j['notes']).whereType<String>().toList(),
+      notesZh: jList(j['notes_zh']).whereType<String>().toList(),
+    );
+  }
+}
+
 /// 앱 전체가 함께 보는 한 벌: ⬇ 아이콘 · 설정의 "업데이트 확인" · 업데이트 시트
 class AppUpdate extends ChangeNotifier {
   AppUpdate._();
@@ -93,6 +121,15 @@ class AppUpdate extends ChangeNotifier {
 
   /// 받을 수 있는 새 빌드 (없으면 null)
   UpdateInfo? available;
+
+  /// 마지막으로 읽은 version.json 의 patch 칸 (없으면 null)
+  PatchInfo? patch;
+
+  /// 패치 [number] 의 바뀐 점 — version.json 이 말하는 패치가 내 빌드의 그 번호일 때만 (아니면 빈 목록)
+  List<String> patchNotes(int? number, {int build = appBuild}) {
+    final p = patch;
+    return p != null && p.build == build && p.number == number ? p.shownNotes : const [];
+  }
 
   /// 받는 중 0–100 (null = 받지 않는 중)
   int? progress;
@@ -123,8 +160,10 @@ class AppUpdate extends ChangeNotifier {
       return available;
     }
     checkFailed = false;
-    final info = UpdateInfo.fromJson(_decode(text));
+    final json = _decode(text);
+    final info = UpdateInfo.fromJson(json);
     available = info != null && info.build > appBuild ? info : null;
+    patch = PatchInfo.fromJson(jMap(json)['patch']);
     notifyListeners();
     return available;
   }
@@ -193,6 +232,7 @@ class AppUpdate extends ChangeNotifier {
   @visibleForTesting
   void debugReset() {
     available = null;
+    patch = null;
     progress = null;
     error = '';
     checkFailed = false;

@@ -1,0 +1,6 @@
+# Shorebird 코드 푸시 설정 — 앱에 함께 묶여(pubspec assets) 깔린 앱이 이 app_id 로 패치를 묻는다.
+# app_id 는 비밀이 아니다. 2026-11-13 GitHub Actions 에서 `shorebird init --display-name "Hobby Atlas"` 로 만들었다.
+# 다시 만들지 않는다 (--force 로 새 app_id 가 되면 이미 깔린 앱이 패치를 못 받는다).
+app_id: 41a2cca8-5418-4b78-9fbc-184a95f1fc83
+
+# auto_update 는 적지 않는다 = 기본값(켜짐): 앱을 열 때 뒤에서 패치를 받고, 다음에 앱을 새로 열 때 적용한다.
