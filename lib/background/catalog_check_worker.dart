@@ -9,7 +9,7 @@
 //   4) notify_state.json 에 합쳐 쓰고(잠금 · 다시 읽어 합치기), 알림이 켜져 있으면 휴대폰 알림
 //   5) 새 알림 · 새 상품이 있으면 그 작은 사진을 받을 한 번짜리 일을 건다 (image_prefetch.dart — 같은 입구로 들어온다)
 // 백그라운드에서는 notify_config.json(앱 화면이 써 둔 설정 · 내 채널 · 좋아요)만 읽는다. user.json · 카탈로그는 열지 않는다
-// (사진 미리 받기 일만 카탈로그 파일에서 표지 주소를 찾는다).
+// (사진 미리 받기 일만 카탈로그 파일에서 표지 주소를 찾는다 — 피드 상품의 thumb 이 있으면 카탈로그에 없는 새 상품도).
 import 'dart:convert';
 import 'dart:ui' show DartPluginRegistrant;
 
@@ -281,8 +281,10 @@ Future<CheckOutcome> runCatalogCheck({
 
   // 사진 미리 받기는 덤 — 무엇이 잘못돼도 확인 결과는 그대로
   try {
+    final kits = newPrefetchKits(fresh: fresh, entries: entries, before: before, config: config);
     await queueImagePrefetch(
-      newPrefetchKits(fresh: fresh, entries: entries, before: before, config: config),
+      kits.keys.toList(),
+      thumbs: kits,
       wifiOnly: config.prefetchWifiOnly,
       now: at,
       schedule: schedulePrefetch,

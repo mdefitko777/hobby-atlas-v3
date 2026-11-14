@@ -526,6 +526,7 @@ class NoticeRecord {
     this.titlePart,
     this.bodyParts = const [],
     this.bodySep = ' · ',
+    this.thumb = '',
   }) : _title = title,
        _body = body;
 
@@ -574,6 +575,9 @@ class NoticeRecord {
   /// 처음 설치 때 채운 지난 소식 = 읽은 것으로 시작 (휴대폰 알림도 보내지 않는다)
   final bool seen;
 
+  /// 피드에 실린 작은 표지 주소 (없으면 빈 글자) — 카탈로그가 아직 없거나 그 상품이 아직 없을 때 줄 사진으로
+  final String thumb;
+
   bool get isPbWindow => kind == 'pb_open' || kind == 'pb_close';
   bool get isAnnStage => kind == 'ann_stage';
 
@@ -615,6 +619,7 @@ class NoticeRecord {
     if (watched) 'watched': true,
     if (seen) 'seen': true,
     if (annId.isNotEmpty) 'ann': annId,
+    if (thumb.isNotEmpty) 'thumb': thumb,
   };
 
   static NoticeRecord? fromJson(Object? json) {
@@ -640,6 +645,7 @@ class NoticeRecord {
       titlePart: NoticePart.fromJson(j['title_part']),
       bodyParts: NoticePart.listOf(j['body_parts']),
       bodySep: j['body_sep'] is String ? jStr(j['body_sep']) : ' · ',
+      thumb: jStr(j['thumb']).startsWith('https://') ? jStr(j['thumb']) : '',
     );
   }
 }

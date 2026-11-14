@@ -1,4 +1,5 @@
-// 새 소식 사진 미리 받기 (lib/background/image_prefetch.dart) — 하루 한도 · 밤 12시 · 와이파이만 · 새것만 · 작은 그림만
+// 새 소식 사진 미리 받기 (lib/background/image_prefetch.dart) — 하루 한도 · 밤 12시 · 와이파이만 · 새것만 · 작은 그림만 ·
+// 피드의 작은 표지(thumb)
 import 'dart:convert';
 import 'dart:io';
 
@@ -7,21 +8,39 @@ import 'package:hobby_atlas/background/catalog_check_worker.dart';
 import 'package:hobby_atlas/background/image_prefetch.dart';
 import 'package:hobby_atlas/data/blob_store.dart';
 import 'package:hobby_atlas/data/catalog.dart';
+import 'package:hobby_atlas/data/derive.dart' show noticeOf;
 import 'package:hobby_atlas/logic/image_size.dart';
 import 'package:hobby_atlas/notifications/feed_rules.dart';
 import 'package:hobby_atlas/notifications/notify_models.dart';
 import 'package:workmanager/workmanager.dart';
 
+import 'support/line_kits.dart';
+
 const _shard = 'https://mdefitko777.github.io/gunpula-img-1/';
 const _thumbs = ThumbIndex(thumbs: {'${_shard}a.jpg': '${_shard}t/a.webp', '${_shard}b.jpg': '${_shard}t/b.webp'});
 
-NoticeRecord _rec(String id, String kind, String kitId, {bool seen = false}) =>
-    NoticeRecord(id: id, kind: kind, kitId: kitId, title: kitId, body: '', at: DateTime.utc(2026, 11, 14), seen: seen);
+/// 피드에 실린 작은 표지 (사진 저장소의 thumbs/…webp)
+const _feedThumb = '${_shard}thumbs/web/x/new.webp';
 
-FeedEntry _entry(String date, List<(String, String, String)> items) => FeedEntry(
-  date: date,
-  items: [for (final (id, type, ch) in items) FeedItem(kitId: id, changeType: type, franchise: ch, name: id)],
+NoticeRecord _rec(String id, String kind, String kitId, {bool seen = false, String thumb = ''}) => NoticeRecord(
+  id: id,
+  kind: kind,
+  kitId: kitId,
+  title: kitId,
+  body: '',
+  at: DateTime.utc(2026, 11, 14),
+  seen: seen,
+  thumb: thumb,
 );
+
+FeedEntry _entry(String date, List<(String, String, String)> items, {Map<String, String> thumbs = const {}}) =>
+    FeedEntry(
+      date: date,
+      items: [
+        for (final (id, type, ch) in items)
+          FeedItem(kitId: id, changeType: type, franchise: ch, name: id, thumb: thumbs[id] ?? ''),
+      ],
+    );
 
 /// 기기 카탈로그 파일 모양 그대로 (Catalog 가 jsonEncode 로 쓴다)
 String _slim(Map<String, String> images) => jsonEncode([
@@ -83,7 +102,7 @@ void main() {
         before: before,
         config: config,
       );
-      expect(ids, ['w', 'n1', 'n2']);
+      expect(ids.keys, ['w', 'n1', 'n2']);
     });
 
     test('처음 실행(지난 소식을 조용히 채우는 날)은 피드에서 고르지 않는다', () {
@@ -107,6 +126,48 @@ void main() {
       );
       expect(ids.length, prefetchPerRun);
     });
+
+    test('피드의 작은 표지를 같이 넘긴다 (알림 줄 · 피드 어느 쪽이든, 없으면 빈 글자)', () {
+      final ids = newPrefetchKits(
+        fresh: [_rec('feed-2026-11-14-a', 'added', 'a', thumb: '${_shard}t/a.webp')],
+        entries: [
+          _entry(
+            '2026-11-14',
+            [('a', 'added', 'gundam'), ('n', 'added', 'gundam'), ('o', 'added', 'gundam')],
+            thumbs: {'n': _feedThumb},
+          ),
+        ],
+        before: NotifyState(lastSeen: '2026-11-13'),
+        config: config,
+      );
+      expect(ids, {'a': '${_shard}t/a.webp', 'n': _feedThumb, 'o': ''});
+    });
+  });
+
+  group('피드의 작은 표지', () {
+    test('https 만 읽고, 없는 옛 피드는 빈 글자', () {
+      FeedItem? item(Object? thumb) => FeedItem.fromJson({'kit_id': 'k', 'thumb': ?thumb}, 'added');
+      expect(item(_feedThumb)!.thumb, _feedThumb);
+      expect(item(null)!.thumb, '');
+      expect(item('http://x.test/a.jpg')!.thumb, '');
+      expect(item('../app/assets/a.jpg')!.thumb, '');
+      expect(item(3)!.thumb, '');
+    });
+
+    test('알림함 줄에 실려 파일로 갔다 와도 같다 — 없으면 칸을 쓰지 않는다', () {
+      final it = FeedItem.fromJson({'kit_id': 'k', 'franchise': 'gundam', 'thumb': _feedThumb}, 'added')!;
+      final r = recordForItem(it, FeedEntry(date: '2026-11-14', items: [it]), NotifyConfig(wanted: const {'k'}))!;
+      expect(r.thumb, _feedThumb);
+      expect(NoticeRecord.fromJson(jsonDecode(jsonEncode(r.toJson())))!.thumb, _feedThumb);
+      expect(_rec('x', 'added', 'k').toJson().containsKey('thumb'), isFalse);
+    });
+
+    test('알림 줄 사진: 카탈로그가 먼저, 아직 없으면 피드의 작은 표지, 둘 다 없으면 빈 사진', () {
+      final r = _rec('feed-2026-11-14-k', 'added', 'k', thumb: _feedThumb);
+      expect(noticeOf(r, null).image, _feedThumb);
+      expect(noticeOf(r, lineKit('k', image: '${_shard}k.jpg')).image, '${_shard}k.jpg');
+      expect(noticeOf(_rec('feed-2026-11-14-k', 'added', 'k'), null).image, '');
+    });
   });
 
   group('작은 그림만', () {
@@ -115,6 +176,13 @@ void main() {
       expect(prefetchUrl('c', '${_shard}c.jpg', _thumbs), isNull);
       expect(prefetchUrl('c', '${_shard}c.jpg', ThumbIndex.none), isNull);
       expect(prefetchUrl('x', null, _thumbs), isNull);
+    });
+
+    test('카탈로그로 작은 판을 모를 때만 피드의 작은 표지 (그대로 — 다시 줄이지 않는다)', () {
+      expect(prefetchUrl('a', '${_shard}a.jpg', _thumbs, _feedThumb), '${_shard}t/a.webp', reason: '알림 칸이 지금 쓰는 주소');
+      expect(prefetchUrl('c', '${_shard}c.jpg', _thumbs, _feedThumb), _feedThumb, reason: '기기 thumbs.json 이 아직 모름');
+      expect(prefetchUrl('new', null, ThumbIndex.none, _feedThumb), _feedThumb, reason: '카탈로그에 아직 없음');
+      expect(prefetchUrl('new', null, _thumbs, 'http://x.test/a.jpg'), isNull);
     });
 
     test('레고는 Rebrickable 250 px — 카탈로그에 아직 없으면 kit id 로', () {
@@ -274,6 +342,67 @@ void main() {
       expect((await state()).queue, hasLength(4));
     });
 
+    test('카탈로그에 아직 없는 새 상품도 피드의 작은 표지가 있으면 받는다 — 없는 것은 전처럼 줄에서 기다린다', () async {
+      final t = DateTime(2026, 11, 14, 9);
+      final calls = <bool>[];
+      Future<void> schedule({required bool wifiOnly, bool replace = false}) async => calls.add(wifiOnly);
+      await queueImagePrefetch(
+        ['new', 'bare'],
+        thumbs: {'new': _feedThumb},
+        wifiOnly: true,
+        now: t,
+        catalogSig: '',
+        schedule: schedule,
+      );
+      final asked = <String>[];
+      final r = await runImagePrefetch(
+        now: t,
+        fetch: (u) async {
+          asked.add(u);
+          return 9000;
+        },
+        readText: files(const {}),
+      );
+      expect(asked, [_feedThumb]);
+      expect(r.bytes, 9000);
+      var s = await state();
+      expect([for (final q in s.queue) q.kitId], ['bare']);
+      expect(s.usedOn(t), 9000, reason: '같은 하루 한도에 센다');
+
+      // 기다리던 상품의 작은 표지를 다음 피드에서 알게 되면 적고 다시 건다 (카탈로그 그대로여도)
+      expect(
+        await queueImagePrefetch(
+          const ['bare'],
+          thumbs: {'bare': '${_shard}t/bare.webp'},
+          wifiOnly: true,
+          now: t,
+          catalogSig: '2026-11-14|10',
+          schedule: schedule,
+        ),
+        isTrue,
+      );
+      s = await state();
+      expect(s.queue.single.thumb, '${_shard}t/bare.webp');
+      expect(calls, [true, true]);
+    });
+
+    test('옛 줄 파일([id, 시각])도 그대로 읽고, 작은 표지는 셋째 칸', () {
+      final at = DateTime.utc(2026, 11, 14);
+      final s = PrefetchState.fromJson({
+        'queue': [
+          ['old', at.toIso8601String()],
+          ['new', at.toIso8601String(), _feedThumb],
+          ['bad', at.toIso8601String(), 'ftp://x'],
+        ],
+      });
+      expect([for (final q in s.queue) (q.kitId, q.thumb)], [('old', ''), ('new', _feedThumb), ('bad', '')]);
+      expect(s.toJson()['queue'], [
+        ['old', at.toIso8601String()],
+        ['new', at.toIso8601String(), _feedThumb],
+        ['bad', at.toIso8601String()],
+      ]);
+    });
+
     test('이미 기기에 있는 그림(0 바이트)은 장 수 · 바이트에 넣지 않고 줄에서 뺀다', () async {
       final t = DateTime(2026, 11, 14, 9);
       await BlobStore.write(imagePrefetchKey, jsonEncode((PrefetchState()..enqueue(['a'], t)).toJson()));
@@ -335,6 +464,7 @@ void main() {
                       'franchise': 'gundam',
                       'names': {'ko': '새 상품'},
                       'change_reasons': ['new'],
+                      'thumb': _feedThumb,
                     },
                   ],
                 },
@@ -353,7 +483,7 @@ void main() {
         );
         expect(calls, [true]);
         final s = PrefetchState.fromJson(jsonDecode((await BlobStore.read(imagePrefetchKey))!));
-        expect([for (final q in s.queue) q.kitId], ['gu-new']);
+        expect([for (final q in s.queue) (q.kitId, q.thumb)], [('gu-new', _feedThumb)]);
         expect(asked.where((p) => !p.startsWith('data/')), isEmpty, reason: '그림은 뒤 받기 일에서만');
       });
     });

@@ -89,12 +89,12 @@ List<HelpItem> get notificationsHelp => [
 const _thumb = 52.0;
 
 /// 🔔 를 누르기 전에 위쪽 알림의 상품 사진을 기기에 받아 둔다 — 알림 화면을 열면 바로 보이게 (머리 줄 🔔 가 부른다).
-/// 사진은 알림 화면과 같이 카탈로그에서 (예고 · 라이브 줄은 사진이 없다)
+/// 사진은 알림 화면과 같이 카탈로그에서, 없으면 피드의 작은 표지 (예고 · 라이브 줄은 사진이 없다)
 void prefetchNoticeImages(BuildContext context, NotifyStore store, List<String> channels) {
   final byId = Catalog.instance.byId;
   prefetchImages(context, [
     for (final r in store.visible(channels).take(16))
-      if (!r.isAnnStage && !r.isLive) ?byId[r.kitId]?.image,
+      if (!r.isAnnStage && !r.isLive) byId[r.kitId]?.image ?? r.thumb,
   ], size: _thumb);
 }
 

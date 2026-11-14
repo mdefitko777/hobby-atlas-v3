@@ -4,8 +4,10 @@
 //    [prefetchPerRun]장 · [prefetchRunBytes] · 하루 [prefetchDailyCap] (실제로 받은 바이트, 기기 시계 밤 12시에 다시)
 //  - 받기는 WorkManager 한 번짜리 일: 「와이파이만」이면 unmetered 망에서만, 배터리 부족이면 안드로이드가 미룬다.
 //    데이터 세이버는 다트에서 알 수 없다 (켜져 있으면 뒤 받기가 막혀 실패할 뿐 바이트는 세지 않는다)
-//  - 피드(notify-feed.json)에는 그림 주소가 없다 → 기기 카탈로그(catalog_kits.json)에서 찾는다. 아직 카탈로그에 없는
-//    새 상품은 레고만 kit id 로 Rebrickable 주소를 만들고, 나머지는 [queueKeep] 동안 줄에 두었다가 카탈로그가 새로 받힌 뒤에
+//  - 주소는 기기 카탈로그(catalog_kits.json)의 표지 → thumbs.json 이 먼저 (알림 칸이 지금 그리는 주소라 캐시를 같이 쓴다).
+//    카탈로그로 작은 판을 모르면 피드 상품의 thumb(Gunpula 가 2026-11-14 부터 싣는 작은 표지 — 이미 작은 그림이라 그대로),
+//    그것도 없는 옛 피드면 레고만 kit id 로 Rebrickable 주소를 만들고, 나머지는 [queueKeep] 동안 줄에 두었다가
+//    카탈로그가 새로 받힌 뒤에
 library;
 
 import 'dart:convert';
@@ -21,7 +23,7 @@ import '../data/net_image_files.dart';
 import '../format.dart' show dayKey;
 import '../json_util.dart';
 import '../logic/image_size.dart';
-import '../notifications/feed_rules.dart' show FeedEntry;
+import '../notifications/feed_rules.dart' show FeedEntry, feedThumb;
 import '../notifications/local_notifier.dart';
 import '../notifications/notify_models.dart';
 
@@ -50,11 +52,14 @@ const _rebrickableSets = 'https://cdn.rebrickable.com/media/sets/';
 
 /// 줄에 선 상품 하나
 class PrefetchItem {
-  const PrefetchItem(this.kitId, this.at);
+  const PrefetchItem(this.kitId, this.at, [this.thumb = '']);
   final String kitId;
 
   /// 줄에 선 때 — [queueKeep] 이 지나면 뺀다
   final DateTime at;
+
+  /// 피드에 실린 작은 표지 (없으면 빈 글자)
+  final String thumb;
 }
 
 /// image_prefetch.json — 기기에만 (계정에 맞추지 않음)
@@ -82,25 +87,36 @@ class PrefetchState {
     bytes += n;
   }
 
-  /// 새 상품을 줄 앞에 (이미 있으면 그대로) · 오래된 것은 뺀다. 새로 선 것이 있으면 true
-  bool enqueue(Iterable<String> ids, DateTime now) {
+  /// 새 상품을 줄 앞에 (이미 있으면 그대로) · 오래된 것은 뺀다. [thumbs] = 상품 id → 피드의 작은 표지.
+  /// 줄에 있던 상품도 작은 표지를 새로 알면 적는다 (주소를 몰라 기다리던 것을 받을 수 있게). 새로 선 것 · 적은 것이 있으면 true
+  bool enqueue(Iterable<String> ids, DateTime now, {Map<String, String> thumbs = const {}}) {
     queue.removeWhere((q) => now.difference(q.at) > queueKeep);
+    var learned = false;
+    for (var i = 0; i < queue.length; i++) {
+      final q = queue[i];
+      final t = thumbs[q.kitId] ?? '';
+      if (q.thumb.isEmpty && t.isNotEmpty) {
+        queue[i] = PrefetchItem(q.kitId, q.at, t);
+        learned = true;
+      }
+    }
     final have = {for (final q in queue) q.kitId};
     final add = [
       for (final id in ids)
-        if (id.isNotEmpty && have.add(id)) PrefetchItem(id, now),
+        if (id.isNotEmpty && have.add(id)) PrefetchItem(id, now, thumbs[id] ?? ''),
     ];
     queue.insertAll(0, add);
     if (queue.length > queueMax) queue.removeRange(queueMax, queue.length);
-    if (add.isNotEmpty) scanned = '';
-    return add.isNotEmpty;
+    final changed = add.isNotEmpty || learned;
+    if (changed) scanned = '';
+    return changed;
   }
 
   Map<String, Object?> toJson() => {
     'day': day,
     'bytes': bytes,
     'queue': [
-      for (final q in queue) [q.kitId, q.at.toUtc().toIso8601String()],
+      for (final q in queue) [q.kitId, q.at.toUtc().toIso8601String(), if (q.thumb.isNotEmpty) q.thumb],
     ],
     if (scanned.isNotEmpty) 'scanned': scanned,
   };
@@ -112,48 +128,61 @@ class PrefetchState {
       bytes: j['bytes'] is num ? (j['bytes']! as num).toInt() : 0,
       queue: [
         for (final q in jList(j['queue']))
-          if (q is List && q.length == 2 && q[0] is String)
-            if (DateTime.tryParse('${q[1]}') case final at?) PrefetchItem(q[0] as String, at),
+          if (q is List && (q.length == 2 || q.length == 3) && q[0] is String)
+            if (DateTime.tryParse('${q[1]}') case final at?)
+              PrefetchItem(q[0] as String, at, q.length == 3 ? feedThumb(q[2]) : ''),
       ],
       scanned: jStr(j['scanned']),
     );
   }
 }
 
-/// 이번 확인에서 새로 온 것 중 사진을 받아 둘 상품 — 새 알림(읽지 않은 것, 예고 · 라이브 줄은 사진이 없다) 먼저,
-/// 그다음 내 채널의 새 상품(피드 added, 지난번에 본 날짜부터 처음 보는 줄). 처음 실행은 지난 소식을 조용히 채우는 날이라 없음
-List<String> newPrefetchKits({
+/// 이번 확인에서 새로 온 것 중 사진을 받아 둘 상품 → 피드의 작은 표지(없으면 빈 글자), 받을 순서대로.
+/// 새 알림(읽지 않은 것, 예고 · 라이브 줄은 사진이 없다) 먼저, 그다음 내 채널의 새 상품(피드 added, 지난번에 본 날짜부터
+/// 처음 보는 줄). 처음 실행은 지난 소식을 조용히 채우는 날이라 없음
+Map<String, String> newPrefetchKits({
   required List<NoticeRecord> fresh,
   required List<FeedEntry> entries,
   required NotifyState before,
   required NotifyConfig config,
 }) {
-  final out = <String>{
-    for (final r in fresh)
-      if (!r.seen && r.kitId.isNotEmpty && !r.isAnnStage && !r.isLive) r.kitId,
-  };
+  final out = <String, String>{};
+  void put(String id, String thumb) {
+    if (out.containsKey(id)) {
+      if (out[id]!.isEmpty) out[id] = thumb;
+    } else if (out.length < prefetchPerRun) {
+      out[id] = thumb;
+    }
+  }
+
+  for (final r in fresh) {
+    if (!r.seen && r.kitId.isNotEmpty && !r.isAnnStage && !r.isLive) put(r.kitId, r.thumb);
+  }
   if (before.lastSeen.isNotEmpty) {
     final known = {for (final r in before.inbox) r.id, ...before.seenFeed};
     for (final e in entries) {
       if (e.date.compareTo(before.lastSeen) < 0) break; // 날짜 새것부터
       for (final it in e.items) {
         if (it.changeType != 'added' || !config.channels.contains(it.franchise)) continue;
-        if (!known.contains('feed-${e.date}-${it.kitId}')) out.add(it.kitId);
+        if (!known.contains('feed-${e.date}-${it.kitId}')) put(it.kitId, it.thumb);
       }
     }
   }
-  return out.take(prefetchPerRun).toList();
+  return out;
 }
 
-/// 미리 받을 작은 그림 주소 — 작은 판이 없으면(원본뿐) null. [original] 을 모르는 레고는 kit id 로 원본 주소를 만든다
-/// (점검 2026-11-14: 레고 28,597개 중 28,546개가 `lego-<세트 번호>` → `sets/<세트 번호>.jpg`, 나머지는 404 로 끝난다)
-String? prefetchUrl(String kitId, String? original, ThumbIndex thumbs) {
+/// 미리 받을 작은 그림 주소 — 작은 판을 모르면(원본뿐) null. [original] 을 모르는 레고는 kit id 로 원본 주소를 만든다
+/// (점검 2026-11-14: 레고 28,597개 중 28,546개가 `lego-<세트 번호>` → `sets/<세트 번호>.jpg`, 나머지는 404 로 끝난다).
+/// [feed] = 피드의 작은 표지 — 카탈로그 쪽으로 모를 때만 (알림 칸은 지금 카탈로그 쪽 주소로 그린다)
+String? prefetchUrl(String kitId, String? original, ThumbIndex thumbs, [String feed = '']) {
   final src = (original == null || original.isEmpty) && kitId.startsWith('lego-')
       ? '$_rebrickableSets${kitId.substring(5)}.jpg'
       : (original ?? '');
-  if (!src.startsWith('https://')) return null;
-  final small = imageThumbUrl(src, prefetchPx, thumbs);
-  return small == src ? null : small;
+  if (src.startsWith('https://')) {
+    final small = imageThumbUrl(src, prefetchPx, thumbs);
+    if (small != src) return small;
+  }
+  return feedThumb(feed).isEmpty ? null : feed;
 }
 
 /// 기기 카탈로그 글(catalog_kits.json, `[{"id":…,…,"image":…},…]`)에서 [ids] 의 표지 주소만 찾는다.
@@ -206,6 +235,7 @@ Future<void> schedulePrefetchWork({required bool wifiOnly, bool replace = false}
 }
 
 /// 확인이 끝난 뒤: 새로 온 상품을 줄에 세우고, 받을 것이 있으면 뒤 받기 일을 건다. 걸었으면 true.
+/// [thumbs] = 상품 id → 피드의 작은 표지 ([newPrefetchKits])
 ///  - 오늘 몫을 다 썼으면 걸지 않는다 (줄은 남겨 둔다 — 밤 12시 뒤의 확인에서)
 ///  - 새로 선 것이 없어도, 그림 주소를 몰라 남은 상품이 있고 카탈로그가 새로 받혔으면([catalogSig] ≠ scanned) 다시
 Future<bool> queueImagePrefetch(
@@ -213,12 +243,13 @@ Future<bool> queueImagePrefetch(
   required bool wifiOnly,
   required DateTime now,
   String? catalogSig,
+  Map<String, String> thumbs = const {},
   SchedulePrefetch? schedule,
 }) async {
   final sig = catalogSig ?? await readCatalogSig();
   final run = await BlobStore.locked(imagePrefetchKey, () async {
     final s = PrefetchState.fromJson(_decode(await BlobStore.read(imagePrefetchKey)));
-    final added = s.enqueue(ids, now);
+    final added = s.enqueue(ids, now, thumbs: thumbs);
     if (added) await BlobStore.write(imagePrefetchKey, jsonEncode(s.toJson()));
     return s.queue.isNotEmpty && s.leftOn(now) > 0 && (added || s.scanned != sig);
   });
@@ -300,7 +331,7 @@ Future<PrefetchRun> runImagePrefetch({
         break;
       }
       final known = images[q.kitId];
-      final url = prefetchUrl(q.kitId, known, thumbs);
+      final url = prefetchUrl(q.kitId, known, thumbs, q.thumb);
       if (url == null) {
         // 표지는 아는데 작은 판이 없다 = 원본뿐 → 받지 않는다. 표지를 모르면 카탈로그가 새로 받힐 때까지 줄에
         if (known != null) done.add(q.kitId);

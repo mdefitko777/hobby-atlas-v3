@@ -50,9 +50,14 @@ class FeedItem {
     this.nameZh = '',
     this.seriesKo = '',
     this.seriesZh = '',
+    this.thumb = '',
   });
 
   final String kitId;
+
+  /// 작은 표지 주소 (피드의 thumb — Gunpula thumbs.json 과 같은 작은 그림, 없으면 빈 글자). 아직 기기 카탈로그에 없는
+  /// 새 상품도 사진을 미리 받고 알림함 줄에 보이게 (image_prefetch.dart · derive/notifications.dart)
+  final String thumb;
 
   /// added · changed
   final String changeType;
@@ -142,6 +147,7 @@ class FeedItem {
       subline: jStr(j['subline']),
       nameJa: jStr(j['name_ja']),
       groups: jList(j['groups']).whereType<String>().toList(),
+      thumb: feedThumb(j['thumb']),
     );
   }
 
@@ -160,6 +166,9 @@ class FeedItem {
 
   bool get isBbx => franchise == 'beyblade' || interestTags.contains('bbx');
 }
+
+/// 피드의 작은 표지 주소 — https 가 아니면 없는 것으로 (옛 피드 · 이상한 값은 지금처럼 카탈로그 사진만)
+String feedThumb(Object? v) => v is String && v.startsWith('https://') ? v : '';
 
 /// 알리지 않는 변화 이유 (Gunpula scripts/build_update_feed.mjs changeReasons)
 /// release_found = 발매일이 처음 생긴 것 (나중에 상품 페이지에서 읽어 채운 날짜 — 바뀐 게 아니라 몰랐던 것)
@@ -341,6 +350,7 @@ NoticeRecord? recordForItem(FeedItem it, FeedEntry e, NotifyConfig c, {bool seen
       pb: it.isPb,
       wanted: true, // 채널과 상관없이 보인다
       seen: seen,
+      thumb: it.thumb,
     );
   }
   final wanted = wantedHit(it, c);
@@ -363,6 +373,7 @@ NoticeRecord? recordForItem(FeedItem it, FeedEntry e, NotifyConfig c, {bool seen
     wanted: wanted,
     watched: hits.contains('seed_00'), // SEED / 00 규칙을 켜서 걸린 것만
     seen: seen,
+    thumb: it.thumb,
   );
 }
 
