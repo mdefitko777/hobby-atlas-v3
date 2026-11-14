@@ -2,6 +2,9 @@
 import 'package:flutter/material.dart';
 
 import '../detail_pane.dart';
+import '../l10n/l10n.dart';
+import '../logic/kit_rules.dart' show kitPriceParts;
+import '../models.dart';
 import '../theme.dart';
 import 'images.dart';
 import 'tags.dart';
@@ -15,6 +18,7 @@ class ProductTile extends StatelessWidget {
     required this.title,
     required this.onTap,
     this.subtitle = '',
+    this.note = '',
     this.marks,
     this.id,
     this.imageWidth,
@@ -25,6 +29,9 @@ class ProductTile extends StatelessWidget {
   final String image;
   final String title;
   final String subtitle;
+
+  /// 보조 줄 아래 작은 한 줄 (한국 · 일본 정가가 다 있는 상품의 둘째 정가) — 칸 높이를 그만큼 더 줘야 한다
+  final String note;
   final VoidCallback onTap;
 
   /// 주면 사진 위에 겹친다 — 보통 [QuickMarks] (리본 + · ♡)
@@ -85,11 +92,45 @@ class ProductTile extends StatelessWidget {
             style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
           ),
         ],
+        if (note.isNotEmpty)
+          Text(
+            note,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: Gp.t11, color: Gp.faint),
+          ),
       ],
     );
     return GestureDetector(
       onTap: onTap,
       child: imageWidth == null ? card : SizedBox(width: imageWidth, child: card),
+    );
+  }
+}
+
+/// 목록 줄 오른쪽 정가 — 그 나라 돈 그대로(₩ · ¥). 한국 · 일본 정가가 다 있으면 둘째 정가는 아래 작은 줄로
+/// (한 줄 "₩19,000 · ¥1,650" 은 360dp 폰에서 제목 칸을 밀어냈다)
+class KitPriceLines extends StatelessWidget {
+  const KitPriceLines(this.kit, {super.key, this.style = const TextStyle(fontSize: Gp.t12)});
+  final Kit kit;
+
+  /// 첫 정가 글자 모양 (둘째 정가는 작고 옅게)
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    final parts = kitPriceParts(kit);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(parts.firstOrNull ?? tr('가격 미정'), style: style),
+        for (final p in parts.skip(1))
+          Text(
+            p,
+            style: const TextStyle(fontSize: Gp.t11, color: Gp.faint),
+          ),
+      ],
     );
   }
 }

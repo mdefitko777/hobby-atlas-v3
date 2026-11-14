@@ -5,6 +5,7 @@ import '../../api.dart';
 import '../../data/gundam_atlas.dart' show episodesLabel, roleLabels;
 import '../../l10n/l10n.dart';
 import '../../level.dart';
+import '../../logic/short_names.dart' show shortWorkName;
 import '../../logic/collection_rules.dart' show bestStatus;
 import '../../marks.dart';
 import '../../models.dart';
@@ -274,7 +275,10 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
     final ownedNow = _units.isEmpty ? w.owned : _units.where((u) => _tierOf(m, u).index >= CellTier.owned.index).length;
     return Scaffold(
       appBar: AppBar(
-        title: BarTitle(w.name, count: trf('수집 {owned} / {total}', {'owned': ownedNow, 'total': w.total})),
+        title: BarTitle(
+          shortWorkName(w.name),
+          count: trf('수집 {owned} / {total}', {'owned': ownedNow, 'total': w.total}),
+        ),
         actions: [
           ToolIcon(
             // G-4d 작품 진행 카드 (그림으로 공유 · 저장)
@@ -323,7 +327,7 @@ class _WorkGuideScreenState extends State<WorkGuideScreen> {
                 LiveLevelBar(loaders: widget.loaders), // G-4a 수집 레벨 (아바타 옆 Lv 와 같은 막대)
                 FindBar(
                   // G-9
-                  hint: trf('{name}에서 찾기', {'name': widget.work.name}),
+                  hint: trf('{name}에서 찾기', {'name': shortWorkName(widget.work.name)}),
                   initial: widget.initialQuery,
                   onQuery: (q) => setState(() => _query = q), // STATE: 찾기 → 칸 거르기
                   filterCount: _filter.count,
@@ -512,8 +516,7 @@ class _UnitSheet extends StatelessWidget {
               ],
             ),
             SectionHeader(
-              tr('이 기체의 상품'),
-              subtitle: lit.isEmpty ? '' : trf('{n}개', {'n': lit.length}),
+              tr('이 기체의 상품'), // 상품 개수는 쓰지 않는다 (docs/terms.md 분류 상품 개수)
               padding: const EdgeInsets.fromLTRB(0, 14, 0, 4),
               // G-5d 빠진 상품 제보 → Gunpula 이슈 (lib/report.dart)
               trailing: ToolIcon(

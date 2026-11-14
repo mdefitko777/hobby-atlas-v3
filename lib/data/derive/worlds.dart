@@ -16,7 +16,7 @@ Future<List<World>> deriveWorlds(String channelId) async {
           id: 'beyblade-${e.key.toLowerCase()}',
           franchiseId: 'beyblade',
           label: trf('{line} 라인', {'line': e.key}),
-          subtitle: trf('{n}개 상품', {'n': e.value.length}),
+          subtitle: '', // 상품 개수는 쓰지 않는다 (2026-11-14 — 분류마다 몇 개인지 보지 않기)
           image: e.value.first.image,
           total: e.value.length,
           owned: e.value.where((t) => t.owned > 0).length,

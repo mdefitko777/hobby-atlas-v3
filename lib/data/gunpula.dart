@@ -1,6 +1,7 @@
 // Gunpula 데이터(GitHub Pages) → 앱 모델용 가벼운 Map.
 // 여기 함수는 compute() 안(다른 isolate)에서도 돌아가야 해서 Flutter 위젯 · 전역 상태를 쓰지 않는다.
 import 'dart:convert';
+
 import '../format.dart' show halfWidth;
 import '../json_util.dart';
 import '../logic/url_lookup.dart' show isListingUrl;
@@ -414,6 +415,49 @@ const _brandBySource = {
   'bandai_candy_jp': '반다이 캔디',
 };
 
+// ── 파는 나라 (출처 사이트로) ─────────────────────────────────────────────
+/// 출처 사이트 → 'kr' · 'jp' · 'both' · ''(모름: 레고 · 손으로 넣은 것 · 위키).
+/// 한국 출처는 지금 pokemon_store_kr 하나 (sources.json 2026-11-14) — 앞으로 들어올 한국 가게(BNKR · 아카데미 ·
+/// 포켓몬코리아)도 Gunpula 가 `_kr` 로 끝나는 id 를 쓰면 따로 고치지 않아도 한국이 된다
+String saleRegion(Iterable<String> sourceIds) {
+  var kr = false;
+  var jp = false;
+  for (final id in sourceIds) {
+    if (id.isEmpty || id == 'rebrickable_lego' || id.startsWith('manual') || id.contains('wiki')) continue;
+    if (id.endsWith('_kr')) {
+      kr = true;
+    } else {
+      jp = true; // 나머지는 일본 공식 · 가게 (_global · _en 도 일본 상품의 해외 페이지)
+    }
+  }
+  return kr && jp ? 'both' : (kr ? 'kr' : (jp ? 'jp' : ''));
+}
+
+/// 같은 바코드의 한국 · 일본 상품을 짝짓는다 — 한국 포켓몬스토어와 일본 포켓몬센터에 같은 상품이 따로 들어와
+/// 같은 카드가 둘 보였다 (2026-11-14 실측 211쌍). 일본 쪽이 여럿이면 `pokemon-center-<JAN>` 먼저.
+/// 짝끼리 없는 나라 가격을 서로 채우고(환산하지 않은 진짜 가격), 한국 쪽 찾기 글자에 일본 쪽 것을 더한다
+/// (일본어 이름으로 찾아도 보이는 카드 = 한국 쪽이 나오게). 일본어 원래 이름도 일본 쪽 것으로
+void pairTwins(List<Map<String, Object?>> out) {
+  final jpByJan = <String, Map<String, Object?>>{};
+  for (final m in out) {
+    final jan = jStr(m['jan']);
+    if (jan.isEmpty || m['region'] != 'jp') continue;
+    if (!jpByJan.containsKey(jan) || m['id'] == 'pokemon-center-$jan') jpByJan[jan] = m;
+  }
+  for (final kr in out) {
+    final jan = jStr(kr['jan']);
+    if (jan.isEmpty || kr['region'] != 'kr') continue;
+    final jp = jpByJan.remove(jan);
+    if (jp == null) continue;
+    kr['twin'] = jp['id'];
+    jp['twin'] = kr['id'];
+    kr['priceJpy'] ??= jp['priceJpy'];
+    jp['priceKrw'] ??= kr['priceKrw'];
+    kr['blob'] = '${kr['blob']} ${jp['blob']}';
+    if (jStr(jp['nameJa']).isNotEmpty) kr['nameJa'] = jp['nameJa'];
+  }
+}
+
 // ── JAN (바코드) — kit_id · 공식 주소 · 품번 · 사진 파일명에 숨어 있는 13자리 ─────
 final _janRe = RegExp(r'(?<!\d)(4[59]\d{11})(?:000)?(?!\d)');
 
@@ -496,12 +540,21 @@ List<Map<String, Object?>> mapKitsJob(Map<String, String> msg) {
     ];
     final pick = pickCover(box: box, gallery: gallery, art: boxart[id]);
     final cover = pick.cover;
-    final jan = findJan([id, ...sourceUrls, jStr(r['number']), jStr(images['box_art_url'])]);
+    // 데이터의 jan 칸이 먼저 (한국 포켓몬스토어, 아직 일부만), 없으면 id · 주소 · 품번 · 원래 사진 주소에서
+    // (한국 상품 사진의 원래 파일 이름이 바코드다: …/4521329340401.jpg)
+    final ownJan = jStr(r['jan']);
+    final jan = RegExp(r'^\d{13}$').hasMatch(ownJan) && _eanOk(ownJan)
+        ? ownJan
+        : findJan([
+            id,
+            ...sourceUrls,
+            jStr(r['number']),
+            jStr(images['box_art_url']),
+            ...jList(images['cached_from']).whereType<String>(),
+          ]);
+    final sourceIds = [for (final s in jList(r['source_refs'])) jStr(jMap(s)['source_id'])];
     final pb = r['is_premium_bandai'] == true;
-    final brands = <String>{
-      for (final s in jList(r['source_refs'])) ?_brandBySource[jStr(jMap(s)['source_id'])],
-      if (pb) '프리미엄 반다이',
-    }.toList();
+    final brands = <String>{for (final s in sourceIds) ?_brandBySource[s], if (pb) '프리미엄 반다이'}.toList();
     final pbInfo = jMap(r['premium_bandai']);
     // 레고는 세트 번호를 이름 앞에 (공식 · 수집가 표기 "75192 Millennium Falcon")
     final number = jStr(r['number']);
@@ -571,6 +624,7 @@ List<Map<String, Object?>> mapKitsJob(Map<String, String> msg) {
       // 굿즈 세부 종류 (티켓 · 의류 · 블루레이 …) — 데이터에 있으면 유형은 굿즈(카드 게임은 카드)
       'goodsKind': goodsKindLabels[jStr(r['goods_kind'])] ?? '',
       'jan': jan,
+      'region': saleRegion(sourceIds),
       'brands': brands,
       'firstSeen': jStr(firstSeen[id]),
       'keywords': keywords,
@@ -583,6 +637,7 @@ List<Map<String, Object?>> mapKitsJob(Map<String, String> msg) {
       if (r['manual_id'] is num) 'manualId': (r['manual_id']! as num).toInt(),
     });
   }
+  pairTwins(out);
   if (msg['kitMs'] != null) {
     fillReferenceImages(out, jsonDecode(msg['kitMs']!), ms: msg['ms'] == null ? null : jsonDecode(msg['ms']!));
   }

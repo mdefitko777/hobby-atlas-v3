@@ -21,13 +21,14 @@ import 'gundam_atlas.dart' show atlasBoxartFile, atlasKitMsFile, atlasMsFile;
 import 'gunpula.dart';
 import 'user_store.dart';
 import '../logic/image_size.dart' show ThumbIndex, parseThumbIndex;
+import '../logic/kit_rules.dart' show isJpTwin;
 import '../logic/lego_scope.dart';
 
 enum CatalogPhase { empty, loading, ready, error }
 
 class Catalog extends ChangeNotifier {
   Catalog._() {
-    UserStore.instance.listPrice = listPriceKrw; // 구매가를 안 적은 상품 = 정가 × 환율
+    UserStore.instance.listPrice = listPriceKrw; // 구매가를 안 적은 상품 = 한국 정가, 없으면 일본 정가 × 환율
   }
   static final instance = Catalog._();
 
@@ -52,7 +53,8 @@ class Catalog extends ChangeNotifier {
   /// 14: 공식 조립 설명서 번호 (manualId)
   /// 15: 찾기 글자(blob)의 전각 영숫자를 반각으로 (ＨＷＳ Ｖｅｒ．Ｋａ → hws ver.ka)
   /// 17: 찾기 낱말의 중국어(names.zh · labels.zh · search_zh)를 뒤로 모으고 그 자리(zhKeywordsFrom)
-  static const mapVersion = 17;
+  /// 18: 파는 나라(한국 · 일본) · 같은 바코드 짝(twin) · 짝의 가격
+  static const mapVersion = 18;
 
   CatalogPhase phase = CatalogPhase.empty;
   String error = '';
@@ -178,14 +180,15 @@ class Catalog extends ChangeNotifier {
   /// 이 상품이 지금 레고 범위 때문에 목록에서 빠져 있는가 (좋아요 · 구매함 · 상세는 그대로 보인다)
   bool hiddenByScope(String id) => _builtScope != LegoScope.all && _legoOutOfScope.contains(id);
 
+  /// 한국 · 일본 짝(같은 바코드)은 둘러보는 목록에 한국 쪽 하나만 — 주인이 한국에 있어서. 일본 쪽도 byId 에는
+  /// 남아 좋아요 · 구매함 · 링크 · 알림이 그대로 찾는다 (lib/marks.dart 가 둘 중 어느 쪽 기록이든 한 카드에)
   void _applyScope() {
     _builtScope = UserStore.instance.legoScope;
-    kits = _builtScope == LegoScope.all || _legoOutOfScope.isEmpty
-        ? _all
-        : [
-            for (final k in _all)
-              if (!_legoOutOfScope.contains(k.id)) k,
-          ];
+    final lego = _builtScope != LegoScope.all && _legoOutOfScope.isNotEmpty;
+    kits = [
+      for (final k in _all)
+        if (!isJpTwin(k) && !(lego && _legoOutOfScope.contains(k.id))) k,
+    ];
   }
 
   /// 테스트: 앱을 새로 켠 것처럼 메모리만 비운다 (기기 캐시는 그대로)
@@ -574,13 +577,15 @@ class Catalog extends ChangeNotifier {
     if (r is num && r > 0) jpyToKrw = r.toDouble();
   }
 
-  /// 정가를 원으로 (정가가 없으면 null)
-  int? listPriceKrw(String id) => switch (byId[id]?.priceJpy) {
-    final int p => (p * jpyToKrw).round(),
+  /// 정가를 원으로 (정가가 없으면 null) — 한국 정가가 있으면 그대로, 없으면 일본 정가 × 환율.
+  /// 지출 합계 · 구매가 시트의 「정가로 ≈」 에만 쓴다 (목록 · 상세에는 환산값을 보이지 않는다)
+  int? listPriceKrw(String id) => switch (byId[id]) {
+    Kit(priceKrw: final int w) => w,
+    Kit(priceJpy: final int p) => (p * jpyToKrw).round(),
     _ => null,
   };
 
-  /// 구매함 한 상품에 쓴 돈 — 적어 둔 구매가, 없으면 정가 × 환율 (estimate = true)
+  /// 구매함 한 상품에 쓴 돈 — 적어 둔 구매가, 없으면 [listPriceKrw] (estimate = true)
   ({int? krw, bool estimate}) paidOf(Kit k) => switch (UserStore.instance.entry(k.id)?['purchase_price']) {
     final num v => (krw: v.toInt(), estimate: false),
     _ => (krw: k.purchaseKrw ?? listPriceKrw(k.id), estimate: k.purchaseKrw == null),

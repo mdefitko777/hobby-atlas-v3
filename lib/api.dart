@@ -44,7 +44,8 @@ Future<List<Kit>> fetchKits(List<String> channelIds) => _guard(() async {
 Future<List<Kit>> fetchCollection() => _guard(() async {
   await Catalog.instance.ensureLoaded();
   final ids = UserStore.instance.idsWith(const {CollectStatus.owned, CollectStatus.wanted});
-  return [for (final id in ids) ?Catalog.instance.byId[id]];
+  // 한국 · 일본 짝에 둘 다 기록이 있으면 한 줄만 (한국 쪽) — lib/marks.dart 가 두 기록을 한 카드로 본다
+  return mergeTwins([for (final id in ids) ?Catalog.instance.byId[id]]);
 });
 
 /// 찍어서 찾기 (바코드): JAN · EAN 이 같은 상품 (Gunpula 에 바코드가 있는 상품은 약 40%)

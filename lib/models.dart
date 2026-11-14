@@ -75,6 +75,8 @@ class Kit {
     this.nameZh = '',
     this.seriesZh = '',
     this.zhKeywordsFrom = -1,
+    this.region = '',
+    this.twinId = '',
   }) : nameKo = name;
 
   final String id;
@@ -168,6 +170,13 @@ class Kit {
   /// 공식 조립 설명서 (manual.bandai-hobby.net 의 번호, 0 = 없음 — Gunpula import_bandai_manuals.mjs 가 이름으로 이은 것)
   final int manualId;
 
+  /// 파는 나라 — 출처 사이트로 정한다: 'kr' · 'jp' · 'both', 모르면 빈 글자 (레고 · 손으로 넣은 것)
+  final String region;
+
+  /// 같은 바코드의 다른 나라 상품 id (한국 포켓몬스토어 ↔ 일본 포켓몬센터). 없으면 빈 글자.
+  /// 둘 다 byId 에 남고(좋아요 · 구매함 · 링크), 둘러보는 목록에는 한국 쪽 하나만 (lib/data/catalog.dart)
+  final String twinId;
+
   /// lib/data/gunpula.dart mapKitsJob 의 결과 → Kit.
   /// [recentSince] 이후에 처음 들어온 상품 = 최근 추가, [monthPrefix]('yyyy-mm')에 발매 = 이번 달
   static Kit fromSlim(Map<String, Object?> j, {required String recentSince, required String monthPrefix}) {
@@ -212,6 +221,8 @@ class Kit {
       imageRef: _b(j, 'imageRef'),
       subline: jStr(j['subline']),
       manualId: _iOrNull(j, 'manualId') ?? 0,
+      region: jStr(j['region']),
+      twinId: jStr(j['twin']),
     );
   }
 

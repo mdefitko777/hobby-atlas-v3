@@ -8,7 +8,8 @@
 // │ D-2c │ SoftTag "참고 그림 · 같은 기체"       │ 공식 사진이 없는 상품 — 같은 기체 상품 사진  │ P02 · P09     │
 // │ D-2d │ BrokenImages.keep                  │ 열리지 않는 사진은 빼기 (장 · 점 함께)    │ P09           │
 // │ D-4  │ 제목 + 일본어 원래 이름              │ 상품명 (공식 사이트 검색용 원문)        │ P02           │
-// │ D-5  │ Text(¥) + 발매일 + 한정 표시         │ 일본 정가 · 발매 · 한정/PB              │ P02 · P01     │
+// │ D-5  │ Text(₩ · ¥) + 발매일 + 한정 표시     │ 한국 · 일본 정가 · 발매 · 한정/PB        │ P02 · P01     │
+// │ D-5i │ 둘째 정가 줄 + ↗ (짝 상품만)          │ 같은 바코드의 다른 나라 정가 · 각 가게 페이지 │ P02 · P10   │
 // │ D-5a │ Wrap(ChipButton …) 정가 아래 한 줄   │ 아직 적은 것이 없는 줄 대신 작은 버튼: 시세 찾아보기 · 예약 적기 · 구매가 적기 │ P08 · P07 │
 // │ D-5b │ ChipButton(show_chart) → 바텀 시트 │ 국내 시세 찾아보기 (시세는 이 한 곳에만 · ↗ 는 공식 · 바깥 링크만) │ P01 · P08 │
 // │ D-5c │ 구매함: 적었으면 "내 구매가" 줄, 아니면 칩 → 입력 시트 │ 내가 낸 돈 기록 (한 개 값 · 동기화 · 정가 ≈ 어림은 시트 안) │ P01 · P03 │
@@ -43,6 +44,7 @@ import '../api.dart';
 import '../logic/build_status.dart' show needsAssembly;
 import '../logic/friends.dart';
 import '../logic/kit_link.dart';
+import '../logic/kit_rules.dart' show kitPrice;
 import '../logic/market.dart';
 import '../logic/restock.dart';
 import '../marks.dart';
@@ -62,7 +64,16 @@ import 'x_manual_screen.dart' show openManual;
 
 /// 상품 상세 열기 — 폰: 오른쪽에서 밀려 들어옴 / 넓은 화면: 오른쪽 칸 (detail_pane.dart)
 /// [list] 를 주면 그 목록 안에서 좌우로 밀어 이전 · 다음 상품 (최근 추가 · 좋아요 · 검색 결과 …)
+/// 한국 · 일본 짝 중 내 기록(좋아요 · 구매함)이 다른 쪽에 있으면 그쪽 상세를 연다 — 수량 · 구매가 · 예약 · 사진이
+/// 그 id 에 붙어 있어서 (lib/marks.dart holderId)
 void openKitDetail(BuildContext context, Kit kit, {Loaders loaders = const Loaders(), List<Kit> list = const []}) {
+  final holder = Marks.maybeRead(context)?.holderId(kit) ?? kit.id;
+  if (holder != kit.id) {
+    if (Catalog.instance.byId[holder] case final h?) {
+      list = [for (final k in list) k.id == kit.id ? h : k];
+      kit = h;
+    }
+  }
   final i = list.indexWhere((k) => k.id == kit.id);
   openPage(
     context,
@@ -101,6 +112,9 @@ class _KitPagerState extends State<KitPager> {
         KitDetailScreen(key: ValueKey(widget.kits[i].id), kit: widget.kits[i], loaders: widget.loaders),
   );
 }
+
+/// 상세 정가 한 줄: 이름(한국 정가) · 짧은 이름(한국) · ₩ · ¥ 값 · 그 나라 가게 주소 · 테스트 열쇠(kr · jp)
+typedef _PriceLine = ({String label, String short, String price, String url, String key});
 
 /// 넓은 화면 기준 (사진 왼쪽 · 정보 오른쪽)
 const detailWideBreakpoint = 720.0;
@@ -196,7 +210,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
             ),
             const SizedBox(height: 6),
             Text(
-              trf('정가 {price} · 컬렉션 지출 합계에 들어가요', {'price': yen(k.priceJpy)}),
+              trf('정가 {price} · 컬렉션 지출 합계에 들어가요', {'price': kitPrice(k)}),
               style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
             ),
             const SizedBox(height: 14),
@@ -234,9 +248,9 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
     showToast(context, trf('{what}을(를) 복사했어요', {'what': what}));
   }
 
-  /// 공식 상품 페이지 · 국내 시세 검색을 브라우저로
-  Future<void> _external(String where) async {
-    final url = where == '공식 상품 페이지'
+  /// 공식 상품 페이지 · 국내 시세 검색을 브라우저로. [url] 을 주면 그 주소 (짝 상품의 다른 나라 가게)
+  Future<void> _external(String where, {String? url}) async {
+    url ??= where == '공식 상품 페이지'
         ? k.officialUrl
         : marketSearchUrl(where, marketSearchName(nameKo: k.nameKo, nameJa: k.nameJa));
     if (url.isEmpty) {
@@ -245,6 +259,29 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
     }
     final ok = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
     if (!ok && mounted) showToast(context, trf('{where}을(를) 열지 못했어요', {'where': tr(where)}));
+  }
+
+  /// D-5 · D-5i 정가 줄 — 그 나라 돈 그대로 (₩ 한국 · ¥ 일본, 환산하지 않음). 상품 나라의 정가가 먼저 크게.
+  /// 짝 상품(같은 바코드)은 둘째 나라 정가도 작게, 줄마다 ↗ 로 그 나라 가게 페이지
+  List<_PriceLine> get _priceLines {
+    final twin = Catalog.instance.byId[k.twinId];
+    final jp = k.region == 'jp';
+    final lines = [
+      if (k.priceKrw case final w?)
+        (
+          label: '한국 정가',
+          short: '한국',
+          price: wonSign(w),
+          url: (jp ? twin?.officialUrl : k.officialUrl) ?? '',
+          key: 'kr',
+        ),
+      if (k.priceJpy case final p?)
+        (label: '일본 정가', short: '일본', price: yen(p), url: (jp ? k.officialUrl : twin?.officialUrl) ?? '', key: 'jp'),
+    ];
+    if (lines.isEmpty) {
+      return [(label: k.region == 'kr' ? '한국 정가' : '일본 정가', short: '', price: tr('가격 미정'), url: '', key: '')];
+    }
+    return jp ? lines.reversed.toList() : lines;
   }
 
   /// D-12 정보 오류 제보 — 무엇이 틀렸나 고르고 GitHub 이슈로 (lib/report.dart)
@@ -262,7 +299,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
     (tr('상품 유형'), tr(k.type)),
     (tr('스케일'), k.scale),
     (tr('발매'), dateDot(k.date)),
-    (tr('정가'), yen(k.priceJpy)),
+    (tr('정가'), kitPrice(k)),
     (tr('브랜드'), k.brands.map(tr).join(' · ')),
     if (k.pbOpens.isNotEmpty || k.pbCloses.isNotEmpty) (tr('PB 예약'), '${dateDot(k.pbOpens)} – ${dateDot(k.pbCloses)}'),
     (tr('바코드'), k.jan),
@@ -382,8 +419,22 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
     }
   }
 
+  /// ↗ 그 나라 가게의 상품 페이지 (주소가 없으면 자리만)
+  Widget _shopLink(_PriceLine p) => p.url.isEmpty
+      ? const SizedBox(width: 8)
+      : InkWell(
+          key: ValueKey('price-link-${p.key}'),
+          borderRadius: BorderRadius.circular(Gp.rSmall),
+          onTap: () => _external('공식 상품 페이지', url: p.url),
+          child: Padding(
+            padding: const EdgeInsets.all(6),
+            child: Icon(Icons.north_east, size: Gp.iS, color: Gp.muted, semanticLabel: tr('공식 상품 페이지')),
+          ),
+        );
+
   List<Widget> _info(BuildContext context) {
     final hasPreorder = Marks.of(context).store.preorderOf(k.id) != null;
+    final prices = _priceLines;
     return [
       // 기본 정보: 이름 → 정가 → 시세 한 줄
       SectionPanel(
@@ -402,9 +453,9 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
               ),
             ],
             const SizedBox(height: 14),
-            // 엔화 = 일본 정가, 원화 = 국내 시세 · 내 구매가 (섞여 보여도 무엇인지 알게)
+            // 정가 = ₩ · ¥ 기호, 내 구매가 · 시세 = "…원" (섞여 보여도 무엇인지 알게)
             Text(
-              tr('일본 정가'),
+              tr(prices.first.label),
               style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
             ),
             const SizedBox(height: 2),
@@ -414,9 +465,15 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
               spacing: 10,
               runSpacing: 6,
               children: [
-                Text(
-                  yen(k.priceJpy), // D-5 P02
-                  style: const TextStyle(fontSize: Gp.t24, fontWeight: FontWeight.w700),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      prices.first.price, // D-5 P02
+                      style: const TextStyle(fontSize: Gp.t24, fontWeight: FontWeight.w700),
+                    ),
+                    if (prices.length > 1) _shopLink(prices.first),
+                  ],
                 ),
                 Padding(
                   padding: const EdgeInsets.only(bottom: 3),
@@ -430,6 +487,17 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
                 if (_restocks.any((e) => !e.quiet)) SoftTag(tr('재판매'), color: Gp.resale), // D-5h
               ],
             ),
+            // D-5i 짝 상품의 다른 나라 정가 (한국 상품이면 "일본 ¥1,650 ↗")
+            for (final p in prices.skip(1))
+              Row(
+                children: [
+                  Text(
+                    '${tr(p.short)} ${p.price}',
+                    style: const TextStyle(fontSize: Gp.t14, color: Gp.muted),
+                  ),
+                  _shopLink(p),
+                ],
+              ),
             const SizedBox(height: 10),
             // 아직 적은 것이 없는 줄은 작은 버튼 한 줄로 (빈 줄 셋이 정가 아래를 회색 칸으로 채웠다), 적으면 그 줄이 나온다
             Wrap(
@@ -549,8 +617,10 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
                 child: Text(tr('관련 상품을 불러오지 못했어요'), style: const TextStyle(color: Gp.muted)),
               );
             }
-            final same = snap.data!.where((r) => r.id != k.id && r.series == k.series).toList();
-            final rest = same.isNotEmpty ? same : snap.data!.where((r) => r.id != k.id).toList();
+            // 이 상품 · 그 짝(같은 상품의 다른 나라 쪽)은 빼고
+            bool other(Kit r) => r.id != k.id && r.id != k.twinId;
+            final same = snap.data!.where((r) => other(r) && r.series == k.series).toList();
+            final rest = same.isNotEmpty ? same : snap.data!.where(other).toList();
             if (rest.isEmpty) return const SizedBox.shrink();
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,

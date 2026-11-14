@@ -1,6 +1,8 @@
 // 좋아요 · 구매함 — 앱 전체가 함께 보는 한 벌. v3: 기기에 저장된다 (lib/data/user_store.dart).
 // 홈에서 ♡ 를 누르면 컬렉션 · 상세 · 내 정보 숫자 · 친구 컬렉션의 "나도 있음"까지 같이 바뀐다.
 // 한 상품에 상태는 하나 (옛 Gunpula 와 같음): 좋아요 = wanted, 구매함 = owned. 구매함에 넣으면 좋아요에서 빠진다.
+// 한국 · 일본 짝(같은 바코드, Kit.twinId)은 한 상품으로 본다 — 어느 id 에 적힌 기록이든 한 카드에 보이고, 바꾸면
+// 기록이 있는 쪽 id 에 적는다 (두 id 모두 그대로 쓸 수 있어 옛 기록 · 다른 기기 기록이 깨지지 않는다).
 import 'package:flutter/material.dart';
 
 import 'data/user_store.dart';
@@ -56,8 +58,38 @@ class Marks extends InheritedWidget {
   /// 누를 때(콜백)에
   static Marks read(BuildContext context) => context.getInheritedWidgetOfExactType<Marks>()!;
 
-  /// 내 기록이 없으면 상품에 적힌 status (테스트용 가짜 데이터)
-  CollectStatus statusOf(Kit k) => store.statusOf(k.id) ?? k.status;
+  /// 위에 MarksHost 가 없을 수도 있는 곳 (상세 열기 — 테스트는 MarksHost 없이 연다)
+  static Marks? maybeRead(BuildContext context) => context.getInheritedWidgetOfExactType<Marks>();
+
+  bool _live(String id) => switch (store.statusOf(id)) {
+    CollectStatus.owned || CollectStatus.wanted => true,
+    _ => false,
+  };
+
+  /// 기록(좋아요 · 구매함)을 가진 id 들 — 짝 중 기록이 있는 쪽, 아무 쪽에도 없으면 이 상품
+  List<String> _holders(Kit k) {
+    final ids = [k.id, if (k.twinId.isNotEmpty) k.twinId].where(_live).toList();
+    return ids.isEmpty ? [k.id] : ids;
+  }
+
+  /// 상세 · 수량 · 구매가가 붙을 id — 짝의 다른 쪽에만 기록이 있으면 그쪽
+  String holderId(Kit k) => _holders(k).first;
+
+  /// 내 기록이 없으면 상품에 적힌 status (테스트용 가짜 데이터). 짝은 둘 중 센 쪽 (구매함 > 좋아요)
+  CollectStatus statusOf(Kit k) {
+    final own = store.statusOf(k.id);
+    final twin = k.twinId.isEmpty ? null : store.statusOf(k.twinId);
+    if (own == CollectStatus.owned || twin == CollectStatus.owned) return CollectStatus.owned;
+    if (own == CollectStatus.wanted || twin == CollectStatus.wanted) return CollectStatus.wanted;
+    return own ?? k.status;
+  }
+
+  /// 기록이 있는 쪽 id(둘 다면 둘 다)에 적는다 — 짝의 두 기록이 서로 다른 상태로 남지 않게
+  void _write(Kit k, CollectStatus next) {
+    for (final id in _holders(k)) {
+      if (store.statusOf(id) != next) store.setStatus(id, next);
+    }
+  }
 
   bool liked(Kit k) => statusOf(k) == CollectStatus.wanted;
   bool owned(Kit k) => statusOf(k) == CollectStatus.owned;
@@ -70,11 +102,11 @@ class Marks extends InheritedWidget {
     if (liked == false && now == CollectStatus.wanted) next = CollectStatus.none;
     if (owned == true) next = CollectStatus.owned;
     if (owned == false && now == CollectStatus.owned) next = CollectStatus.none;
-    if (next != now) store.setStatus(k.id, next);
+    if (next != now) _write(k, next);
   }
 
   void _restore(Kit k, CollectStatus s) {
-    if (statusOf(k) != s) store.setStatus(k.id, s);
+    if (statusOf(k) != s) _write(k, s);
   }
 
   /// ♡ 누르기 + 토스트(되돌리기) — 상품 사진 · 상세 · 카메라 결과 공통

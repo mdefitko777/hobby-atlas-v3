@@ -5,6 +5,7 @@ import '../../api.dart';
 import '../../detail_pane.dart';
 import '../../l10n/l10n.dart';
 import '../../level.dart';
+import '../../logic/short_names.dart' show shortWorkName;
 import '../../marks.dart';
 import '../../models.dart';
 import '../../widgets.dart';
@@ -83,7 +84,7 @@ class _GundamGuideState extends State<GundamGuide> {
                     CategoryTile(
                       // G-3 P06 공식 작품 로고 + 이름만
                       image: w.image,
-                      name: w.name,
+                      name: shortWorkName(w.name), // "기동전사 건담" 머리 없이
                       onTap: () => _open(w),
                     ),
                 ],

@@ -144,7 +144,7 @@ void main() {
     testWidgets('작품 도감 기체 칸: 아무것도 없는 칸도 흑백이 아니다', (t) async {
       me.setStatus('hg-strike', CollectStatus.wanted);
       await _pump(t, _gundam());
-      await t.tap(find.text('기동전사 건담 SEED'));
+      await t.tap(find.text('SEED'));
       await _settle(t);
       expect(find.byType(GuideCell), findsWidgets);
       _expectFullColour(t, find.byType(Scaffold).last);

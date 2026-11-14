@@ -196,7 +196,7 @@ class SquareSegments<T> extends StatelessWidget {
   }
 }
 
-/// 체크 칸 2열 (이름 · 개수 · 네모 체크)
+/// 체크 칸 2열 (네모 체크 · 이름, 맞는 상품이 없는 칸은 옅게)
 class CheckGrid extends StatelessWidget {
   const CheckGrid({
     super.key,
@@ -228,9 +228,9 @@ class CheckGrid extends StatelessWidget {
               width: box.maxWidth / columns,
               child: () {
                 final on = selected.contains(v);
-                final n = countOf(v);
+                // 칸마다 개수는 쓰지 않는다 (둘러보는 화면에 숫자를 늘어놓지 않기, 2026-11-14) — 맞는 상품이 없으면 옅게만
                 return Opacity(
-                  opacity: n == 0 && !on ? 0.4 : 1,
+                  opacity: countOf(v) == 0 && !on ? 0.4 : 1,
                   child: InkWell(
                     onTap: () => onToggle(v),
                     child: Padding(
@@ -256,10 +256,6 @@ class CheckGrid extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(fontSize: Gp.t14),
                             ),
-                          ),
-                          Text(
-                            '$n',
-                            style: const TextStyle(fontSize: Gp.t11, color: Gp.faint),
                           ),
                           const SizedBox(width: 10),
                         ],

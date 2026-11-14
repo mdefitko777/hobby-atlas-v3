@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../api.dart';
 import '../../data/catalog.dart';
 import '../../detail_pane.dart';
+import '../../logic/short_names.dart' show shortWorkName;
 import '../../l10n/l10n.dart';
 import '../../marks.dart';
 import '../../models.dart';
@@ -89,7 +90,7 @@ class GuideHits extends StatelessWidget {
           for (final w in works)
             ThumbRow(
               image: w.image,
-              title: w.name,
+              title: shortWorkName(w.name),
               subtitle: joinDot([
                 tr('작품'),
                 tr(w.section),
@@ -106,8 +107,7 @@ class GuideHits extends StatelessWidget {
               title: u.name,
               subtitle: joinDot([
                 u.nameEn,
-                index.work(u.workId)?.name ?? '',
-                trf('상품 {n}', {'n': u.kitIds.length}),
+                shortWorkName(index.work(u.workId)?.name ?? ''),
                 if (_ownedOf(m, u) case final n when n > 0) trf('가짐 {n}', {'n': n}),
               ]),
               size: 48,
@@ -154,7 +154,6 @@ class GroupedResults extends StatelessWidget {
         return switch (row) {
           final GuideUnit u => _UnitHead(
             unit: u,
-            count: groups[u.id]!.length,
             owned: groups[u.id]!.where(m.owned).length,
             onTap: () => openUnitInGuide(context, index, u.id, loaders: loaders),
           ),
@@ -175,9 +174,8 @@ class GroupedResults extends StatelessWidget {
 }
 
 class _UnitHead extends StatelessWidget {
-  const _UnitHead({required this.unit, required this.count, required this.owned, required this.onTap});
+  const _UnitHead({required this.unit, required this.owned, required this.onTap});
   final GuideUnit unit;
-  final int count;
   final int owned;
   final VoidCallback onTap;
 
@@ -204,7 +202,6 @@ class _UnitHead extends StatelessWidget {
                 Text(
                   joinDot([
                     unit.nameEn,
-                    trf('상품 {n}', {'n': count}),
                     if (owned > 0) trf('가짐 {n}', {'n': owned}),
                   ]),
                   maxLines: 1,

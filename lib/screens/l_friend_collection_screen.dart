@@ -20,6 +20,7 @@ import '../api.dart';
 import '../marks.dart';
 import '../channels.dart';
 import '../l10n/l10n.dart';
+import '../logic/short_names.dart' show shortWorkName;
 import '../models.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -176,7 +177,7 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
             subtitle: joinDot([tr(channelOf(k.franchiseId).label), tr(k.line), k.seriesLabel]),
             tag: tr(mark(k)),
             tagStrong: mark(k) == '내 좋아요' && !liked, // 친구가 이미 샀는데 나도 원함 → 겹쳐 사기 주의
-            trailing: Text(yen(k.priceJpy), style: const TextStyle(fontSize: Gp.t12)),
+            trailing: KitPriceLines(k),
             onTap: () => openKitDetail(context, k, loaders: widget.loaders),
           ),
       ],
@@ -257,7 +258,7 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
               children: [
                 SizedBox.square(
                   dimension: 52,
-                  child: AppImage(w.image, fit: BoxFit.contain, placeholder: w.name),
+                  child: AppImage(w.image, fit: BoxFit.contain, placeholder: shortWorkName(w.name)),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -267,7 +268,7 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
                       Row(
                         children: [
                           Expanded(
-                            child: Text(w.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                            child: Text(shortWorkName(w.name), style: const TextStyle(fontWeight: FontWeight.w600)),
                           ),
                           if ((photos[w.id] ?? 0) > 0) ...[
                             const Icon(Icons.photo_camera_outlined, size: Gp.iXS, color: Gp.muted),

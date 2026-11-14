@@ -9,6 +9,17 @@ String _comma(int v) => v.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\
 /// 일본 정가: ¥3,850 (없으면 '가격 미정')
 String yen(int? v) => v == null ? tr('가격 미정') : '¥${_comma(v)}';
 
+/// 한국 정가: ₩19,000 (없으면 '가격 미정'). 정가는 ₩ · ¥ 기호로 — 내 돈(구매가 · 지출 · 낼 돈)은 [won] 의 "…원"
+String wonSign(int? v) => v == null ? tr('가격 미정') : '₩${_comma(v)}';
+
+/// 정가 한 줄: "₩19,000 · ¥1,650" (원이 앞, [jpyFirst] 면 엔이 앞), 하나만 있으면 그것, 없으면 '가격 미정'.
+/// 환산하지 않는다 — 있는 가격만 그 나라 돈으로
+String prices({int? krw, int? jpy, bool jpyFirst = false}) {
+  final parts = [if (krw != null) wonSign(krw), if (jpy != null) yen(jpy)];
+  if (parts.isEmpty) return tr('가격 미정');
+  return (jpyFirst ? parts.reversed : parts).join(' · ');
+}
+
 /// 날짜 한 가지 모양: "2026-10-05" → "2026.10.05", "2027-07" → "2027.07" (상세 · 목록 · 공고 공통)
 String dateDot(String d) => d.replaceAll('-', '.');
 

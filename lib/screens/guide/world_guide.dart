@@ -7,6 +7,7 @@ import '../../detail_pane.dart';
 import '../../l10n/l10n.dart';
 import '../../marks.dart';
 import '../../logic/category_browse.dart' show worldSections;
+import '../../logic/short_names.dart' show shortWorldLabel;
 import '../../models.dart';
 import '../../theme.dart';
 import '../../widgets.dart';
@@ -101,7 +102,7 @@ class _WorldGuideState extends State<WorldGuide> {
                     CategoryTile(
                       // G-7 P06 그림 + 이름만
                       image: w.image,
-                      name: w.label,
+                      name: shortWorldLabel(widget.channel, w.id, w.label), // "포켓몬스터" 머리 없이
                       onTap: () => openPage(context, _WorldKitsPage(world: w, loaders: widget.loaders)), // G-7a
                     ),
                 ],
@@ -136,7 +137,7 @@ class _WorldKitsPageState extends State<_WorldKitsPage> {
           if (snap.connectionState != ConnectionState.done) return const LoadingView();
           if (snap.hasError) return ErrorView(message: '${snap.error}', onRetry: () => Navigator.pop(context));
           return SectionListView(
-            title: widget.world.label,
+            title: shortWorldLabel(widget.world.franchiseId, widget.world.id, widget.world.label),
             subtitle: widget.world.subtitle,
             kits: snap.data!,
             onBack: () => Navigator.pop(context),

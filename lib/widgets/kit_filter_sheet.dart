@@ -1,6 +1,7 @@
 // 상품 필터 시트 — 검색 결과 · 전체 목록 · 홈 · 캘린더 · 컬렉션이 같이 쓰는 한 벌.
 // 아래에서 올라오는 시트(화면의 60%). 캡슐 대신 네모 세그먼트 · 체크 2열 · 펼치는 줄. 도감 필터도 같은 틀 · 같은 상태 줄.
-//   위 3줄(내 상태 · 발매 · 판매)은 하나만 고르는 세그먼트, 종류는 개수 붙은 체크, 라인 · 작품 · 기간 · 가격은 한 줄 눌러 펼침.
+//   위 3줄(내 상태 · 발매 · 판매, 나라가 섞인 목록이면 + 한국 · 일본)은 하나만 고르는 세그먼트, 종류는 체크,
+//   라인 · 작품 · 기간 · 가격은 한 줄 눌러 펼침. 가격은 원 · 엔이 섞인 목록이면 돈을 먼저 고른다 (환산하지 않음).
 // 거르는 규칙(KitFilter.matches)은 lib/logic/kit_filter.dart
 import 'package:flutter/material.dart';
 
@@ -122,10 +123,17 @@ class _FilterSheetState extends State<FilterSheet> {
 
   void _toggle(Set<String> set, String v) => setState(() => set.contains(v) ? set.remove(v) : set.add(v));
 
+  /// 한국 · 일본 상품이 섞인 목록 (나라 칸을 보인다)
+  late final bool _regions = hasBothRegions(widget.kits);
+
+  /// 원 · 엔 정가가 섞인 목록 (가격의 돈 칸을 보인다)
+  late final bool _currencies = hasBothCurrencies(widget.kits);
+
   @override
   Widget build(BuildContext context) {
     final kits = widget.kits;
     final hits = _hits(_draft);
+    final currency = currencyFor(kits, _draft.preferredCurrency);
     return GpPickSheet(
       title: tr('필터'),
       hits: hits,
@@ -156,6 +164,17 @@ class _FilterSheetState extends State<FilterSheet> {
           child: (v) => Text(v.label),
           onPick: (v) => setState(() => _draft.sale = v),
         ),
+        // 한국 · 일본 — 두 나라 상품이 섞인 목록에서만 (포켓몬 · 전체 채널)
+        if (_regions) ...[
+          const SizedBox(height: 8),
+          SquareSegments<SaleRegion>(
+            key: const ValueKey('filter-region'),
+            values: SaleRegion.values,
+            current: _draft.region,
+            child: (v) => Text(v.label),
+            onPick: (v) => setState(() => _draft.region = v),
+          ),
+        ],
         const SizedBox(height: 12),
         CheckGrid(
           values: valueCounts(kits.map((k) => k.type)).map((e) => e.$1).toList(),
@@ -242,22 +261,32 @@ class _FilterSheetState extends State<FilterSheet> {
           ),
         ExpandRow(
           title: tr('가격'),
-          summary: _draft.price.label,
+          summary: _draft.price.labelIn(currency),
           open: _open == '가격',
           onTap: () => setState(() => _open = _open == '가격' ? '' : '가격'),
         ),
-        if (_open == '가격')
+        if (_open == '가격') ...[
+          if (_currencies) ...[
+            SquareSegments<PriceCurrency>(
+              key: const ValueKey('filter-currency'),
+              values: PriceCurrency.values,
+              current: currency,
+              child: (v) => Text(v.label),
+              onPick: (v) => setState(() => _draft.currency = v), // STATE: 돈 → 가격대 칸 · 맞는 상품 수
+            ),
+            const SizedBox(height: 8),
+          ],
           SquareSegments<PriceBand>(
             values: PriceBand.values,
             current: _draft.price,
-            child: (v) => Text(switch (v) {
-              PriceBand.any => tr('전체'),
-              PriceBand.under3k => tr('¥3천 이하'),
-              PriceBand.mid => tr('3천–1만'),
-              PriceBand.over10k => tr('¥10천 이상'),
+            child: (v) => Text(v.shortIn(currency)),
+            // 가격대를 고르면 지금 보이는 돈으로 정해 둔다 (목록 · 정렬이 같은 돈을 쓴다)
+            onPick: (v) => setState(() {
+              _draft.price = v;
+              if (v != PriceBand.any) _draft.currency = currency;
             }),
-            onPick: (v) => setState(() => _draft.price = v),
           ),
+        ],
       ],
     );
   }

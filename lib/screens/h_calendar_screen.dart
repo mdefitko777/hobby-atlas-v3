@@ -27,6 +27,7 @@ import '../api.dart';
 import '../channels.dart';
 import '../l10n/l10n.dart';
 import '../logic/announcement_match.dart';
+import '../logic/kit_rules.dart' show kitPrice;
 import '../logic/live_stream.dart';
 import '../logic/preorder_open.dart';
 import '../logic/restock.dart';
@@ -198,13 +199,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
         }
         if (k.date.startsWith(ym)) {
           out.add(
-            _Event(
-              title: k.name,
-              image: k.image,
-              sub: joinDot([tr(k.line), yen(k.priceJpy)]),
-              kit: k,
-              day: dayOf(k.date),
-            ),
+            _Event(title: k.name, image: k.image, sub: joinDot([tr(k.line), kitPrice(k)]), kit: k, day: dayOf(k.date)),
           );
         }
         // H-9b 예약 도착 예정 (하루까지 정하지 않았으면 날짜 미정)
@@ -267,7 +262,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
           _Event(
             title: k.name,
             image: k.image,
-            sub: joinDot([tr(channelOf(k.franchiseId).label), tr(k.line), yen(k.priceJpy)]),
+            sub: joinDot([tr(channelOf(k.franchiseId).label), tr(k.line), kitPrice(k)]),
             kit: k,
             day: dayOf(k.date),
           ),

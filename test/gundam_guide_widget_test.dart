@@ -63,8 +63,8 @@ void main() {
     await _pumpGuide(t);
     // G-3 시대 묶음 + 작품 카드
     expect(find.text('코즈믹 에라'), findsOneWidget);
-    expect(find.text('기동전사 건담 SEED'), findsOneWidget);
-    await t.tap(find.text('기동전사 건담 SEED'));
+    expect(find.text('SEED'), findsOneWidget);
+    await t.tap(find.text('SEED'));
     await _settle(t);
 
     // G-4 기체 칸 — SEED 에는 GN- · V2 · 빌드 기체가 없다
@@ -107,7 +107,7 @@ void main() {
 
   testWidgets('칸의 리본: 상품 없는 gget 기체는 손으로 켜기 (옛 기록과 같은 gget id)', (t) async {
     await _pumpGuide(t);
-    await t.tap(find.text('기동전사 건담 SEED'));
+    await t.tap(find.text('SEED'));
     await _settle(t);
     // 프리덤 = 카탈로그 상품 없음 → 칸의 리본(구매함) = 손으로 켜기 (칸 순서: 스트라이크 · 듀얼 · 프리덤)
     t.widget<MarkOverlay>(find.byType(MarkOverlay).at(2)).onOwn();
@@ -132,11 +132,11 @@ void main() {
     await t.tap(find.text('1개 보기'));
     await _settle(t);
     expect(ctrl.filter.tier, GuideTier.owned);
-    expect(find.text('기동전사 건담 SEED'), findsOneWidget);
-    expect(find.text('기동전사 건담 00'), findsNothing);
+    expect(find.text('SEED'), findsOneWidget);
+    expect(find.text('00'), findsNothing);
 
     // 이어받은 조건 (구매함) — 기체 칸도 켜진 것만
-    await t.tap(find.text('기동전사 건담 SEED'));
+    await t.tap(find.text('SEED'));
     await _settle(t);
     expect(find.text('아크엔젤'), findsOneWidget);
     expect(find.text('스트라이크 건담'), findsNothing);
@@ -159,7 +159,7 @@ void main() {
 
   testWidgets('화수별 보기: gundam-chapters 가 있으면 장마다 칸, 없으면 단추가 없다', (t) async {
     await _pumpGuide(t);
-    await t.tap(find.text('기동전사 건담 SEED'));
+    await t.tap(find.text('SEED'));
     await _settle(t);
     expect(find.byTooltip('화수별'), findsOneWidget);
     await t.tap(find.byTooltip('화수별'));
@@ -172,7 +172,7 @@ void main() {
   testWidgets('화수 데이터가 아직 없으면(404) 화수별 단추가 없다', (t) async {
     loadAtlasFixture(chapters: false);
     await _pumpGuide(t);
-    await t.tap(find.text('기동전사 건담 SEED'));
+    await t.tap(find.text('SEED'));
     await _settle(t);
     expect(find.text('스트라이크 건담'), findsOneWidget);
     expect(find.byTooltip('화수별'), findsNothing);
@@ -180,10 +180,10 @@ void main() {
 
   testWidgets('찾기: 기체 이름으로 작품을 찾고, 작품 안에서도 그 말로 거른다', (t) async {
     await _pumpGuide(t, query: '듀얼');
-    expect(find.text('기동전사 건담 SEED'), findsOneWidget);
+    expect(find.text('SEED'), findsOneWidget);
     expect(find.text('건담 빌드 파이터즈'), findsWidgets); // 공식 로고가 없어 그림 자리에도 이름
     expect(find.text('기동전사 건담'), findsNothing);
-    await t.tap(find.text('기동전사 건담 SEED'));
+    await t.tap(find.text('SEED'));
     await _settle(t);
     expect(find.text('듀얼 건담'), findsOneWidget);
     expect(find.text('스트라이크 건담'), findsNothing);

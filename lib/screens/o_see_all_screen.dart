@@ -5,10 +5,10 @@
 //
 // ┌──────── 디자인 가이드 대응표: O 전체 목록 ─────────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
-// │ O-1  │ ‹ + 제목 + 개수 · 필터 · 보기 전환    │ 어느 목록인지 · 돌아가기 · 격자/목록     │ P03 · P07     │
+// │ O-1  │ ‹ + 제목 · 필터 · 보기 전환          │ 어느 목록인지 · 돌아가기 · 격자/목록     │ P03 · P07     │
 // │ O-2  │ 아래 시트(60%) · 네모 세그먼트 · 체크 2열 · 펼치는 줄 │ 필터: 내 상태 · 발매 · 판매 · 종류 · 라인 · 작품 · 가격 (lib/widgets/kit_filter_sheet.dart) │ P06 · P08 · P01 · P05 │
 // │ O-3  │ 고른 필터 한 줄 + showPickSheet      │ 지금 거르는 조건 · 정렬 4가지 (아래 시트)  │ P01 · P07     │
-// │ O-4  │ 격자 ProductTile(+ ♡) / ThumbRow     │ 상품 (가격 · 발매일 보임) → D 상세       │ P08 · P07     │
+// │ O-4  │ 격자 ProductTile(+ ♡) / ThumbRow     │ 상품 (정가 ₩ · ¥ · 발매일 보임) → D 상세  │ P08 · P07     │
 // │ O-5  │ 밑줄 탭 + 16:9 카드 (AnnTag)         │ 예고: 공식 발표 · 상품화 확정 · 예약(열리는 때 · 날) · 비공식(있을 때만) · 라이브(곧 할 것이 맨 앞) │ P02 · P06 │
 // │ O-6  │ 기록 지우기 → showDialog → 토스트     │ 최근 본 기록 비우기 (기기 기록 · 되돌리기)  │ P05 · P03     │
 // │ O-7  │ 위 검색창 (이 목록 안에서만 찾기)      │ "최근 추가에서 찾기"                     │ P07 · P04     │
@@ -20,6 +20,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
 import '../api.dart';
+import '../data/catalog.dart';
 import '../logic/announcement_match.dart';
 import '../logic/kit_rules.dart';
 import '../logic/preorder_open.dart' show annShownDay;
@@ -181,30 +182,34 @@ class _SectionListViewState extends State<SectionListView> {
   /// 예고 목록 탭: '' 전체 · 단계 글 · 비공식 (lib/logic/announcement_match.dart announcementTabs)
   String _annTab = '';
 
-  List<Kit> get _kits => [
+  /// 한국 · 일본 짝이 둘 다 들었으면 한 카드만 (도감 묶음 · 받은 id 목록은 둘 다 가질 수 있다)
+  List<Kit> get _kits => mergeTwins([
     for (final k in widget.kits)
       if (!_cleared.contains(k)) k,
-  ];
+  ]);
 
   /// 지금 보이는 목록 (상세에서 좌우로 넘길 때 같은 순서)
   List<Kit> _shown = const [];
 
   List<Kit> _visibleKits() {
     _filter.statusOf = Marks.of(context).statusOf; // 좋아요 · 구매함으로 거르기
+    // 한 나라만 보면 짝 상품은 그 나라 쪽으로 (일본 = 일본 포켓몬센터 상품, 정가 ¥ 먼저)
+    final byId = Catalog.instance.byId;
     final list = [
       for (final k in _kits)
-        if (_filter.matches(k) && kitMatches(k, widget.query)) k,
+        if (_filter.matches(k) && kitMatches(k, widget.query)) _filter.region.shownIn(k, byId),
     ];
-    int price(Kit k, int none) => k.priceJpy ?? none;
+    // 가격순: 고른 돈(없으면 원)의 정가로 먼저, 다른 돈만 있는 상품은 그 뒤에 그 돈으로 — 환산해 섞지 않는다
+    final currency = currencyFor(list, _filter.preferredCurrency);
     switch (_sort) {
       case KitSort.newest:
         break; // GET 정렬 그대로
       case KitSort.release:
         list.sort((a, b) => a.date.compareTo(b.date));
       case KitSort.priceLow:
-        list.sort((a, b) => price(a, 1 << 30).compareTo(price(b, 1 << 30)));
+        list.sort((a, b) => comparePrice(a, b, currency));
       case KitSort.priceHigh:
-        list.sort((a, b) => price(b, -1).compareTo(price(a, -1)));
+        list.sort((a, b) => comparePrice(a, b, currency, high: true));
     }
     return _shown = list;
   }
@@ -249,7 +254,6 @@ class _SectionListViewState extends State<SectionListView> {
   @override
   Widget build(BuildContext context) {
     final anns = widget.announcements;
-    final count = anns != null ? anns.length : _kits.length;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -274,12 +278,10 @@ class _SectionListViewState extends State<SectionListView> {
                   style: const TextStyle(fontSize: Gp.t19, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(width: 8),
+                // 개수는 쓰지 않는다 (분류마다 몇 개인지는 보지 않기, 2026-11-14)
                 Expanded(
                   child: Text(
-                    joinDot([
-                      widget.subtitle,
-                      trf('{n}개', {'n': count}),
-                    ]),
+                    widget.subtitle,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: Gp.t12, color: Gp.accent, fontWeight: FontWeight.w500),
                   ),
@@ -331,15 +333,12 @@ class _SectionListViewState extends State<SectionListView> {
         children: [
           Expanded(
             child: labels.isEmpty
-                ? Text(
-                    trf('{n}개', {'n': visible.length}),
-                    style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
-                  )
+                ? const SizedBox.shrink()
                 : Row(
                     children: [
                       Flexible(
                         child: Text(
-                          '${labels.map(tr).join(' · ')}  ${trf('{n}개', {'n': visible.length})}',
+                          labels.map(tr).join(' · '),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontSize: Gp.t12, color: Gp.accent),
@@ -416,7 +415,8 @@ class _SectionListViewState extends State<SectionListView> {
                     crossAxisCount: cols,
                     mainAxisSpacing: 14,
                     crossAxisSpacing: 10,
-                    mainAxisExtent: cell + 76, // 사진 + 이름 두 줄 + 가격 · 날짜 한 줄
+                    // 사진 + 이름 두 줄 + 가격 · 날짜 한 줄 (+ 한국 · 일본 정가가 다 있는 상품이 있으면 작은 둘째 정가 줄)
+                    mainAxisExtent: cell + 76 + (visible.any((k) => kitPriceParts(k).length > 1) ? 16 : 0),
                   ),
                   itemCount: visible.length,
                   itemBuilder: (context, i) => _tile(visible[i]),
@@ -433,15 +433,20 @@ class _SectionListViewState extends State<SectionListView> {
     );
   }
 
-  Widget _tile(Kit k) => ProductTile(
-    id: k.id,
-    image: k.image,
-    title: k.name,
-    titleLines: 2,
-    subtitle: joinDot([yen(k.priceJpy), dateDot(k.date)]),
-    marks: QuickMarks(kit: k),
-    onTap: () => openKitDetail(context, k, loaders: widget.loaders, list: _shown),
-  );
+  /// 정가가 둘(₩ · ¥)이면 360dp 칸(약 100dp)에 날짜와 한 줄로 다 들어가지 않아 둘째 정가는 아래 작은 줄로
+  Widget _tile(Kit k) {
+    final p = kitPriceParts(k);
+    return ProductTile(
+      id: k.id,
+      image: k.image,
+      title: k.name,
+      titleLines: 2,
+      subtitle: joinDot([p.firstOrNull ?? tr('가격 미정'), dateDot(k.date)]),
+      note: p.length > 1 ? p[1] : '',
+      marks: QuickMarks(kit: k),
+      onTap: () => openKitDetail(context, k, loaders: widget.loaders, list: _shown),
+    );
+  }
 
   Widget _row(Kit k) => ThumbRow(
     id: k.id,
@@ -462,7 +467,7 @@ class _SectionListViewState extends State<SectionListView> {
     trailing: Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        Text(yen(k.priceJpy), style: const TextStyle(fontSize: Gp.t12)),
+        KitPriceLines(k),
         Text(
           dateDot(k.date),
           style: const TextStyle(fontSize: Gp.t11, color: Gp.faint),

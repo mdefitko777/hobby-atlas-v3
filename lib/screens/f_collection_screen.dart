@@ -26,6 +26,7 @@ import '../api.dart';
 import '../level.dart' show tierHelpItems;
 import '../logic/build_status.dart';
 import '../logic/collection_rules.dart';
+import '../logic/kit_rules.dart' show kitPrice, priceTotals;
 import '../logic/preorder.dart';
 import '../marks.dart';
 import '../channels.dart';
@@ -446,9 +447,13 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
     }
     // F-4 합계 × 수량 (좋아요 = 갖고 싶은 수, 구매함 = 가진 수)
     final me = Marks.of(context).store;
-    final total = kits.fold<int>(0, (s, k) => s + (k.priceJpy ?? 0) * me.quantityOf(k.id));
+    // 좋아요 합계: 상품마다 제 나라 정가 하나로 (원 · 엔 따로, 환산하지 않음)
+    final total = priceTotals(kits, (k) => me.quantityOf(k.id));
     final pieces = kits.fold<int>(0, (s, k) => s + me.quantityOf(k.id));
-    final spent = kits.fold<int>(0, (s, k) => s + (_paid(k).krw ?? 0) * me.quantityOf(k.id)); // 적은 구매가, 없으면 정가 × 환율
+    final spent = kits.fold<int>(
+      0,
+      (s, k) => s + (_paid(k).krw ?? 0) * me.quantityOf(k.id),
+    ); // 적은 구매가, 없으면 한국 정가(없으면 일본 정가 × 환율) — 합계에만
     final pre = {for (final k in kits) k.id: ?me.preorderOf(k.id)};
     final due = pre.values.fold<int>(0, (s, p) => s + p.due);
     final backlog = backlogCount(_inTab(all).where(needsAssembly).map((k) => k.id), me.stageOf);
@@ -476,7 +481,12 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                         ]),
                         _Tab.liked => joinDot([
                           trf('{n}개', {'n': pieces}),
-                          trf('합계 {money}', {'money': yen(total)}),
+                          trf('합계 {money}', {
+                            'money': prices(
+                              krw: total.krw > 0 || total.jpy == 0 ? total.krw : null,
+                              jpy: total.jpy > 0 ? total.jpy : null,
+                            ),
+                          }),
                         ]),
                       }, // F-4 P01
                       style: const TextStyle(color: Gp.muted, fontSize: Gp.t12),
@@ -528,25 +538,28 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 if (_ownedTab) ...[
-                                  // 구매함: 적은 구매가 (없으면 정가 × 환율을 옅게 ≈) · 아래에 정가
-                                  Text(
-                                    switch (_paid(k)) {
-                                      (krw: null, estimate: _) => tr('구매가 미입력'),
-                                      (krw: final int w, estimate: true) => '≈ ${won(w)}',
-                                      (krw: final int w, estimate: false) => won(w),
-                                    },
-                                    style: TextStyle(
-                                      fontSize: Gp.t14,
-                                      fontWeight: _paid(k).estimate ? FontWeight.w400 : FontWeight.w600,
-                                      color: _paid(k).estimate ? Gp.faint : Gp.ink,
+                                  // 구매함: 적은 구매가, 안 적었으면 정가 그대로 (₩ · ¥, 환산한 ≈ 값은 보이지 않는다)
+                                  switch (_paid(k)) {
+                                    (krw: null, estimate: _) => Text(
+                                      tr('구매가 미입력'),
+                                      style: const TextStyle(fontSize: Gp.t14, color: Gp.faint),
                                     ),
-                                  ),
-                                  Text(
-                                    trf('정가 {money}', {'money': yen(k.priceJpy)}),
-                                    style: const TextStyle(fontSize: Gp.t11, color: Gp.faint),
-                                  ),
+                                    (krw: _, estimate: true) => KitPriceLines(
+                                      k,
+                                      style: const TextStyle(fontSize: Gp.t14, color: Gp.faint),
+                                    ),
+                                    (krw: final int w, estimate: false) => Text(
+                                      won(w),
+                                      style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w600),
+                                    ),
+                                  },
+                                  if (!_paid(k).estimate)
+                                    Text(
+                                      trf('정가 {money}', {'money': kitPrice(k)}),
+                                      style: const TextStyle(fontSize: Gp.t11, color: Gp.faint),
+                                    ),
                                 ] else
-                                  Text(yen(k.priceJpy), style: const TextStyle(fontSize: Gp.t12)),
+                                  KitPriceLines(k),
                               ],
                             ),
                             // F-5c 조립하는 상품만 (나머지는 같은 너비로 비워 가격 줄을 맞춘다)
@@ -622,10 +635,16 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
       Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Text(
-            p?.price == null ? yen(k.priceJpy) : won(p!.price!),
-            style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w600),
-          ),
+          if (p?.price case final v?)
+            Text(
+              won(v),
+              style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w600),
+            )
+          else
+            KitPriceLines(
+              k,
+              style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w600),
+            ),
           Text(
             (p?.due ?? 0) > 0 ? trf('낼 돈 {money}', {'money': won(p!.due)}) : tr(p?.paid ?? false ? '결제 완료' : '미결제'),
             style: TextStyle(fontSize: Gp.t11, color: (p?.due ?? 0) > 0 ? Gp.reserve : Gp.faint),

@@ -1,4 +1,4 @@
-// 상품 필터 규칙 — 내 상태 · 발매 · 판매 · 가격 · 종류 · 라인 · 작품 (화면 없이 테스트할 수 있는 순수 Dart)
+// 상품 필터 규칙 — 내 상태 · 발매 · 판매 · 나라 · 가격 · 종류 · 라인 · 작품 (화면 없이 테스트할 수 있는 순수 Dart)
 import '../clock.dart';
 import '../format.dart';
 import '../l10n/l10n.dart';
@@ -11,23 +11,115 @@ enum ReleaseState { any, upcoming, thisMonth, released }
 
 enum SaleState { any, regular, limited, pb, base }
 
-enum PriceBand { any, under3k, mid, over10k }
+/// 가격대를 고르는 돈 — 한국 정가(원) · 일본 정가(엔). 서로 환산하지 않는다
+enum PriceCurrency { krw, jpy }
+
+extension PriceCurrencyLabel on PriceCurrency {
+  String get label => switch (this) {
+    PriceCurrency.krw => tr('원'),
+    PriceCurrency.jpy => tr('엔'),
+  };
+
+  /// 이 돈의 진짜 정가 (없으면 null) — 짝 상품은 둘 다 있다
+  int? of(Kit k) => this == PriceCurrency.krw ? k.priceKrw : k.priceJpy;
+
+  PriceCurrency get other => this == PriceCurrency.krw ? PriceCurrency.jpy : PriceCurrency.krw;
+}
+
+/// 가격대 — 원은 엔의 10배 칸 (2026-11-14 실측: 원 중간값 2만 · 엔 대부분 ¥3,000 이하)
+enum PriceBand { any, low, mid, high }
 
 extension PriceBandLabel on PriceBand {
-  String get label => switch (this) {
-    PriceBand.any => tr('전체'),
-    PriceBand.under3k => tr('¥3,000 이하'),
-    PriceBand.mid => '¥3,000 – ¥10,000',
-    PriceBand.over10k => tr('¥10,000 이상'),
+  /// 고른 조건 한 줄에 보일 이름
+  String labelIn(PriceCurrency? c) => switch ((this, c)) {
+    (PriceBand.any, _) => tr('전체'),
+    (PriceBand.low, PriceCurrency.krw) => tr('3만원 이하'),
+    (PriceBand.mid, PriceCurrency.krw) => tr('3만–10만원'),
+    (PriceBand.high, PriceCurrency.krw) => tr('10만원 이상'),
+    (PriceBand.low, _) => tr('¥3,000 이하'),
+    (PriceBand.mid, _) => '¥3,000 – ¥10,000',
+    (PriceBand.high, _) => tr('¥10,000 이상'),
   };
 
-  bool hit(int? p) => switch (this) {
-    PriceBand.any => true,
-    PriceBand.under3k => p != null && p <= 3000,
-    PriceBand.mid => p != null && p > 3000 && p <= 10000,
-    PriceBand.over10k => p != null && p > 10000,
+  /// 필터 시트 칸 (좁아서 짧게 — 360dp 네 칸 하나가 약 80dp, 중국어 "3万–10万韩元" 은 잘렸다. 돈은 위 원 · 엔 칸에)
+  String shortIn(PriceCurrency c) => switch ((this, c)) {
+    (PriceBand.any, _) => tr('전체'),
+    (PriceBand.low, PriceCurrency.krw) => tr('₩3만 이하'),
+    (PriceBand.mid, PriceCurrency.krw) => tr('3만–10만'),
+    (PriceBand.high, PriceCurrency.krw) => tr('₩10만 이상'),
+    (PriceBand.low, _) => tr('¥3천 이하'),
+    (PriceBand.mid, _) => tr('3천–1만'),
+    (PriceBand.high, _) => tr('¥10천 이상'),
   };
+
+  bool _inBand(int? p, PriceCurrency c) {
+    if (p == null) return false;
+    final unit = c == PriceCurrency.krw ? 10 : 1;
+    return switch (this) {
+      PriceBand.any => true,
+      PriceBand.low => p <= 3000 * unit,
+      PriceBand.mid => p > 3000 * unit && p <= 10000 * unit,
+      PriceBand.high => p > 10000 * unit,
+    };
+  }
+
+  /// [c] 돈의 진짜 정가가 이 칸에 드나. [c] 가 없으면 원 · 엔 어느 쪽이든 제 칸에 들면
+  bool hit(Kit k, PriceCurrency? c) {
+    if (this == PriceBand.any) return true;
+    if (c != null) return _inBand(c.of(k), c);
+    return _inBand(k.priceKrw, PriceCurrency.krw) || _inBand(k.priceJpy, PriceCurrency.jpy);
+  }
 }
+
+/// 가격대 · 가격순의 돈 — 고른 돈이 이 목록에 있으면 그것, 아니면 원(한국 정가가 하나라도 있으면), 그다음 엔
+PriceCurrency currencyFor(Iterable<Kit> pool, PriceCurrency? picked) {
+  if (picked != null && pool.any((k) => picked.of(k) != null)) return picked;
+  return pool.any((k) => k.priceKrw != null) ? PriceCurrency.krw : PriceCurrency.jpy;
+}
+
+/// 원 · 엔이 둘 다 있는 목록인가 (필터 시트의 원 · 엔 칸)
+bool hasBothCurrencies(Iterable<Kit> pool) =>
+    pool.any((k) => k.priceKrw != null) && pool.any((k) => k.priceJpy != null);
+
+/// 가격순 — 고른 돈 [c] 의 정가가 있는 상품을 그 값으로 먼저, 다음은 다른 돈만 있는 상품을 그 값으로,
+/// 정가가 없는 상품은 끝. 낮은순 · 높은순([high])은 묶음 안에서만 (원과 엔을 환산해 섞지 않는다)
+int comparePrice(Kit a, Kit b, PriceCurrency c, {bool high = false}) {
+  int group(Kit k) => c.of(k) != null ? 0 : (c.other.of(k) != null ? 1 : 2);
+  final ga = group(a);
+  final gb = group(b);
+  if (ga != gb) return ga.compareTo(gb);
+  if (ga == 2) return 0;
+  final cur = ga == 0 ? c : c.other;
+  final d = cur.of(a)!.compareTo(cur.of(b)!);
+  return high ? -d : d;
+}
+
+/// 파는 나라 — 한국 · 일본 (짝 상품은 둘 다)
+enum SaleRegion { any, kr, jp }
+
+extension SaleRegionLabel on SaleRegion {
+  String get label => switch (this) {
+    SaleRegion.any => tr('전체'),
+    SaleRegion.kr => tr('한국'),
+    SaleRegion.jp => tr('일본'),
+  };
+
+  bool hit(Kit k) => switch (this) {
+    SaleRegion.any => true,
+    SaleRegion.kr => soldInKorea(k),
+    SaleRegion.jp => soldInJapan(k),
+  };
+
+  /// 한 나라만 볼 때 보일 상품 — 짝이 있으면 그 나라 쪽 ([byId] = 카탈로그 전체, 짝을 못 찾으면 그대로)
+  Kit shownIn(Kit k, Map<String, Kit> byId) {
+    if (this == SaleRegion.any || k.twinId.isEmpty) return k;
+    if (k.region == (this == SaleRegion.jp ? 'jp' : 'kr')) return k;
+    return byId[k.twinId] ?? k;
+  }
+}
+
+/// 나라가 둘 이상 섞인 목록인가 (필터 시트의 한국 · 일본 칸 — 지금은 포켓몬 · 전체 채널)
+bool hasBothRegions(Iterable<Kit> pool) => pool.any(soldInKorea) && pool.any(soldInJapan);
 
 extension ReleaseStateLabel on ReleaseState {
   String get label => switch (this) {
@@ -137,6 +229,8 @@ class KitFilter {
     this.release = ReleaseState.any,
     this.sale = SaleState.any,
     this.price = PriceBand.any,
+    this.currency,
+    this.region = SaleRegion.any,
     this.from = '',
     this.to = '',
     Map<String, String>? workNames,
@@ -160,6 +254,21 @@ class KitFilter {
   SaleState sale;
   PriceBand price;
 
+  /// 가격대 · 가격순의 돈 (null = 목록에 맞춰 — [currencyFor])
+  PriceCurrency? currency;
+
+  /// 파는 나라
+  SaleRegion region;
+
+  /// 가격대 · 가격순의 돈 — 고른 것, 없으면 고른 나라의 돈 (null = 목록에 맞춰, [currencyFor])
+  PriceCurrency? get preferredCurrency =>
+      currency ??
+      switch (region) {
+        SaleRegion.kr => PriceCurrency.krw,
+        SaleRegion.jp => PriceCurrency.jpy,
+        SaleRegion.any => null,
+      };
+
   /// 발매 기간 'YYYY-MM' (빈 글자 = 열림)
   String from;
   String to;
@@ -176,6 +285,8 @@ class KitFilter {
     release: release,
     sale: sale,
     price: price,
+    currency: currency,
+    region: region,
     from: from,
     to: to,
     workNames: {...workNames},
@@ -191,6 +302,8 @@ class KitFilter {
     release = ReleaseState.any;
     sale = SaleState.any;
     price = PriceBand.any;
+    currency = null;
+    region = SaleRegion.any;
     from = '';
     to = '';
   }
@@ -204,6 +317,7 @@ class KitFilter {
       (release == ReleaseState.any ? 0 : 1) +
       (sale == SaleState.any ? 0 : 1) +
       (price == PriceBand.any ? 0 : 1) +
+      (region == SaleRegion.any ? 0 : 1) +
       (from.isEmpty && to.isEmpty ? 0 : 1);
 
   bool matches(Kit k) {
@@ -211,7 +325,8 @@ class KitFilter {
     if (types.isNotEmpty && !types.contains(k.type)) return false;
     if (lines.isNotEmpty && !lines.contains(k.line)) return false;
     if (goodsKinds.isNotEmpty && !goodsKinds.contains(k.goodsKind)) return false;
-    if (!price.hit(k.priceJpy)) return false;
+    if (!price.hit(k, currency)) return false;
+    if (!region.hit(k)) return false;
     if (!inPeriod(k.date, from, to)) return false;
     final st = statusOf?.call(k) ?? k.status;
     final today = _today();
@@ -249,11 +364,12 @@ class KitFilter {
     if (release != ReleaseState.any) release.label,
     if (from.isNotEmpty || to.isNotEmpty) periodLabel(from, to),
     if (sale != SaleState.any) sale.label,
+    if (region != SaleRegion.any) region.label,
     for (final w in works) workNames[w] ?? w,
     ...types.map(tr),
     ...lines.map(tr),
     ...goodsKinds.map(tr),
-    if (price != PriceBand.any) price.label,
+    if (price != PriceBand.any) price.labelIn(currency),
   ];
 }
 

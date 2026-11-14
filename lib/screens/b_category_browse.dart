@@ -19,6 +19,7 @@ import '../l10n/l10n.dart';
 import '../api.dart';
 import '../channels.dart';
 import '../logic/category_browse.dart';
+import '../logic/short_names.dart';
 import '../marks.dart';
 import '../models.dart';
 import '../theme.dart';
@@ -166,9 +167,13 @@ class _CategoryBrowseState extends State<_CategoryBrowse> {
   /// B-21 세대 묶음 — 상품이 없는 칸은 숨긴다
   Future<List<(String, List<_Cat>)>> _eraSections(String channel, List<Kit> kits) async {
     final byId = {for (final k in kits) k.id: k};
-    List<Kit> resolve(Iterable<String> ids) => [
-      for (final id in {...ids}) ?byId[id],
-    ]..sort(newestFirst);
+    // 한국 짝이 있는 일본 상품은 목록에 없다 → 묶음이 일본 쪽 id 만 가져도 한국 쪽 카드로 (한 카드만)
+    final byTwin = {
+      for (final k in kits)
+        if (k.twinId.isNotEmpty) k.twinId: k,
+    };
+    List<Kit> resolve(Iterable<String> ids) =>
+        {for (final id in ids) ?(byId[id] ?? byTwin[id])}.toList()..sort(newestFirst);
 
     if (channel == 'gundam') {
       // 작품 = 그 작품 기체들에 연결된 상품
@@ -179,7 +184,9 @@ class _CategoryBrowseState extends State<_CategoryBrowse> {
       final cats = <GuideWork, _Cat>{};
       for (final (i, w) in works.indexed) {
         final list = resolve([for (final u in units[i]) ...u.kitIds]);
-        if (list.isNotEmpty) cats[w] = _Cat(w.id, w.name, w.image.isNotEmpty ? w.image : newestCover(list), list);
+        if (list.isNotEmpty) {
+          cats[w] = _Cat(w.id, shortWorkName(w.name), w.image.isNotEmpty ? w.image : newestCover(list), list);
+        }
       }
       return [
         for (final (title, ws) in workSections(cats.keys)) (title, [for (final w in ws) cats[w]!]),
@@ -198,7 +205,8 @@ class _CategoryBrowseState extends State<_CategoryBrowse> {
       // 베이 라인은 공식 라인 로고(BX · UX · CX)가 먼저
       final line = w.id.replaceFirst('beyblade-', '').toUpperCase();
       final logo = channel == 'beyblade' ? (lineCovers[channel]?[line]) : null;
-      cats.add(_Cat(w.id, w.label, logo ?? (w.image.isNotEmpty ? w.image : newestCover(list)), list));
+      final name = shortWorldLabel(channel, w.id, w.label);
+      cats.add(_Cat(w.id, name, logo ?? (w.image.isNotEmpty ? w.image : newestCover(list)), list));
     }
     return worldSections(channel, cats, (c) => c.key);
   }

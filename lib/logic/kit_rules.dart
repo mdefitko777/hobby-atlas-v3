@@ -15,6 +15,50 @@ bool kitMatches(Kit k, String query) {
   return [k.name, k.nameJa, k.series, k.line, k.type, ...k.keywords].any((f) => halfWidth(f).toLowerCase().contains(q));
 }
 
+// ── 한국 · 일본 정가 (같은 바코드 짝) ─────────────────────────────────────────
+
+/// 둘러보는 목록에서 빠지는 쪽 — 한국 짝이 있는 일본 상품 (lib/data/gunpula.dart pairTwins)
+bool isJpTwin(Kit k) => k.twinId.isNotEmpty && k.region == 'jp';
+
+/// 한국에서 파는 상품 (한국 출처 · 둘 다 · 짝이 있는 것)
+bool soldInKorea(Kit k) => k.region == 'kr' || k.region == 'both' || k.twinId.isNotEmpty;
+
+/// 일본에서 파는 상품
+bool soldInJapan(Kit k) => k.region == 'jp' || k.region == 'both' || k.twinId.isNotEmpty;
+
+/// 정가 조각 — 그 상품 나라의 돈이 앞 (일본 상품은 ¥ 먼저, 나머지는 ₩ 먼저). 정가가 없으면 빈 목록
+List<String> kitPriceParts(Kit k) {
+  final krw = k.priceKrw == null ? null : wonSign(k.priceKrw);
+  final jpy = k.priceJpy == null ? null : yen(k.priceJpy);
+  return k.region == 'jp' ? [?jpy, ?krw] : [?krw, ?jpy];
+}
+
+/// 정가 한 줄: "₩19,000 · ¥1,650" · "¥1,540" · '가격 미정' (목록 · 상세 · 컬렉션 공통, 환산값 없음)
+String kitPrice(Kit k) => prices(krw: k.priceKrw, jpy: k.priceJpy, jpyFirst: k.region == 'jp');
+
+/// 한 목록에 짝이 둘 다 들었으면 일본 쪽을 뺀다 (도감 묶음 · 받은 id 목록은 둘 다 가질 수 있다)
+List<Kit> mergeTwins(List<Kit> kits) {
+  final ids = {for (final k in kits) k.id};
+  return [
+    for (final k in kits)
+      if (!(isJpTwin(k) && ids.contains(k.twinId))) k,
+  ];
+}
+
+/// 정가 합계 — 상품마다 제 나라 돈 하나로만 센다 (한국 정가가 있으면 원, 없으면 엔). 서로 환산하지 않는다
+({int krw, int jpy}) priceTotals(Iterable<Kit> kits, int Function(Kit) qty) {
+  var krw = 0;
+  var jpy = 0;
+  for (final k in kits) {
+    if (k.priceKrw case final w?) {
+      krw += w * qty(k);
+    } else if (k.priceJpy case final p?) {
+      jpy += p * qty(k);
+    }
+  }
+  return (krw: krw, jpy: jpy);
+}
+
 /// 바코드 읽은 값 → 숫자 13자리 비교용 (UPC-A 12자리는 앞에 0, EAN-8 은 그대로). 숫자가 아니면 빈 글자
 String normalizeBarcode(String raw) {
   final d = raw.replaceAll(RegExp(r'\D'), '');
