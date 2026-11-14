@@ -5,7 +5,7 @@
 //   mark_overlay  MarkOverlay · QuickMarks (리본 = 구매함 · ♡ = 좋아요) · StatusMarks (보기만)
 //   icons         LikedIcon · OwnedIcon · VerifiedBadge · ChannelGlyph
 //   tags          TagPill · SoftTag · DateTag · stageColor · AnnTag(예고 꼬리표: 단계 · 라이브 때 · 예약 때 · 비공식) · liveColor · preorderColor · unofficialColor
-//   buttons       RaisedCircleButton · TogglePill · GradientButton
+//   buttons       RaisedCircleButton · TogglePill · GradientButton · ChipButton(상세의 빈 줄 대신 작은 버튼)
 //   rings         AccentRing · RingAvatar
 //   sections      SectionHeader · SectionPanel · UnderlineTab · PageDots · AccentBar
 //   toolbar       GpSearchBar · ToolRow · ToolIcon · FilterButton · ViewIconToggle · FindBar

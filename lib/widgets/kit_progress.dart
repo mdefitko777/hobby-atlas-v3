@@ -177,7 +177,8 @@ String preorderSummary(Preorder p) => joinDot([
   if (p.arrivedAt.isNotEmpty) tr('도착함') else (p.paid ? tr('결제 완료') : tr('미결제')),
 ]);
 
-/// D-5g 상세 줄 (구매함이 아닐 때): 예약 요약 · 없으면 "예약" 적기. 오른쪽 📥 = 도착했어요
+/// D-5g 상세 줄 (구매함이 아닐 때): 적어 둔 예약 요약. 오른쪽 📥 = 도착했어요.
+/// 예약이 없으면 줄 대신 상세의 작은 버튼 줄에 「예약 적기」(ChipButton)가 있다 — 여기서는 아무것도 그리지 않는다
 class PreorderRow extends StatelessWidget {
   const PreorderRow({super.key, required this.kit});
   final Kit kit;
@@ -185,6 +186,7 @@ class PreorderRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = Marks.of(context).store.preorderOf(kit.id);
+    if (p == null) return const SizedBox.shrink();
     return InkWell(
       key: const ValueKey('preorder-row'),
       onTap: () => showPreorderSheet(context, kit),
@@ -194,11 +196,11 @@ class PreorderRow extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: 44),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(Gp.radius),
-          border: Border.all(color: p == null ? Gp.line : Gp.reserve.withValues(alpha: 0.5)),
+          border: Border.all(color: Gp.reserve.withValues(alpha: 0.5)),
         ),
         child: Row(
           children: [
-            Icon(preorderIcon, size: Gp.iS, color: p == null ? Gp.muted : Gp.reserve),
+            const Icon(preorderIcon, size: Gp.iS, color: Gp.reserve),
             const SizedBox(width: 8),
             Text(
               tr('예약'),
@@ -207,17 +209,13 @@ class PreorderRow extends StatelessWidget {
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                p == null ? tr('안 적음') : preorderSummary(p),
+                preorderSummary(p),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: Gp.t14,
-                  fontWeight: p == null ? FontWeight.w400 : FontWeight.w600,
-                  color: p == null ? Gp.muted : Gp.ink,
-                ),
+                style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w600, color: Gp.ink),
               ),
             ),
-            if (p != null && p.active)
+            if (p.active)
               IconButton(
                 key: const ValueKey('preorder-arrived'),
                 tooltip: tr('도착했어요'),

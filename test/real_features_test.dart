@@ -411,7 +411,7 @@ void main() {
     await tester.pump();
     expect(me.quantityOf('q1'), 2);
     expect(find.text('2'), findsOneWidget);
-    expect(find.textContaining('모은 시세 없음'), findsOneWidget);
+    expect(find.byKey(const ValueKey('chip-market')), findsOneWidget); // 국내 시세 찾아보기 (작은 버튼)
   });
 
   testWidgets('도움말 화면', (tester) async {

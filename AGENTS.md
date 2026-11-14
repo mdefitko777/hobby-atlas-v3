@@ -40,7 +40,7 @@
 
 ## 폴더 (층 나누기)
 위층은 아래층만 부른다: 화면 → 공용 조각 → 규칙 → 데이터.
-- `lib/data/` 데이터 — 받기 · 캐시 · 파싱 · 저장만. `catalog`(Gunpula Pages) · `gunpula` · `gundam_atlas` · `tag_atlas` · `blob_store` · `photo_files` · `social_local` · `net_image_files`(인터넷 그림 받기 · 기기 캐시: 2000장 · 안 본 지 60일이면 지움 · 30일 동안 다시 묻지 않음 · 동시 16개 · 두 번 멈춘 서버 1분 쉬기 · 작은 칸은 Gunpula `thumbs.json` 의 작은 그림).
+- `lib/data/` 데이터 — 받기 · 캐시 · 파싱 · 저장만. `catalog`(Gunpula Pages) · `gunpula` · `gundam_atlas` · `tag_atlas` · `blob_store` · `photo_files` · `social_local` · `net_image_files`(인터넷 그림 받기 · 기기 캐시: 2000장 · 안 본 지 60일이면 지움 · 30일 동안 다시 묻지 않음 · 동시 16개 · 두 번 멈춘 서버 1분 쉬기 · 작은 칸은 Gunpula `thumbs.json` 의 작은 그림 · 새 소식 사진은 뒤 확인 뒤에 작은 그림만 미리 받기 `lib/background/image_prefetch.dart`: 하루 15 MB · 설정 › 미리 받기).
   - `user_store.dart` = 내 기록 핵심(기록 · 저장 · 동기화) + part `user_store/` (atlas_local · history · trash · profile_local · import). 저장 파일 모양은 `test/user_store_golden_test.dart` 골든이 지킨다.
   - `derive.dart` = 카탈로그 + 내 기록 → 화면 모델, part `derive/` (guide · bbx · worlds · announcements · notifications · profile).
 - `lib/logic/` 규칙 — 순수 Dart (위젯 없음): kit_filter · guide_filter · kit_rules(찾기 · 바코드 · 다가오는 날짜) · collection_rules · spend · level_math · friends · announcement_match · live_stream(공식 라이브: 기기 시계로 본 단계 · 꼬리표 글) · sentence_search · bbx_builder · market. 엔진은 `lib/bbx/` · 알림 규칙은 `lib/notifications/` 그대로.

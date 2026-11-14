@@ -7,7 +7,9 @@
 //       알림 받는 예고의 단계가 넘어간 것 · 처음 보인 라이브는 알림함에, 라이브 · 예약 시작 30분 전 알림은 안드로이드에
 //       미리 걸어 둔다 (lib/notifications/live_reminders.dart · preorder_reminders.dart). 안 받은 확인도 지난번 것으로 다시 건다
 //   4) notify_state.json 에 합쳐 쓰고(잠금 · 다시 읽어 합치기), 알림이 켜져 있으면 휴대폰 알림
-// 백그라운드에서는 notify_config.json(앱 화면이 써 둔 설정 · 내 채널 · 좋아요)만 읽는다. user.json · 카탈로그는 열지 않는다.
+//   5) 새 알림 · 새 상품이 있으면 그 작은 사진을 받을 한 번짜리 일을 건다 (image_prefetch.dart — 같은 입구로 들어온다)
+// 백그라운드에서는 notify_config.json(앱 화면이 써 둔 설정 · 내 채널 · 좋아요)만 읽는다. user.json · 카탈로그는 열지 않는다
+// (사진 미리 받기 일만 카탈로그 파일에서 표지 주소를 찾는다).
 import 'dart:convert';
 import 'dart:ui' show DartPluginRegistrant;
 
@@ -25,6 +27,7 @@ import '../notifications/live_reminders.dart';
 import '../notifications/preorder_reminders.dart';
 import '../notifications/local_notifier.dart';
 import '../notifications/notify_models.dart';
+import 'image_prefetch.dart';
 
 const catalogCheckUniqueName = 'hobbyatlas-catalog-check';
 const catalogCheckTask = 'catalogCheck';
@@ -51,6 +54,10 @@ void catalogCheckDispatcher() {
   Workmanager().executeTask((task, input) async {
     DartPluginRegistrant.ensureInitialized();
     try {
+      if (task == imagePrefetchTask) {
+        await runImagePrefetch();
+        return true;
+      }
       final r = await runCatalogCheck(background: true);
       debugPrint('[notify] 백그라운드 확인: 새 알림 ${r.liveCount} ${r.error}');
     } on Object catch (e) {
@@ -191,6 +198,7 @@ Future<CheckOutcome> runCatalogCheck({
   DateTime? now,
   FetchText? fetch,
   ApplyLive? applyLive,
+  SchedulePrefetch? schedulePrefetch,
 }) async {
   final at = now ?? DateTime.now();
   final get = fetch ?? fetchGunpula;
@@ -270,6 +278,18 @@ Future<CheckOutcome> runCatalogCheck({
         if (!onDisk.contains(r.id)) r,
     ];
   });
+
+  // 사진 미리 받기는 덤 — 무엇이 잘못돼도 확인 결과는 그대로
+  try {
+    await queueImagePrefetch(
+      newPrefetchKits(fresh: fresh, entries: entries, before: before, config: config),
+      wifiOnly: config.prefetchWifiOnly,
+      now: at,
+      schedule: schedulePrefetch,
+    );
+  } on Object catch (e) {
+    debugPrint('[prefetch] 줄 세우기 실패: $e');
+  }
 
   var posted = 0;
   if (config.enabled && LocalNotifier.supported) {

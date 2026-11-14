@@ -10,6 +10,10 @@ const arrivedIcon = Icons.move_to_inbox_outlined;
 const restockIcon = Icons.autorenew;
 const paintIcon = Icons.brush;
 
+/// 국내 시세 · 내 구매가 (상세). ↗ north_east 는 공식 · 바깥 링크에만 — 시세가 같은 화살표라 링크로 읽혔다 (2026-11-14)
+const marketIcon = Icons.show_chart;
+const paidIcon = Icons.account_balance_wallet_outlined;
+
 /// 채널 관리 아이콘: 짧은 선(왼쪽 위) · 긴 선(가운데) · 짧은 선(오른쪽 아래)
 class ChannelGlyph extends StatelessWidget {
   const ChannelGlyph({super.key, this.size = 22, this.color = Gp.ink});

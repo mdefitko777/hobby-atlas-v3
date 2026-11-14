@@ -364,6 +364,7 @@ class NotifyConfig {
     Map<String, FollowedAnn>? followed,
     List<NotifyCondition>? conditions,
     this.legoAll = false,
+    this.prefetchWifiOnly = false,
   }) : rules = {...notifyRuleDefaults, ...?rules},
        conditions = conditions ?? [],
        channels = channels ?? const ['gundam', 'beyblade', 'pokemon'],
@@ -407,6 +408,9 @@ class NotifyConfig {
   /// 레고 범위(검색 탭 › 레고)가 "전부"인지 (최근 정식 세트면 그 밖의 레고는 알리지 않는다)
   bool legoAll;
 
+  /// 새 소식 사진 미리 받기를 와이파이에서만 (기본 = 모바일 데이터도 — 주인은 거의 모바일 데이터, lib/background/image_prefetch.dart)
+  bool prefetchWifiOnly;
+
   bool rule(String key) => rules[key] ?? notifyRuleDefaults[key] ?? false;
 
   Map<String, Object?> toJson() => {
@@ -424,6 +428,7 @@ class NotifyConfig {
     if (followed.isNotEmpty) 'followed': {for (final e in followed.entries) e.key: e.value.toJson()},
     if (conditions.isNotEmpty) 'conditions': [for (final x in conditions) x.toJson()],
     if (legoAll) 'lego_all': true,
+    if (prefetchWifiOnly) 'prefetch_wifi_only': true,
   };
 
   static NotifyConfig fromJson(Object? json) {
@@ -445,6 +450,7 @@ class NotifyConfig {
       followed: {for (final e in jMap(j['followed']).entries) e.key: ?FollowedAnn.fromJson(e.value)},
       conditions: jList(j['conditions']).map(NotifyCondition.fromJson).nonNulls.toList(),
       legoAll: j['lego_all'] == true,
+      prefetchWifiOnly: j['prefetch_wifi_only'] == true,
     );
   }
 }

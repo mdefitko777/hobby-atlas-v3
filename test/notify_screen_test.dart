@@ -6,6 +6,7 @@ import 'package:hobby_atlas/clock.dart';
 import 'package:hobby_atlas/data/derive.dart' show noticeOf;
 import 'package:hobby_atlas/data/user_store.dart';
 import 'package:hobby_atlas/detail_pane.dart';
+import 'package:hobby_atlas/l10n/l10n.dart' show tr;
 import 'package:hobby_atlas/marks.dart';
 import 'package:hobby_atlas/notifications/notify_models.dart';
 import 'package:hobby_atlas/notifications/notify_store.dart';
@@ -196,6 +197,21 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
     }
     expect(find.byType(NotifySettingsScreen), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('설정: 미리 받기 — 기본 모바일 데이터도 → 와이파이만 고르면 NotifyConfig 에', (tester) async {
+    final store = NotifyStore.memory();
+    await pumpApp(tester, SettingsScreen(notify: store), size: const Size(390, 1400));
+    const row = Key('settings-prefetch');
+    expect(inRow(row, tr('모바일 데이터도')), findsOneWidget);
+    await tester.tap(find.byKey(row));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(tr('와이파이만')).last);
+    await tester.pumpAndSettle();
+    expect(store.config.prefetchWifiOnly, isTrue);
+    expect(store.config.toJson()['prefetch_wifi_only'], isTrue);
+    expect(inRow(row, tr('와이파이만')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

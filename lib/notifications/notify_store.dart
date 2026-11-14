@@ -8,6 +8,7 @@ import 'dart:convert';
 import 'package:flutter/widgets.dart';
 
 import '../background/catalog_check_worker.dart';
+import '../background/image_prefetch.dart' show reschedulePrefetch;
 import '../channels.dart' show defaultMyChannels;
 import '../data/blob_store.dart';
 import '../data/catalog.dart';
@@ -302,6 +303,14 @@ class NotifyStore extends ChangeNotifier {
   void setOnlyMine(bool v) {
     config.onlyMine = v;
     _configChanged();
+  }
+
+  /// 설정 › 미리 받기 — 이미 걸린 뒤 받기 일도 새 조건으로 (와이파이만 ↔ 모바일 데이터도)
+  void setPrefetchWifiOnly(bool v) {
+    if (config.prefetchWifiOnly == v) return;
+    config.prefetchWifiOnly = v;
+    _configChanged();
+    if (persist) unawaited(reschedulePrefetch(wifiOnly: v));
   }
 
   void setRule(String key, bool v) {

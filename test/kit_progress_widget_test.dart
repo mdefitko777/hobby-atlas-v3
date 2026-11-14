@@ -126,10 +126,11 @@ void main() {
       final store = UserStore.memory();
       final k = _kit('gu03');
       await _pump(tester, store, KitDetailScreen(kit: k, loaders: _loaders()));
-      final row = find.byKey(const ValueKey('preorder-row'));
-      await tester.scrollUntilVisible(row, 200, scrollable: find.byType(Scrollable).first);
-      expect(find.text('안 적음'), findsOneWidget);
-      await tester.tap(row);
+      // 예약이 없으면 줄 대신 정가 아래 작은 버튼 「예약 적기」
+      expect(find.byKey(const ValueKey('preorder-row')), findsNothing);
+      final chip = find.byKey(const ValueKey('chip-preorder'));
+      await tester.scrollUntilVisible(chip, 200, scrollable: find.byType(Scrollable).first);
+      await tester.tap(chip);
       await _settle(tester);
       await tester.enterText(find.byKey(const ValueKey('pre-shop')), '동네 샵');
       await tester.enterText(find.byKey(const ValueKey('pre-price')), '8800');

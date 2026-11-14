@@ -1,4 +1,4 @@
-// 버튼 — 떠 있는 원 · 켜고 끄기 · 주 버튼(그라데이션)
+// 버튼 — 떠 있는 원 · 켜고 끄기 · 주 버튼(그라데이션) · 작은 칩 버튼
 import 'package:flutter/material.dart';
 
 import '../theme.dart';
@@ -132,6 +132,53 @@ class GradientButton extends StatelessWidget {
               label,
               style: TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w700, color: on ? Colors.white : Gp.faint),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 작은 칩 버튼 (아이콘 + 짧은 말) — 상세에서 아직 적은 것이 없는 줄 대신 한 줄에 나란히 (시세 찾아보기 · 예약 적기 · 구매가 적기).
+/// 빈 줄을 전체 폭으로 깔면 정가 아래가 회색 칸으로 길어져 상품보다 칸이 먼저 보였다 (2026-11-14)
+class ChipButton extends StatelessWidget {
+  const ChipButton({super.key, required this.icon, required this.label, required this.onTap, this.color = Gp.accent});
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  /// 아이콘 색 — 그 일의 색 (예약 = Gp.reserve · 구매가 = Gp.own)
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Gp.panel,
+      borderRadius: BorderRadius.circular(Gp.rSmall),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(Gp.rSmall),
+        child: Container(
+          height: 34,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(Gp.rSmall),
+            border: Border.all(color: Gp.line),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: Gp.iS, color: color),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w600, color: Gp.ink),
+                ),
+              ),
+            ],
           ),
         ),
       ),

@@ -34,6 +34,10 @@ class Catalog extends ChangeNotifier {
   static const _kitsKey = 'catalog_kits.json';
   static const _metaKey = 'catalog_meta.json';
 
+  /// 뒤 사진 미리 받기(lib/background/image_prefetch.dart)가 카탈로그를 풀지 않고 표지 주소 · 판만 읽는다
+  static const cacheKitsKey = _kitsKey;
+  static const cacheMetaKey = _metaKey;
+
   /// 상품 매핑 규칙(lib/data/gunpula.dart)을 바꾸면 +1 → 기기 캐시를 버리고 다시 받아 정리한다
   /// 4: 건담 박스 아트(data/atlas/gundam-boxart.json)를 대표 사진으로
   /// 5: 사진 없는 상품의 참고 그림(imageRef) · 魂 라인 이름(Hi-Resolution Model · 超合金 …)

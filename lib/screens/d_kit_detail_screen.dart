@@ -9,12 +9,13 @@
 // │ D-2d │ BrokenImages.keep                  │ 열리지 않는 사진은 빼기 (장 · 점 함께)    │ P09           │
 // │ D-4  │ 제목 + 일본어 원래 이름              │ 상품명 (공식 사이트 검색용 원문)        │ P02           │
 // │ D-5  │ Text(¥) + 발매일 + 한정 표시         │ 일본 정가 · 발매 · 한정/PB              │ P02 · P01     │
-// │ D-5b │ 정가 아래 시세 한 줄 → 바텀 시트      │ 정가 ↔ 국내 시세 (시세는 이 한 곳에만)   │ P01 · P08     │
-// │ D-5c │ 구매함일 때 "내 구매가" 줄 → 입력 시트 │ 내가 낸 돈 기록 (한 개 값 · 동기화)      │ P01 · P03     │
+// │ D-5a │ Wrap(ChipButton …) 정가 아래 한 줄   │ 아직 적은 것이 없는 줄 대신 작은 버튼: 시세 찾아보기 · 예약 적기 · 구매가 적기 │ P08 · P07 │
+// │ D-5b │ ChipButton(show_chart) → 바텀 시트 │ 국내 시세 찾아보기 (시세는 이 한 곳에만 · ↗ 는 공식 · 바깥 링크만) │ P01 · P08 │
+// │ D-5c │ 구매함: 적었으면 "내 구매가" 줄, 아니면 칩 → 입력 시트 │ 내가 낸 돈 기록 (한 개 값 · 동기화 · 정가 ≈ 어림은 시트 안) │ P01 · P03 │
 // │ D-5d │ KitPhotoStrip (T-8)                │ 구매함이면 이 상품의 내 사진 + 넣기       │ P07           │
 // │ D-5e │ 리본 · ♡ 아이콘 + @아이디              │ 이 상품을 가진 · 좋아요한 친구 (선물 · 겹침) │ P01 · P07   │
 // │ D-5f │ BuildStatusRow (단계 3칸 + 붓)        │ 조립 상태: 미조립 · 조립 중 · 완성 + 도색 (구매함) │ P01 · P03 │
-// │ D-5g │ PreorderRow → 예약 시트 · 📥 도착     │ 예약: 가게 · 낸 돈 · 결제 · 도착 예정 → 구매함으로 │ P01 · P03 │
+// │ D-5g │ 적었으면 PreorderRow, 아니면 칩 → 예약 시트 · 📥 도착 │ 예약: 가게 · 낸 돈 · 결제 · 도착 예정 → 구매함으로 │ P01 · P03 │
 // │ D-5h │ SoftTag 재판매 + 재판매 줄(날짜 · ↗)  │ 재판매(再販) 소식 (restocks.json, 없으면 숨김) │ P01 · P10   │
 // │ D-6  │ 하단 고정 바: ♡ 좋아요 · 리본 구매함   │ 좋아요 · 구매함 (따로 켜고 끔, 앱 전체 한 벌) │ P03 · P04 │
 // │ D-7  │ − n + (1–99)                       │ 수량: 좋아요 = 갖고 싶은 수 · 구매함 = 가진 수 │ P03 · P01 │
@@ -184,7 +185,14 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
               controller: ctrl,
               autofocus: true,
               keyboardType: TextInputType.number,
-              decoration: InputDecoration(hintText: tr('예: 38000'), suffixText: tr('원')),
+              // 안 적은 동안 지출 합계에 들어가는 어림값 (정가 × 환율) — 상세 줄에서 빼고 여기에만
+              decoration: InputDecoration(
+                hintText: switch (Catalog.instance.listPriceKrw(k.id)) {
+                  final int w => trf('정가로 ≈ {price}', {'price': won(w)}),
+                  _ => tr('예: 38000'),
+                },
+                suffixText: tr('원'),
+              ),
             ),
             const SizedBox(height: 6),
             Text(
@@ -375,6 +383,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
   }
 
   List<Widget> _info(BuildContext context) {
+    final hasPreorder = Marks.of(context).store.preorderOf(k.id) != null;
     return [
       // 기본 정보: 이름 → 정가 → 시세 한 줄
       SectionPanel(
@@ -422,30 +431,38 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
               ],
             ),
             const SizedBox(height: 10),
-            // D-5b 정가 바로 아래 국내 시세 — 누르면 자세히(시트)
-            InkWell(
-              onTap: _openMarket,
-              borderRadius: BorderRadius.circular(Gp.radius),
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(12, 10, 6, 10),
-                decoration: BoxDecoration(color: Gp.bg, borderRadius: BorderRadius.circular(Gp.radius)),
-                child: Row(
-                  children: [
-                    Text(
-                      tr('국내 시세'),
-                      style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        tr('모은 시세 없음 · 찾아보기'), // Gunpula 에 국내 시세가 없다 — 숫자를 지어내지 않는다
-                        style: const TextStyle(fontSize: Gp.t14, color: Gp.muted),
-                      ),
-                    ),
-                    const Icon(Icons.north_east, size: Gp.iS, color: Gp.muted),
-                  ],
+            // 아직 적은 것이 없는 줄은 작은 버튼 한 줄로 (빈 줄 셋이 정가 아래를 회색 칸으로 채웠다), 적으면 그 줄이 나온다
+            Wrap(
+              key: const ValueKey('detail-chips'),
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                // D-5b 국내 시세 — Gunpula 에 모은 시세가 없어 늘 찾아보기 (숫자를 지어내지 않는다). 모은 시세가 생기면 그 줄로
+                ChipButton(
+                  key: const ValueKey('chip-market'),
+                  icon: marketIcon,
+                  label: tr('시세 찾아보기'),
+                  onTap: _openMarket,
                 ),
-              ),
+                if (!_owned && !hasPreorder)
+                  ChipButton(
+                    // D-5g
+                    key: const ValueKey('chip-preorder'),
+                    icon: preorderIcon,
+                    color: Gp.reserve,
+                    label: tr('예약 적기'),
+                    onTap: () => showPreorderSheet(context, k),
+                  ),
+                if (_owned && _paid == null)
+                  ChipButton(
+                    // D-5c 정가로 어림한 값은 시트 안 입력칸에
+                    key: const ValueKey('chip-paid'),
+                    icon: paidIcon,
+                    color: Gp.own,
+                    label: tr('구매가 적기'),
+                    onTap: _editPaid,
+                  ),
+              ],
             ),
             if (_owned || _wanted) ...[
               const SizedBox(height: 8),
@@ -456,52 +473,48 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
                 onChanged: _setQty,
               ),
             ],
-            if (!_owned) ...[
+            if (!_owned && hasPreorder) ...[
               const SizedBox(height: 8),
               PreorderRow(kit: k), // D-5g 예약 (좋아요와 구매함 사이)
             ],
             if (_owned) ...[
-              const SizedBox(height: 8),
-              // D-5c 구매함이면 내가 낸 돈
-              InkWell(
-                onTap: _editPaid,
-                borderRadius: BorderRadius.circular(Gp.radius),
-                child: Container(
-                  padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(Gp.radius),
-                    border: Border.all(color: Gp.line),
-                  ),
-                  child: Row(
-                    children: [
-                      Text(
-                        tr('내 구매가'),
-                        style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          _paid == null
-                              ? switch (Catalog.instance.listPriceKrw(widget.kit.id)) {
-                                  final int w => trf('안 적음 · 정가로 ≈ {price}', {'price': won(w)}),
-                                  _ => tr('아직 안 적었어요'),
-                                }
-                              : won(_paid!),
-                          style: TextStyle(
-                            fontSize: Gp.t14,
-                            fontWeight: _paid == null ? FontWeight.w400 : FontWeight.w600,
-                            color: _paid == null ? Gp.muted : Gp.ink,
+              if (_paid case final paid?) ...[
+                const SizedBox(height: 8),
+                // D-5c 구매함이면 내가 낸 돈
+                InkWell(
+                  key: const ValueKey('paid-row'),
+                  onTap: _editPaid,
+                  borderRadius: BorderRadius.circular(Gp.radius),
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(Gp.radius),
+                      border: Border.all(color: Gp.line),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(paidIcon, size: Gp.iS, color: Gp.own),
+                        const SizedBox(width: 8),
+                        Text(
+                          tr('내 구매가'),
+                          style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            won(paid),
+                            style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w600, color: Gp.ink),
                           ),
                         ),
-                      ),
-                      Text(
-                        _paid == null ? tr('적기') : tr('수정'),
-                        style: const TextStyle(fontSize: Gp.t12, color: Gp.accent, fontWeight: FontWeight.w600),
-                      ),
-                    ],
+                        Text(
+                          tr('수정'),
+                          style: const TextStyle(fontSize: Gp.t12, color: Gp.accent, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
+              ],
               const SizedBox(height: 8),
               if (needsAssembly(widget.kit)) ...[
                 BuildStatusRow(kitId: widget.kit.id), // D-5f 조립 상태 (조립하는 상품만)
@@ -1091,6 +1104,8 @@ List<HelpItem> get detailHelp => [
   HelpItem(Icons.content_copy_rounded, tr('상품명 복사')),
   HelpItem(Icons.share_outlined, tr('이 상품 보내기 (받은 사람이 앱에서 바로 열기)')),
   HelpItem(Icons.north_east, tr('공식 상품 페이지')),
+  HelpItem(marketIcon, tr('국내 시세 찾아보기'), color: Gp.accent),
+  HelpItem(paidIcon, tr('내 구매가 (구매함)'), color: Gp.own),
   HelpItem(Icons.assignment_outlined, tr('공식 정보 전체')),
   HelpItem(Icons.menu_book_outlined, tr('공식 조립 설명서 (있는 상품만)')),
   HelpItem(Icons.flag_outlined, tr('정보 오류 제보')),

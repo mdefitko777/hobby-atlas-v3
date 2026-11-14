@@ -50,7 +50,7 @@ void main() {
   testWidgets('상품 상세: 중국어 화면이면 정가 · 시세 · 아래 띠가 중국어', (tester) async {
     await _pump(tester, KitDetailScreen(kit: _kit(), loaders: fakeLoaders));
     expect(find.text('日本定价'), findsOneWidget);
-    expect(find.text('韩国行情'), findsOneWidget);
+    expect(find.text('搜搜行情'), findsOneWidget); // 정가 아래 작은 버튼 「시세 찾아보기」
     expect(find.text('复制'), findsOneWidget);
     expect(find.text('喜欢'), findsOneWidget);
     expect(find.text('已购'), findsOneWidget);

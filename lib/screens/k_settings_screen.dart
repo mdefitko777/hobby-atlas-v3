@@ -6,6 +6,7 @@
 // │ K-3  │ ListTile(요약 · ›) → 알림(쌓기)      │ 알림: 켜짐 · 규칙 n개 / 꺼짐 (k_notify_settings.dart) │ P01 · P07 │
 // │ K-2  │ ListTile → 고르는 시트              │ 언어: 한국어(기본) · 中文                │ P04 · P10     │
 // │ K-4  │ ListTile                           │ 상품 데이터 기준일 · 지금 새로 받기 · 버전 │ P10           │
+// │ K-4b │ ListTile → 고르는 시트              │ 미리 받기: 와이파이만 · 모바일 데이터도(기본) — 새 소식 사진 │ P07 · P10 │
 // │ K-7  │ ListTile → HelpScreen(쌓기)          │ 도움말: 도감 칸(늘 컬러 · ♡ · 리본 · 내 사진) · 색 · 데이터 출처 · 알림 · 업데이트 │ P10 │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 앱 셸 ⚙ → 쌓기(push, 오른쪽에서). 알림 · 도움말 → 쌓기.
@@ -86,6 +87,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context,
       changed ? trf('새로 받았어요 · {n}개', {'n': c.kits.length}) : (c.error.isEmpty ? tr('이미 최신이에요') : c.error),
     );
+  }
+
+  static String _prefetchLabel(bool wifiOnly) => wifiOnly ? tr('와이파이만') : tr('모바일 데이터도');
+
+  /// K-4b 미리 받기 — 주인은 거의 모바일 데이터라 기본은 「모바일 데이터도」 (하루 15 MB 안에서)
+  Future<void> _pickPrefetch() async {
+    final picked = await showPickSheet<bool>(
+      context,
+      title: tr('미리 받기'),
+      values: const [true, false],
+      current: _n.config.prefetchWifiOnly,
+      label: _prefetchLabel,
+    );
+    if (picked != null) _n.setPrefetchWifiOnly(picked);
   }
 
   /// K-2 언어 고르기 — 고르면 L10n 이 앱 전체를 그 언어로 다시 만든다 (main.dart)
@@ -214,6 +229,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   trailing: _refreshing
                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                       : TextButton(onPressed: _refresh, child: Text(tr('지금 새로 받기'))),
+                ),
+                ListenableBuilder(
+                  listenable: _n,
+                  builder: (context, _) => ListTile(
+                    // K-4b 뒤에서 새 소식 사진 받기 (lib/background/image_prefetch.dart) — 설정은 알림 설정 파일에 같이
+                    key: const Key('settings-prefetch'),
+                    leading: const Icon(Icons.downloading_outlined),
+                    title: Text(tr('미리 받기')),
+                    subtitle: Text(tr('새 소식 사진 · 하루 15 MB까지')),
+                    trailing: Text(_prefetchLabel(_n.config.prefetchWifiOnly), style: const TextStyle(color: Gp.muted)),
+                    onTap: _pickPrefetch,
+                  ),
                 ),
               ],
             ),
