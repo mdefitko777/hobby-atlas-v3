@@ -86,6 +86,7 @@ const List<DeviceSection> builtInDeviceSections = [
   DeviceSection.set('special_friends'),
   DeviceSection.value('my_channels', empty: defaultMyChannels),
   DeviceSection.value('lego_scope', empty: 'recent'),
+  DeviceSection.value('channel_sync', empty: true),
   DeviceSection.set('dismissed_suggestions'),
   DeviceSection.value('profile_tags', empty: <String>[]),
   // 조립 상태 · 예약 (lib/data/user_store/kit_progress.dart) — kit_id 마다 따로 늦은 쪽 (예약을 지우면 deleted: true 로 남는다)

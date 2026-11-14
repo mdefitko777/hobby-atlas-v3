@@ -22,10 +22,18 @@ const _thumbs = ThumbIndex(thumbs: {'${_shard}a.jpg': '${_shard}t/a.webp', '${_s
 /// 피드에 실린 작은 표지 (사진 저장소의 thumbs/…webp)
 const _feedThumb = '${_shard}thumbs/web/x/new.webp';
 
-NoticeRecord _rec(String id, String kind, String kitId, {bool seen = false, String thumb = ''}) => NoticeRecord(
+NoticeRecord _rec(
+  String id,
+  String kind,
+  String kitId, {
+  bool seen = false,
+  String thumb = '',
+  String franchise = '',
+}) => NoticeRecord(
   id: id,
   kind: kind,
   kitId: kitId,
+  franchise: franchise,
   title: kitId,
   body: '',
   at: DateTime.utc(2026, 11, 14),
@@ -115,6 +123,20 @@ void main() {
         config: config,
       );
       expect(ids, isEmpty);
+    });
+
+    test('고르지 않은 채널 상품의 알림 사진은 받지 않는다 (채널을 모르는 알림은 받는다)', () {
+      final ids = newPrefetchKits(
+        fresh: [
+          _rec('a', 'release', 'mine', franchise: 'gundam'),
+          _rec('b', 'release', 'other', franchise: 'lego'),
+          _rec('c', 'release', 'unknown'),
+        ],
+        entries: const [],
+        before: NotifyState(),
+        config: config,
+      );
+      expect(ids.keys, ['mine', 'unknown']);
     });
 
     test('한 번에 많아야 $prefetchPerRun 개', () {

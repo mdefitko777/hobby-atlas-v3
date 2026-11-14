@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hobby_atlas/api.dart';
 import 'package:hobby_atlas/data/blob_store.dart';
 import 'package:hobby_atlas/data/catalog.dart';
+import 'package:hobby_atlas/data/user_store.dart';
 import 'package:hobby_atlas/data/gunpula.dart' show manifestSignature;
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -21,6 +22,9 @@ Map<String, Object?> _kit(String id, String name) => {
 };
 
 void main() {
+  // Fate 상품으로 시험한다 — 앱은 고른 채널만 받는다
+  setUpAll(() => UserStore.instance.setMyChannels(['fate']));
+
   test('목록에 없는 상품 → 새 데이터를 받아 찾는다 · 다시 눌러도 1분 안엔 manifest 를 또 받지 않는다', () async {
     BlobStore.debugDirectory = Directory.systemTemp.createTempSync('ha_missing_kit');
     var updated = '2026-11-10';

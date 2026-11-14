@@ -33,6 +33,7 @@ const notifyRuleDefaults = <String, bool>{
   'fate': false,
   'madoka': false,
   'lego': false,
+  'nintendo': false,
 };
 
 /// 관심 항목 (켜 두면 그 항목만) · 세계관 전체 (그 채널의 새 상품 전부)
@@ -48,7 +49,7 @@ const notifyInterestRules = [
   'preorder_soon',
   'live_soon',
 ];
-const notifyWorldRules = ['gundam', 'armored_core', 'pokemon', 'fate', 'madoka', 'lego'];
+const notifyWorldRules = ['gundam', 'armored_core', 'pokemon', 'fate', 'madoka', 'lego', 'nintendo'];
 
 /// 알림 화면(k_notify_settings.dart)의 자리 — 내 상품 = 채널과 상관없이, 나머지는 채널 시트.
 /// 키 · 저장 모양은 그대로 두고 화면에서 묶는 곳만 나눴다 (2026-11-12, 한 줄 칩 목록이 길어서)
@@ -77,6 +78,7 @@ const notifyRuleLabels = <String, String>{
   'fate': 'Fate 전체',
   'madoka': '마도카 마기카 전체',
   'lego': '레고 전체',
+  'nintendo': '닌텐도 전체',
 };
 
 /// 규칙 이름 (화면) — [notifyRuleLabels] 의 한국어는 그대로 두고 보일 때만 번역

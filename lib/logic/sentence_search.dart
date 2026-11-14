@@ -319,6 +319,13 @@ const sentenceConcepts = <Concept>[
   Concept('Fate', ['페이트', 'fate'], field: ConceptField.franchise, needles: ['fate'], weight: 0.5),
   Concept('레고', ['레고', 'lego', 'レゴ', '乐高'], field: ConceptField.franchise, needles: ['lego'], weight: 0.5),
   Concept(
+    '닌텐도',
+    ['닌텐도', 'nintendo', '任天堂', 'ニンテンドー'],
+    field: ConceptField.franchise,
+    needles: ['nintendo'],
+    weight: 0.5,
+  ),
+  Concept(
     '마도카 마기카',
     ['마도카', '마마마', 'madoka', 'まどか', 'まどマギ', '魔法少女小圆', '小圆'],
     field: ConceptField.franchise,

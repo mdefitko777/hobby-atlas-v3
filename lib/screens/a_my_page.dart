@@ -58,6 +58,10 @@ class _MyPageViewState extends State<MyPageView> {
       for (final id in me.idsWith(const {CollectStatus.owned}))
         if (cat.byId[id] case final k? when hit(k)) k,
     ];
+    // 이 기기 어디에도 없는 상품(다른 기기에서 적었고 이 기기는 그 채널을 받은 적이 없다)도 수에는 센다 — 기록은 그대로라
+    // 그 채널을 고르면 목록에도 보인다. 찾기 · 필터 중에는 거를 수 없어 세지 않는다
+    final plain = widget.query.trim().isEmpty && (f == null || f.count == 0);
+    int unseen(CollectStatus s) => plain ? me.idsWith({s}).where((id) => cat.byId[id] == null).length : 0;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -67,8 +71,8 @@ class _MyPageViewState extends State<MyPageView> {
           padding: const EdgeInsets.fromLTRB(16, 2, 16, 12),
           child: CollectionStats(
             // A-21 · A-21b 끝에 공유 카드
-            liked: liked.length,
-            owned: owned.length,
+            liked: liked.length + unseen(CollectStatus.wanted),
+            owned: owned.length + unseen(CollectStatus.owned),
             backlog: backlogCount(owned.where(needsAssembly).map((k) => k.id), me.stageOf),
             month: me.spendInMonth(appNow()),
             total: me.spendKrw,

@@ -44,7 +44,7 @@ import '../api.dart';
 import '../logic/build_status.dart' show needsAssembly;
 import '../logic/friends.dart';
 import '../logic/kit_link.dart';
-import '../logic/kit_rules.dart' show kitPrice;
+import '../logic/kit_rules.dart' show kitPrice, shopUrl;
 import '../logic/market.dart';
 import '../logic/restock.dart';
 import '../marks.dart';
@@ -266,17 +266,20 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
   List<_PriceLine> get _priceLines {
     final twin = Catalog.instance.byId[k.twinId];
     final jp = k.region == 'jp';
+    // 두 나라 출처 상품(both)은 제 주소 안에 두 나라 가게가 다 있다
+    final krSide = jp ? twin : k;
+    final jpSide = jp || k.region == 'both' ? k : twin;
     final lines = [
       if (k.priceKrw case final w?)
         (
           label: '한국 정가',
           short: '한국',
           price: wonSign(w),
-          url: (jp ? twin?.officialUrl : k.officialUrl) ?? '',
+          url: krSide == null ? '' : shopUrl(krSide, kr: true),
           key: 'kr',
         ),
       if (k.priceJpy case final p?)
-        (label: '일본 정가', short: '일본', price: yen(p), url: (jp ? k.officialUrl : twin?.officialUrl) ?? '', key: 'jp'),
+        (label: '일본 정가', short: '일본', price: yen(p), url: jpSide == null ? '' : shopUrl(jpSide, kr: false), key: 'jp'),
     ];
     if (lines.isEmpty) {
       return [(label: k.region == 'kr' ? '한국 정가' : '일본 정가', short: '', price: tr('가격 미정'), url: '', key: '')];

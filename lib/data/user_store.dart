@@ -91,6 +91,9 @@ class UserStore extends ChangeNotifier with _AtlasLocal, _History, _ProfileLocal
   /// 레고 보기 범위 (검색 탭 › 레고) — 처음 값은 최근 정식 세트
   LegoScope legoScope = LegoScope.recent;
 
+  /// 채널 맞춰 보기 (설정 › 앱): 홈 · 검색 · 캘린더 · 컬렉션이 같은 채널. 끄면 탭마다 따로 — 처음 값은 켜짐
+  bool channelSync = true;
+
   /// 친구 쪽 기기 기록 (아바타 · 배경 · 사진 공개 범위 · 알 수도 있는 친구 닫음 · 서랍 본 시각) — lib/data/social_local.dart
   late final SocialLocal social = SocialLocal(_changed);
 
@@ -169,6 +172,7 @@ class UserStore extends ChangeNotifier with _AtlasLocal, _History, _ProfileLocal
       ..clear()
       ..addAll(jList(local['special_friends']).whereType<String>());
     legoScope = local['lego_scope'] == 'all' ? LegoScope.all : LegoScope.recent;
+    channelSync = local['channel_sync'] != false;
     social.load(local);
     _photos
       ..clear()
@@ -210,6 +214,7 @@ class UserStore extends ChangeNotifier with _AtlasLocal, _History, _ProfileLocal
       'special_friends': specialFriends.toList(),
       // 처음 값(recent)도 늘 적는다 — 빠지면 동기화가 '지움'으로 보고 다른 기기의 '전부'가 되살아난다
       'lego_scope': legoScope.name,
+      'channel_sync': channelSync,
       ...social.toJson(),
       'photos': [for (final p in _photos) p.toJson()],
       'profile_tags': profileTags,
@@ -263,6 +268,17 @@ class UserStore extends ChangeNotifier with _AtlasLocal, _History, _ProfileLocal
 
   int get ownedCount => idsWith(const {CollectStatus.owned}).length;
   int get wantedCount => idsWith(const {CollectStatus.wanted}).length;
+
+  /// 내가 무언가 적어 둔 상품 — 좋아요 · 구매함 · 예약 · 조립 상태 · 휴지통 · 내 사진. 고르지 않은 채널은 받지 않아
+  /// 카탈로그가 이 상품들만 따로 기기에 둔다 (lib/data/catalog.dart _kept)
+  Set<String> get markedKitIds => {
+    ...idsWith(const {CollectStatus.owned, CollectStatus.wanted}),
+    ...activePreorders.keys,
+    ...buildStatus.keys,
+    ...trash.keys,
+    for (final p in photos)
+      if (p.kitId.isNotEmpty) p.kitId,
+  };
 
   /// 구매가를 안 적은 상품의 값 (Catalog 가 정가 × 환율로 채운다)
   int? Function(String id)? listPrice;
@@ -392,6 +408,12 @@ class UserStore extends ChangeNotifier with _AtlasLocal, _History, _ProfileLocal
   void setLegoScope(LegoScope v) {
     if (v == legoScope) return;
     legoScope = v;
+    _changed();
+  }
+
+  void setChannelSync(bool on) {
+    if (on == channelSync) return;
+    channelSync = on;
     _changed();
   }
 

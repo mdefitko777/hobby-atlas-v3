@@ -22,6 +22,9 @@ const allChannels = <Channel>[
   Channel(id: 'fate', label: 'Fate', image: 'assets/gp/worlds/fa_stay_night.jpg'),
   Channel(id: 'madoka', label: '마도카 마기카', image: 'assets/gp/worlds/ma_madoka.jpg'),
   Channel(id: 'lego', label: '레고', image: 'assets/gp/worlds/le_lego.jpg'),
+  // 게임 · 본체 · 주변기기 · amiibo · 캐릭터 굿즈 (Gunpula 2026-11-14). 앱 안 그림을 새로 넣으면 APK 를 새로 내야 해서
+  // 그림은 atlas-groups `channels.nintendo.image` (없으면 첫 글자). 처음 내 채널에는 없다 — 고르기 전엔 아무것도 받지 않는다
+  Channel(id: 'nintendo', label: '닌텐도'),
   Channel(id: 'kamen_rider', label: '가면라이더', hasData: false),
   Channel(id: 'evangelion', label: '에반게리온', hasData: false),
   Channel(id: 'ultraman', label: '울트라맨', hasData: false),
@@ -38,6 +41,10 @@ final channelCovers = <String, String>{};
 /// 종류 이름 = 앱의 라인 이름(lib/data/gunpula.dart lineLabel). 없으면 그 종류의 최근 상품 사진
 final lineCovers = <String, Map<String, String>>{};
 
+/// Gunpula 에 상품 파일이 있는 채널 (manifest `franchises`, Catalog 가 채운다). 비어 있으면 모름 → 위 hasData 그대로.
+/// 앱이 먼저 아는 새 채널(닌텐도)은 Gunpula 가 파일을 내기 전까지 회색으로
+final channelsWithData = <String>{};
+
 /// 처음 설치했을 때의 내 채널
 const defaultMyChannels = ['gundam', 'beyblade', 'pokemon'];
 
@@ -47,5 +54,7 @@ Channel channelOf(String id) {
     orElse: () => Channel(id: id, label: id, hasData: false),
   );
   final cover = channelCovers[id];
-  return cover == null || cover.isEmpty ? c : Channel(id: c.id, label: c.label, image: cover, hasData: c.hasData);
+  final hasData = c.hasData && (channelsWithData.isEmpty || channelsWithData.contains(id));
+  if ((cover == null || cover.isEmpty) && hasData == c.hasData) return c;
+  return Channel(id: c.id, label: c.label, image: cover == null || cover.isEmpty ? c.image : cover, hasData: hasData);
 }

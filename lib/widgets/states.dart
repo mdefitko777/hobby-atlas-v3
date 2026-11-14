@@ -1,6 +1,7 @@
 // 불러오는 중 · 오류 · 빈 목록 — GET 을 쓰는 화면은 모두 이 세 상태를 그린다 (P01 · P09)
 import 'package:flutter/material.dart';
 
+import '../data/catalog.dart' show Catalog;
 import '../l10n/l10n.dart';
 import '../theme.dart';
 
@@ -8,25 +9,40 @@ import '../theme.dart';
 class LoadingView extends StatelessWidget {
   const LoadingView({super.key, this.label});
 
-  /// 없으면 '불러오는 중…'
+  /// 없으면 '불러오는 중…' — 막 더한 채널을 받는 중이면 「{channel} 상품 받는 중 · 3.2 MB」
+  /// (채널은 고르면 그때 처음 받아서, 큰 채널은 몇십 초 걸린다). 한 줄로 — 상세의 120 높이 칸에도 들어가게
   final String? label;
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const MiniSpinner(),
-            const SizedBox(height: 12),
-            Text(label ?? tr('불러오는 중…'), style: const TextStyle(color: Gp.muted)),
-          ],
-        ),
-      ),
+    if (label case final l?) return _body(l);
+    final c = Catalog.instance;
+    return ListenableBuilder(
+      listenable: c,
+      builder: (context, _) => c.channelStep.isEmpty
+          ? _body(tr('불러오는 중…'))
+          : _body('${c.channelStep} · ${(c.channelBytes / (1024 * 1024)).toStringAsFixed(1)} MB', oneLine: true),
     );
   }
+
+  Widget _body(String text, {bool oneLine = false}) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const MiniSpinner(),
+          const SizedBox(height: 12),
+          Text(
+            text,
+            maxLines: oneLine ? 1 : null,
+            overflow: oneLine ? TextOverflow.ellipsis : null,
+            style: const TextStyle(color: Gp.muted),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 /// 오류 상태: 무엇이 잘못됐는지 + 다시 시도 버튼

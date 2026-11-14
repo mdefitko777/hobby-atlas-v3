@@ -7,10 +7,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hobby_atlas/api.dart';
 import 'package:hobby_atlas/data/blob_store.dart';
 import 'package:hobby_atlas/data/catalog.dart';
+import 'package:hobby_atlas/data/user_store.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
+  // Fate 상품으로 시험한다 — 앱은 고른 채널만 받는다
+  setUpAll(() => UserStore.instance.setMyChannels(['fate']));
+
   test('앱을 막 켜고 바로 옛 id 로 찾아도 남은 상품이 나온다', () async {
     BlobStore.debugDirectory = Directory.systemTemp.createTempSync('ha_alias_cold');
     Catalog.debugClient = MockClient((req) async {

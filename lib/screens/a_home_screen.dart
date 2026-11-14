@@ -60,6 +60,8 @@ class HomeScreen extends StatefulWidget {
     super.key,
     required this.myChannels,
     required this.onMyChannelsChanged,
+    this.channel,
+    this.onChannelChanged,
     required this.onOpenSearch,
     required this.onCamera,
     this.onJump,
@@ -72,6 +74,10 @@ class HomeScreen extends StatefulWidget {
 
   final List<String> myChannels;
   final ValueChanged<List<String>> onMyChannelsChanged;
+
+  /// 앱 셸이 든 이 탭의 채널 · 고르면 셸에 알림 (채널 맞춰 보기, ChannelScope)
+  final String? channel;
+  final ValueChanged<String>? onChannelChanged;
   final VoidCallback onOpenSearch;
 
   /// 검색창 카메라 → 앱 셸의 찍어서 찾기 시트
@@ -183,6 +189,12 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
   List<String> get myChannels => widget.myChannels;
 
   @override
+  String? get shellChannel => widget.channel;
+
+  @override
+  ValueChanged<String>? get onShellChannel => widget.onChannelChanged;
+
+  @override
   void loadScope(List<String> ids) {
     // STATE: 선택 채널 → 상품 · 공식 예고 → 배너 + 가로 줄
     _future = Future.wait([
@@ -194,7 +206,7 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
   @override
   void initState() {
     super.initState();
-    reloadScope();
+    initScope();
   }
 
   @override

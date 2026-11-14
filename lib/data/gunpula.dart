@@ -35,12 +35,14 @@ String manifestSignature(Object? manifest) {
 
 /// 매일 갱신되는 순서대로 받는 파일들 (kits.json · search-index.json 은 받지 않는다).
 /// 새 소식 피드는 여기서 받지 않는다 — 알림 확인(lib/background/catalog_check_worker.dart)이 manifest 가 바뀔 때 한 번만 받는다.
-const franchiseIds = ['gundam', 'beyblade', 'pokemon', 'armored_core', 'fate', 'madoka', 'lego'];
+/// 이 중 내 채널만 받는다 (Catalog.wantedChannels) — 고르지 않은 채널은 상품 · 그 채널 보조 파일 모두 받지 않는다
+const franchiseIds = ['gundam', 'beyblade', 'pokemon', 'armored_core', 'fate', 'madoka', 'lego', 'nintendo'];
 
 /// 예전에 받던 건담 도감 파일 (gget) — 기기 캐시에서 지운다
 const retiredAuxFiles = ['gget-units.json', 'gget-kit-map.json', 'gget-series-sections.json'];
 
-/// 매핑(compute)에만 쓰고 기기에 따로 두지 않는 보조 파일
+/// 상품 매핑(compute)에만 쓰는 보조 파일 — 메모리에 두지 않고, 판이 같은 날 이것만 바뀌어도 따로 받지 않는다 (상품과 같이 녹는다).
+/// 기기에는 둔다: 나중에 채널을 더할 때 다시 받지 않게
 const mapOnlyAuxFiles = {'grades.json', 'kit-first-seen.json', atlasBoxartFile};
 
 const auxFiles = [
@@ -69,6 +71,25 @@ const auxFiles = [
   // 작은 그림 목록 (원본 주소 → 사진 저장소의 400 px WebP, lib/logic/image_size.dart ThumbIndex) — Pages 에만 있다.
   // 없으면 404 → 원본 그대로
   thumbsFile,
+];
+
+/// 한 채널만 쓰는 보조 파일 → 그 채널. 내 채널이 아니면 받지 않고, 채널을 빼면 기기에서도 지운다.
+/// 여기 없는 파일(예고 · 등급 · 작은 그림 목록 …)은 모든 채널이 같이 쓰는 작은 파일이라 늘 받는다
+const auxChannel = {
+  atlasMsFile: 'gundam',
+  atlasKitMsFile: 'gundam',
+  atlasBoxartFile: 'gundam',
+  atlasChaptersFile: 'gundam',
+  'bbx-database.json': 'beyblade',
+  'atlas/mezastar-intl.json': 'pokemon',
+  'atlas/mezastar-jp.json': 'pokemon',
+  'atlas/pokemon-frienda.json': 'pokemon',
+};
+
+/// [channels] 를 볼 때 받을 보조 파일 (auxFiles 순서 그대로)
+List<String> auxFilesFor(Iterable<String> channels) => [
+  for (final f in auxFiles)
+    if (auxChannel[f] case final c when c == null || channels.contains(c)) f,
 ];
 
 /// 보조 파일 이름 — 작은 그림 목록 (Gunpula publish_site.mjs 가 발행할 때 만든다)
@@ -206,6 +227,11 @@ const _lineLabels = {
   'AC30MM': '30MM',
   'AC_SMP': 'SMP',
   'AC_SHOKUGAN': '식완',
+  // 닌텐도 (Gunpula nintendo — 닌텐도 스토어 한국 · nintendo.com/kr, 계약 2026-11-14)
+  'NIN_GAME': '게임',
+  'NIN_HW': '본체 · 주변기기',
+  'NIN_AMIIBO': 'amiibo',
+  'NIN_GOODS': '굿즈',
 };
 
 /// 전각 영숫자 → 반각 (ＨＧＵＣ → HGUC) — lib/format.dart
@@ -237,6 +263,12 @@ String cleanSubline(String subline, String code, String line, {String name = ''}
       return s == line ? '' : s;
     case 'BEYBLADE_X':
       return _beyForms[s.replaceFirst('BEYBLADE X ', '')] ?? '';
+    case 'NIN_GAME' || 'NIN_HW':
+      // 기종 (Nintendo Switch 2 · Nintendo Switch) — 같은 게임도 기종마다 따로 나온다
+      final m = RegExp(r'Nintendo Switch(?:\s*2)?', caseSensitive: false).firstMatch(s);
+      return m == null ? '' : (m.group(0)!.endsWith('2') ? 'Nintendo Switch 2' : 'Nintendo Switch');
+    case 'NIN_AMIIBO':
+      return s; // amiibo 시리즈 (슈퍼 스매시브라더스 시리즈 · amiibo 카드 …)
   }
   return '';
 }
@@ -352,6 +384,12 @@ String typeLabel(String code, String category, [String name = '']) {
       return '피규어';
     case 'FATE_ACTION' || 'MADOKA_ACTION':
       return '액션';
+    case 'NIN_GAME':
+      return '게임';
+    case 'NIN_HW':
+      return '본체 · 주변기기';
+    case 'NIN_AMIIBO':
+      return '피규어';
   }
   return switch (category) {
     'core' || 'core_subline' || 'one_hundred' || 'sd' || 'historical' || 'special' || 'plastic_model' => '프라모델',
@@ -413,12 +451,16 @@ const _brandBySource = {
   'bandai_gashapon_gundam_jp': '반다이 가샤폰',
   'bandai_candy_gundam_jp': '반다이 캔디',
   'bandai_candy_jp': '반다이 캔디',
+  'nintendo_store_kr': 'Nintendo',
+  'nintendo_kr': 'Nintendo',
+  'bnkrmall_kr': '반다이남코코리아',
+  'academy_kr': '아카데미과학',
 };
 
 // ── 파는 나라 (출처 사이트로) ─────────────────────────────────────────────
 /// 출처 사이트 → 'kr' · 'jp' · 'both' · ''(모름: 레고 · 손으로 넣은 것 · 위키).
-/// 한국 출처는 지금 pokemon_store_kr 하나 (sources.json 2026-11-14) — 앞으로 들어올 한국 가게(BNKR · 아카데미 ·
-/// 포켓몬코리아)도 Gunpula 가 `_kr` 로 끝나는 id 를 쓰면 따로 고치지 않아도 한국이 된다
+/// 한국 출처: pokemon_store_kr · bnkrmall_kr · academy_kr · nintendo_store_kr · nintendo_kr (Gunpula 2026-11-14) —
+/// 앞으로 들어올 한국 가게도 Gunpula 가 `_kr` 로 끝나는 id 를 쓰면 따로 고치지 않아도 한국이 된다
 String saleRegion(Iterable<String> sourceIds) {
   var kr = false;
   var jp = false;
@@ -436,18 +478,23 @@ String saleRegion(Iterable<String> sourceIds) {
 /// 같은 바코드의 한국 · 일본 상품을 짝짓는다 — 한국 포켓몬스토어와 일본 포켓몬센터에 같은 상품이 따로 들어와
 /// 같은 카드가 둘 보였다 (2026-11-14 실측 211쌍). 일본 쪽이 여럿이면 `pokemon-center-<JAN>` 먼저.
 /// 짝끼리 없는 나라 가격을 서로 채우고(환산하지 않은 진짜 가격), 한국 쪽 찾기 글자에 일본 쪽 것을 더한다
-/// (일본어 이름으로 찾아도 보이는 카드 = 한국 쪽이 나오게). 일본어 원래 이름도 일본 쪽 것으로
+/// (일본어 이름으로 찾아도 보이는 카드 = 한국 쪽이 나오게). 일본어 원래 이름도 일본 쪽 것으로.
+/// 두 나라 출처가 다 붙은 상품(region both — BNKR · 아카데미 가격이 일본 상품에 붙은 것)은 이미 두 정가라 일본 상품과는
+/// 짝짓지 않는다. 같은 바코드의 한국 상품이 따로 있고 일본 짝이 없을 때만 그 한국 카드 뒤로 (한 카드 · 두 id 그대로)
 void pairTwins(List<Map<String, Object?>> out) {
   final jpByJan = <String, Map<String, Object?>>{};
+  final bothByJan = <String, Map<String, Object?>>{};
   for (final m in out) {
     final jan = jStr(m['jan']);
-    if (jan.isEmpty || m['region'] != 'jp') continue;
+    if (jan.isEmpty) continue;
+    if (m['region'] == 'both') bothByJan.putIfAbsent(jan, () => m);
+    if (m['region'] != 'jp') continue;
     if (!jpByJan.containsKey(jan) || m['id'] == 'pokemon-center-$jan') jpByJan[jan] = m;
   }
   for (final kr in out) {
     final jan = jStr(kr['jan']);
     if (jan.isEmpty || kr['region'] != 'kr') continue;
-    final jp = jpByJan.remove(jan);
+    final jp = jpByJan.remove(jan) ?? bothByJan.remove(jan);
     if (jp == null) continue;
     kr['twin'] = jp['id'];
     jp['twin'] = kr['id'];

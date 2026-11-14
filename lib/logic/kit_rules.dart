@@ -17,8 +17,8 @@ bool kitMatches(Kit k, String query) {
 
 // ── 한국 · 일본 정가 (같은 바코드 짝) ─────────────────────────────────────────
 
-/// 둘러보는 목록에서 빠지는 쪽 — 한국 짝이 있는 일본 상품 (lib/data/gunpula.dart pairTwins)
-bool isJpTwin(Kit k) => k.twinId.isNotEmpty && k.region == 'jp';
+/// 둘러보는 목록에서 빠지는 쪽 — 한국 짝이 있는 일본 상품 · 두 나라 상품 (lib/data/gunpula.dart pairTwins)
+bool isJpTwin(Kit k) => k.twinId.isNotEmpty && k.region != 'kr';
 
 /// 한국에서 파는 상품 (한국 출처 · 둘 다 · 짝이 있는 것)
 bool soldInKorea(Kit k) => k.region == 'kr' || k.region == 'both' || k.twinId.isNotEmpty;
@@ -31,6 +31,16 @@ List<String> kitPriceParts(Kit k) {
   final krw = k.priceKrw == null ? null : wonSign(k.priceKrw);
   final jpy = k.priceJpy == null ? null : yen(k.priceJpy);
   return k.region == 'jp' ? [?jpy, ?krw] : [?krw, ?jpy];
+}
+
+/// 상품 [k] 의 그 나라 가게 페이지 ([kr] = 한국). 두 나라 출처 상품(both — 일본 상품에 BNKR · 아카데미 가격)은 공식 주소
+/// (첫 출처)가 일본 페이지라 상세의 「한국 정가 ↗」 가 일본 가게를 열고 일본 줄에는 ↗ 가 없었다 → 주소가 .kr 인 것이 한국
+String shopUrl(Kit k, {required bool kr}) {
+  if (k.region != 'both') return k.officialUrl;
+  for (final u in k.sourceUrls) {
+    if ((Uri.tryParse(u)?.host ?? '').endsWith('.kr') == kr) return u;
+  }
+  return k.officialUrl;
 }
 
 /// 정가 한 줄: "₩19,000 · ¥1,650" · "¥1,540" · '가격 미정' (목록 · 상세 · 컬렉션 공통, 환산값 없음)

@@ -89,7 +89,7 @@ class _WorldGuideState extends State<WorldGuide> {
                             'pokemon' => '세대',
                             'fate' => '작품',
                             'madoka' => '캐릭터',
-                            'lego' => '시리즈',
+                            'lego' || 'nintendo' => '시리즈',
                             _ => '게임 세대',
                           },
                           worlds,

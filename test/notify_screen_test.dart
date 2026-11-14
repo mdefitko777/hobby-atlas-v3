@@ -188,7 +188,12 @@ void main() {
     await pumpApp(tester, SettingsScreen(notify: store), size: const Size(390, 1400));
     const row = Key('settings-notify');
     expect(inRow(row, notifySummary(store.config)), findsOneWidget);
-    expect(find.byType(SwitchListTile), findsNothing, reason: '규칙 스위치 · 칩은 알림 페이지에');
+    // 설정의 스위치는 채널 맞춰 보기 하나뿐
+    expect(
+      find.byWidgetPredicate((w) => w is SwitchListTile && w.key != const Key('settings-channel-sync')),
+      findsNothing,
+      reason: '규칙 스위치 · 칩은 알림 페이지에',
+    );
     store.setRule('wanted', false);
     await tester.pump();
     expect(inRow(row, notifySummary(store.config)), findsOneWidget);

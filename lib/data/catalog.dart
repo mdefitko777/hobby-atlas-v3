@@ -1,10 +1,15 @@
 // Gunpula 상품 카탈로그 — 기기 캐시를 먼저 보여 주고, 뒤에서 GitHub Pages 의 새 데이터를 받는다.
 //   1) split/manifest.json 의 updated_at · total · content_hash 가 같으면 상품은 받지 않는다 (manifestSignature).
 //      그래도 manifest `files`(보조 파일마다 지문)가 달라진 보조 파일은 그것만 받는다 ([auxHashes])
-//   2) 다르면 보조 파일(auxFiles) → split/kits-<채널>.json 5개를 받아 compute() 에서 가벼운 모양으로 바꿔 저장
+//   2) 다르면 보조 파일(auxFiles) → split/kits-<채널>.json 을 받아 compute() 에서 가벼운 모양으로 바꿔 저장
+// 받는 것은 내 채널뿐 ([wantedChannels]) — 고르지 않은 채널은 상품 파일도 그 채널 보조 파일(건담 도감 · 베이 부품 · 태그 도감)도
+// 받지 않는다. 채널을 더하면 그 채널 것만 받고([syncChannels]), 빼면 기기에서 지운다 (2026-11-14, 전에는 7채널 약 50 MB 를 다 받았다).
+// 지우는 채널에서 내가 적어 둔 상품만은 따로 남긴다 ([_kept] — 컬렉션 · 알림이 그 상품을 계속 찾는다)
 // 처음 설치(캐시 없음)면 [firstDownload] — 앱은 셸 대신 받는 화면(lib/screens/w_first_run_screen.dart)을 보인다.
 //   진행 = 받은 파일 [filesDone] / [filesTotal] · 받은 바이트 [bytesReceived]
 import '../format.dart';
+
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -12,13 +17,14 @@ import 'package:crypto/crypto.dart' show sha256;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
-import '../channels.dart' show channelCovers, lineCovers;
+import '../channels.dart' show channelCovers, channelOf, channelsWithData, lineCovers;
 import '../json_util.dart';
 import '../l10n/l10n.dart';
 import '../models.dart';
 import 'blob_store.dart';
 import 'gundam_atlas.dart' show atlasBoxartFile, atlasKitMsFile, atlasMsFile;
 import 'gunpula.dart';
+import 'tag_atlas.dart' show friendaFile, mezastarIntlFile, mezastarJpFile;
 import 'user_store.dart';
 import '../logic/image_size.dart' show ThumbIndex, parseThumbIndex;
 import '../logic/kit_rules.dart' show isJpTwin;
@@ -34,6 +40,7 @@ class Catalog extends ChangeNotifier {
 
   static const _kitsKey = 'catalog_kits.json';
   static const _metaKey = 'catalog_meta.json';
+  static const _keptKey = 'catalog_kept.json';
 
   /// 뒤 사진 미리 받기(lib/background/image_prefetch.dart)가 카탈로그를 풀지 않고 표지 주소 · 판만 읽는다
   static const cacheKitsKey = _kitsKey;
@@ -54,7 +61,8 @@ class Catalog extends ChangeNotifier {
   /// 15: 찾기 글자(blob)의 전각 영숫자를 반각으로 (ＨＷＳ Ｖｅｒ．Ｋａ → hws ver.ka)
   /// 17: 찾기 낱말의 중국어(names.zh · labels.zh · search_zh)를 뒤로 모으고 그 자리(zhKeywordsFrom)
   /// 18: 파는 나라(한국 · 일본) · 같은 바코드 짝(twin) · 짝의 가격
-  static const mapVersion = 18;
+  /// 19: 닌텐도 등급 · 한국 가게(BNKR · 아카데미) 브랜드, 두 나라 출처 상품(both)도 같은 바코드의 한국 상품과 한 카드로
+  static const mapVersion = 19;
 
   CatalogPhase phase = CatalogPhase.empty;
   String error = '';
@@ -65,9 +73,12 @@ class Catalog extends ChangeNotifier {
   /// 처음 설치라 캐시가 없어 받는 중 (실패해도 true — 받는 화면에서 다시 시도)
   bool firstDownload = false;
 
-  /// 첫 다운로드: 받은 파일 수 / 받을 파일 수 (manifest + 보조 파일 + 채널별 상품)
+  /// 첫 다운로드: 받은 파일 수 / 받을 파일 수 (manifest + 보조 파일 + 내 채널 상품)
   int filesDone = 0;
-  int get filesTotal => 1 + auxFiles.length + franchiseIds.length;
+  int get filesTotal {
+    final w = wantedChannels;
+    return 1 + auxFilesFor(w).length + w.length;
+  }
 
   /// 첫 다운로드: 지금까지 받은 바이트
   int bytesReceived = 0;
@@ -88,6 +99,40 @@ class Catalog extends ChangeNotifier {
   Map<String, Kit> byId = const {};
   Map<String, Object?> manifest = const {};
   List<Map<String, Object?>> _slim = const [];
+
+  /// 기기 목록(_slim)에 없는 채널의 상품 중 내가 적어 둔 것 (UserStore.markedKitIds) — id → slim.
+  /// 고르지 않은 채널은 받지 않아, 채널을 빼거나 옛 7채널 캐시에서 올라오면 좋아요 · 구매함 · 예약 · 알림이 기댄 상품이
+  /// 사라졌다 (2026-11-14). 그 상품만 따로 두어 byId(컬렉션 · 알림 · 상세 · 친구 비교)에는 있고, 둘러보는 목록(kits)에는 없다
+  Map<String, Map<String, Object?>> _kept = {};
+  List<Kit> _keptKits = const [];
+  bool _keptDirty = false;
+
+  /// 기기 목록에 든 채널 (meta `franchises`) — 받기를 마친 채널만
+  List<String> _have = const [];
+
+  /// 받을 채널 = 내 채널 중 앱이 아는 것 · Gunpula 에 파일이 있는 것 (manifest `franchises`, 모르면 앱이 아는 것 전부).
+  /// 순서는 franchiseIds
+  List<String> get wantedChannels => _wantedFor(manifest);
+
+  List<String> _wantedFor(Map<String, Object?> m) {
+    final mine = UserStore.instance.myChannels;
+    final listed = jMap(m['franchises']);
+    return [
+      for (final f in franchiseIds)
+        if (mine.contains(f) && (listed.isEmpty || listed.containsKey(f))) f,
+    ];
+  }
+
+  /// 기기 목록이 있다 (manifest 를 한 번은 받았다). 채널을 하나도 안 골랐거나 아직 상품이 없는 채널만 고르면
+  /// kits 가 비어도 받기는 끝난 것 — kits.isEmpty 로 보면 받기 실패로 여겨 첫 받기 화면이 돌았다
+  bool get _ready => manifest.isNotEmpty || kits.isNotEmpty;
+
+  /// 채널을 더해 받는 중인 그 채널 이름 · 받은 바이트 (화면의 「불러오는 중」 자리, LoadingView)
+  String channelStep = '';
+  int channelBytes = 0;
+
+  /// 더한 채널을 못 받았을 때 (채널 → 오류 문장) — 그 채널을 보는 화면이 오류 + 다시 시도
+  final Map<String, String> _channelErrors = {};
   final Map<String, Object?> _aux = {};
 
   /// 최근 추가 = 이 날짜 이후 처음 들어온 상품 (데이터의 가장 새 날짜 기준 3일)
@@ -107,17 +152,19 @@ class Catalog extends ChangeNotifier {
 
   /// 화면이 데이터를 쓰기 전에 기다린다. 캐시가 있으면 바로, 없으면 첫 다운로드가 끝날 때까지.
   Future<void> ensureLoaded() async {
-    if (kits.isNotEmpty) return;
+    if (_ready) return;
     await (_loading ??= _start());
-    if (kits.isEmpty) {
+    if (!_ready) {
       _loading = null; // 다시 시도할 수 있게
       throw CatalogException(error.isEmpty ? tr('상품 데이터를 받지 못했어요.') : error);
     }
   }
 
   Future<void> _start() async {
+    // 받을 채널은 내 채널로 정한다 — 저장 파일을 읽기 전이면 처음 값(건담 · 베이 · 포켓몬)으로 받아 버린다
+    await UserStore.instance.load();
     await _loadCache();
-    if (kits.isEmpty) {
+    if (!_ready) {
       firstDownload = true;
       filesDone = 0;
       bytesReceived = 0;
@@ -130,16 +177,23 @@ class Catalog extends ChangeNotifier {
   }
 
   Future<void> _loadCache() async {
+    await _readKept();
     final meta = await BlobStore.read(_metaKey);
     final slim = await BlobStore.read(_kitsKey);
     if (meta == null || slim == null) return;
     try {
-      // 예전 규칙으로 정리한 캐시 (예: 굿즈가 전부 가샤폰이던 때) → 쓰지 않고 새로 받는다
       final m = jsonDecode(meta) as Map<String, Object?>;
+      // 버리거나 내 채널에 맞추기 전에, 고르지 않은 채널(옛 앱은 7채널을 다 받아 두었다)에서 내가 적어 둔 상품을 건진다
+      await _keepFromCache(slim, m['franchises'] is List ? jList(m['franchises']).whereType<String>() : franchiseIds);
+      // 예전 규칙으로 정리한 캐시 (예: 굿즈가 전부 가샤폰이던 때) → 쓰지 않고 새로 받는다
       if (m['map_version'] != mapVersion) return;
-      // 그때 받은 채널 목록이 지금과 다르면(새 채널 — 예: 마도카) 새로 받는다. 옛 앱은 manifest 에 있는 새 채널을
-      // 건너뛰고도 manifest 를 그대로 적어 두어, 새 앱이 "같은 데이터" 로 보고 그 채널을 끝내 받지 않았다
-      if (jList(m['franchises']).join(',') != franchiseIds.join(',')) return;
+      // 채널 목록이 없는 옛 캐시는 새로 받는다. 있으면 그 채널들이 든 목록 — 내 채널과 다르면 뒤에서 그만큼만
+      // 더 받거나 지운다 ([syncChannels])
+      if (m['franchises'] is! List) return;
+      _have = [
+        for (final f in jList(m['franchises']))
+          if (f is String && franchiseIds.contains(f)) f,
+      ];
       manifest = m['manifest'] as Map<String, Object?>? ?? const {};
       _slim = await compute(_decodeSlim, slim);
       _rebuild();
@@ -157,6 +211,32 @@ class Catalog extends ChangeNotifier {
     _watchingUser = true;
     UserStore.instance.addListener(() {
       if (_builtScope != null && _builtScope != UserStore.instance.legoScope) refilter();
+      _channelsMaybeChanged();
+    });
+  }
+
+  bool _syncQueued = false;
+
+  /// 받기가 끝났다. 그 사이 내 채널이 바뀌었으면(받는 중에 뺀 채널 · 더한 채널) 이어서 맞춘다 — 받기 전에 정한 채널로
+  /// 끝나, 다음 확인(몇 시간 뒤)까지 뺀 채널이 기기에 남거나 더한 채널이 비어 있었다
+  void _settled() {
+    _inflight = null;
+    _channelsMaybeChanged();
+  }
+
+  /// 내 채널이 바뀌었으면(채널 관리 · 다른 기기에서 맞춤) 더한 채널을 받고 뺀 채널을 지운다.
+  /// 한 번에 여러 채널을 바꿔도 한 번만 (microtask 로 모은다)
+  void _channelsMaybeChanged() {
+    // 못 받은 채널은 빼고 본다 — 넣으면 받기가 끝날 때마다 다시 불러 멈추지 않는다 (다시 시도는 그 채널 화면에서)
+    final pending = [
+      for (final f in wantedChannels)
+        if (_have.contains(f) || !_channelErrors.containsKey(f)) f,
+    ];
+    if (_syncQueued || manifest.isEmpty || listEquals(pending, _have)) return;
+    _syncQueued = true;
+    scheduleMicrotask(() {
+      _syncQueued = false;
+      syncChannels().ignore();
     });
   }
 
@@ -195,6 +275,10 @@ class Catalog extends ChangeNotifier {
   @visibleForTesting
   void debugForget() {
     _slim = [];
+    _kept = {};
+    _keptDirty = false;
+    _have = const [];
+    _channelErrors.clear();
     _loading = null;
     _checkedAt = null;
     _seenElsewhere = _seenElsewhereChecked = '';
@@ -247,14 +331,19 @@ class Catalog extends ChangeNotifier {
         v = null;
       }
     }
-    if (v == null) {
-      // 웹 미리보기처럼 캐시가 없으면 바로 받는다
+    if (v == null && _auxWanted(file)) {
+      // 웹 미리보기처럼 캐시가 없으면 바로 받는다 (고르지 않은 채널의 파일은 받지 않는다 — 그 화면은 빈 · 오류 상태)
       final t = await _get('data/$file');
       if (t != null) v = jsonDecode(t);
     }
     if (v != null) _aux[file] = v; // 못 받았으면 기억하지 않는다 (다음에 다시)
     return v;
   }
+
+  bool _auxWanted(String file) => switch (auxChannel[file]) {
+    final c? => UserStore.instance.myChannels.contains(c),
+    null => true,
+  };
 
   /// 이미 푼 보조 파일 (아직이면 null) — 기다릴 수 없는 곳(설정 목록의 글자)에서
   Object? auxLoaded(String file) => _aux[file];
@@ -277,7 +366,7 @@ class Catalog extends ChangeNotifier {
   }
 
   bool get _behind =>
-      kits.isNotEmpty &&
+      _ready &&
       _seenElsewhere.isNotEmpty &&
       _seenElsewhere != manifestSignature(manifest) &&
       _seenElsewhere != _seenElsewhereChecked;
@@ -288,7 +377,7 @@ class Catalog extends ChangeNotifier {
   ///   · 알림 · 받은 링크의 상품이 이 기기 목록에 없을 때 (api.dart fetchKitsByIds)
   Future<bool> checkForNewData({required Duration maxAge}) async {
     if (_inflight case final f?) return f;
-    if (kits.isEmpty) return false; // 처음 받기는 ensureLoaded 가 맡는다
+    if (!_ready) return false; // 처음 받기는 ensureLoaded 가 맡는다
     final behind = _behind;
     final at = _checkedAt;
     if (!behind && at != null && DateTime.now().difference(at) < maxAge) return false;
@@ -309,14 +398,14 @@ class Catalog extends ChangeNotifier {
       if (changed || !force) return changed;
     }
     _loud = !quiet;
-    return _inflight = _refresh(force: force).whenComplete(() => _inflight = null);
+    return _inflight = _refresh(force: force).whenComplete(_settled);
   }
 
   /// 지금 받기를 사람이 골랐다 (처음부터, 또는 뒤에서 받는 중에 [refresh]) → [lastChangeQuiet] = false
   bool _loud = false;
 
   Future<bool> _refresh({required bool force}) async {
-    if (kits.isEmpty) {
+    if (!_ready) {
       phase = CatalogPhase.loading;
       progress = tr('새 데이터 확인 중');
       notifyListeners();
@@ -329,11 +418,16 @@ class Catalog extends ChangeNotifier {
       _checkedAt = DateTime.now();
       // updated_at · total (+ content_hash — 같은 날 파일만 바뀐 갱신도 받는다)
       final same = manifestSignature(m) == manifestSignature(manifest);
-      if (same && kits.isNotEmpty && !force) return await _refreshAux(m);
+      if (same && _ready && !force) {
+        final auxChanged = await _refreshAux(m);
+        // 판이 같아도 내 채널이 바뀌었으면 그만큼 (앱을 끈 사이 다른 기기에서 채널을 바꿨을 때)
+        return await _syncChannels() || auxChanged;
+      }
       final hashes = auxHashes(m);
+      final want = _wantedFor(m);
 
       final aux = <String, String>{};
-      for (final f in auxFiles) {
+      for (final f in auxFilesFor(want)) {
         _step(trf('보조 데이터 {file}', {'file': f}));
         final t = await _get('data/$f', count: true);
         if (t != null) aux[f] = t;
@@ -342,42 +436,39 @@ class Catalog extends ChangeNotifier {
         _fileDone();
       }
       final slim = <Map<String, Object?>>[];
-      // manifest 에 없는 채널은 아직 Gunpula 에 파일이 없다 (새 채널을 앱이 먼저 알 때) — 건너뛴다
-      final listed = jMap(m['franchises']);
-      for (final f in franchiseIds) {
-        if (listed.isNotEmpty && !listed.containsKey(f)) {
+      // manifest 에 없는 채널은 아직 Gunpula 에 파일이 없다 (새 채널을 앱이 먼저 알 때) — want 에서 빠져 있다
+      for (final f in want) {
+        if (_reusable(f, m)) {
+          // 이 채널 파일은 그대로다 — 기기 목록의 그 채널 상품을 다시 쓴다 (건담 12 MB 를 매일 받지 않게)
+          slim.addAll(_slim.where((s) => s['franchiseId'] == f));
           _fileDone();
           continue;
         }
-        _step(trf('{channel} 상품 받는 중', {'channel': tr(_label[f] ?? f)}));
+        _step(trf('{channel} 상품 받는 중', {'channel': _label(f)}));
         final raw = await _get('data/split/kits-$f.json', count: true);
-        if (raw == null) throw CatalogException(trf('{channel} 상품을 받지 못했어요.', {'channel': tr(_label[f] ?? f)}));
+        if (raw == null) throw CatalogException(trf('{channel} 상품을 받지 못했어요.', {'channel': _label(f)}));
         _fileDone();
-        slim.addAll(
-          await compute(mapKitsJob, {
-            'raw': raw,
-            'grades': aux['grades.json'] ?? '{}',
-            'firstSeen': aux['kit-first-seen.json'] ?? '{}',
-            if (f == 'gundam' && aux[atlasBoxartFile] != null) 'boxart': aux[atlasBoxartFile]!,
-            if (f == 'gundam' && aux[atlasKitMsFile] != null) 'kitMs': aux[atlasKitMsFile]!, // 사진 없는 상품의 참고 그림
-            if (f == 'gundam' && aux[atlasMsFile] != null) 'ms': aux[atlasMsFile]!,
-          }),
-        );
+        slim.addAll(await compute(mapKitsJob, _mapMsg(f, raw, aux)));
       }
       _step(tr('정리하는 중'));
       final slimText = await compute(jsonEncode, slim);
-      // first-seen · 등급 · 박스 아트는 상품에 녹였으니 따로 두지 않는다
+      // 등급 · first-seen 은 상품에 녹였어도 기기에 둔다 — 나중에 채널을 더할 때 다시 받지 않게 (메모리에는 두지 않는다)
       for (final e in aux.entries) {
-        if (mapOnlyAuxFiles.contains(e.key)) continue;
         await BlobStore.write(auxKey(e.key), e.value);
         _aux.remove(e.key);
       }
+      await _dropAux(want);
       for (final f in retiredAuxFiles) {
         await BlobStore.delete(auxKey(f));
       }
+      // 빠지는 채널(받는 사이에 뺀 것)의 내 상품을 먼저 적어 둔다 — 목록을 쓴 뒤에 앱이 꺼져도 잃지 않게
+      _keepLeaving(_slim.where((s) => !want.contains(s['franchiseId'])));
+      await _saveKept(slim);
       await BlobStore.write(_kitsKey, slimText);
+      _have = want;
       await _writeMeta(m.containsKey('files') ? {...m, 'files': hashes} : m);
       _slim = slim;
+      _channelErrors.clear();
       _rebuild();
       version++;
       lastChangeQuiet = !_loud;
@@ -386,12 +477,220 @@ class Catalog extends ChangeNotifier {
       error = e is CatalogException ? e.message : trf('데이터를 정리하다 멈췄어요: {error}', {'error': e});
       debugPrint('[catalog] $error');
       _checkedAt = null; // 다 받지 못했다 — 다음 확인은 간격을 기다리지 않는다
-      if (kits.isEmpty) phase = CatalogPhase.error;
+      if (!_ready) phase = CatalogPhase.error;
       return false;
     } finally {
       progress = '';
       notifyListeners();
     }
+  }
+
+  /// 새 manifest [m] 에서도 채널 [f] 의 상품을 기기 것 그대로 써도 되는가: 기기에 있고, 채널 파일 지문
+  /// (manifest `franchise_hashes`, Gunpula 2026-11-14 계약)과 매핑에 녹인 보조 파일 지문(등급 · 건담 박스 아트 ·
+  /// 참고 그림)이 지난번과 같을 때. 지문이 없는 manifest(그전 Gunpula · raw)는 늘 다시 받는다
+  bool _reusable(String f, Map<String, Object?> m) {
+    if (!_have.contains(f)) return false;
+    final now = jMap(m['franchise_hashes'])[f];
+    if (now is! String || now.isEmpty || now != jMap(manifest['franchise_hashes'])[f]) return false;
+    final files = auxHashes(m);
+    final before = auxHashes(manifest);
+    final deps = [
+      'grades.json',
+      if (f == 'gundam') ...[atlasBoxartFile, atlasKitMsFile, atlasMsFile],
+    ];
+    return deps.every((d) => files[d] != null && files[d] == before[d]);
+  }
+
+  /// mapKitsJob 에 넘길 것 — 건담만 박스 아트 · 참고 그림
+  static Map<String, String> _mapMsg(String f, String raw, Map<String, String> aux) => {
+    'raw': raw,
+    'grades': aux['grades.json'] ?? '{}',
+    'firstSeen': aux['kit-first-seen.json'] ?? '{}',
+    if (f == 'gundam' && aux[atlasBoxartFile] != null) 'boxart': aux[atlasBoxartFile]!,
+    if (f == 'gundam' && aux[atlasKitMsFile] != null) 'kitMs': aux[atlasKitMsFile]!, // 사진 없는 상품의 참고 그림
+    if (f == 'gundam' && aux[atlasMsFile] != null) 'ms': aux[atlasMsFile]!,
+  };
+
+  /// 내 채널이 아닌 채널의 보조 파일을 기기 · 메모리에서 지운다. 메자스타 · 프렌다 태그를 적어 둔 사람은 태그 도감 파일만
+  /// 기기에 남긴다 — 컬렉션 전체의 내 태그가 그 파일로 이름 · 그림을 찾는다 (다시 받지는 않는다, [_kept] 와 같은 까닭)
+  Future<void> _dropAux(List<String> want) async {
+    final me = UserStore.instance;
+    final tags = me.tagOwned.isNotEmpty || me.tagLiked.isNotEmpty;
+    for (final e in auxChannel.entries) {
+      if (want.contains(e.value)) continue;
+      _aux.remove(e.key);
+      if (tags && const {mezastarIntlFile, mezastarJpFile, friendaFile}.contains(e.key)) continue;
+      await BlobStore.delete(auxKey(e.key));
+    }
+  }
+
+  Future<void> _readKept() async {
+    final text = await BlobStore.read(_keptKey);
+    if (text == null) return;
+    try {
+      _kept = {
+        for (final s in _decodeSlim(text))
+          if (s['id'] case final String id) id: s,
+      };
+    } on Object catch (e) {
+      debugPrint('[catalog] 따로 둔 상품을 못 읽음: $e');
+    }
+  }
+
+  /// 기기 캐시 글 [text](채널 [had] 가 든 목록)에서 내 채널이 아닌 채널의 내가 적어 둔 상품을 [_kept] 에.
+  /// 큰 글(옛 7채널 약 50 MB)은 다른 isolate 에서 풀고 고른 몇 개만 받아 온다
+  Future<void> _keepFromCache(String text, Iterable<String> had) async {
+    final mine = UserStore.instance.myChannels;
+    if (had.every(mine.contains)) return;
+    final ids = UserStore.instance.markedKitIds.difference(_kept.keys.toSet());
+    if (ids.isEmpty) return;
+    try {
+      _keepLeaving(await compute(_pickSlim, (text: text, ids: ids, mine: [...mine])));
+      await _saveKept();
+    } on Object catch (e) {
+      debugPrint('[catalog] 옛 캐시에서 내 상품을 못 건짐: $e');
+    }
+  }
+
+  /// 기기 목록에서 빠지는 상품 중 내가 적어 둔 것을 [_kept] 에 옮긴다 (채널을 뺄 때 · 받은 목록이 줄 때)
+  void _keepLeaving(Iterable<Map<String, Object?>> leaving) {
+    final marked = UserStore.instance.markedKitIds;
+    for (final s in leaving) {
+      if (s['id'] case final String id when marked.contains(id)) {
+        _kept[id] = s;
+        _keptDirty = true;
+      }
+    }
+  }
+
+  /// [_kept] 을 정리해 기기에 쓴다 — 새 기기 목록 [next] 에 든 상품(채널을 다시 골라 새 데이터가 이긴다) · 적어 둔 것을
+  /// 다 뗀 상품은 뺀다
+  Future<void> _saveKept([List<Map<String, Object?>> next = const []]) async {
+    final marked = UserStore.instance.markedKitIds;
+    final here = {for (final s in next) s['id']};
+    final before = _kept.length;
+    _kept.removeWhere((id, _) => here.contains(id) || !marked.contains(id));
+    if (!_keptDirty && _kept.length == before) return;
+    _keptDirty = false;
+    await BlobStore.write(_keptKey, jsonEncode(_kept.values.toList()));
+  }
+
+  /// 내 채널에 맞춘다: 더한 채널은 그 채널 상품 · 보조 파일만 받고, 뺀 채널은 목록 · 기기에서 지운다 (인터넷 없이).
+  /// 받는 중이면 끝난 뒤에. 바뀌었으면 true. 더한 채널을 못 받으면 그 채널만 빠진 채로 두고 오류를 남긴다
+  Future<bool> syncChannels() async {
+    for (var f = _inflight; f != null; f = _inflight) {
+      await f;
+    }
+    if (!_ready || manifest.isEmpty) return false;
+    return _inflight = _syncChannels().whenComplete(_settled);
+  }
+
+  /// [ids] 중 받을 채널이 아직 기기에 없으면 받을 때까지 기다린다 (홈 · 검색 · 캘린더 · 컬렉션의 fetchKits).
+  /// 고른 채널을 다 못 받았으면 CatalogException — 몇 개라도 있으면 있는 것만 보여 준다
+  Future<void> channelsReady(List<String> ids) async {
+    bool missing(String f) => wantedChannels.contains(f) && !_have.contains(f);
+    // manifest 가 없으면 받은 목록이 아니다 (테스트가 넣은 데이터) — 기다릴 것이 없다
+    if (manifest.isEmpty || !ids.any(missing)) return;
+    _channelErrors.removeWhere((f, _) => ids.contains(f)); // 다시 시도
+    await syncChannels();
+    final failed = [
+      for (final f in ids)
+        if (missing(f)) f,
+    ];
+    final wanted = [
+      for (final f in ids)
+        if (wantedChannels.contains(f)) f,
+    ];
+    if (failed.isNotEmpty && failed.length == wanted.length) {
+      throw CatalogException(
+        _channelErrors[failed.first] ?? trf('{channel} 상품을 받지 못했어요.', {'channel': _label(failed.first)}),
+      );
+    }
+  }
+
+  Future<bool> _syncChannels() async {
+    final want = wantedChannels;
+    final add = [
+      for (final f in want)
+        if (!_have.contains(f) && !_channelErrors.containsKey(f)) f,
+    ];
+    final drop = [
+      for (final f in _have)
+        if (!want.contains(f)) f,
+    ];
+    if (add.isEmpty && drop.isEmpty) return false;
+    var slim = drop.isEmpty
+        ? _slim
+        : [
+            for (final s in _slim)
+              if (!drop.contains(s['franchiseId'])) s,
+          ];
+    final have = [
+      for (final f in _have)
+        if (!drop.contains(f)) f,
+    ];
+    final hashes = auxHashes(manifest);
+    final shared = <String, String>{};
+    Future<String> stored(String file) async =>
+        shared[file] ??= await BlobStore.read(auxKey(file)) ?? await _get('data/$file') ?? '';
+    try {
+      for (final f in add) {
+        channelStep = trf('{channel} 상품 받는 중', {'channel': _label(f)});
+        channelBytes = 0;
+        notifyListeners();
+        final aux = <String, String>{
+          for (final file in const ['grades.json', 'kit-first-seen.json'])
+            if (await stored(file) case final t when t.isNotEmpty) file: t,
+        };
+        // 그 채널의 보조 파일 (건담 도감 · 베이 부품 · 태그 도감) — 그 채널을 뺄 때 지웠으니 새로 받는다
+        for (final file in [
+          for (final e in auxChannel.entries)
+            if (e.value == f) e.key,
+        ]) {
+          final t = await _get('data/$file', channel: true);
+          if (t == null || !auxMatches(t, hashes[file])) hashes.remove(file); // 다음 확인에서 다시 (_refreshAux)
+          if (t == null) continue;
+          aux[file] = t;
+          await BlobStore.write(auxKey(file), t);
+          _aux.remove(file);
+        }
+        final raw = await _get('data/split/kits-$f.json', channel: true);
+        if (raw == null) {
+          _channelErrors[f] = trf('{channel} 상품을 받지 못했어요.', {'channel': _label(f)});
+          continue;
+        }
+        slim = [...slim, ...await compute(mapKitsJob, _mapMsg(f, raw, aux))];
+        have.add(f);
+      }
+    } finally {
+      channelStep = '';
+      channelBytes = 0;
+    }
+    if (drop.isNotEmpty) await _dropAux(want);
+    for (final e in auxChannel.entries) {
+      if (drop.contains(e.value)) hashes.remove(e.key);
+    }
+    if (have.length == _have.length && drop.isEmpty) {
+      notifyListeners(); // 다 못 받았다 — 받는 중 표시만 지운다
+      return false;
+    }
+    // 고른 순서가 아니라 franchiseIds 순서로 (기기 기록 비교가 순서에 기대지 않게)
+    _have = [
+      for (final f in franchiseIds)
+        if (have.contains(f)) f,
+    ];
+    // 빠지는 채널의 내 상품을 먼저 적어 둔다 — 목록을 쓴 뒤에 앱이 꺼져도 잃지 않게
+    _keepLeaving(_slim.where((s) => drop.contains(s['franchiseId'])));
+    await _saveKept(slim);
+    await BlobStore.write(_kitsKey, await compute(jsonEncode, slim));
+    await _writeMeta(manifest.containsKey('files') ? {...manifest, 'files': hashes} : manifest);
+    _slim = slim;
+    _rebuild();
+    version++;
+    // 지금 보는 탭은 그 채널을 기다려 이미 받았다 (fetchKits) — 검색어 · 스크롤을 지키려고 조용히
+    lastChangeQuiet = true;
+    notifyListeners();
+    return true;
   }
 
   /// manifest `files` = 발행된 보조 파일마다 내용 지문 (data/ 아래 경로 → sha256 앞 16자리, Gunpula publish_site.mjs).
@@ -414,7 +713,7 @@ class Catalog extends ChangeNotifier {
     final hashes = auxHashes(m);
     final before = auxHashes(manifest);
     final changed = [
-      for (final f in auxFiles)
+      for (final f in auxFilesFor(_wantedFor(m)))
         if (!mapOnlyAuxFiles.contains(f) && hashes[f] != null && hashes[f] != before[f]) f,
     ];
     // files 없는 manifest(raw · 그전 Gunpula)도 여기서 끝난다 — 적어 둔 지문은 그대로 두고 다음 Pages 판과 비교
@@ -447,7 +746,7 @@ class Catalog extends ChangeNotifier {
     }
     await _writeMeta({...m, 'files': hashes});
     if (got.isEmpty) return false;
-    if (got.contains('kit-aliases.json')) byId = {for (final k in _all) k.id: k}; // 빠진 옛 id 는 떼고 다시 붙인다
+    if (got.contains('kit-aliases.json')) byId = _index(); // 빠진 옛 id 는 떼고 다시 붙인다
     _loadAuxDerived(aliases: got.contains('kit-aliases.json'));
     version++; // 앱 셸이 탭 화면을 다시 불러온다 (홈 · 예고 화면의 공식 예고 …)
     lastChangeQuiet = !_loud;
@@ -460,7 +759,7 @@ class Catalog extends ChangeNotifier {
       jsonEncode({
         'manifest': m,
         'map_version': mapVersion,
-        'franchises': franchiseIds,
+        'franchises': _have,
         'fetched_at': DateTime.now().toIso8601String(),
       }),
     );
@@ -468,16 +767,21 @@ class Catalog extends ChangeNotifier {
   }
 
   void _fileDone() {
-    if (!firstDownload || kits.isNotEmpty) return;
+    if (!firstDownload || _ready) return;
     filesDone++;
     notifyListeners();
   }
 
   final _bytesTick = Stopwatch();
 
-  void _addBytes(int n) {
-    if (!firstDownload || kits.isNotEmpty) return;
-    bytesReceived += n;
+  void _addBytes(int n, {bool channel = false}) {
+    if (channel) {
+      channelBytes += n;
+    } else if (!firstDownload || _ready) {
+      return;
+    } else {
+      bytesReceived += n;
+    }
     // 너무 자주 다시 그리지 않게 (0.1초에 한 번쯤)
     if (!_bytesTick.isRunning || _bytesTick.elapsedMilliseconds > 100) {
       _bytesTick
@@ -488,7 +792,7 @@ class Catalog extends ChangeNotifier {
   }
 
   void _step(String s) {
-    if (kits.isNotEmpty) return; // 뒤에서 받는 중엔 문구를 바꾸지 않는다
+    if (_ready) return; // 뒤에서 받는 중엔 문구를 바꾸지 않는다
     progress = s;
     notifyListeners();
   }
@@ -496,6 +800,10 @@ class Catalog extends ChangeNotifier {
   /// slim → Kit (최근 추가 · 이번 달은 오늘 날짜로 다시 계산)
   void _rebuild() {
     _watchLegoScope();
+    // 채널 관리의 회색 칸 — Gunpula 에 파일이 생기면(새 채널) 저절로 진해진다
+    channelsWithData
+      ..clear()
+      ..addAll(jMap(manifest['franchises']).keys);
     var latest = '';
     for (final s in _slim) {
       final f = s['firstSeen'];
@@ -521,13 +829,17 @@ class Catalog extends ChangeNotifier {
         return c != 0 ? c : b.firstSeen.compareTo(a.firstSeen);
       });
     _all = list;
-    byId = {for (final k in list) k.id: k};
+    _keptKits = [for (final s in _kept.values) Kit.fromSlim(s, recentSince: recentSince, monthPrefix: monthPrefix)];
+    byId = _index();
     _applyScope();
     phase = CatalogPhase.ready;
-    if (list.isNotEmpty) firstDownload = false;
+    if (_ready) firstDownload = false;
     error = '';
     _loadAuxDerived();
   }
+
+  /// id → 상품: 받은 상품 전부 + 따로 둔 내 상품 (같은 id 면 받은 것)
+  Map<String, Kit> _index() => {for (final k in _keptKits) k.id: k, for (final k in _all) k.id: k};
 
   /// 보조 파일에서 오는 값 — 옛 id 연결 · 환율 · 채널 그림
   void _loadAuxDerived({bool aliases = true}) {
@@ -622,18 +934,10 @@ class Catalog extends ChangeNotifier {
     UserStore.instance.applyAliases(map);
   }
 
-  static const _label = {
-    'gundam': '건담',
-    'beyblade': '베이블레이드',
-    'pokemon': '포켓몬',
-    'armored_core': '아머드 코어',
-    'fate': 'Fate',
-    'madoka': '마도카 마기카',
-    'lego': '레고',
-  };
+  static String _label(String f) => tr(channelOf(f).label);
 
-  /// 받기 — Pages 가 안 되면 raw.githubusercontent. [count] = 첫 다운로드 바이트를 센다
-  Future<String?> _get(String path, {bool count = false}) async {
+  /// 받기 — Pages 가 안 되면 raw.githubusercontent. [count] = 첫 다운로드 바이트를 센다 · [channel] = 더한 채널 바이트
+  Future<String?> _get(String path, {bool count = false, bool channel = false}) async {
     for (final base in [gunpulaBase, gunpulaRawBase]) {
       final client = debugClient ?? http.Client();
       try {
@@ -645,7 +949,7 @@ class Catalog extends ChangeNotifier {
           // 한 조각을 60초 넘게 못 받으면 멈춘 것으로 본다 (큰 파일도 천천히 오는 동안은 기다린다)
           await for (final chunk in res.stream.timeout(const Duration(seconds: 60))) {
             bytes.add(chunk);
-            if (count) _addBytes(chunk.length);
+            if (count || channel) _addBytes(chunk.length, channel: channel);
           }
           final text = utf8.decode(bytes.takeBytes());
           return base == gunpulaRawBase ? rawAssetPaths(text) : text;
@@ -665,6 +969,12 @@ class Catalog extends ChangeNotifier {
 List<Map<String, Object?>> _decodeSlim(String text) => [
   for (final e in jsonDecode(text) as List<Object?>)
     if (e is Map<String, Object?>) e,
+];
+
+/// compute(): 기기 목록 글에서 [ids] 중 내 채널([mine]) 밖의 상품만
+List<Map<String, Object?>> _pickSlim(({String text, Set<String> ids, List<String> mine}) a) => [
+  for (final s in _decodeSlim(a.text))
+    if (a.ids.contains(s['id']) && !a.mine.contains(s['franchiseId'])) s,
 ];
 
 class CatalogException implements Exception {

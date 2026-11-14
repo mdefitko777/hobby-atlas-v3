@@ -84,7 +84,8 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
       widget.loaders.kitsByIds(f.likedIds),
       widget.loaders.kitsByIds(f.ownedIds),
       widget.loaders.collection(),
-      widget.loaders.guideWorks(),
+      // 건담 채널을 안 고른 기기엔 건담 도감이 없다 — 작품 칸만 빼고 연다
+      widget.loaders.guideWorks().catchError((Object _) => const <GuideWork>[]),
     ]);
     var byWork = const <String, int>{};
     final linked = [

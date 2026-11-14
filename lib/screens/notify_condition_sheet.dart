@@ -142,7 +142,7 @@ class _ConditionSheetState extends State<_ConditionSheet> {
                     switch (ch) {
                       'madoka' => tr('캐릭터'),
                       'beyblade' => tr('블레이더'),
-                      'lego' => tr('시리즈'),
+                      'lego' || 'nintendo' => tr('시리즈'),
                       'pokemon' => tr('세대'),
                       _ => tr('작품'),
                     },

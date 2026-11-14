@@ -138,7 +138,7 @@ class PrefetchState {
 }
 
 /// 이번 확인에서 새로 온 것 중 사진을 받아 둘 상품 → 피드의 작은 표지(없으면 빈 글자), 받을 순서대로.
-/// 새 알림(읽지 않은 것, 예고 · 라이브 줄은 사진이 없다) 먼저, 그다음 내 채널의 새 상품(피드 added, 지난번에 본 날짜부터
+/// 내 채널의 새 알림(읽지 않은 것, 예고 · 라이브 줄은 사진이 없다) 먼저, 그다음 내 채널의 새 상품(피드 added, 지난번에 본 날짜부터
 /// 처음 보는 줄). 처음 실행은 지난 소식을 조용히 채우는 날이라 없음
 Map<String, String> newPrefetchKits({
   required List<NoticeRecord> fresh,
@@ -156,7 +156,9 @@ Map<String, String> newPrefetchKits({
   }
 
   for (final r in fresh) {
-    if (!r.seen && r.kitId.isNotEmpty && !r.isAnnStage && !r.isLive) put(r.kitId, r.thumb);
+    // 고르지 않은 채널(좋아요해 둔 옛 채널 상품 소식 등)의 사진은 받지 않는다 — 그 채널은 아무것도 받지 않기로
+    final mine = r.franchise.isEmpty || config.channels.contains(r.franchise);
+    if (!r.seen && mine && r.kitId.isNotEmpty && !r.isAnnStage && !r.isLive) put(r.kitId, r.thumb);
   }
   if (before.lastSeen.isNotEmpty) {
     final known = {for (final r in before.inbox) r.id, ...before.seenFeed};

@@ -52,6 +52,8 @@ class CollectionScreen extends StatefulWidget {
     super.key,
     required this.myChannels,
     required this.onMyChannelsChanged,
+    this.channel,
+    this.onChannelChanged,
     required this.onGoSearch,
     this.leading,
     this.loaders = const Loaders(),
@@ -61,6 +63,10 @@ class CollectionScreen extends StatefulWidget {
 
   final List<String> myChannels;
   final ValueChanged<List<String>> onMyChannelsChanged;
+
+  /// 앱 셸이 든 이 탭의 채널 · 고르면 셸에 알림 (채널 맞춰 보기, ChannelScope)
+  final String? channel;
+  final ValueChanged<String>? onChannelChanged;
   final VoidCallback onGoSearch;
   final Widget? leading;
   final Loaders loaders;
@@ -110,6 +116,12 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
   List<String> get myChannels => widget.myChannels;
 
   @override
+  String? get shellChannel => widget.channel;
+
+  @override
+  ValueChanged<String>? get onShellChannel => widget.onChannelChanged;
+
+  @override
   void loadScope(List<String> ids) {
     _future = widget.loaders.kits(ids); // STATE: 내 채널 상품 → 좋아요 · 구매함은 Marks 로 거름 (홈에서 누른 ♡ 도 보임)
   }
@@ -117,7 +129,7 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
   @override
   void initState() {
     super.initState();
-    reloadScope();
+    initScope();
   }
 
   @override
@@ -134,7 +146,11 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
       _guide = widget.jump == CollectionJump.guide;
       _editing = false;
       _selected.clear();
-      if (channel != allChannelId) selectChannel(allChannelId);
+      // 셸도 이 탭을 전체로 바꿔 둔다(_jumpTo) — 여기서 셸에 다시 알리면 셸이 그리는 중에 setState 가 된다
+      if (channel != allChannelId) {
+        channel = allChannelId;
+        reloadScope();
+      }
     }
   }
 

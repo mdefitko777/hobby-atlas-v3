@@ -54,6 +54,8 @@ class SearchScreen extends StatefulWidget {
     super.key,
     required this.myChannels,
     required this.onMyChannelsChanged,
+    this.channel,
+    this.onChannelChanged,
     required this.onCamera,
     this.focusTick = 0,
     this.leading,
@@ -62,6 +64,10 @@ class SearchScreen extends StatefulWidget {
 
   final List<String> myChannels;
   final ValueChanged<List<String>> onMyChannelsChanged;
+
+  /// 앱 셸이 든 이 탭의 채널 · 고르면 셸에 알림 (채널 맞춰 보기, ChannelScope)
+  final String? channel;
+  final ValueChanged<String>? onChannelChanged;
 
   /// 검색창 카메라 → 앱 셸의 찍어서 찾기 시트
   final VoidCallback onCamera;
@@ -96,6 +102,12 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
   List<String> get myChannels => widget.myChannels;
 
   @override
+  String? get shellChannel => widget.channel;
+
+  @override
+  ValueChanged<String>? get onShellChannel => widget.onChannelChanged;
+
+  @override
   void loadScope(List<String> ids) {
     _future = widget.loaders.kits(ids); // STATE: 검색 범위(채널) → 상품
     _all = null;
@@ -122,7 +134,7 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
   @override
   void initState() {
     super.initState();
-    reloadScope();
+    initScope();
     // 검색창을 누르면(포커스) 최근 · 자주 찾은 · 설명으로 찾기 판, 벗어나면 다시 전체 상품
     _focus.addListener(() => setState(() {})); // STATE: 포커스 → 보여 줄 판
   }

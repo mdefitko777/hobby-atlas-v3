@@ -62,9 +62,12 @@ Future<LevelData> loadLevel(Loaders loaders) async {
   final series = <LitSeries>[];
   var lit = 0;
   try {
-    for (final w in await loaders.guideWorks()) {
-      lit += w.owned;
-      if (w.owned > 0) series.add((title: w.name, image: w.image, owned: w.owned, total: w.total));
+    // 건담 도감은 건담 채널을 고른 기기에만 있다 (고르지 않은 채널의 도감 파일은 받지 않는다)
+    if (me.myChannels.contains('gundam')) {
+      for (final w in await loaders.guideWorks()) {
+        lit += w.owned;
+        if (w.owned > 0) series.add((title: w.name, image: w.image, owned: w.owned, total: w.total));
+      }
     }
   } on Object {
     // 도감 데이터가 없으면 구매 수만으로

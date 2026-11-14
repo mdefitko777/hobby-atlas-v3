@@ -116,6 +116,7 @@
       "@bro"
     ],
     "lego_scope": "recent",
+    "channel_sync": true,
     "profile_images": {
       "avatar": {
         "file": "a1.jpg",

@@ -9,6 +9,7 @@
 // │ S-5  │ NavigationRail (가로 폰: 높이 <520)    │ 측면 탭 (아바타 / 탭 4개 / 🔔 ⚙)          │ 적응형 · P04  │
 // │ S-6  │ IndexedStack                    │ 탭 상태 유지                           │ P03           │
 // │ S-7  │ 내 채널 목록(UserStore 에 저장)    │ 네 화면이 같이 쓰는 내 IP 채널         │ P04           │
+// │ S-7b │ 고른 채널 (채널 맞춰 보기)          │ 한 탭에서 고른 채널을 네 탭이 같이 (설정에서 끄면 탭마다) │ P04 │
 // │ S-9  │ 오른쪽 위 🔔 (안 읽은 수)          │ 알림 열기 · 휴대폰 알림 누르면 이동     │ P01           │
 // │ S-10 │ 오른쪽 위 ⚙                     │ 설정 열기 (K)                          │ P04 · P06     │
 // │ S-19 │ 오른쪽 위 ? (HelpButton)          │ 위 줄 + 이 탭 아이콘 뜻 한 줄씩           │ P10           │
@@ -44,6 +45,7 @@ import '../update/update_ui.dart';
 import '../widgets.dart';
 import 'a_home_screen.dart';
 import 'b_search_screen.dart';
+import 'c_channel_screen.dart' show allChannelId;
 import 'd_kit_detail_screen.dart';
 import 'e_camera_screen.dart';
 import 'e_photo_find_screen.dart' show openShared;
@@ -107,6 +109,28 @@ class _AppShellState extends State<AppShell> {
 
   List<String> _myChannels = [...defaultMyChannels]; // S-7 P04 — 실제 값은 UserStore(기기 저장)에서
 
+  /// S-7b 탭마다 고른 채널 · 채널 맞춰 보기(UserStore.channelSync, 처음 켜짐)면 네 탭이 늘 같은 값.
+  /// 셸이 들고 있어 새 데이터로 탭 화면을 다시 만들어도(_pageGen) 고른 채널이 전체로 돌아가지 않는다
+  final List<String> _tabChannels = List.filled(_tabs.length, allChannelId);
+  bool _channelSync = true;
+
+  /// 탭 [tab] 에서 채널을 골랐다 — 맞춰 보기면 네 탭 모두
+  void _pickChannel(int tab, String id) => setState(() {
+    // STATE: 고른 채널 → 네 탭(맞춰 보기) 또는 그 탭만
+    if (_channelSync) {
+      _tabChannels.fillRange(0, _tabChannels.length, id);
+    } else {
+      _tabChannels[tab] = id;
+    }
+  });
+
+  /// 내 채널에서 빠진 채널을 고르고 있던 탭은 전체로
+  void _dropMissingChannels() {
+    for (var i = 0; i < _tabChannels.length; i++) {
+      if (_tabChannels[i] != allChannelId && !_myChannels.contains(_tabChannels[i])) _tabChannels[i] = allChannelId;
+    }
+  }
+
   final _scaffold = GlobalKey<ScaffoldState>();
 
   late final NotifyStore _notify = widget.notify ?? NotifyScope.read(context);
@@ -120,7 +144,10 @@ class _AppShellState extends State<AppShell> {
   int _jumpTick = 0;
 
   void _setChannels(List<String> ids) {
-    setState(() => _myChannels = [...ids]); // STATE: 내 채널 → 네 화면의 채널 바와 목록
+    setState(() {
+      _myChannels = [...ids]; // STATE: 내 채널 → 네 화면의 채널 바와 목록
+      _dropMissingChannels();
+    });
     _me?.setMyChannels(ids); // 기기에 저장 (다음 실행 · 새 데이터를 받아 셸을 다시 만들 때도 그대로)
   }
 
@@ -148,6 +175,7 @@ class _AppShellState extends State<AppShell> {
       _me?.removeListener(_onUserStore);
       _me = me..addListener(_onUserStore);
       _myChannels = [...me.myChannels];
+      _channelSync = me.channelSync;
     }
   }
 
@@ -178,8 +206,20 @@ class _AppShellState extends State<AppShell> {
   }
 
   void _onUserStore() {
-    final ids = _me!.myChannels;
-    if (!listEquals(ids, _myChannels)) setState(() => _myChannels = [...ids]); // STATE: 저장된 내 채널 → 채널 바
+    final me = _me!;
+    if (!listEquals(me.myChannels, _myChannels)) {
+      setState(() {
+        _myChannels = [...me.myChannels]; // STATE: 저장된 내 채널 → 채널 바
+        _dropMissingChannels();
+      });
+    }
+    if (me.channelSync != _channelSync) {
+      setState(() {
+        // STATE: 채널 맞춰 보기 → 켜면 지금 탭의 채널로 네 탭을 맞춘다, 끄면 지금 그대로에서 탭마다 따로
+        _channelSync = me.channelSync;
+        if (_channelSync) _tabChannels.fillRange(0, _tabChannels.length, _tabChannels[_tab]);
+      });
+    }
   }
 
   /// 휴대폰 알림을 눌렀을 때: `kit:<id>` → 상품 상세, 그 밖에는 알림 화면
@@ -266,6 +306,12 @@ class _AppShellState extends State<AppShell> {
   /// 내 정보 숫자 · 홈 내 보드 · Lv → 컬렉션 탭 + 그 목록(좋아요 · 구매함 · 도감)
   void _jumpTo(CollectionJump j) => setState(() {
     _setTab(3); // STATE: 컬렉션 탭 + 그 목록
+    // 내 정보 숫자는 모든 채널을 센다 → 컬렉션은 전체로 (맞춰 보기면 네 탭 모두)
+    if (_channelSync) {
+      _tabChannels.fillRange(0, _tabChannels.length, allChannelId);
+    } else {
+      _tabChannels[3] = allChannelId;
+    }
     _jump = j;
     _jumpTick++;
     _barShown = true;
@@ -357,6 +403,8 @@ class _AppShellState extends State<AppShell> {
             leading: wide ? null : topRow,
             myChannels: _myChannels,
             onMyChannelsChanged: _setChannels,
+            channel: _tabChannels[0],
+            onChannelChanged: (id) => _pickChannel(0, id),
             onCamera: _openAdd,
             onOpenSearch: _goSearch,
             onJump: _jumpTo,
@@ -369,6 +417,8 @@ class _AppShellState extends State<AppShell> {
             leading: wide ? null : topRow,
             myChannels: _myChannels,
             onMyChannelsChanged: _setChannels,
+            channel: _tabChannels[1],
+            onChannelChanged: (id) => _pickChannel(1, id),
             onCamera: _openAdd,
             focusTick: _searchFocusTick,
             loaders: widget.loaders,
@@ -380,6 +430,8 @@ class _AppShellState extends State<AppShell> {
             leading: wide ? null : topRow,
             myChannels: _myChannels,
             onMyChannelsChanged: _setChannels,
+            channel: _tabChannels[2],
+            onChannelChanged: (id) => _pickChannel(2, id),
             loaders: widget.loaders,
           )
         : CollectionScreen(
@@ -388,6 +440,8 @@ class _AppShellState extends State<AppShell> {
             leading: wide ? null : topRow,
             myChannels: _myChannels,
             onMyChannelsChanged: _setChannels,
+            channel: _tabChannels[3],
+            onChannelChanged: (id) => _pickChannel(3, id),
             onGoSearch: _goSearch,
             loaders: widget.loaders,
             jump: _jump,

@@ -5,6 +5,7 @@
 // │ K-0  │ ListTile × 3 (로그인 · 상태 · 로그아웃) │ 계정 · 동기화 (옛 Gunpula 와 같은 계정)   │ P01 · P05 · P10 │
 // │ K-3  │ ListTile(요약 · ›) → 알림(쌓기)      │ 알림: 켜짐 · 규칙 n개 / 꺼짐 (k_notify_settings.dart) │ P01 · P07 │
 // │ K-2  │ ListTile → 고르는 시트              │ 언어: 한국어(기본) · 中文                │ P04 · P10     │
+// │ K-2b │ SwitchListTile                     │ 채널 맞춰 보기: 홈 · 검색 · 캘린더 · 컬렉션이 같은 채널(기본 켜짐) │ P04 │
 // │ K-4  │ ListTile                           │ 상품 데이터 기준일 · 지금 새로 받기 · 버전 │ P10           │
 // │ K-4b │ ListTile → 고르는 시트              │ 미리 받기: 와이파이만 · 모바일 데이터도(기본) — 새 소식 사진 │ P07 · P10 │
 // │ K-7  │ ListTile → HelpScreen(쌓기)          │ 도움말: 도감 칸(늘 컬러 · ♡ · 리본 · 내 사진) · 색 · 데이터 출처 · 알림 · 업데이트 │ P10 │
@@ -18,6 +19,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/catalog.dart';
+import '../marks.dart';
 import '../detail_pane.dart';
 import '../l10n/l10n.dart';
 import '../sync/account.dart';
@@ -283,6 +285,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   subtitle: Text(tr('화면 · 상품 이름 · 공지 번역 · 알림')),
                   trailing: Text(L10n.isZh ? '中文' : '한국어', style: const TextStyle(color: Gp.muted)),
                   onTap: () => _pickLanguage(context),
+                ),
+                SwitchListTile(
+                  // K-2b 홈에서 고른 채널이 검색 · 캘린더 · 컬렉션에도 (끄면 탭마다 따로) — 계정에 맞춘다 (channel_sync)
+                  key: const Key('settings-channel-sync'),
+                  secondary: const Icon(Icons.sync_alt),
+                  title: Text(tr('채널 맞춰 보기')),
+                  subtitle: Text(tr('홈 · 검색 · 캘린더 · 컬렉션에서 같은 채널')),
+                  value: Marks.of(context).store.channelSync,
+                  onChanged: Marks.read(context).store.setChannelSync, // STATE: 채널 맞춰 보기 → 앱 셸
                 ),
                 ListTile(
                   // K-7

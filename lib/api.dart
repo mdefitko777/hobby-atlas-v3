@@ -30,9 +30,11 @@ Future<T> _guard<T>(Future<T> Function() f) async {
 }
 
 /// 홈 · 검색 · 캘린더: 내 채널의 상품 (발매일 새것부터). 채널이 없으면 빈 목록.
+/// 막 더한 채널은 그 채널 상품을 받을 때까지 기다린다 (그동안 화면은 「{channel} 상품 받는 중」)
 Future<List<Kit>> fetchKits(List<String> channelIds) => _guard(() async {
   if (channelIds.isEmpty) return const <Kit>[];
   await Catalog.instance.ensureLoaded();
+  await Catalog.instance.channelsReady(channelIds);
   final set = channelIds.toSet();
   return [
     for (final k in Catalog.instance.kits)

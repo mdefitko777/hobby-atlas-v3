@@ -68,6 +68,9 @@ const _goods = _Sec(
 );
 const _media = _Sec('영상 · 책 · 이벤트', ['티켓 · 이벤트', '블루레이 · DVD', '음반', '책 · 화보', '팸플릿', '게임', '보드게임'], merge: true);
 
+/// 닌텐도는 게임이 맨 위 묶음이라 영상 · 책 묶음에서 '게임' 칸을 뺀다 (같은 키가 두 묶음에 있으면 뒤의 것이 이긴다)
+const _mediaNoGame = _Sec('영상 · 책 · 이벤트', ['티켓 · 이벤트', '블루레이 · DVD', '음반', '책 · 화보', '팸플릿', '보드게임'], merge: true);
+
 /// 채널마다 종류 묶음 (위에서 아래 순서). 없는 채널 = 한 묶음 '종류'
 const _typeSectionDefs = <String, List<_Sec>>{
   'gundam': [
@@ -139,6 +142,14 @@ const _typeSectionDefs = <String, List<_Sec>>{
     _Sec('세트 · 도구', ['세트', '런처 · 도구'], types: {'툴'}),
     _goods,
     _media,
+  ],
+  // 라인 = Gunpula 등급 NIN_GAME · NIN_HW · NIN_AMIIBO · NIN_GOODS (lib/data/gunpula.dart)
+  'nintendo': [
+    _Sec('게임', ['게임'], types: {'게임'}),
+    _Sec('본체 · 주변기기', ['본체 · 주변기기'], types: {'본체 · 주변기기'}),
+    _Sec('amiibo', ['amiibo'], types: {'피규어'}),
+    _goods,
+    _mediaNoGame,
   ],
 };
 
@@ -296,7 +307,7 @@ String worldSectionOf(String channel, String worldId) {
     'armored_core' => '시리즈',
     'beyblade' => RegExp(r'^[a-z]{1,2}x[a-z]?$').hasMatch(id) ? '라인' : '블레이더', // bx · ux · cx · bxa
     'madoka' => '캐릭터',
-    'lego' => '시리즈',
+    'lego' || 'nintendo' => '시리즈',
     _ => '세대',
   };
 }

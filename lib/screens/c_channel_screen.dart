@@ -25,6 +25,8 @@ const allChannelId = 'all';
 
 /// 채널 바가 있는 화면의 공통 상태 (홈 · 검색 · 캘린더 · 컬렉션):
 /// 선택한 채널 · 지금 불러온 범위 · 내 채널이 바뀌면 다시 불러오기.
+/// 고른 채널은 앱 셸이 든다 ([shellChannel]) — 채널 맞춰 보기(설정)가 켜져 있으면 네 탭이 같은 채널, 꺼져 있으면
+/// 탭마다 따로. 셸이 들고 있어 새 데이터로 탭 화면을 다시 만들어도 고른 채널이 전체로 돌아가지 않는다
 mixin ChannelScope<T extends StatefulWidget> on State<T> {
   /// 선택한 채널 (allChannelId = 전체)
   String channel = allChannelId;
@@ -32,6 +34,12 @@ mixin ChannelScope<T extends StatefulWidget> on State<T> {
 
   /// 앱 셸이 내려 준 내 채널 (화면이 widget.myChannels 로 구현)
   List<String> get myChannels;
+
+  /// 앱 셸이 든 이 탭의 채널 (화면이 widget.channel 로 구현, null = 셸 없이 화면만 띄운 테스트)
+  String? get shellChannel;
+
+  /// 채널을 고르면 셸에 알린다 (화면이 widget.onChannelChanged 로 구현)
+  ValueChanged<String>? get onShellChannel;
 
   /// '전체'면 내 채널 전부, 아니면 그 채널 하나
   List<String> get scopeIds => channel == allChannelId ? myChannels : [channel];
@@ -44,10 +52,21 @@ mixin ChannelScope<T extends StatefulWidget> on State<T> {
     loadScope(_loadedFor);
   }
 
-  void selectChannel(String id) => setState(() {
-    channel = id; // STATE: 선택 채널 → 그 범위로 다시 GET
+  /// initState 에서 부른다: 셸이 든 채널로 시작
+  void initScope() {
+    channel = _valid(shellChannel ?? channel);
     reloadScope();
-  });
+  }
+
+  String _valid(String id) => id == allChannelId || myChannels.contains(id) ? id : allChannelId;
+
+  void selectChannel(String id) {
+    setState(() {
+      channel = id; // STATE: 선택 채널 → 그 범위로 다시 GET
+      reloadScope();
+    });
+    onShellChannel?.call(id); // 채널 맞춰 보기면 다른 탭도 이 채널로
+  }
 
   /// 내용 위에서 좌우로 밀면 옆 채널 (전체 → 내 채널 순서, 채널 바와 같은 순서).
   /// 가로로 넘기는 줄 · 배너 위에서 시작하면 그 줄이 먼저 받는다
@@ -63,9 +82,9 @@ mixin ChannelScope<T extends StatefulWidget> on State<T> {
     child: child,
   );
 
-  /// didUpdateWidget 에서 부른다: 내 채널에서 빠진 채널을 보고 있었다면 '전체'로
+  /// didUpdateWidget 에서 부른다: 셸의 채널(다른 탭에서 고른 것)을 따르고, 내 채널에서 빠진 채널을 보고 있었다면 '전체'로
   void syncScope() {
-    if (channel != allChannelId && !myChannels.contains(channel)) channel = allChannelId;
+    channel = _valid(shellChannel ?? channel);
     if (scopeIds.join(',') != _loadedFor.join(',')) setState(reloadScope);
   }
 }
@@ -194,7 +213,10 @@ class _ChannelManagerScreenState extends State<ChannelManagerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final more = allChannels.where((c) => !_mine.contains(c.id)).toList();
+    final more = [
+      for (final c in allChannels)
+        if (!_mine.contains(c.id)) channelOf(c.id),
+    ];
     return Scaffold(
       appBar: AppBar(title: Text(tr('채널'))),
       body: LayoutBuilder(

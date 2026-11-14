@@ -109,12 +109,18 @@ class CalendarScreen extends StatefulWidget {
     super.key,
     required this.myChannels,
     required this.onMyChannelsChanged,
+    this.channel,
+    this.onChannelChanged,
     this.leading,
     this.loaders = const Loaders(),
   });
 
   final List<String> myChannels;
   final ValueChanged<List<String>> onMyChannelsChanged;
+
+  /// 앱 셸이 든 이 탭의 채널 · 고르면 셸에 알림 (채널 맞춰 보기, ChannelScope)
+  final String? channel;
+  final ValueChanged<String>? onChannelChanged;
   final Widget? leading;
   final Loaders loaders;
 
@@ -147,6 +153,12 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
   List<String> get myChannels => widget.myChannels;
 
   @override
+  String? get shellChannel => widget.channel;
+
+  @override
+  ValueChanged<String>? get onShellChannel => widget.onChannelChanged;
+
+  @override
   void loadScope(List<String> ids) {
     // STATE: 채널 → 상품 · 공식 예고 → 달력 점 · 일정 목록
     _future = Future.wait([
@@ -159,7 +171,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope {
   @override
   void initState() {
     super.initState();
-    reloadScope();
+    initScope();
   }
 
   @override
