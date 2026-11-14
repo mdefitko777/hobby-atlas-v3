@@ -80,6 +80,14 @@ Future<List<Kit>> fetchKitsByIds(List<String> ids) => _guard(() async {
   return [for (final id in ids) ?cat.byId[id]];
 });
 
+/// 합쳐진 상품의 옛 kit_id → 남은 kit_id (생김새 표처럼 이름이 바뀌기 전에 만든 파일의 id 를 풀 때).
+/// 앱을 막 켠 때는 아직 안 붙었을 수 있어 5초까지 기다린다 (받지는 않는다)
+Future<Map<String, String>> fetchKitAliases() async {
+  final cat = Catalog.instance;
+  await cat.aliasesReady.timeout(const Duration(seconds: 5), onTimeout: () {});
+  return cat.aliases;
+}
+
 /// 못 찾은 상품 때문에 manifest 를 다시 보는 간격 (같은 id 를 여러 번 눌러도 매번 받지 않게)
 const missingKitRecheck = Duration(minutes: 1);
 
@@ -184,6 +192,7 @@ class Loaders {
     this.restocks = fetchRestocks,
     this.guideIndex = fetchGuideIndex,
     this.annDetails = fetchAnnDetails,
+    this.kitAliases = fetchKitAliases,
   });
 
   final Future<List<Kit>> Function(List<String> channelIds) kits;
@@ -216,4 +225,7 @@ class Loaders {
 
   /// 예고 id → 상품 소개 (예고 상세의 「상품 소개」)
   final Future<Map<String, AnnDetail>> Function() annDetails;
+
+  /// 옛 kit_id → 지금 kit_id
+  final Future<Map<String, String>> Function() kitAliases;
 }

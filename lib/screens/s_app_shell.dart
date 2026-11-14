@@ -283,6 +283,9 @@ class _AppShellState extends State<AppShell> {
   });
 
   void _openAdd() {
+    // 지금 탭의 채널 = 사진으로 찾기의 생김새 후보 기본 칩 (전체면 칩도 전체)
+    final tabChannel = _tabChannels[_tab];
+    final channel = tabChannel == allChannelId ? null : tabChannel;
     showGpSheet<void>(
       // S-4 P07
       context,
@@ -292,11 +295,11 @@ class _AppShellState extends State<AppShell> {
           if (!mounted) return;
           switch (pick) {
             case 'photo':
-              openCamera(context, CameraMode.photo, loaders: widget.loaders, onGoSearch: _goSearch);
+              openCamera(context, CameraMode.photo, loaders: widget.loaders, onGoSearch: _goSearch, channel: channel);
             case 'barcode':
-              openCamera(context, CameraMode.barcode, loaders: widget.loaders, onGoSearch: _goSearch);
+              openCamera(context, CameraMode.barcode, loaders: widget.loaders, onGoSearch: _goSearch, channel: channel);
             default:
-              openAlbum(context, loaders: widget.loaders, onGoSearch: _goSearch);
+              openAlbum(context, loaders: widget.loaders, onGoSearch: _goSearch, channel: channel);
           }
         },
       ),

@@ -13,7 +13,8 @@
 // │ E-15 │ 공유로 받은 글 칸 (🔗)                  │ 공유로 받은 글 · 주소 → 주소 · 글자로 찾기   │ P01 · P07     │
 // │ E-16 │ SentenceCandidates                     │ 후보가 없을 때 낱말 맞추기 (설명과 겹친 상품) │ P09           │
 // │ E-17 │ AppBar 오른쪽 ? (HelpButton)       │ 글자 조각 아이콘 · ♡ · 리본 · 사진 붙이기 뜻 │ P10           │
-// │ E-18 │ VisualMatches (e_visual_matches.dart) │ 생김새가 비슷한 상품 칸 (기기 안 모델, 처음 한 번 받기) │ P01 · P08 │
+// │ E-18 │ VisualMatches (e_visual_matches.dart) │ 생김새가 비슷한 상품 칸 (기기 안 모델, 처음 한 번 받기) · 채널 칩 │ P01 · P08 │
+// │ E-19 │ 사진 위 ✂ → PhotoCropScreen (e_photo_crop_screen.dart) │ 찾을 부분 고르기 (생김새만, 틀 끌기) │ P07 · P09 │
 // └────────────────────────────────────────────────────────────────────────────────────┘
 // 전환: E-5 사진 · 앨범 / 공유로 받기 → 이 화면(쌓기) → D 상세(쌓기).
 // 글자 후보의 일치도는 글자가 겹친 정도 그대로다. 생김새(E-18)는 점수 없이 비슷한 순서로만 — 같은 기체의 다른 등급이 섞이므로 고르게 한다.
@@ -28,9 +29,11 @@ import '../channels.dart';
 import '../data/photo_files.dart';
 import '../logic/kit_rules.dart' show kitMatches;
 import '../logic/ocr_lookup.dart';
+import '../logic/photo_crop.dart';
 import '../logic/sentence_search.dart';
 import '../logic/url_lookup.dart';
 import '../marks.dart';
+import '../ml/visual_search.dart';
 import '../models.dart';
 import '../ocr/ocr_catalog.dart';
 import '../ocr/text_reader.dart';
@@ -41,6 +44,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'b_search_screen.dart' show SentenceCandidates;
 import 'd_kit_detail_screen.dart';
+import 'e_photo_crop_screen.dart';
 import 'e_visual_matches.dart';
 
 /// 공유로 받은 것 열기 (앱 셸이 부른다): 사진 → 글자 읽기, 글 · 주소 → 주소 · 글자로 찾기
@@ -97,6 +101,7 @@ class PhotoFindScreen extends StatefulWidget {
     this.photo,
     this.sharedText = '',
     this.attachable = true,
+    this.channel,
     required this.loaders,
     required this.onGoSearch,
   });
@@ -109,6 +114,9 @@ class PhotoFindScreen extends StatefulWidget {
 
   /// 구매함 상품에 이 사진을 붙일 수 있나 (찍기 · 앨범 = 줄인 JPEG)
   final bool attachable;
+
+  /// 사진 찾기를 연 탭의 채널 — 생김새 후보의 기본 칩 (null = 전체)
+  final String? channel;
   final Loaders loaders;
   final VoidCallback onGoSearch;
 
@@ -138,6 +146,9 @@ class _PhotoFindScreenState extends State<PhotoFindScreen> {
 
   /// 이 화면에서 사진을 붙인 상품 (✓)
   final Set<String> _attached = {};
+
+  /// E-19 생김새를 비교할 부분 (글자 읽기 · 사진 붙이기는 사진 전체)
+  CropBox _crop = fullCrop;
 
   (String, List<SentenceHit>)? _memo;
   (String, List<SentenceHit>)? _fallbackMemo;
@@ -247,6 +258,12 @@ class _PhotoFindScreenState extends State<PhotoFindScreen> {
         if (mounted) setState(() => _attached.remove(k.id));
       },
     );
+  }
+
+  /// E-19 찾을 부분 고르기 → 생김새만 다시 비교
+  Future<void> _pickCrop(Uint8List photo) async {
+    final box = await pickPhotoCrop(context, photo, _crop);
+    if (box != null && mounted) setState(() => _crop = isFullCrop(box) ? fullCrop : box); // STATE: 틀 → E-18 다시
   }
 
   /// 줄 오른쪽: ♡ · 리본(구매함) · 📎(구매함이고 사진을 붙일 수 있을 때)
@@ -364,7 +381,34 @@ class _PhotoFindScreenState extends State<PhotoFindScreen> {
                     borderRadius: BorderRadius.circular(Gp.rLarge),
                     child: ColoredBox(
                       color: Gp.soft,
-                      child: SizedBox(height: 220, child: BytesImage(photo, fit: BoxFit.contain)),
+                      child: SizedBox(
+                        height: 220,
+                        // E-19 생김새 모델이 있을 때만: 사진(고른 틀) 누르기 · ✂ → 찾을 부분 고르기
+                        child: ListenableBuilder(
+                          listenable: VisualSearch.instance,
+                          builder: (context, _) => VisualSearch.instance.state != VisualState.ready
+                              ? BytesImage(photo, fit: BoxFit.contain)
+                              : GestureDetector(
+                                  onTap: () => _pickCrop(photo),
+                                  child: Stack(
+                                    fit: StackFit.expand,
+                                    children: [
+                                      PhotoCropView(photo: photo, box: _crop),
+                                      Positioned(
+                                        right: 8,
+                                        bottom: 8,
+                                        child: RaisedCircleButton(
+                                          key: const ValueKey('visual-crop'),
+                                          tooltip: tr('찾을 부분 고르기'),
+                                          onTap: () => _pickCrop(photo),
+                                          child: const Icon(Icons.crop, size: Gp.iM, color: Gp.ink),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                        ),
+                      ),
                     ),
                   ),
                 )
@@ -433,6 +477,8 @@ class _PhotoFindScreenState extends State<PhotoFindScreen> {
                     kits: kits,
                     loaders: widget.loaders,
                     textIds: {for (final k in candKits) k.id},
+                    crop: _crop,
+                    channel: widget.channel,
                   ),
                 Padding(
                   // E-8 이름으로 찾기
@@ -485,6 +531,7 @@ List<HelpItem> photoFindHelp() => [
   HelpItem.widget(const OwnedIcon(size: Gp.iL, filled: false, color: Gp.muted), tr('구매함')),
   HelpItem(Icons.add_photo_alternate_outlined, tr('이 사진을 구매함 상품에 붙이기')),
   HelpItem(Icons.image_search, tr('생김새가 비슷한 상품 (기기 안 모델 · 처음 한 번 받기 · 사진은 밖으로 안 나감)')),
+  HelpItem(Icons.crop, tr('찾을 부분 고르기 (물건만 틀에 넣으면 생김새를 더 잘 찾아요)')),
   HelpItem(Icons.delete_outline, tr('받아 둔 생김새 모델 지우기')),
 ];
 

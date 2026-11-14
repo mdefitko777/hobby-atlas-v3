@@ -14,7 +14,7 @@
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 앱 셸 카메라 버튼 → 추가 시트 → 바코드: E 카메라(아래에서 올라옴) → 찾으면 D 상세로 바꿔 쌓기.
 //       사진 · 앨범: 휴대폰 카메라 / 사진 고르기 → E-8 사진으로 찾기(쌓기) → D 상세(쌓기).
-// 사진은 기기 안 ML Kit 로 상자 · 화면의 "글자"만 읽어 상품 후보를 고른다 (lib/logic/ocr_lookup.dart). 물건 모양을 알아보는 AI 는 없다.
+// 사진은 기기 안 ML Kit 로 상자 · 화면의 "글자"를 읽어 상품 후보를 고르고 (lib/logic/ocr_lookup.dart), 생김새(E-18)로도 찾는다.
 import 'dart:async';
 import 'dart:typed_data';
 
@@ -37,29 +37,37 @@ import 't_photo_screen.dart' show photoPicker;
 
 enum CameraMode { photo, barcode }
 
-/// 찍어서 찾기 열기 — 바코드: 카메라 화면(아래에서 올라옴), 사진: 휴대폰 카메라로 찍은 뒤 E-8
-void openCamera(BuildContext context, CameraMode mode, {required Loaders loaders, required VoidCallback onGoSearch}) {
+/// 찍어서 찾기 열기 — 바코드: 카메라 화면(아래에서 올라옴), 사진: 휴대폰 카메라로 찍은 뒤 E-8.
+/// [channel] = 연 탭의 채널 (E-18 생김새 후보의 기본 칩)
+void openCamera(
+  BuildContext context,
+  CameraMode mode, {
+  required Loaders loaders,
+  required VoidCallback onGoSearch,
+  String? channel,
+}) {
   if (mode == CameraMode.photo) {
-    unawaited(_pickPhoto(context, ImageSource.camera, loaders: loaders, onGoSearch: onGoSearch));
+    unawaited(_pickPhoto(context, ImageSource.camera, loaders: loaders, onGoSearch: onGoSearch, channel: channel));
     return;
   }
   Navigator.of(context, rootNavigator: true).push(
     MaterialPageRoute<void>(
       fullscreenDialog: true,
-      builder: (_) => BarcodeScanScreen(loaders: loaders, onGoSearch: onGoSearch),
+      builder: (_) => BarcodeScanScreen(loaders: loaders, onGoSearch: onGoSearch, channel: channel),
     ),
   );
 }
 
 /// E-5 앨범에서 고르기 → E-8
-void openAlbum(BuildContext context, {required Loaders loaders, required VoidCallback onGoSearch}) =>
-    unawaited(_pickPhoto(context, ImageSource.gallery, loaders: loaders, onGoSearch: onGoSearch));
+void openAlbum(BuildContext context, {required Loaders loaders, required VoidCallback onGoSearch, String? channel}) =>
+    unawaited(_pickPhoto(context, ImageSource.gallery, loaders: loaders, onGoSearch: onGoSearch, channel: channel));
 
 Future<void> _pickPhoto(
   BuildContext context,
   ImageSource source, {
   required Loaders loaders,
   required VoidCallback onGoSearch,
+  String? channel,
 }) async {
   final nav = Navigator.of(context, rootNavigator: true);
   final Uint8List? bytes;
@@ -72,7 +80,7 @@ Future<void> _pickPhoto(
   if (bytes == null || bytes.isEmpty) return;
   nav.push(
     MaterialPageRoute<void>(
-      builder: (_) => PhotoFindScreen(photo: bytes!, loaders: loaders, onGoSearch: onGoSearch),
+      builder: (_) => PhotoFindScreen(photo: bytes!, channel: channel, loaders: loaders, onGoSearch: onGoSearch),
     ),
   );
 }
@@ -82,10 +90,13 @@ typedef ScannerPreview = Widget Function(BuildContext context, ValueChanged<Stri
 
 /// E-1 바코드 찍기
 class BarcodeScanScreen extends StatefulWidget {
-  const BarcodeScanScreen({super.key, required this.loaders, required this.onGoSearch, this.preview});
+  const BarcodeScanScreen({super.key, required this.loaders, required this.onGoSearch, this.preview, this.channel});
 
   final Loaders loaders;
   final VoidCallback onGoSearch;
+
+  /// 연 탭의 채널 — 사진 모드로 바꾸면 그대로 넘긴다
+  final String? channel;
 
   /// 비면 MobileScanner (휴대폰 카메라)
   final ScannerPreview? preview;
@@ -222,13 +233,19 @@ class _BarcodeScanScreenState extends State<BarcodeScanScreen> {
   void _toPhoto() {
     final root = Navigator.of(context, rootNavigator: true);
     root.pop();
-    openCamera(root.context, CameraMode.photo, loaders: widget.loaders, onGoSearch: widget.onGoSearch);
+    openCamera(
+      root.context,
+      CameraMode.photo,
+      loaders: widget.loaders,
+      onGoSearch: widget.onGoSearch,
+      channel: widget.channel,
+    );
   }
 
   void _toAlbum() {
     final root = Navigator.of(context, rootNavigator: true);
     root.pop();
-    openAlbum(root.context, loaders: widget.loaders, onGoSearch: widget.onGoSearch);
+    openAlbum(root.context, loaders: widget.loaders, onGoSearch: widget.onGoSearch, channel: widget.channel);
   }
 
   Widget _preview(BuildContext context) {

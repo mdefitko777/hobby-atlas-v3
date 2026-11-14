@@ -1,7 +1,9 @@
 // 생김새로 찾기 (E-18) — 상품 공식 그림의 "생김새 벡터" 표 · 가장 비슷한 상품 고르기. 순수 Dart (테스트 가능).
-// 표는 Gunpula 가 매주 만든다 (scripts/imgsim/build_vectors.py → release imgsim / imgsim-vectors.bin).
-// 파일: b'HAIS' · 판 1 · u32 차원 · u32 줄 수 · u32 JSON 길이 · JSON {model, updated, ids, src} · f32 배율[줄] · i8 벡터[줄 × 차원]
+// 표는 Gunpula 가 매일 만들고 바뀐 줄이 있을 때만 올린다 (scripts/imgsim/build_vectors.py → release imgsim, 모델마다 표 하나).
+// 파일: b'HAIS' · 판 1 · u32 차원 · u32 줄 수 · u32 JSON 길이 · JSON {model, updated, ids, src, fr …} · f32 배율[줄] · i8 벡터[줄 × 차원]
 // 한 상품에 줄이 둘일 수 있다 (대표 사진 + 상자 그림) — 상품 점수는 그중 큰 것.
+// 표는 상품 이름이 바뀌기 전에 만들어졌을 수 있다 → 옛 id 는 kit-aliases 로 지금 id 에 합친다 (2026-11-14: 베이 17개가
+// 옛 id 로 1위였는데 화면이 못 찾아 버렸다).
 library;
 
 import 'dart:convert';
@@ -28,17 +30,13 @@ class VisualIndex {
 
   /// 파일 바이트 → 표. 모양이 틀리면 FormatException
   factory VisualIndex.parse(Uint8List bytes) {
-    if (bytes.length < 20 || ascii.decode(bytes.sublist(0, 4), allowInvalid: true) != 'HAIS' || bytes[4] != 1) {
-      throw const FormatException('생김새 표 파일이 아니에요');
-    }
+    final scaleAt = metaEnd(bytes);
     final head = ByteData.sublistView(bytes, 8, 20);
     final dim = head.getUint32(0, Endian.little);
     final n = head.getUint32(4, Endian.little);
-    final jl = head.getUint32(8, Endian.little);
-    final scaleAt = 20 + jl;
     final vecAt = scaleAt + 4 * n;
-    if (dim == 0 || jl % 4 != 0 || bytes.length < vecAt + n * dim) throw const FormatException('생김새 표가 잘렸어요');
-    final meta = jsonDecode(utf8.decode(bytes.sublist(20, scaleAt))) as Map<String, Object?>;
+    if (dim == 0 || bytes.length < vecAt + n * dim) throw const FormatException('생김새 표가 잘렸어요');
+    final meta = readMeta(bytes);
     final ids = (meta['ids']! as List).cast<String>();
     if (ids.length != n) throw const FormatException('생김새 표 줄 수가 맞지 않아요');
     // 배율은 4바이트 경계 (20 + jl, jl 은 4의 배수) — 복사해서 정렬 걱정 없이
@@ -57,13 +55,31 @@ class VisualIndex {
     );
   }
 
-  /// [query](L2 정규화된 벡터)와 가장 비슷한 상품 [k]개 — 상품마다 가장 높은 줄 하나만
-  List<VisualHit> nearest(Float32List query, {int k = 12, Set<String>? only}) {
+  /// 파일 머리 20바이트(이상) → 메타 JSON 이 끝나는 곳. 표 전체를 읽지 않고 메타만 볼 때 (받은 표가 어느 모델 것인지)
+  static int metaEnd(Uint8List head) {
+    if (head.length < 20 || ascii.decode(head.sublist(0, 4), allowInvalid: true) != 'HAIS' || head[4] != 1) {
+      throw const FormatException('생김새 표 파일이 아니에요');
+    }
+    final jl = ByteData.sublistView(head, 16, 20).getUint32(0, Endian.little);
+    if (jl % 4 != 0) throw const FormatException('생김새 표가 잘렸어요');
+    return 20 + jl;
+  }
+
+  /// 머리 + 메타 JSON 바이트 → 메타 ({model, updated, ids, src, …})
+  static Map<String, Object?> readMeta(Uint8List bytes) {
+    final end = metaEnd(bytes);
+    if (bytes.length < end) throw const FormatException('생김새 표가 잘렸어요');
+    return jsonDecode(utf8.decode(bytes.sublist(20, end))) as Map<String, Object?>;
+  }
+
+  /// [query](L2 정규화된 벡터)와 가장 비슷한 상품 [k]개 (null = 전부) — 상품마다 가장 높은 줄 하나만.
+  /// [alias] = 옛 id → 지금 id: 같은 상품의 옛 줄 · 새 줄을 한 상품으로 합치고, [only] 도 지금 id 로 본다
+  List<VisualHit> nearest(Float32List query, {int? k = 12, Set<String>? only, Map<String, String> alias = const {}}) {
     if (query.length != dim) throw ArgumentError('벡터 길이 ${query.length} ≠ $dim');
     final best = <String, double>{};
     final d = dim;
     for (var r = 0; r < rows; r++) {
-      final id = ids[r];
+      final id = alias[ids[r]] ?? ids[r];
       if (only != null && !only.contains(id)) continue;
       final o = r * d;
       var s0 = 0.0, s1 = 0.0, s2 = 0.0, s3 = 0.0;
@@ -83,7 +99,7 @@ class VisualIndex {
     }
     final out = [for (final e in best.entries) (kitId: e.key, score: e.value)]
       ..sort((a, b) => b.score.compareTo(a.score));
-    return out.take(k).toList();
+    return k == null ? out : out.take(k).toList();
   }
 }
 
