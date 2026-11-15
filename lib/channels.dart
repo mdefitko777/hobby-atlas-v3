@@ -25,6 +25,10 @@ const allChannels = <Channel>[
   // 게임 · 본체 · 주변기기 · amiibo · 캐릭터 굿즈 (Gunpula 2026-11-14). 앱 안 그림을 새로 넣으면 APK 를 새로 내야 해서
   // 그림은 atlas-groups `channels.nintendo.image` (없으면 첫 글자). 처음 내 채널에는 없다 — 고르기 전엔 아무것도 받지 않는다
   Channel(id: 'nintendo', label: '닌텐도'),
+  // 어느 작품에도 안 붙는 범용 이펙트 파츠 (연기 · 폭발 · 충격 · 바람 · 번개 … 魂EFFECT · the simple effect, Gunpula 계약
+  // 2026-11-15). 한 기체 · 캐릭터 전용 이펙트(光の翼 · ver. A.N.I.M.E. 이펙트 세트 …)는 원래 채널에 남는다.
+  // 닌텐도처럼 그림은 atlas-groups `channels.effects.image`, 처음 내 채널에는 없다
+  Channel(id: 'effects', label: '이펙트'),
   Channel(id: 'kamen_rider', label: '가면라이더', hasData: false),
   Channel(id: 'evangelion', label: '에반게리온', hasData: false),
   Channel(id: 'ultraman', label: '울트라맨', hasData: false),

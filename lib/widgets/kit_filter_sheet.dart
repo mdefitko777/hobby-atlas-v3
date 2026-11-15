@@ -224,25 +224,28 @@ class _FilterSheetState extends State<FilterSheet> {
             ),
             onToggle: (v) => _toggle(_draft.lines, v),
           ),
-        ExpandRow(
-          title: tr('작품'),
-          summary: _summary(_draft.works, works: true),
-          open: _open == '작품',
-          onTap: () => setState(() => _open = _open == '작품' ? '' : '작품'),
-        ),
-        if (_open == '작품')
-          CheckGrid(
-            columns: 1,
-            values: valueCounts(kits.map(kitWork)).map((e) => e.$1).toList(),
-            label: _workName, // 작품 이름은 번역 표가 아니라 상품의 중국어 작품 이름
-            selected: _draft.works,
-            countOf: (v) => _with(
-              (f) => f.works
-                ..clear()
-                ..add(v),
-            ),
-            onToggle: (v) => _toggle(_draft.works, v),
+        // 작품 값이 하나도 없는 목록은 펼쳐도 빈 칸이라 줄을 숨긴다. 이펙트뿐이면 이 줄은 이펙트 갈래(시리즈)
+        if (valueCounts(kits.map(kitWork)) case final works when works.isNotEmpty || _draft.works.isNotEmpty) ...[
+          ExpandRow(
+            title: tr(kitWorkTitle(kits)),
+            summary: _summary(_draft.works, works: true),
+            open: _open == '작품',
+            onTap: () => setState(() => _open = _open == '작품' ? '' : '작품'),
           ),
+          if (_open == '작품')
+            CheckGrid(
+              columns: 1,
+              values: works.map((e) => e.$1).toList(),
+              label: _workName, // 작품 이름은 번역 표가 아니라 상품의 중국어 작품 이름
+              selected: _draft.works,
+              countOf: (v) => _with(
+                (f) => f.works
+                  ..clear()
+                  ..add(v),
+              ),
+              onToggle: (v) => _toggle(_draft.works, v),
+            ),
+        ],
         ExpandRow(
           title: tr('기간'),
           summary: periodLabel(_draft.from, _draft.to).isEmpty ? tr('전체') : periodLabel(_draft.from, _draft.to),

@@ -19,7 +19,7 @@ import 'package:workmanager/workmanager.dart';
 
 import '../data/blob_store.dart';
 import '../data/catalog.dart' show Catalog;
-import '../data/gunpula.dart' show gunpulaBase, gunpulaRawBase, gunpulaUserAgent, manifestSignature;
+import '../data/gunpula.dart' show gunpulaBase, gunpulaRawBase, gunpulaUserAgent, manifestSignature, useGradeNames;
 import '../l10n/l10n.dart';
 import '../json_util.dart';
 import '../notifications/feed_rules.dart';
@@ -204,6 +204,9 @@ Future<CheckOutcome> runCatalogCheck({
   final get = fetch ?? fetchGunpula;
   // 백그라운드(새 isolate)는 앱이 고른 화면 언어를 모른다 — 알림 글을 그 언어로 쓰려고 기기 파일에서 읽는다
   if (background) await L10n.load();
+  // 새 등급의 라인 이름(grades.json)도 — 내 조건의 종류(MODEROID 이펙트 …)와 피드의 FeedItem.line 이 같은 이름이 되게.
+  // 앱 화면은 Catalog 가 이미 채웠다
+  if (background) useGradeNames(_decode(await BlobStore.read(Catalog.auxKey('grades.json'))));
   final config = NotifyConfig.fromJson(_decode(await BlobStore.read(notifyConfigKey)));
   final before = NotifyState.fromJson(_decode(await BlobStore.read(notifyStateKey)));
 

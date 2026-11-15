@@ -105,6 +105,7 @@ const Map<String, String> zhCommon = {
   '마도카 마기카': '魔法少女小圆',
   '레고': '乐高',
   '닌텐도': '任天堂',
+  '이펙트': '特效件', // 채널 · 상품 유형 (TAMASHII_EFFECT · GSC_SIMPLE_EFFECT)
   '가면라이더': '假面骑士',
   '에반게리온': '新世纪福音战士',
   '울트라맨': '奥特曼',
@@ -119,6 +120,7 @@ const Map<String, String> zhCommon = {
   '마도카 마기카 전체': '全部魔法少女小圆',
   '레고 전체': '全部乐高',
   '닌텐도 전체': '全部任天堂',
+  '이펙트 전체': '全部特效件',
   // 라인 · 종류 (lib/data/gunpula.dart 의 line · type · subline 값)
   'PB 한정': 'PB 限定',
   'PB (프리미엄 반다이)': 'PB 限定',

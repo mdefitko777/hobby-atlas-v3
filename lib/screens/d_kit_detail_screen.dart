@@ -44,7 +44,7 @@ import '../api.dart';
 import '../logic/build_status.dart' show needsAssembly;
 import '../logic/friends.dart';
 import '../logic/kit_link.dart';
-import '../logic/kit_rules.dart' show kitPrice, shopUrl;
+import '../logic/kit_rules.dart' show kitPrice, kitWorkTitle, shopUrl;
 import '../logic/market.dart';
 import '../logic/restock.dart';
 import '../marks.dart';
@@ -297,7 +297,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
   List<(String, String)> get _specs => [
     (tr('판매'), k.pb ? tr('PB 한정') : (k.limited ? tr('한정') : tr('일반 판매'))),
     (tr('분류'), tr(channelOf(k.franchiseId).label)),
-    (tr('작품'), k.seriesLabel),
+    (tr(kitWorkTitle([k])), k.seriesLabel),
     (tr('제품 라인'), tr(k.line)),
     (tr('상품 유형'), tr(k.type)),
     (tr('스케일'), k.scale),

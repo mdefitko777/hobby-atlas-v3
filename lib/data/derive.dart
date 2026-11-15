@@ -6,6 +6,7 @@ library;
 import '../clock.dart';
 import '../l10n/l10n.dart';
 import '../logic/announcement_match.dart' show annHeroIds, annReplacedOf;
+import '../logic/category_browse.dart' show newestCover, newestFirst, noWorkChannels, noWorkGroupKey, noWorkGroupLabel;
 import '../logic/live_stream.dart';
 import '../models.dart';
 import '../notifications/feed_rules.dart' show annStageLabels;

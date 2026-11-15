@@ -1,5 +1,5 @@
 // 고른 채널만 받는다 (2026-11-14): 고르지 않은 채널은 상품 파일도 그 채널 보조 파일(건담 도감 · 베이 부품 · 태그 도감)도
-// 받지 않고, 채널을 더하면 그 채널 것만 처음 받고, 빼면 인터넷 없이 지운다. 새 채널(닌텐도)은 처음엔 꺼져 있다.
+// 받지 않고, 채널을 더하면 그 채널 것만 처음 받고, 빼면 인터넷 없이 지운다. 새 채널(닌텐도 · 이펙트)은 처음엔 꺼져 있다.
 import 'dart:convert';
 import 'dart:io';
 
@@ -30,7 +30,7 @@ Map<String, Object?> _kit(String id, String franchise, [Map<String, Object?> mor
 
 /// 가짜 Pages — 받은 경로를 센다
 class _Pages {
-  _Pages({this.franchises = const ['gundam', 'beyblade', 'pokemon', 'lego', 'nintendo']});
+  _Pages({this.franchises = const ['gundam', 'beyblade', 'pokemon', 'lego', 'nintendo', 'effects']});
 
   List<String> franchises;
   String updated = '2026-11-14';
@@ -76,6 +76,16 @@ class _Pages {
           ],
         }),
       ],
+      'split/kits-effects.json' => [
+        _kit('tamashii-effect-smoke', 'effects', {
+          'grade_code': 'TAMASHII_EFFECT',
+          'subline': 'S.H.Figuarts',
+          'price_jpy': 3300,
+          'source_refs': [
+            {'source_id': 'tamashii_web_jp'},
+          ],
+        }),
+      ],
       _ when p.startsWith('split/kits-') => const <Object>[],
       _ => null,
     };
@@ -105,17 +115,19 @@ void main() {
     UserStore.instance.setMyChannels(defaultMyChannels);
   });
 
-  test('닌텐도는 처음 내 채널에 없다 (고르기 전엔 받지 않는다)', () {
-    expect(defaultMyChannels, isNot(contains('nintendo')));
-    expect(allChannels.map((c) => c.id), contains('nintendo'));
-    expect(franchiseIds, contains('nintendo'));
+  test('닌텐도 · 이펙트는 처음 내 채널에 없다 (고르기 전엔 받지 않는다)', () {
+    for (final f in ['nintendo', 'effects']) {
+      expect(defaultMyChannels, isNot(contains(f)));
+      expect(allChannels.map((c) => c.id), contains(f));
+      expect(franchiseIds, contains(f));
+    }
   });
 
   test('처음 받기: 고른 채널의 상품 · 보조 파일만', () async {
     final pages = await _start('ha_gate_first', ['gundam']);
     final c = Catalog.instance;
     expect(pages.got('split/kits-gundam.json'), 1);
-    for (final f in ['beyblade', 'pokemon', 'lego', 'nintendo']) {
+    for (final f in ['beyblade', 'pokemon', 'lego', 'nintendo', 'effects']) {
       expect(pages.touched(f), isFalse, reason: '$f 는 고르지 않았다');
     }
     expect(pages.got('announcements.json'), 1, reason: '모든 채널이 같이 쓰는 작은 파일은 받는다');
@@ -158,6 +170,16 @@ void main() {
     await c.ensureLoaded();
     await pumpEventQueue();
     expect(c.kits.map((k) => k.id), ['nintendo-kr-14917']);
+  });
+
+  test('이펙트를 더하면 split/kits-effects.json 하나만 받고, 라인은 魂EFFECT', () async {
+    final pages = await _start('ha_gate_effects', ['gundam']);
+    final before = pages.gets.length;
+    UserStore.instance.setMyChannels(['gundam', 'effects']);
+    final kits = await fetchKits(['effects']);
+    expect(pages.gets.skip(before), ['split/kits-effects.json']);
+    expect(kits.map((k) => (k.id, k.line, k.subline)), [('tamashii-effect-smoke', '魂EFFECT', 'S.H.Figuarts')]);
+    expect(Catalog.instance.wantedChannels, ['gundam', 'effects']);
   });
 
   test('Gunpula 에 아직 없는 채널(닌텐도 발행 전): 받지 않고 빈 목록 · 채널은 회색', () async {

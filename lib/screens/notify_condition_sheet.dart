@@ -7,7 +7,7 @@ import '../channels.dart';
 import '../data/catalog.dart';
 import '../data/derive.dart' show atlasGroupLabel, deriveWorlds;
 import '../l10n/l10n.dart';
-import '../logic/category_browse.dart' show isBeyLineWorld;
+import '../logic/category_browse.dart' show isBeyLineWorld, noWorkChannels;
 import '../models.dart' show Kit;
 import '../notifications/notify_models.dart';
 import '../theme.dart';
@@ -91,7 +91,10 @@ class _ConditionSheetState extends State<_ConditionSheet> {
       for (final w in worlds)
         if (w.total > 0 && !(channel == 'beyblade' && isBeyLineWorld(w.id)))
           if (w.id.substring(channel.length + 1) case final id)
-            ('group:$id', atlasGroupLabel(channel, id, zh: false) ?? w.label),
+            // 작품이 없는 채널(이펙트)이 상품으로 만든 묶음은 피드에 없는 묶음이라 고를 수 없다 (종류로 고른다)
+            if (atlasGroupLabel(channel, id, zh: false) case final label
+                when label != null || !noWorkChannels.contains(channel))
+              ('group:$id', label ?? w.label),
     ];
   }
 
@@ -142,7 +145,7 @@ class _ConditionSheetState extends State<_ConditionSheet> {
                     switch (ch) {
                       'madoka' => tr('캐릭터'),
                       'beyblade' => tr('블레이더'),
-                      'lego' || 'nintendo' => tr('시리즈'),
+                      'lego' || 'nintendo' || 'effects' => tr('시리즈'),
                       'pokemon' => tr('세대'),
                       _ => tr('작품'),
                     },

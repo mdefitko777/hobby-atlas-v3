@@ -45,7 +45,34 @@ Future<List<World>> deriveWorlds(String channelId) async {
           }(),
     ];
   }
-  return _atlasWorlds(channelId, atlas);
+  final worlds = _atlasWorlds(channelId, atlas);
+  if (worlds.isEmpty && noWorkChannels.contains(channelId)) return _noWorkWorlds(channelId);
+  return worlds;
+}
+
+/// 작품이 없는 채널(이펙트)의 묶음 — atlas 묶음이 없으니 받은 상품을 이펙트 갈래 · 세부 시리즈 · 라인으로 (category_browse noWorkGroupKey).
+/// 묶음 id 는 atlas 묶음이 아니라 알림 조건(group:)으로 고르지 않는다 (notify_condition_sheet)
+List<World> _noWorkWorlds(String channelId) {
+  final groups = <String, List<Kit>>{};
+  for (final k in _cat.kits) {
+    if (k.franchiseId == channelId) (groups[noWorkGroupKey(k)] ??= []).add(k);
+  }
+  return [
+    for (final e in groups.entries)
+      () {
+        final kits = [...e.value]..sort(newestFirst);
+        return World(
+          id: '$channelId-${e.key}',
+          franchiseId: channelId,
+          label: noWorkGroupLabel(kits.first),
+          subtitle: '',
+          image: newestCover(kits),
+          total: kits.length,
+          owned: kits.where((k) => _kitStatus(k.id) == CollectStatus.owned).length,
+          kitIds: [for (final k in kits) k.id],
+        );
+      }(),
+  ]..sort((a, b) => b.total != a.total ? b.total.compareTo(a.total) : a.label.compareTo(b.label));
 }
 
 List<World> _atlasWorlds(String channelId, Map<String, Object?> atlas) {

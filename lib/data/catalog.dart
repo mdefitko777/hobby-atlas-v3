@@ -20,6 +20,7 @@ import 'package:http/http.dart' as http;
 import '../channels.dart' show channelCovers, channelOf, channelsWithData, lineCovers;
 import '../json_util.dart';
 import '../l10n/l10n.dart';
+import '../l10n/zh_text.dart' show zhText;
 import '../models.dart';
 import 'blob_store.dart';
 import 'gundam_atlas.dart' show atlasBoxartFile, atlasKitMsFile, atlasMsFile;
@@ -196,6 +197,7 @@ class Catalog extends ChangeNotifier {
       ];
       manifest = m['manifest'] as Map<String, Object?>? ?? const {};
       _slim = await compute(_decodeSlim, slim);
+      _useGrades(await BlobStore.read(auxKey('grades.json')));
       _rebuild();
     } on Object catch (e) {
       debugPrint('[catalog] 캐시를 못 읽음: $e');
@@ -348,6 +350,20 @@ class Catalog extends ChangeNotifier {
   /// 이미 푼 보조 파일 (아직이면 null) — 기다릴 수 없는 곳(설정 목록의 글자)에서
   Object? auxLoaded(String file) => _aux[file];
 
+  /// 새 등급의 라인 이름(grades.json name_ko · name_zh)을 이 isolate 에도 — 알림 피드의 종류(FeedItem.line)가 상품의
+  /// 라인과 같고, 중국어 화면의 tr(k.line) 이 grades.json 의 중국어 이름을 찾게 (손으로 쓴 번역이 있으면 그것)
+  static void _useGrades(String? text) {
+    if (text == null || text.isEmpty) return;
+    try {
+      useGradeNames(jsonDecode(text));
+    } on FormatException {
+      return;
+    }
+    for (final e in gradeZhNames.entries) {
+      zhText.putIfAbsent(e.key, () => e.value);
+    }
+  }
+
   /// 보조 파일의 기기 캐시 이름 — `atlas/…` 처럼 폴더가 붙은 이름도 한 파일로 (`/` → `__`)
   static String auxKey(String file) => 'aux_${file.replaceAll('/', '__')}';
 
@@ -435,6 +451,7 @@ class Catalog extends ChangeNotifier {
         if (t == null || !auxMatches(t, hashes[f])) hashes.remove(f);
         _fileDone();
       }
+      _useGrades(aux['grades.json']);
       final slim = <Map<String, Object?>>[];
       // manifest 에 없는 채널은 아직 Gunpula 에 파일이 없다 (새 채널을 앱이 먼저 알 때) — want 에서 빠져 있다
       for (final f in want) {
@@ -642,6 +659,7 @@ class Catalog extends ChangeNotifier {
           for (final file in const ['grades.json', 'kit-first-seen.json'])
             if (await stored(file) case final t when t.isNotEmpty) file: t,
         };
+        _useGrades(aux['grades.json']);
         // 그 채널의 보조 파일 (건담 도감 · 베이 부품 · 태그 도감) — 그 채널을 뺄 때 지웠으니 새로 받는다
         for (final file in [
           for (final e in auxChannel.entries)

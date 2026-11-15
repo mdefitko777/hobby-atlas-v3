@@ -36,7 +36,7 @@ String manifestSignature(Object? manifest) {
 /// 매일 갱신되는 순서대로 받는 파일들 (kits.json · search-index.json 은 받지 않는다).
 /// 새 소식 피드는 여기서 받지 않는다 — 알림 확인(lib/background/catalog_check_worker.dart)이 manifest 가 바뀔 때 한 번만 받는다.
 /// 이 중 내 채널만 받는다 (Catalog.wantedChannels) — 고르지 않은 채널은 상품 · 그 채널 보조 파일 모두 받지 않는다
-const franchiseIds = ['gundam', 'beyblade', 'pokemon', 'armored_core', 'fate', 'madoka', 'lego', 'nintendo'];
+const franchiseIds = ['gundam', 'beyblade', 'pokemon', 'armored_core', 'fate', 'madoka', 'lego', 'nintendo', 'effects'];
 
 /// 예전에 받던 건담 도감 파일 (gget) — 기기 캐시에서 지운다
 const retiredAuxFiles = ['gget-units.json', 'gget-kit-map.json', 'gget-series-sections.json'];
@@ -170,7 +170,7 @@ String pickName(Object? names, [List<String> order = const ['ko', 'ja', 'en', 'z
   return '';
 }
 
-// ── 제품 라인 · 상품 유형 (grades.json 에는 한국어 이름이 없다) ────────────────
+// ── 제품 라인 · 상품 유형 (grades.json 의 한국어 이름은 새 등급에만 있다) ────────────────
 const _lineLabels = {
   'GUNDAM_MERCH': '굿즈',
   'ROBOT_SPIRITS': 'ROBOT魂',
@@ -232,7 +232,48 @@ const _lineLabels = {
   'NIN_HW': '본체 · 주변기기',
   'NIN_AMIIBO': 'amiibo',
   'NIN_GOODS': '굿즈',
+  // 이펙트 (Gunpula effects, 계약 2026-11-15) — 계약에 이름이 정해진 두 라인만. 그 밖의 이펙트 등급(MODEROID_EFFECT …)은
+  // grades.json name_ko 로 ([useGradeNames])
+  'TAMASHII_EFFECT': '魂EFFECT',
+  'GSC_SIMPLE_EFFECT': 'the simple effect',
 };
+
+/// grades.json 의 한국어 라인 이름 — 위 표에 없는 새 등급 코드만 (계약: 새 코드는 grades.json 에 ko · zh · ja 이름과 같이 온다).
+/// 매핑(mapKitsJob)과 알림 피드(FeedItem.line)가 같은 이름을 쓰도록 둘 다 [lineLabel] 이 여기서 찾는다. isolate 마다 따로 채운다
+final _gradeKo = <String, String>{};
+
+/// 그 한국어 라인 이름 → 중국어 (grades.json name_zh) — 화면의 tr(k.line) 이 찾게 catalog 가 번역 표에 더한다
+final gradeZhNames = <String, String>{};
+
+// 코드 그대로가 라인 이름인 분류 (HG · MG · RE100 · SDX · BEYBLADE_X …) — 다른 곳(OCR · 조립 여부)이 그 글자로 비교해서
+// grades.json 에 한국어 이름이 생겨도 바꾸지 않는다
+const _codeNamedCategories = {
+  'core',
+  'core_subline',
+  'one_hundred',
+  'sd',
+  'historical',
+  'special',
+  'plastic_model',
+  'tamashii_figure',
+  'battle_toy',
+};
+
+/// grades.json (푼 JSON) 으로 [_gradeKo] · [gradeZhNames] 를 다시 채운다
+void useGradeNames(Object? grades) {
+  _gradeKo.clear();
+  gradeZhNames.clear();
+  for (final raw in jList(jMap(grades)['grades'])) {
+    final g = jMap(raw);
+    final code = jStr(g['code']);
+    final ko = jStr(g['name_ko']).trim();
+    if (code.isEmpty || ko.isEmpty || _lineLabels.containsKey(code)) continue;
+    if (_codeNamedCategories.contains(jStr(g['category']))) continue;
+    _gradeKo[code] = ko;
+    final zh = jStr(g['name_zh']).trim();
+    if (zh.isNotEmpty) gradeZhNames[ko] = zh;
+  }
+}
 
 /// 전각 영숫자 → 반각 (ＨＧＵＣ → HGUC) — lib/format.dart
 const _halfWidth = halfWidth;
@@ -269,6 +310,14 @@ String cleanSubline(String subline, String code, String line, {String name = ''}
       return m == null ? '' : (m.group(0)!.endsWith('2') ? 'Nintendo Switch 2' : 'Nintendo Switch');
     case 'NIN_AMIIBO':
       return s; // amiibo 시리즈 (슈퍼 스매시브라더스 시리즈 · amiibo 카드 …)
+    case 'TAMASHII_EFFECT' || 'GSC_SIMPLE_EFFECT':
+      // 맞춰 쓰는 피규어 라인 (지금 魂EFFECT 의 「… for S.H.Figuarts」). 작품이 없는 채널이라 세대 · 도감 칸도 이것으로 묶는다
+      // (lib/data/derive/worlds.dart). subline 이 라인 이름뿐(옛 魂EFFECT)이면 이름의 「for …」 에서, 없으면 없음
+      // 라인 이름(魂EFFECT · THE シンプルエフェクト …)은 세부 시리즈가 아니다 — 가타카나 エフェクト 도 같이 거른다
+      if (s.isNotEmpty && s != line && !RegExp(r'EFFECT|エフェクト', caseSensitive: false).hasMatch(s)) return s;
+      final m = RegExp(r'for\s*(S\.H\.\s*Figuarts|figma)', caseSensitive: false).firstMatch(_halfWidth(name));
+      if (m == null) return '';
+      return m.group(1)!.toLowerCase() == 'figma' ? 'figma' : 'S.H.Figuarts';
   }
   return '';
 }
@@ -328,7 +377,7 @@ String lineLabel(String code, String subline, String kitId) {
     return subline.replaceFirst('BEYBLADE X ', '');
   }
   if ((code == 'FATE_ACTION' || code == 'MADOKA_ACTION') && subline == 'figma') return 'figma';
-  return _lineLabels[code] ?? code;
+  return _lineLabels[code] ?? _gradeKo[code] ?? code;
 }
 
 // 이름으로 가르는 상품 종류 — 굿즈 묶음(GUNDAM_MERCH · *_GOODS)에 카드 · 진짜 가샤폰이 섞여 있다
@@ -455,7 +504,15 @@ const _brandBySource = {
   'nintendo_kr': 'Nintendo',
   'bnkrmall_kr': '반다이남코코리아',
   'academy_kr': '아카데미과학',
+  'tamashii_effect_jp': 'TAMASHII NATIONS',
+  'good_smile_effects_jp': 'Good Smile',
 };
+
+/// 출처 사이트 → 브랜드. 표에 없으면 같은 사이트의 다른 출처(tamashii_<…> · good_smile_<…>)로 —
+/// 새 채널의 출처 이름(이펙트는 tamashii_effect_jp)을 표가 아직 모를 때도 브랜드 칸이 비지 않게
+String? brandOfSource(String id) =>
+    _brandBySource[id] ??
+    (id.startsWith('tamashii_') ? 'TAMASHII NATIONS' : (id.startsWith('good_smile_') ? 'Good Smile' : null));
 
 // ── 파는 나라 (출처 사이트로) ─────────────────────────────────────────────
 /// 출처 사이트 → 'kr' · 'jp' · 'both' · ''(모름: 레고 · 손으로 넣은 것 · 위키).
@@ -563,8 +620,11 @@ List<String> partsFirst(List<String> gallery) {
 List<Map<String, Object?>> mapKitsJob(Map<String, String> msg) {
   final kits = jList(jMap(jsonDecode(msg['raw']!))['kits']);
   final boxart = msg['boxart'] == null ? const <String, BoxArt>{} : parseBoxart(jsonDecode(msg['boxart']!));
+  final gradesJson = jsonDecode(msg['grades'] ?? '{}');
+  // 이 isolate 의 라인 이름 표도 같은 grades.json 으로 (안 넘긴 테스트는 부른 쪽 표를 그대로)
+  if (msg['grades'] != null) useGradeNames(gradesJson);
   final grades = {
-    for (final g in jList(jMap(jsonDecode(msg['grades'] ?? '{}'))['grades']))
+    for (final g in jList(jMap(gradesJson)['grades']))
       if (jStr(jMap(g)['code']).isNotEmpty) jStr(jMap(g)['code']): jStr(jMap(g)['category']),
   };
   final firstSeen = jMap(jMap(jsonDecode(msg['firstSeen'] ?? '{}'))['dates']);
@@ -601,7 +661,7 @@ List<Map<String, Object?>> mapKitsJob(Map<String, String> msg) {
           ]);
     final sourceIds = [for (final s in jList(r['source_refs'])) jStr(jMap(s)['source_id'])];
     final pb = r['is_premium_bandai'] == true;
-    final brands = <String>{for (final s in sourceIds) ?_brandBySource[s], if (pb) '프리미엄 반다이'}.toList();
+    final brands = <String>{for (final s in sourceIds) ?brandOfSource(s), if (pb) '프리미엄 반다이'}.toList();
     final pbInfo = jMap(r['premium_bandai']);
     // 레고는 세트 번호를 이름 앞에 (공식 · 수집가 표기 "75192 Millennium Falcon")
     final number = jStr(r['number']);
@@ -614,7 +674,10 @@ List<Map<String, Object?>> mapKitsJob(Map<String, String> msg) {
     final seriesZh = jStr(labels['zh']);
     final line = lineLabel(code, subline, id);
     final goodsKind = jStr(r['goods_kind']);
-    final type = goodsKind.isEmpty
+    // 이펙트 채널은 등급과 상관없이 유형 이펙트 — grades.json 분류(other)로는 굿즈가 된다 (피규어에 붙이는 부품이다)
+    final type = jStr(r['franchise']) == 'effects'
+        ? '이펙트'
+        : goodsKind.isEmpty
         ? typeLabel(code, grades[code] ?? '', '${jStr(names['ja'])} ${jStr(names['ko'])}')
         : (goodsKind == 'card_game' ? '카드' : '굿즈');
     final other = <String>{

@@ -3,6 +3,7 @@ import '../clock.dart';
 import '../format.dart';
 import '../l10n/l10n.dart';
 import '../models.dart';
+import 'category_browse.dart' show noWorkChannels;
 
 /// 검색어가 이름 · 일본어 이름 · 작품 · 라인 · 종류에 들어 있는지 (검색 탭 · 홈 전체 목록 공통)
 bool kitMatches(Kit k, String query) {
@@ -93,6 +94,10 @@ List<Kit> kitsWithBarcode(Iterable<Kit> kits, String raw) {
 
 /// 작품 묶음 이름 (홈 전체 목록 거르기). 베이블레이드는 작품이 하나라 series(한정 · UX…) 대신 이름 하나로
 String kitWork(Kit k) => k.franchiseId == 'beyblade' ? 'BEYBLADE X' : k.series;
+
+/// [kitWork] 칸의 이름 — 작품이 없는 채널(이펙트)만 있으면 series 가 이펙트 갈래(연기 · 폭발 …)라 「시리즈」
+String kitWorkTitle(Iterable<Kit> kits) =>
+    kits.isNotEmpty && kits.every((k) => noWorkChannels.contains(k.franchiseId)) ? '시리즈' : '작품';
 
 /// [kitWork] 를 화면에 보일 때 (중국어 화면이면 작품 중국어 이름) — 묶기 · 비교는 [kitWork] 그대로
 String kitWorkLabel(Kit k) => k.franchiseId == 'beyblade' ? 'BEYBLADE X' : k.seriesLabel;

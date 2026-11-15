@@ -307,10 +307,23 @@ String worldSectionOf(String channel, String worldId) {
     'armored_core' => '시리즈',
     'beyblade' => RegExp(r'^[a-z]{1,2}x[a-z]?$').hasMatch(id) ? '라인' : '블레이더', // bx · ux · cx · bxa
     'madoka' => '캐릭터',
-    'lego' || 'nintendo' => '시리즈',
+    'lego' || 'nintendo' || 'effects' => '시리즈',
     _ => '세대',
   };
 }
+
+/// 작품이 없는 채널 — 이펙트 상품은 work_title · universe 가 비고, series 는 이펙트 갈래(연기 · 폭발 · 불꽃 …)다
+/// (어느 작품에도 안 붙는 범용 파츠). 그래서 series 를 작품이 아니라 「시리즈」라고 부르고, atlas 묶음이 없으면
+/// 세대 탭 · 도감 칸을 [noWorkGroupKey] 로 묶는다 (안 묶으면 상품이 있어도 「아직 없어요」 였다)
+const noWorkChannels = {'effects'};
+
+/// 작품이 없는 채널의 묶음: 이펙트 갈래(series) > 맞춰 쓰는 피규어 라인(세부 시리즈 S.H.Figuarts …) > 라인
+String noWorkGroupKey(Kit k) => k.seriesKey.isNotEmpty
+    ? k.seriesKey
+    : (k.subline.isNotEmpty ? k.subline : (k.line.isNotEmpty ? k.line : lineOtherKey));
+
+/// [noWorkGroupKey] 묶음의 이름 (고른 언어)
+String noWorkGroupLabel(Kit k) => k.seriesKey.isNotEmpty ? k.seriesLabel : lineGroupLabel(noWorkGroupKey(k));
 
 /// 세대 묶음들 → 묶음 순서대로 (Fate 는 정한 순서, 그 밖은 처음 나온 순서 · 묶음 안은 받은 순서)
 List<(String, List<T>)> worldSections<T>(String channel, Iterable<T> items, String Function(T) idOf) {
