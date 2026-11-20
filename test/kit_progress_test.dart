@@ -58,16 +58,6 @@ void main() {
       expect(BuildStage.values.map((s) => s.label), ['미조립', '조립 중', '완성']);
     });
 
-    test('미조립 수 · 단계별 수 (기록 없음 = 미조립)', () {
-      final rec = {'a': BuildStage.built, 'b': BuildStage.building};
-      BuildStage of(String id) => rec[id] ?? BuildStage.unbuilt;
-      expect(backlogCount(['a', 'b', 'c', 'd'], of), 2);
-      expect(stageCounts(['a', 'b', 'c'], of), {BuildStage.unbuilt: 1, BuildStage.building: 1, BuildStage.built: 1});
-      expect(buildFilterAt(0), isNull);
-      expect(buildFilterAt(1), BuildStage.unbuilt);
-      expect(buildFilterAt(3), BuildStage.built);
-    });
-
     test('저장 모양 왕복 · 깨진 줄 버림', () {
       final m = buildRecordsFrom({
         'a': {'stage': 'building', 'painted': true, 'updated_at': 't1'},
@@ -215,7 +205,7 @@ void main() {
   });
 
   group('바코드 겹침', () {
-    test('구매함 > 예약 > 좋아요 · 없으면 null', () {
+    test('구매함 > 예약 > 좋아요 · 없으면 null (조립 기록이 있어도 겹침 알림에는 보이지 않는다)', () {
       final s = UserStore.memory()
         ..setStatus('own', CollectStatus.owned)
         ..setQuantity('own', 2)
@@ -231,7 +221,6 @@ void main() {
       expect(d.kind, ScanDupKind.owned);
       expect(d.kit.id, 'own');
       expect(d.quantity, 2);
-      expect(d.build.stage, BuildStage.building);
     });
   });
 }

@@ -139,7 +139,7 @@ Future<void> showUpdateSheet(BuildContext context, UpdateInfo info, {AppUpdate? 
                   ),
                 const SizedBox(height: 8),
                 Text(
-                  tr('처음 한 번은 "이 출처의 앱 설치 허용"을 켜야 해요 · 내 기록은 그대로예요'),
+                  tr('처음 한 번은 「출처를 알 수 없는 앱 설치」에서 「이 출처 허용」을 켜야 해요 · 내 기록은 그대로예요'),
                   style: const TextStyle(fontSize: Gp.t11, color: Gp.faint),
                 ),
               ],
@@ -239,7 +239,7 @@ class _VersionTileState extends State<VersionTile> {
     final u = _update;
     final p = _patch;
     if (!AppUpdate.supported && !p.available) {
-      showToast(context, tr('이 빌드는 앱 안 업데이트를 쓰지 않아요'));
+      showToast(context, tr('이 버전은 앱 안 업데이트를 쓰지 않아요'));
       return;
     }
     setState(() => _checking = true); // STATE: 확인 중
@@ -276,7 +276,7 @@ class _VersionTileState extends State<VersionTile> {
             Text(
               u.available == null
                   ? 'Hobby Atlas · ${p.versionLabel}'
-                  : trf('Hobby Atlas · {version} → {next} 있음', {
+                  : trf('Hobby Atlas {version} · 새 버전 {next}', {
                       'version': p.versionLabel,
                       'next': u.available!.versionLabel,
                     }),

@@ -22,6 +22,7 @@ import '../l10n/l10n.dart';
 import '../api.dart';
 import '../data/catalog.dart';
 import '../logic/announcement_match.dart';
+import '../logic/data_labels.dart';
 import '../logic/kit_rules.dart';
 import '../logic/preorder_open.dart' show annShownDay;
 import '../marks.dart';
@@ -64,9 +65,12 @@ class ListTools extends ChangeNotifier {
 
 /// 검색창 줄 오른쪽 세 칸: 필터 · 격자 · 목록. [pool] = 필터 시트가 개수를 세는 상품 (null 이면 필터 없음 = 옅게)
 class ListToolIcons extends StatelessWidget {
-  const ListToolIcons({super.key, required this.tools, required this.pool});
+  const ListToolIcons({super.key, required this.tools, required this.pool, this.togglesOutside = false});
   final ListTools tools;
   final List<Kit>? pool;
+
+  /// 좋아요 · 구매함 · 발매 예정 · 나라 아이콘 줄이 검색창 아래에 따로 있다 (검색 탭) — 시트에서 빼고 숫자에도 안 센다
+  final bool togglesOutside;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -75,11 +79,16 @@ class ListToolIcons extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         FilterButton(
-          count: tools.filter.count,
+          count: togglesOutside ? tools.filter.sheetCount : tools.filter.count,
           onTap: pool == null
               ? null
               : () async {
-                  final picked = await pickKitFilter(context, pool: pool!, current: tools.filter);
+                  final picked = await pickKitFilter(
+                    context,
+                    pool: pool!,
+                    current: tools.filter,
+                    toggles: !togglesOutside,
+                  );
                   if (picked != null) tools.setFilter(picked); // STATE: 필터 → 목록
                 },
         ),
@@ -220,7 +229,7 @@ class _SectionListViewState extends State<SectionListView> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(tr('최근 본 기록을 지울까요?')),
-        content: Text(tr('상품은 그대로이고, 이 목록만 비워져요.')),
+        content: Text(tr('상품은 그대로이고 이 목록만 비워져요')),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr('취소'))),
           FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(tr('지우기'))),
@@ -265,7 +274,7 @@ class _SectionListViewState extends State<SectionListView> {
               children: [
                 if (widget.onBack case final back?)
                   IconButton(
-                    tooltip: tr('돌아가기'),
+                    tooltip: tr('뒤로'),
                     onPressed: back,
                     icon: const Icon(Icons.arrow_back_ios_new, size: Gp.iM),
                   )
@@ -338,7 +347,7 @@ class _SectionListViewState extends State<SectionListView> {
                     children: [
                       Flexible(
                         child: Text(
-                          labels.map(tr).join(' · '),
+                          joinDot(labels), // KitFilter.labels 는 이미 보이는 이름 (다시 tr 하지 않는다)
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontSize: Gp.t12, color: Gp.accent),
@@ -457,7 +466,7 @@ class _SectionListViewState extends State<SectionListView> {
     subtitle: joinDot([
       tr(channelOf(k.franchiseId).label),
       kitWork(k) == k.series ? k.seriesLabel : kitWork(k),
-      tr(k.line),
+      dataLabel(k.line),
     ]),
     tag: Marks.of(context).owned(k)
         ? tr('구매함')
@@ -543,7 +552,11 @@ class _SectionListViewState extends State<SectionListView> {
                                   const SizedBox(width: 6),
                                   Expanded(
                                     child: Text(
-                                      joinDot([tr(channelOf(a.franchiseId).label), dateDot(annShownDay(a)), a.source]),
+                                      joinDot([
+                                        tr(channelOf(a.franchiseId).label),
+                                        dateDot(annShownDay(a)),
+                                        sourceLabel(a.source),
+                                      ]),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),

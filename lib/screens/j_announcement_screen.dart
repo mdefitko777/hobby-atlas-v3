@@ -10,8 +10,8 @@
 // │ J-5  │ 아래 띠: 브라우저로 (↗)               │ Chrome 등에서 열기                      │ P10           │
 // │ J-5b │ 아래 띠: 번역 (文A)                   │ 원문 글을 한국어로 · 다시 누르면 원문    │ P02 · P03     │
 // │ J-6  │ PageView (위 띠 · 아래 띠에서)        │ 좌우로 밀어 이전 · 다음 예고            │ P03           │
-// │ J-7  │ 시트 안 가로 ProductTile (최대 12)    │ 같은 IP의 새 상품 (작품 · 없으면 채널)   │ P06 · P08     │
-// │ J-8  │ ExpandRow + AnimatedSize (J-2b · J-4) │ 상품 소개: 사진 · 가격 · 예약 기간 · 발송 · 설명 · 사양 · 구성품 · 공식 상품 페이지 (글은 일본어 그대로, 공식만) │ P02 · P08 │
+// │ J-7  │ 시트 안 가로 ProductTile (최대 12, 이름 두 줄) │ 관련 새 상품 (작품 · 없으면 채널) │ P06 · P08 │
+// │ J-8  │ ExpandRow + AnimatedSize (J-2b · J-4) │ 상품 소개: 사진 · 가격 · 예약 기간 · 발송 · 설명 · 사양 · 구성품 · 공식 상품 페이지 (번역을 켜면 글도 번역, 공식만) │ P02 · P08 │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 홈 배너 · 홈 공식 예고 줄 · 캘린더 예고 줄 · 예고 목록 · 알림에서 쌓기(push, 오른쪽에서).
 import 'dart:async';
@@ -32,6 +32,7 @@ import '../detail_pane.dart';
 import '../channels.dart';
 import '../l10n/l10n.dart';
 import '../logic/announcement_match.dart';
+import '../logic/data_labels.dart' show sourceLabel;
 import '../logic/preorder_open.dart';
 import '../models.dart';
 import '../notifications/live_reminders.dart' show liveLead;
@@ -148,7 +149,7 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
           ),
         );
 
-  /// J-7 같은 IP의 새 상품 (제목으로 찾은 상품의 작품, 없으면 채널 전체)
+  /// J-7 관련 새 상품 (제목으로 찾은 상품의 작품, 없으면 채널 전체)
   late final Future<({String label, List<Kit> kits})> _sameIp = Future.wait([
     _all,
     _related,
@@ -250,7 +251,7 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
           builder: (context) => AlertDialog(
             title: Text(tr('번역 모델 받기')),
             // 번역은 화면 언어로 (lib/data/page_translate.dart) — 중국어 화면이면 일본어 · 중국어 모델
-            content: Text(tr('일본어 · 한국어 번역 모델(약 60 MB)을 한 번 받아요. 그다음부터는 인터넷 없이도 이 기기 안에서 번역해요. Wi-Fi 에서 받는 것을 권해요.')),
+            content: Text(tr('일본어 · 한국어 번역 모델(약 60 MB)을 한 번 받아요. 그다음부터는 인터넷 없이도 이 기기 안에서 번역해요. 와이파이에서 받는 것을 권해요.')),
             actions: [
               TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr('나중에'))),
               TextButton(onPressed: () => Navigator.pop(context, true), child: Text(tr('받기'))),
@@ -327,7 +328,7 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
   void _toggleFollow(NotifyStore store) {
     final a = widget.item;
     if (a.status == announcementStages.last) {
-      showToast(context, tr('이미 발매된 예고예요'));
+      showToast(context, tr('이미 발매된 상품이에요'));
       return;
     }
     final before = store.isFollowing(a.id);
@@ -422,7 +423,7 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  joinDot([tr(channelOf(a.franchiseId).label), dateDot(annShownDay(a)), a.source]),
+                  joinDot([tr(channelOf(a.franchiseId).label), dateDot(annShownDay(a)), sourceLabel(a.source)]),
                   style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
                 ),
                 _PreorderLine(item: a),
@@ -433,7 +434,7 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          _IntroSlot(item: a, intro: _intro, sheet: true), // J-8
+          _IntroSlot(item: a, intro: _intro, sheet: true, translate: _translateOn), // J-8
           FutureBuilder<List<Kit>>(
             future: _related,
             builder: (context, snap) {
@@ -467,7 +468,7 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SectionHeader(tr('같은 IP의 새 상품'), subtitle: ip.label), // P06
+                  SectionHeader(tr('관련 새 상품'), subtitle: ip.label), // P06
                   _tiles(sheet, ip.kits),
                 ],
               );
@@ -480,7 +481,7 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
 
   /// 가로 상품 줄 (누르면 시트를 닫고 상세)
   Widget _tiles(BuildContext sheet, List<Kit> kits) => SizedBox(
-    height: 148 + 32,
+    height: productTileHeight(context, 148), // 사진 + 이름 두 줄
     child: ListView.separated(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: Gp.gutter),
@@ -536,7 +537,7 @@ class _TopBar extends StatelessWidget {
                     const SizedBox(width: 6),
                     Flexible(
                       child: Text(
-                        joinDot([dateDot(annShownDay(item)), item.source]),
+                        joinDot([dateDot(annShownDay(item)), sourceLabel(item.source)]),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontSize: Gp.t11, color: Gp.muted),
@@ -681,7 +682,7 @@ class _Summary extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                joinDot([tr(channelOf(item.franchiseId).label), dateDot(annShownDay(item)), item.source]),
+                joinDot([tr(channelOf(item.franchiseId).label), dateDot(annShownDay(item)), sourceLabel(item.source)]),
                 style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
               ),
               _PreorderLine(item: item),
@@ -802,10 +803,13 @@ typedef _Intro = ({AnnDetail? detail, Kit? kit});
 
 /// J-8 자리 — 읽는 동안 · 상품 소개가 없으면 아무것도 (버튼도 빈 칸 글도 없다)
 class _IntroSlot extends StatelessWidget {
-  const _IntroSlot({required this.item, required this.intro, required this.sheet});
+  const _IntroSlot({required this.item, required this.intro, required this.sheet, this.translate = false});
   final Announcement item;
   final Future<_Intro> intro;
   final bool sheet;
+
+  /// J-5b 번역을 켠 채 연 시트 — 소개 글도 같은 기기 번역으로
+  final bool translate;
 
   @override
   Widget build(BuildContext context) => FutureBuilder<_Intro>(
@@ -816,6 +820,7 @@ class _IntroSlot extends StatelessWidget {
         detail: d,
         kit: kit,
         sheet: sheet,
+        translate: translate,
       ),
       _ => const SizedBox.shrink(),
     },
@@ -824,9 +829,16 @@ class _IntroSlot extends StatelessWidget {
 
 /// J-8 상품 소개 — 버튼 하나(처음엔 접힘)를 누르면 그 자리에서 펼친다:
 /// 사진 → 가격 · 예약 기간 · 발송 → 설명 → 사양 → 구성품 → 공식 상품 페이지.
-/// 글은 공식 페이지의 일본어 그대로 (번역하지 않는다 — 길게 눌러 고를 수 있게 SelectionArea). 칸 이름만 화면 언어
+/// 글은 공식 페이지의 일본어 그대로 (길게 눌러 고를 수 있게 SelectionArea), 원문 번역을 켜 두었으면 펼칠 때 같은 기기 번역으로.
+/// 사양 이름은 번역 모델 없이도 고정 표([_specLabels])로 화면 언어
 class _ProductIntro extends StatefulWidget {
-  const _ProductIntro({required this.item, required this.detail, required this.kit, required this.sheet});
+  const _ProductIntro({
+    required this.item,
+    required this.detail,
+    required this.kit,
+    required this.sheet,
+    this.translate = false,
+  });
   final Announcement item;
   final AnnDetail detail;
 
@@ -836,12 +848,61 @@ class _ProductIntro extends StatefulWidget {
   /// 이 예고 시트 안 (요약 화면은 위에 큰 사진이 이미 있어 예고 사진으로 채우지 않는다)
   final bool sheet;
 
+  /// 원문 번역을 켠 채 열었다 (모델은 켤 때 이미 받았다)
+  final bool translate;
+
   @override
   State<_ProductIntro> createState() => _ProductIntroState();
 }
 
 class _ProductIntroState extends State<_ProductIntro> {
   bool _open = false;
+
+  /// 원문 → 번역 (번역을 켜고 처음 펼칠 때 한 번 채운다, 못 바꾼 글은 원문 그대로)
+  Map<String, String> _translated = const {};
+
+  /// 번역 중이면 진행 글 (펼침 줄 오른쪽, 빈 글자 = 쉬는 중)
+  String _busy = '';
+
+  Future<void> _translate() async {
+    if (!widget.translate || _busy.isNotEmpty || _translated.isNotEmpty) return;
+    final d = widget.detail;
+    final texts = textsToTranslate([
+      d.priceText,
+      d.saleText,
+      d.releaseText,
+      d.lead,
+      ...d.description,
+      for (final (label, value) in d.spec) ...[if (!_specLabels.containsKey(label.trim())) label, value],
+      ...d.contents,
+    ]);
+    if (texts.isEmpty) return;
+    setState(() => _busy = tr('번역 준비 중')); // STATE: 소개 번역 시작
+    try {
+      final map = await PageTranslator.instance.translate(
+        texts,
+        shouldStop: () => !mounted,
+        onProgress: (done, total) {
+          if (mounted) setState(() => _busy = trf('번역 중 {done}/{total}', {'done': done, 'total': total}));
+        },
+      );
+      if (mounted) setState(() => _translated = map); // STATE: 소개 글 → 번역
+    } on Exception {
+      // 기기 번역이 멈췄다 — 원문 그대로 두고 원문 페이지 번역과 같은 알림
+      if (mounted) showToast(context, tr('이 페이지는 번역하지 못했어요 · ↗ 브라우저에서 번역해 보세요'));
+    } finally {
+      if (mounted) setState(() => _busy = '');
+    }
+  }
+
+  /// 번역한 글이 있으면 그것, 없으면 원문
+  String _t(String s) => _translated[s.trim()] ?? s;
+
+  /// 사양 이름: 고정 표 → (번역을 켰으면) 기기 번역 → 원문
+  String _label(String ja) {
+    final ko = _specLabels[ja.trim()];
+    return ko != null ? tr(ko) : _t(ja);
+  }
 
   Future<void> _openPage() async {
     final u = Uri.tryParse(widget.detail.pageUrl.isNotEmpty ? widget.detail.pageUrl : widget.item.url);
@@ -859,9 +920,12 @@ class _ProductIntroState extends State<_ProductIntro> {
           child: ExpandRow(
             key: const ValueKey('ann-detail-toggle'),
             title: tr('상품 소개'),
-            summary: '',
+            summary: _busy,
             open: _open,
-            onTap: () => setState(() => _open = !_open), // STATE: 상품 소개 펼침 · 접음
+            onTap: () {
+              setState(() => _open = !_open); // STATE: 상품 소개 펼침 · 접음
+              if (_open) _translate();
+            },
           ),
         ),
         AnimatedSize(
@@ -885,12 +949,12 @@ class _ProductIntroState extends State<_ProductIntro> {
     final price = d.priceJpy ?? kit?.priceJpy;
     final period = preorderPeriod(a);
     final rows = [
-      (tr('가격'), price != null ? yen(price) : d.priceText),
+      (tr('가격'), price != null ? yen(price) : _t(d.priceText)),
       // 시각은 예고 쪽에만 있다 (상품 페이지는 날짜만) — 있으면 그것, 없으면 페이지 글 그대로
-      (tr('예약 기간'), period.isNotEmpty ? period : d.saleText),
+      (tr('예약 기간'), period.isNotEmpty ? period : _t(d.saleText)),
       (
         tr(d.releaseKind == 'ship' ? '발송 예정' : '발매 예정'),
-        d.releaseMonth.isNotEmpty ? dateDot(d.releaseMonth) : d.releaseText,
+        d.releaseMonth.isNotEmpty ? dateDot(d.releaseMonth) : _t(d.releaseText),
       ),
     ].where((r) => r.$2.isNotEmpty);
     const text = TextStyle(fontSize: Gp.t14, height: 1.6);
@@ -909,16 +973,16 @@ class _ProductIntroState extends State<_ProductIntro> {
                 for (final (label, value) in rows) _InfoRow(label: label, value: value),
                 if (d.lead.isNotEmpty) ...[
                   const SizedBox(height: 14),
-                  Text(d.lead, style: text.copyWith(fontWeight: FontWeight.w600)),
+                  Text(_t(d.lead), style: text.copyWith(fontWeight: FontWeight.w600)),
                 ],
-                for (final p in d.description) ...[const SizedBox(height: 10), Text(p, style: text)],
+                for (final p in d.description) ...[const SizedBox(height: 10), Text(_t(p), style: text)],
                 if (d.spec.isNotEmpty) ...[
                   _IntroHeader(tr('사양')),
-                  for (final (label, value) in d.spec) _InfoRow(label: label, value: value),
+                  for (final (label, value) in d.spec) _InfoRow(label: _label(label), value: _t(value)),
                 ],
                 if (d.contents.isNotEmpty) ...[
                   _IntroHeader(tr('구성품')),
-                  for (final c in d.contents) Text('・$c', style: text),
+                  for (final c in d.contents) Text('· ${_t(c)}', style: text),
                 ],
               ],
             ),
@@ -983,3 +1047,39 @@ class _InfoRow extends StatelessWidget {
     ),
   );
 }
+
+/// J-8 사양 이름 고정 표 (공식 상품 페이지의 일본어 이름 → 한국어, 중국어는 번역 표) — 번역 모델 없이도 한국어 화면에 가나가 없게.
+/// 2026-11-20 announcement-details 57개의 이름 + 반다이 · 혼 웹 상점에 자주 나오는 이름. 없는 이름은 원문(번역을 켰으면 기기 번역)
+const _specLabels = {
+  '価格': '가격',
+  '価格(税込)': '가격',
+  '価格（税込）': '가격',
+  '販売価格': '가격',
+  '希望小売価格': '가격',
+  '対象年齢': '대상 연령',
+  '材質': '소재',
+  '素材': '소재',
+  '商品素材': '소재',
+  '仕様': '사양',
+  '仕様/素材': '사양 · 소재',
+  'サイズ': '크기',
+  '商品サイズ': '크기',
+  '全高': '높이',
+  'スケール': '스케일',
+  '作品名': '작품',
+  'ブランド': '브랜드',
+  '商品名': '상품명',
+  'メーカー': '제조사',
+  '製造元': '제조사',
+  '発売元': '발매원',
+  '販売元': '판매원',
+  '原型': '원형',
+  '原型制作': '원형 제작',
+  '原型/設計': '원형 · 설계',
+  '版権表記': '저작권 표기',
+  'セット内容': '구성품',
+  '発売日': '발매일',
+  '発売時期': '발매 예정',
+  '発送時期': '발송 예정',
+  'お届け時期': '발송 예정',
+};

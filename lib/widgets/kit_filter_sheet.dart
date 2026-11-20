@@ -1,13 +1,16 @@
 // 상품 필터 시트 — 검색 결과 · 전체 목록 · 홈 · 캘린더 · 컬렉션이 같이 쓰는 한 벌.
-// 아래에서 올라오는 시트(화면의 60%). 캡슐 대신 네모 세그먼트 · 체크 2열 · 펼치는 줄. 도감 필터도 같은 틀 · 같은 상태 줄.
-//   위 3줄(내 상태 · 발매 · 판매, 나라가 섞인 목록이면 + 한국 · 일본)은 하나만 고르는 세그먼트, 종류는 체크,
-//   라인 · 작품 · 기간 · 가격은 한 줄 눌러 펼침. 가격은 원 · 엔이 섞인 목록이면 돈을 먼저 고른다 (환산하지 않음).
+// 아래에서 올라오는 시트(화면의 60%). 캡슐 대신 아이콘 줄 · 체크 2열 · 펼치는 줄. 도감 필터도 같은 틀 · 같은 상태 줄.
+//   맨 위 아이콘 줄(좋아요 · 구매함 · 발매 예정, 나라가 섞인 목록이면 + 나라)은 [KitFilterToggles] — 검색 탭은 이 줄을
+//   시트 밖 검색창 아래에 두고(2026-11-19 주인 결정) 시트에는 종류 · 라인 · 작품 · 기간 · 가격만.
+//   맞는 상품이 없는 칸 · 값이 하나뿐인 줄 · 정가가 없는 목록의 가격 줄은 숨긴다 (회색 칸을 두지 않기).
+//   가격은 원 · 엔이 섞인 목록이면 돈을 먼저 고른다 (환산하지 않음).
 // 거르는 규칙(KitFilter.matches)은 lib/logic/kit_filter.dart
 import 'package:flutter/material.dart';
 
 import '../clock.dart';
 import '../format.dart';
 import '../l10n/l10n.dart';
+import '../logic/data_labels.dart';
 import '../logic/kit_filter.dart';
 import '../logic/kit_rules.dart';
 import '../marks.dart';
@@ -18,18 +21,27 @@ import 'sheets.dart';
 
 export '../logic/kit_filter.dart';
 
-/// 필터 시트 열기 — 고르면 새 조건, 닫으면 null
-Future<KitFilter?> showFilterSheet(BuildContext context, {required List<Kit> kits, required KitFilter initial}) =>
-    showGpSheet<KitFilter>(
-      context,
-      heightFactor: gpSheetHeight,
-      builder: (_) => FilterSheet(kits: kits, initial: initial),
-    );
+/// 필터 시트 열기 — 고르면 새 조건, 닫으면 null. [toggles] = 시트 맨 위 아이콘 줄 (밖에 둔 화면은 false)
+Future<KitFilter?> showFilterSheet(
+  BuildContext context, {
+  required List<Kit> kits,
+  required KitFilter initial,
+  bool toggles = true,
+}) => showGpSheet<KitFilter>(
+  context,
+  heightFactor: gpSheetHeight,
+  builder: (_) => FilterSheet(kits: kits, initial: initial, toggles: toggles),
+);
 
 /// 필터 시트를 열어 고른 조건을 돌려준다 (닫으면 null). 내 상태(좋아요 · 구매함)는 앱 전체 Marks 로 센다
-Future<KitFilter?> pickKitFilter(BuildContext context, {required List<Kit> pool, required KitFilter current}) {
+Future<KitFilter?> pickKitFilter(
+  BuildContext context, {
+  required List<Kit> pool,
+  required KitFilter current,
+  bool toggles = true,
+}) {
   current.statusOf = Marks.read(context).statusOf;
-  return showFilterSheet(context, kits: pool, initial: current);
+  return showFilterSheet(context, kits: pool, initial: current, toggles: toggles);
 }
 
 /// 목록 안 찾기 글자 + 상품 필터 한 벌 (컬렉션 · 캘린더 · My Page). 값만 들고, 다시 그리기는 화면의 setState
@@ -70,7 +82,7 @@ class KitFind {
   }
 }
 
-/// 상태 줄 한 칸 (전체 · ♡ · 리본 · 아직 없음) — 상품 · 도감 · 태그 필터가 같은 말 · 같은 아이콘
+/// 상태 줄 한 칸 (전체 · ♡ · 리본 · 아직 없음) — 도감 · 태그 필터가 같은 말 · 같은 아이콘
 class MineStateLabel extends StatelessWidget {
   const MineStateLabel(this.state, {super.key});
   final MineState state;
@@ -84,17 +96,136 @@ class MineStateLabel extends StatelessWidget {
   };
 }
 
+/// 상품 필터 아이콘 줄 — ♡ 좋아요 · 리본 구매함 · 발매 예정 · 나라(전체 → 한국 → 일본, 두 나라가 섞인 목록에만).
+/// 캡슐 · 칩 없이 아이콘만: 고르면 채운 아이콘 + 색, 다시 누르면 풀린다. 검색 탭은 검색창 아래, 다른 화면은 필터 시트 맨 위.
+/// 누를 때마다 새 조건(복사)을 [onChanged] 로
+class KitFilterToggles extends StatelessWidget {
+  const KitFilterToggles({super.key, required this.filter, required this.regions, required this.onChanged});
+  final KitFilter filter;
+
+  /// 한국 · 일본 상품이 섞인 목록 ([hasBothRegions]) — 아니면 나라 칸을 숨긴다
+  final bool regions;
+  final ValueChanged<KitFilter> onChanged;
+
+  void _set(void Function(KitFilter) change) {
+    final f = filter.copy()..dropHidden();
+    change(f);
+    onChanged(f);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final liked = filter.mine == MineState.liked;
+    final owned = filter.mine == MineState.owned;
+    final upcoming = filter.release == ReleaseState.upcoming;
+    final region = filter.region;
+    return Row(
+      key: const ValueKey('filter-toggles'),
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _Toggle(
+          key: const ValueKey('toggle-liked'),
+          tip: tr('좋아요'),
+          on: liked,
+          icon: LikedIcon(filled: liked, size: Gp.iM, color: liked ? Gp.accent : Gp.muted),
+          onTap: () => _set((f) => f.mine = liked ? MineState.any : MineState.liked),
+        ),
+        _Toggle(
+          key: const ValueKey('toggle-owned'),
+          tip: tr('구매함'),
+          on: owned,
+          icon: OwnedIcon(filled: owned, size: Gp.iM, color: owned ? Gp.own : Gp.muted),
+          onTap: () => _set((f) => f.mine = owned ? MineState.any : MineState.owned),
+        ),
+        _Toggle(
+          key: const ValueKey('toggle-upcoming'),
+          tip: tr('발매 예정'),
+          on: upcoming,
+          icon: Icon(
+            upcoming ? Icons.watch_later : Icons.watch_later_outlined,
+            size: Gp.iM,
+            color: upcoming ? Gp.accent : Gp.muted,
+          ),
+          onTap: () => _set((f) => f.release = upcoming ? ReleaseState.any : ReleaseState.upcoming),
+        ),
+        // 나라 — 두 나라 상품이 섞인 목록에서만 (포켓몬 · 전체 채널). 이미 골라 두었으면 풀 수 있게 남긴다
+        if (regions || region != SaleRegion.any)
+          _Toggle(
+            key: const ValueKey('toggle-region'),
+            tip: region == SaleRegion.any ? '${tr('한국')} · ${tr('일본')}' : region.label,
+            on: region != SaleRegion.any,
+            icon: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.public, size: Gp.iM, color: region == SaleRegion.any ? Gp.muted : Gp.accent),
+                if (region != SaleRegion.any) ...[
+                  const SizedBox(width: 3),
+                  Text(
+                    region.label,
+                    style: const TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w700, color: Gp.accent),
+                  ),
+                ],
+              ],
+            ),
+            onTap: () => _set(
+              (f) => f.region = switch (region) {
+                SaleRegion.any => SaleRegion.kr,
+                SaleRegion.kr => SaleRegion.jp,
+                SaleRegion.jp => SaleRegion.any,
+              },
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// 아이콘 줄 한 칸 — 누르는 자리 40, 그림은 아이콘만 (읽어 주기는 이름 + 고름)
+class _Toggle extends StatelessWidget {
+  const _Toggle({super.key, required this.tip, required this.on, required this.icon, required this.onTap});
+  final String tip;
+  final bool on;
+  final Widget icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    toggled: on,
+    label: tip,
+    excludeSemantics: true,
+    child: Tooltip(
+      message: tip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(Gp.radius),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 40, minHeight: 36),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Center(widthFactor: 1, child: icon),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 class FilterSheet extends StatefulWidget {
-  const FilterSheet({super.key, required this.kits, required this.initial});
+  const FilterSheet({super.key, required this.kits, required this.initial, this.toggles = true});
   final List<Kit> kits;
   final KitFilter initial;
+
+  /// 맨 위 아이콘 줄 (검색 탭은 시트 밖에 있어 false)
+  final bool toggles;
 
   @override
   State<FilterSheet> createState() => _FilterSheetState();
 }
 
 class _FilterSheetState extends State<FilterSheet> {
-  late final KitFilter _draft = widget.initial.copy();
+  // 화면에서 뺀 칸(아직 없음 · 이번 달 · 판매)이 걸려 있던 조건은 열 때 푼다
+  late KitFilter _draft = widget.initial.copy()..dropHidden();
 
   /// 펼친 줄 (라인 · 작품 · 가격)
   String _open = '';
@@ -109,7 +240,8 @@ class _FilterSheetState extends State<FilterSheet> {
   };
 
   /// 고른 값들 한 줄 요약 — 라인 · 종류는 번역 표로, 작품은 [_workNames] 로
-  String _summary(Set<String> picked, {bool works = false}) => pickSummary(picked, label: works ? _workName : tr);
+  String _summary(Set<String> picked, {bool works = false}) =>
+      pickSummary(picked, label: works ? _workName : dataLabel);
 
   String _workName(String work) => _workNames[work] ?? work;
 
@@ -123,71 +255,64 @@ class _FilterSheetState extends State<FilterSheet> {
 
   void _toggle(Set<String> set, String v) => setState(() => set.contains(v) ? set.remove(v) : set.add(v));
 
+  /// 체크 칸에 보일 값 — 맞는 상품이 없는 값은 숨긴다 ([liveValues])
+  List<String> _live(String Function(Kit) valueOf, Set<String> Function(KitFilter) field) =>
+      liveValues(widget.kits, _draft, valueOf, field);
+
   /// 한국 · 일본 상품이 섞인 목록 (나라 칸을 보인다)
   late final bool _regions = hasBothRegions(widget.kits);
 
   /// 원 · 엔 정가가 섞인 목록 (가격의 돈 칸을 보인다)
   late final bool _currencies = hasBothCurrencies(widget.kits);
 
+  /// 정가가 있는 상품이 하나라도 있다 (없으면 가격 줄을 숨긴다)
+  late final bool _prices = hasAnyPrice(widget.kits);
+
   @override
   Widget build(BuildContext context) {
     final kits = widget.kits;
     final hits = _hits(_draft);
     final currency = currencyFor(kits, _draft.preferredCurrency);
+    final lines = _live((k) => k.line, (f) => f.lines);
+    final works = _live(kitWork, (f) => f.works);
     return GpPickSheet(
       title: tr('필터'),
       hits: hits,
       noHitLabel: tr('맞는 상품 없음'),
       onApply: () => Navigator.pop(context, _draft..workNames.addAll(_workNames)),
       onReset: () => setState(() {
-        _draft.clear();
+        _draft.clear(keepToggles: !widget.toggles); // 시트 밖 아이콘 줄은 시트가 끄지 않는다
         _open = '';
       }),
       children: [
-        SquareSegments<MineState>(
-          values: MineState.values,
-          current: _draft.mine,
-          child: MineStateLabel.new,
-          onPick: (v) => setState(() => _draft.mine = v),
-        ),
-        const SizedBox(height: 8),
-        SquareSegments<ReleaseState>(
-          values: ReleaseState.values,
-          current: _draft.release,
-          child: (v) => Text(v.label),
-          onPick: (v) => setState(() => _draft.release = v),
-        ),
-        const SizedBox(height: 8),
-        SquareSegments<SaleState>(
-          values: SaleState.values,
-          current: _draft.sale,
-          child: (v) => Text(v.label),
-          onPick: (v) => setState(() => _draft.sale = v),
-        ),
-        // 한국 · 일본 — 두 나라 상품이 섞인 목록에서만 (포켓몬 · 전체 채널)
-        if (_regions) ...[
-          const SizedBox(height: 8),
-          SquareSegments<SaleRegion>(
-            key: const ValueKey('filter-region'),
-            values: SaleRegion.values,
-            current: _draft.region,
-            child: (v) => Text(v.label),
-            onPick: (v) => setState(() => _draft.region = v),
+        if (widget.toggles) ...[
+          Align(
+            alignment: Alignment.centerLeft,
+            child: KitFilterToggles(
+              filter: _draft,
+              regions: _regions,
+              onChanged: (f) => setState(() => _draft = f), // STATE: 아이콘 줄 → 맞는 상품 수 · 보일 칸
+            ),
           ),
+          const SizedBox(height: 8),
         ],
-        const SizedBox(height: 12),
         CheckGrid(
-          values: valueCounts(kits.map((k) => k.type)).map((e) => e.$1).toList(),
+          key: const ValueKey('filter-types'),
+          values: _live((k) => k.type, (f) => f.types),
           selected: _draft.types,
+          label: dataLabel,
           countOf: (v) => _with(
             (f) => f.types
               ..clear()
               ..add(v),
           ),
-          onToggle: (v) => _toggle(_draft.types, v),
+          onToggle: (v) {
+            _toggle(_draft.types, v);
+            _draft.dropHidden(); // 굿즈를 풀면 숨는 굿즈 종류도 푼다
+          },
         ),
         // 굿즈를 고르면 세부 종류 (티켓 · 의류 · 블루레이 …)
-        if (_draft.types.contains('굿즈') && kits.any((k) => k.goodsKind.isNotEmpty)) ...[
+        if (_draft.types.contains(goodsType) && kits.any((k) => k.goodsKind.isNotEmpty)) ...[
           Padding(
             padding: const EdgeInsets.fromLTRB(2, 10, 0, 2),
             child: Text(
@@ -196,8 +321,9 @@ class _FilterSheetState extends State<FilterSheet> {
             ),
           ),
           CheckGrid(
-            values: valueCounts(kits.map((k) => k.goodsKind)).map((e) => e.$1).toList(),
+            values: _live((k) => k.goodsKind, (f) => f.goodsKinds),
             selected: _draft.goodsKinds,
+            label: dataLabel,
             countOf: (v) => _with(
               (f) => f.goodsKinds
                 ..clear()
@@ -207,26 +333,32 @@ class _FilterSheetState extends State<FilterSheet> {
           ),
         ],
         const Divider(height: 20),
-        ExpandRow(
-          title: tr('라인'),
-          summary: _summary(_draft.lines),
-          open: _open == '라인',
-          onTap: () => setState(() => _open = _open == '라인' ? '' : '라인'),
-        ),
-        if (_open == '라인')
-          CheckGrid(
-            values: valueCounts(kits.map((k) => k.line)).map((e) => e.$1).toList(),
-            selected: _draft.lines,
-            countOf: (v) => _with(
-              (f) => f.lines
-                ..clear()
-                ..add(v),
-            ),
-            onToggle: (v) => _toggle(_draft.lines, v),
-          ),
-        // 작품 값이 하나도 없는 목록은 펼쳐도 빈 칸이라 줄을 숨긴다. 이펙트뿐이면 이 줄은 이펙트 갈래(시리즈)
-        if (valueCounts(kits.map(kitWork)) case final works when works.isNotEmpty || _draft.works.isNotEmpty) ...[
+        // 값이 하나뿐인 줄은 고를 것이 없어 숨긴다 (포켓몬 · 베이 · AC 작품, 레고 라인 — 2026-11-19 감사)
+        if (showChoices(lines, _draft.lines)) ...[
           ExpandRow(
+            key: const ValueKey('filter-lines'),
+            title: tr('라인'),
+            summary: _summary(_draft.lines),
+            open: _open == '라인',
+            onTap: () => setState(() => _open = _open == '라인' ? '' : '라인'),
+          ),
+          if (_open == '라인')
+            CheckGrid(
+              values: lines,
+              selected: _draft.lines,
+              label: dataLabel,
+              countOf: (v) => _with(
+                (f) => f.lines
+                  ..clear()
+                  ..add(v),
+              ),
+              onToggle: (v) => _toggle(_draft.lines, v),
+            ),
+        ],
+        // 이펙트뿐이면 이 줄은 이펙트 갈래 (이펙트 종류)
+        if (showChoices(works, _draft.works)) ...[
+          ExpandRow(
+            key: const ValueKey('filter-works'),
             title: tr(kitWorkTitle(kits)),
             summary: _summary(_draft.works, works: true),
             open: _open == '작품',
@@ -235,7 +367,7 @@ class _FilterSheetState extends State<FilterSheet> {
           if (_open == '작품')
             CheckGrid(
               columns: 1,
-              values: works.map((e) => e.$1).toList(),
+              values: works,
               label: _workName, // 작품 이름은 번역 표가 아니라 상품의 중국어 작품 이름
               selected: _draft.works,
               countOf: (v) => _with(
@@ -262,33 +394,37 @@ class _FilterSheetState extends State<FilterSheet> {
               _draft.to = to;
             }),
           ),
-        ExpandRow(
-          title: tr('가격'),
-          summary: _draft.price.labelIn(currency),
-          open: _open == '가격',
-          onTap: () => setState(() => _open = _open == '가격' ? '' : '가격'),
-        ),
-        if (_open == '가격') ...[
-          if (_currencies) ...[
-            SquareSegments<PriceCurrency>(
-              key: const ValueKey('filter-currency'),
-              values: PriceCurrency.values,
-              current: currency,
-              child: (v) => Text(v.label),
-              onPick: (v) => setState(() => _draft.currency = v), // STATE: 돈 → 가격대 칸 · 맞는 상품 수
-            ),
-            const SizedBox(height: 8),
-          ],
-          SquareSegments<PriceBand>(
-            values: PriceBand.values,
-            current: _draft.price,
-            child: (v) => Text(v.shortIn(currency)),
-            // 가격대를 고르면 지금 보이는 돈으로 정해 둔다 (목록 · 정렬이 같은 돈을 쓴다)
-            onPick: (v) => setState(() {
-              _draft.price = v;
-              if (v != PriceBand.any) _draft.currency = currency;
-            }),
+        // 정가가 하나도 없는 목록(레고 등)은 가격대를 골라도 비어서 숨긴다
+        if (_prices || _draft.price != PriceBand.any) ...[
+          ExpandRow(
+            key: const ValueKey('filter-price'),
+            title: tr('가격'),
+            summary: _draft.price.labelIn(currency),
+            open: _open == '가격',
+            onTap: () => setState(() => _open = _open == '가격' ? '' : '가격'),
           ),
+          if (_open == '가격') ...[
+            if (_currencies) ...[
+              SquareSegments<PriceCurrency>(
+                key: const ValueKey('filter-currency'),
+                values: PriceCurrency.values,
+                current: currency,
+                child: (v) => Text(v.label),
+                onPick: (v) => setState(() => _draft.currency = v), // STATE: 돈 → 가격대 칸 · 맞는 상품 수
+              ),
+              const SizedBox(height: 8),
+            ],
+            SquareSegments<PriceBand>(
+              values: PriceBand.values,
+              current: _draft.price,
+              child: (v) => Text(v.shortIn(currency)),
+              // 가격대를 고르면 지금 보이는 돈으로 정해 둔다 (목록 · 정렬이 같은 돈을 쓴다)
+              onPick: (v) => setState(() {
+                _draft.price = v;
+                if (v != PriceBand.any) _draft.currency = currency;
+              }),
+            ),
+          ],
         ],
       ],
     );
@@ -314,7 +450,7 @@ class _PeriodPicker extends StatelessWidget {
       final now = start ? from : to;
       final v = await pickMonth(
         context,
-        title: start ? tr('시작 달') : tr('끝 달'),
+        title: start ? tr('시작 월') : tr('종료 월'),
         initial: now.isEmpty ? today.substring(0, 7) : now,
         minYear: minYear,
       );
@@ -390,13 +526,13 @@ class _MonthButton extends StatelessWidget {
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(Gp.rSmall))),
     ),
     child: Text(
-      value.isEmpty ? trf('{label}  ·  열어 둠', {'label': label}) : '$label  ${monthDot(value)}',
+      value.isEmpty ? trf('{label} · 정하지 않음', {'label': label}) : joinDot([label, monthDot(value)]),
       style: TextStyle(fontSize: Gp.t12, color: value.isEmpty ? Gp.muted : Gp.ink),
     ),
   );
 }
 
-/// 달 고르기 시트 — 위에 ‹ 해 ›, 아래 1–12월, 「정하지 않기」= 빈 글자. 그냥 닫으면 null.
+/// 달 고르기 시트 — 위에 ‹ 해 ›, 아래 1–12월, 「정하지 않음」= 빈 글자. 그냥 닫으면 null.
 /// ‹ 는 [minYear] 에서 멈춘다 (처음 해 [initial] 가 더 이르면 그 해)
 Future<String?> pickMonth(BuildContext context, {required String title, required String initial, int minYear = 1980}) =>
     showGpSheet<String>(
@@ -438,7 +574,7 @@ class _MonthSheetState extends State<_MonthSheet> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               IconButton(
-                tooltip: tr('작년'),
+                tooltip: tr('이전 해'), // 기간 빠른 고르기의 「작년」(지난해)과 뜻이 달라 따로
                 onPressed: _year > _minYear ? () => setState(() => _year--) : null, // STATE: 해 → 달 칸
                 icon: const Icon(Icons.chevron_left, size: Gp.iL),
               ),
@@ -481,7 +617,7 @@ class _MonthSheetState extends State<_MonthSheet> {
             ],
           ),
           const SizedBox(height: 8),
-          TextButton(onPressed: () => Navigator.pop(context, ''), child: Text(tr('정하지 않기 (열어 두기)'))),
+          TextButton(onPressed: () => Navigator.pop(context, ''), child: Text(tr('정하지 않음'))),
         ],
       ),
     );

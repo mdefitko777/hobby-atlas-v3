@@ -5,13 +5,13 @@
 // │ N-1  │ 밑줄 탭 4개 + 안 읽은 수             │ 전체 · 상품(발매·예약·가격) · 예고 · 친구 │ P06 · P01     │
 // │ N-2  │ 날짜 묶음 머리                       │ 오늘 · 이번 주 · 이전                   │ P08           │
 // │ N-3  │ 알림 줄: 사진 · 제목 · 한 줄 · 시간 · 점 │ 안 읽음 = 굵은 제목 + 하늘색 점          │ P01 · P04     │
-// │ N-4  │ 줄 누르기 → 읽음 + 이동               │ 상품 상세 · 공고 · 친구 프로필 · 친구 요청 │ P07          │
+// │ N-4  │ 줄 누르기 → 읽음 + 이동               │ 상품 상세 · 예고 · 친구 프로필 · 친구 요청 │ P07          │
 // │ N-5  │ Dismissible → 토스트(되돌리기)        │ 밀어서 지우기                           │ P03 · P05     │
 // │ N-6  │ AppBar: 모두 읽음 · ⚙                │ 한 번에 읽음 · 알림 설정(K 알림 페이지)    │ P07           │
 // │ N-10 │ AppBar 오른쪽 ? (HelpButton)       │ 알림 종류 아이콘 · 밀어서 지우기 · ⚙      │ P10           │
 // │ N-9  │ RefreshIndicator                   │ 당겨서 새 소식 확인                      │ P10           │
 // │ N-7  │ 바텀 시트: 수락 · 거절                │ 친구 요청 응답 (Gunpula v3 respond_friend) │ P05        │
-// │ N-8  │ 친구 줄 (사진 = 상품)                │ 내 좋아요를 친구가 이미 가짐 → 상품 상세   │ P01 · P09     │
+// │ N-8  │ 친구 줄 (사진 = 상품)                │ 내 좋아요가 친구 구매함에 있음 → 상품 상세 │ P01 · P09     │
 // │ N-11 │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 알림 없음           │ P01 · P09     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 🔔 → 쌓기(push, 오른쪽에서). 줄 → 각 화면 쌓기. 요청 → 덮기(바텀 시트).
@@ -72,7 +72,7 @@ extension on NoticeType {
     NoticeType.release => tr('발매 (내 채널 · 좋아요한 상품)'),
     NoticeType.reserve => tr('PB 예약 · 재판매 · 예약 도착'), // derive/notifications.dart: isPbWindow · isRestock · isPreorder
     NoticeType.price => tr('가격 변경 (일본 정가)'), // 국내 시세가 아니라 공식 엔화 정가 (feed_rules.dart 'price')
-    NoticeType.announce => tr('예고 · 공지 · 라이브'), // 비공식 소식도 이 묶음
+    NoticeType.announce => tr('예고 · 라이브'), // 비공식 소식도 이 묶음
     NoticeType.friend => tr('친구 소식'),
     NoticeType.request => tr('친구 요청'),
   };
@@ -162,7 +162,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             id: 'own-${o.handle}-${o.kitId}',
             type: NoticeType.friend,
             title: k.name,
-            body: trf('{name}님이 이미 갖고 있어요', {'name': o.name.isEmpty ? '@${o.handle}' : o.name}),
+            body: trf('{name}님 구매함에 있어요', {'name': o.name.isEmpty ? '@${o.handle}' : o.name}),
             image: k.image,
             at: noticeNow,
             read: false,
@@ -282,7 +282,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (!real) {
       if (accept) {
         _store.setDismissed(n.id, true);
-        showToast(context, tr('친구가 됐어요 · 친구 서랍에서 볼 수 있어요'));
+        showToast(context, tr('친구가 됐어요 · 친구 목록에서 볼 수 있어요'));
       } else {
         _remove(n);
       }
@@ -290,7 +290,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
     try {
       await account.friends.respond(n.friend, accept: accept);
-      if (mounted) showToast(context, accept ? tr('친구가 됐어요 · 친구 서랍에서 볼 수 있어요') : tr('요청을 거절했어요'));
+      if (mounted) showToast(context, accept ? tr('친구가 됐어요 · 친구 목록에서 볼 수 있어요') : tr('요청을 거절했어요'));
     } on FriendsFailure catch (e) {
       if (mounted) showToast(context, e.message);
     }
@@ -381,7 +381,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ),
             _ when snap.connectionState != ConnectionState.done => const LoadingView(), // N-11
             _ => ErrorView(
-              message: '${snap.error}',
+              message: errorText(snap.error ?? ''), // Exception: 머리를 떼고 번역
               onRetry: () => setState(() => _future = widget.loaders.notifications()),
             ),
           },
@@ -423,7 +423,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               // N-11 P09
               icon: Icons.notifications_none,
               message: tr('새 알림이 없어요'),
-              detail: '${tr('내 채널 새 상품 · 좋아요한 상품 변화 · PB 예약이 여기에 모여요')}\n${_store.statusLine}',
+              detail: '${tr('내 채널 새 상품 · 좋아요한 상품 변경 · PB 예약이 여기에 모여요')}\n${_store.statusLine}',
             ),
           ),
         ),

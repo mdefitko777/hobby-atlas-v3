@@ -155,10 +155,10 @@ void main() {
   });
 
   test('받기 실패 이유는 글만 (FormatException: · HttpException: 머리 없이)', () {
-    expect(visualErrorText(const FormatException('앱을 업데이트해야 받을 수 있어요')), '앱을 업데이트해야 받을 수 있어요');
-    expect(visualErrorText(const HttpException('내려받지 못했어요 (404)')), '내려받지 못했어요 (404)');
-    expect(visualErrorText(StateError('모델을 아직 받지 않았어요')), '모델을 아직 받지 않았어요');
-    expect(visualErrorText(UnsupportedError('못 해요')), '못 해요');
+    expect(errorText(const FormatException('앱을 업데이트해야 받을 수 있어요')), '앱을 업데이트해야 받을 수 있어요');
+    expect(errorText(const HttpException('내려받지 못했어요 (404)')), '내려받지 못했어요 (404)');
+    expect(errorText(StateError('모델을 아직 받지 않았어요')), '모델을 아직 받지 않았어요');
+    expect(errorText(UnsupportedError('못 해요')), '못 해요');
   });
 
   test('표가 아니거나 잘렸으면 FormatException', () {

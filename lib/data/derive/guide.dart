@@ -14,7 +14,7 @@ Future<GundamAtlas> _atlas() async {
   final zh = L10n.isZh; // 이름이 언어마다 달라 캐시 열쇠에 넣는다
   final key = [ms, km, groups, chapters, _cat.byId, zh];
   if (_atlasCache case final a? when _sameAll(_atlasKey, key)) return a;
-  if (ms == null) throw CatalogException(tr('건담 도감 데이터를 받지 못했어요.'));
+  if (ms == null) throw CatalogException(tr('건담 도감 데이터를 받지 못했어요'));
   // gget 시리즈 번호 → 공식 작품 로고 (atlas-groups 의 건담 시대 묶음)
   final logos = <int, String>{};
   for (final g in jList(jMap(jMap(groups)['franchises'])['gundam_timeline'])) {

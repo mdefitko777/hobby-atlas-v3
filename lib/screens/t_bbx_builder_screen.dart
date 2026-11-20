@@ -5,12 +5,12 @@
 //
 // ┌──────── 디자인 가이드 대응표: T 베이 조합 만들기 ──────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
-// │ T-1  │ AppBar + ToolIcon(책갈피)           │ 가진 부품만 보기 (고르기 시트에도 같은 값) │ P07 · P04     │
+// │ T-1  │ AppBar + ToolIcon(책갈피)           │ 보유 부품만 보기 (고르기 시트에도 같은 값) │ P07 · P04     │
 // │ T-2  │ UnderlineTab 3개                    │ 만들기 · 저장 n · 덱 n                  │ P06           │
 // │ T-3  │ SquareSegments                     │ BX·UX / CX / CX 확장 (구성 바꾸기)      │ P04 · P08     │
 // │ T-4  │ 이름 판 + 규칙 줄                    │ 상자 이름(한 · 일 · 영) · 맞음 ✓ / 안 맞는 이유 │ P01 · P09 │
 // │ T-5  │ 칸 줄(사진 · 이름 · 무게) → 아래 시트 │ 부품 칸 → 부품 고르기 (사진 · 종류 · 보유 책갈피) │ P07 · P01 │
-// │ T-5a │ 시트의 GpSearchBar + ToolIcon        │ 부품 찾기 · 가진 것만                   │ P07           │
+// │ T-5a │ 시트의 GpSearchBar + ToolIcon        │ 부품 찾기 · 보유한 것만                 │ P07           │
 // │ T-5b │ 시트 줄의 ⊘                         │ 지금 조합과 안 맞는 부품 (미리 알림)      │ P05           │
 // │ T-6  │ AccentBar 5줄 + 무게 · 회전          │ 공격 · 방어 · 지구력 · 대시 · 버스트 저항 합 │ P01       │
 // │ T-7  │ GradientButton → 이름 대화 상자      │ 조합 저장 (고친 조합은 그 자리에 다시)    │ P03           │
@@ -54,7 +54,7 @@ class _BbxBuilderScreenState extends State<BbxBuilderScreen> {
   late Future<BbxBuilderData> _future = widget.loaders.bbxBuilder(); // STATE: 베이 조합 데이터
   int _tab = 0;
 
-  /// T-1 가진 부품만
+  /// T-1 보유 부품만
   bool _ownedOnly = false;
 
   // 만들기 — 구성을 바꿔도 고른 부품은 칸마다 남겨 둔다 (다시 돌아오면 그대로)
@@ -76,7 +76,7 @@ class _BbxBuilderScreenState extends State<BbxBuilderScreen> {
           ToolIcon(
             // T-1 P07
             icon: _ownedOnly ? Icons.bookmark : Icons.bookmark_border,
-            tip: tr('가진 부품만'),
+            tip: tr('보유 부품만'),
             on: _ownedOnly,
             color: _ownedOnly ? Gp.own : null,
             onTap: () => setState(() => _ownedOnly = !_ownedOnly),
@@ -203,7 +203,7 @@ class _BbxBuilderScreenState extends State<BbxBuilderScreen> {
           child: GradientButton(
             // T-7 P03
             key: const Key('bbx-save'),
-            label: editing != null ? tr('고쳐 저장') : tr('저장'),
+            label: editing != null ? tr('수정 저장') : tr('저장'),
             onPressed: combo.parts.isEmpty ? null : () => _save(cat),
           ),
         ),
@@ -231,7 +231,7 @@ class _BbxBuilderScreenState extends State<BbxBuilderScreen> {
       ),
     );
     if (picked == null || !mounted) return;
-    // 가진 색이 있으면 그 색(무게 · 사진이 내 것), 없으면 대표 색
+    // 보유한 색이 있으면 그 색(무게 · 사진이 내 것), 없으면 대표 색
     final id = picked.variantIds.where((v) => inv.variantCount(v) > 0).firstOrNull ?? picked.representativeId;
     setState(() => _parts[slot] = id);
   }
@@ -243,7 +243,7 @@ class _BbxBuilderScreenState extends State<BbxBuilderScreen> {
     if (editing != null) {
       final c = bbxComboFor(editing.id, _frame, _parts, cat);
       store.saveBbxCombo(editing.copyWith(arch: c.arch, parts: c.parts, updatedAt: now));
-      showToast(context, tr('고쳐 저장했어요'));
+      showToast(context, tr('수정했어요'));
       return;
     }
     final name = await _askName(
@@ -304,7 +304,7 @@ class _BbxBuilderScreenState extends State<BbxBuilderScreen> {
               if (_editingId == c.id) setState(() => _editingId = null);
               showToast(
                 context,
-                trf('‘{name}’ 지웠어요', {'name': bbxComboTitle(c, cat)}),
+                trf('「{name}」 지웠어요', {'name': bbxComboTitle(c, cat)}),
                 onUndo: () => store.restoreBbx(combos, decks),
               );
             },
@@ -316,7 +316,7 @@ class _BbxBuilderScreenState extends State<BbxBuilderScreen> {
 
 /// T-11 ? 도움말
 List<HelpItem> bbxBuilderHelp() => [
-  HelpItem(Icons.bookmark_border, tr('가진 부품만 (고르기 시트도)')),
+  HelpItem(Icons.bookmark_border, tr('보유 부품만 (고르기 시트도)')),
   HelpItem(Icons.restart_alt, tr('새로 만들기')),
   HelpItem(Icons.link, tr('붙어 있는 칸 (따로 못 고름)')),
   HelpItem(Icons.block, tr('지금 조합과 안 맞음'), color: Gp.danger),

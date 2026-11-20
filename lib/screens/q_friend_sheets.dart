@@ -95,7 +95,7 @@ class _TextAskDialogState extends State<_TextAskDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            tr(h ? '친구가 이 아이디로 나를 찾아요. 영문 소문자 · 숫자 · _ 3–20자.' : '친구 목록에 보이는 이름이에요.'),
+            tr(h ? '친구가 이 아이디로 나를 찾아요. 영문 소문자 · 숫자 · _ 3–20자.' : '친구 목록에 보이는 이름이에요'),
             style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
           ),
           const SizedBox(height: 10),
@@ -198,7 +198,7 @@ class _AddFriendSheetState extends State<_AddFriendSheet> {
             Container(
               // Q-1
               padding: const EdgeInsets.fromLTRB(14, 4, 4, 4),
-              decoration: BoxDecoration(color: Gp.bg, borderRadius: BorderRadius.circular(Gp.radius)),
+              decoration: BoxDecoration(color: Gp.soft, borderRadius: BorderRadius.circular(Gp.radius)),
               child: Row(
                 children: [
                   Text(

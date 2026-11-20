@@ -71,10 +71,10 @@ void main() {
     expect(find.text('건담 상품 받는 중'), findsOneWidget);
     expect(find.byType(Image), findsOneWidget);
 
-    c.debugFirstRun(on: true, error: '인터넷에 연결하지 못했어요.');
+    c.debugFirstRun(on: true, error: '인터넷에 연결하지 못했어요');
     await tester.pump();
     expect(find.text('다시 시도'), findsOneWidget);
-    expect(find.text('인터넷에 연결하지 못했어요.'), findsOneWidget);
+    expect(find.text('인터넷에 연결하지 못했어요'), findsOneWidget);
 
     c.debugFirstRun(on: false);
     await tester.pump();

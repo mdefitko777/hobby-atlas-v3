@@ -2,7 +2,7 @@
 // 위: 내 프로필 요약(아바타를 한 번 더 누르면 I 내 정보) · 아래: 친구 (검색 · 새 친구 요청 · 목록)
 // v3: 친구 · 요청은 Gunpula 계정(v3 get_me), 친구 숫자는 get_friend_collection, 친구 사진 · 아바타는 get_friend_wall,
 //     알 수도 있는 친구는 gunpula_v3_suggest_friends(docs/supabase-v3-social.sql — 없으면 칸 숨김),
-//     공유 공간은 v2 get_state 의 멤버(읽기만, 공유 공간이 없는 계정은 탭 숨김). 공용 조각은 u_social.dart.
+//     공용 조각은 u_social.dart. 공유 공간 탭은 뺐다 (2026-11-20 주인) — 친구 하나뿐이라 탭 줄도 없다.
 //
 // ┌──────── 디자인 가이드 대응표: M 친구 서랍 ─────────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
@@ -11,7 +11,7 @@
 // │ M-3  │ 각진 칩 (있을 때만)                  │ 친구 요청 n건 · 새 사진 n (지난번 연 뒤)  │ P01           │
 // │ M-4  │ GpSearchBar (카메라 없는 모드)        │ 친구 검색 (홈 · 검색과 같은 검색창)       │ P07 · P04     │
 // │ M-5  │ SuggestionsPanel (U-7) · 요청 줄      │ 알 수도 있는 친구(함께 아는 친구 n명) · 친구 요청 │ P07 · P05 │
-// │ M-6  │ 밑줄 탭 + 접히는 그룹                │ 친구 | 공유 공간(멤버 · 역할, U-6)        │ P06           │
+// │ M-6  │ 접히는 그룹 (탭 줄 없음)              │ 친구                                   │ P06           │
 // │ M-7  │ 친구 줄 (아바타 · 상태 한 줄 · Lv)    │ 친구 → 친구 프로필(I 친구 보기) · 새 사진 점 │ P07 · P01    │
 // │ M-8  │ 안내 + 로그인 버튼                   │ 로그인 전                              │ P09           │
 // │ M-9  │ 머리 줄 ? (HelpButton, ✕ 앞)        │ 서랍 아이콘 뜻 한 줄씩                   │ P10           │
@@ -55,9 +55,6 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
 
   String _query = '';
   bool _collapsed = false;
-
-  /// M-6 공유 공간 탭
-  bool _spaceTab = false;
 
   /// 지난번 서랍을 연 시각 — 그 뒤에 올라온 친구 사진 = 새 사진 (M-3)
   late final String _seenBefore;
@@ -327,13 +324,11 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
     );
   }
 
-  /// M-6 · M-7 친구 목록 | 공유 공간
+  /// M-6 · M-7 친구 목록
   Widget _lists(List<Member> all, bool signedIn, Account account) {
     bool hit(Member m) => _query.isEmpty || m.name.contains(_query) || m.handle.contains(_query);
     final shown = all.where(hit).toList();
     final open = !_collapsed || _query.isNotEmpty;
-    final workspace = signedIn ? account.sync.workspace : null; // 없는 계정이면 탭 자체가 없다
-    final space = workspace != null && _spaceTab;
     Widget friendRow(Member m) => ListTile(
       // M-7
       leading: Badge(
@@ -404,63 +399,37 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (workspace != null)
-            Padding(
-              // M-6 친구 | 공유 공간
-              padding: const EdgeInsets.fromLTRB(8, 10, 8, 0),
+          InkWell(
+            onTap: () => setState(() => _collapsed = open), // STATE: 그룹 접기
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 16, 10),
               child: Row(
                 children: [
-                  UnderlineTab(
-                    label: tr('친구'),
-                    count: all.length,
-                    selected: !space,
-                    onTap: () => setState(() => _spaceTab = false), // STATE: 탭 → 친구
+                  AnimatedRotation(
+                    turns: open ? 0.25 : 0,
+                    duration: const Duration(milliseconds: 150),
+                    child: const Icon(Icons.arrow_right, color: Gp.muted),
                   ),
-                  UnderlineTab(
-                    key: const ValueKey('tab-space'),
-                    label: tr('공유 공간'),
-                    count: workspace.members.length,
-                    selected: space,
-                    onTap: () => setState(() => _spaceTab = true), // STATE: 탭 → 공유 공간
+                  Text(tr('친구'), style: const TextStyle(fontWeight: FontWeight.w600)),
+                  const Spacer(),
+                  Text(
+                    '${shown.length}/${all.length}',
+                    style: const TextStyle(fontSize: Gp.t12, color: Gp.faint),
                   ),
                 ],
               ),
             ),
-          if (space)
-            WorkspaceMembers(workspace: workspace, onSelf: () => _close(widget.onOpenProfile))
-          else ...[
-            InkWell(
-              onTap: () => setState(() => _collapsed = open), // STATE: 그룹 접기
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 12, 16, 10),
-                child: Row(
-                  children: [
-                    AnimatedRotation(
-                      turns: open ? 0.25 : 0,
-                      duration: const Duration(milliseconds: 150),
-                      child: const Icon(Icons.arrow_right, color: Gp.muted),
-                    ),
-                    Text(tr('친구'), style: const TextStyle(fontWeight: FontWeight.w600)),
-                    const Spacer(),
-                    Text(
-                      '${shown.length}/${all.length}',
-                      style: const TextStyle(fontSize: Gp.t12, color: Gp.faint),
-                    ),
-                  ],
-                ),
+          ),
+          if (open && all.isEmpty && signedIn)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Text(
+                tr('아직 친구가 없어요'),
+                style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
               ),
             ),
-            if (open && all.isEmpty && signedIn)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: Text(
-                  tr('아직 친구가 없어요'),
-                  style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
-                ),
-              ),
-            if (open)
-              for (final m in shown) friendRow(m),
-          ],
+          if (open)
+            for (final m in shown) friendRow(m),
         ],
       ),
     );
@@ -471,7 +440,7 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
 List<HelpItem> friendsHelp() => [
   HelpItem(Icons.person_add_alt_1_outlined, tr('아이디로 친구 추가')),
   HelpItem(Icons.notifications_none, tr('받은 친구 요청')),
-  HelpItem(Icons.photo_library_outlined, tr('지난번 뒤 새 사진')),
-  HelpItem(Icons.star_rounded, tr('특별 관심 (My Page ★ 에 소식)'), color: Gp.star),
+  HelpItem(Icons.photo_library_outlined, tr('지난번에 본 뒤 새 사진')),
+  HelpItem(Icons.star_rounded, tr('특별 관심 (My Page ★에 소식)'), color: Gp.star),
   HelpItem(Icons.close, tr('닫기')),
 ];

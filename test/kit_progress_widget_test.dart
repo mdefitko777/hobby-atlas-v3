@@ -1,4 +1,4 @@
-// 화면: 조립 상태(컬렉션 F-2b · F-5c, 상세 D-5f) · 예약(상세 D-5g, 컬렉션 예약 탭 F-5d, 캘린더 H-9b · H-9c) ·
+// 화면: 조립 상태(컬렉션 F-2b · F-5c, 상세에는 없음) · 예약(상세 D-5g, 컬렉션 예약 탭 F-5d, 캘린더 H-9b · H-9c) ·
 // 재판매(상세 D-5h, 캘린더) · 바코드 겹침 시트(E-6b) · 공유 카드(V)
 // 데이터는 test/fixtures/sample-db.json (layout_test 의 가짜 Loaders) + 재판매만 가짜 묶음
 import 'package:flutter/material.dart';
@@ -42,6 +42,7 @@ Loaders _loaders({RestockIndex? restocks}) => Loaders(
   notifications: fakeLoaders.notifications,
   guideChapters: (_) async => const [],
   restocks: () async => restocks ?? RestockIndex.empty,
+  guideIndex: fakeLoaders.guideIndex, // 컬렉션 줄 부제의 건담 작품 이름
 );
 
 Kit _kit(String id) => Kit.fromJson((db['kits']! as List).firstWhere((k) => (k as Map)['id'] == id))!;
@@ -82,40 +83,35 @@ void main() {
       ),
     );
 
-    testWidgets('구매함 탭: 조립 상태 거르기 · 줄의 단계 아이콘 누르면 다음 단계', (tester) async {
+    testWidgets('구매함 탭: 조립 거르기 · 단계 버튼 없음 · 탭에 수 없음 · 합계는 목록 맨 끝', (tester) async {
       final store = UserStore.memory();
       await _pump(tester, store, screen());
       expect(find.byKey(const ValueKey('tab-preorder')), findsNothing); // 예약이 없으면 탭도 없다
+      for (final t in ['tab-liked', 'tab-owned']) {
+        expect(tester.widget<UnderlineTab>(find.byKey(ValueKey(t))).count, isNull);
+      }
       await tester.tap(find.byKey(const ValueKey('tab-owned')));
       await _settle(tester);
       final owned = _kit('gu01');
-      expect(find.byKey(const ValueKey('build-filter')), findsOneWidget);
-      final allUnbuilt = find.textContaining('미조립 ');
-      expect(allUnbuilt, findsWidgets); // 합계 줄 · 세그먼트
-      await tester.tap(find.byKey(ValueKey('build-${owned.id}')));
-      await _settle(tester);
-      expect(store.stageOf(owned.id), BuildStage.building);
-      // 조립 중만 → 그 상품 하나
-      await tester.tap(find.text('조립 중 1'));
-      await _settle(tester);
-      expect(find.text(owned.name), findsOneWidget);
-      expect(find.text(_kit('gu02').name), findsNothing);
-      // 길게 누르면 시트 → 붓(도색)
-      await tester.longPress(find.byKey(ValueKey('build-${owned.id}')));
-      await _settle(tester);
-      await tester.tap(find.byKey(ValueKey('paint-${owned.id}')));
-      await _settle(tester);
-      expect(store.buildOf(owned.id).painted, isTrue);
+      expect(find.byKey(const ValueKey('build-filter')), findsNothing);
+      expect(find.byKey(ValueKey('build-${owned.id}')), findsNothing);
+      final sum = find.byKey(const ValueKey('list-summary'));
+      await tester.scrollUntilVisible(sum, 200, scrollable: find.byType(Scrollable).first);
+      expect(
+        tester.getTopLeft(sum).dy,
+        greaterThan(tester.getTopLeft(find.text(owned.name, skipOffstage: false)).dy),
+      ); // 줄들 다음
+      expect(tester.takeException(), isNull);
     });
 
-    testWidgets('예약 탭: 예약이 있으면 나타나고 낼 돈을 보인다 · 좋아요 줄엔 예약 꼬리표', (tester) async {
+    testWidgets('예약 탭: 예약이 있으면 나타나고 결제 예정 금액을 보인다 · 좋아요 줄엔 예약 꼬리표', (tester) async {
       final store = UserStore.memory()
         ..putPreorder('gu03', const Preorder(shop: '프리미엄 반다이', price: 10000, deposit: 2000, arrival: '2026-11'));
       await _pump(tester, store, screen());
       expect(find.text('예약'), findsWidgets); // 좋아요 줄의 꼬리표 + 탭
       await tester.tap(find.byKey(const ValueKey('tab-preorder')));
       await _settle(tester);
-      expect(find.text('낼 돈 8,000원'), findsOneWidget);
+      expect(find.text('결제 예정 8,000원'), findsOneWidget);
       expect(find.textContaining('2026.11 도착'), findsOneWidget);
       expect(find.text(_kit('gu04').name), findsNothing); // 예약 없는 좋아요는 빠진다
     });
@@ -154,33 +150,17 @@ void main() {
       expect(store.preorderOf(k.id), isNull);
     });
 
-    testWidgets('구매함 상품: 조립 상태 세 칸 · 예약 칸 없음', (tester) async {
-      final store = UserStore.memory();
+    testWidgets('구매함 상품: 예약 칸 없음 · 조립 상태 칸 없음 (적어 둔 기록은 그대로)', (tester) async {
       final k = _kit('gu01');
+      final store = UserStore.memory()..setBuild(k.id, stage: BuildStage.building, painted: true);
       await _pump(tester, store, KitDetailScreen(kit: k, loaders: _loaders()));
       expect(find.byKey(const ValueKey('preorder-row')), findsNothing);
-      final done = find.text('완성');
-      await tester.scrollUntilVisible(done, 200, scrollable: find.byType(Scrollable).first);
-      await tester.tap(done);
-      await _settle(tester);
-      expect(store.stageOf(k.id), BuildStage.built);
-    });
-
-    testWidgets('조립하지 않는 상품(인형 · 피규어): 조립 상태 칸이 없다', (tester) async {
-      final store = UserStore.memory();
-      final json =
-          Map<String, Object?>.of(
-              (db['kits']! as List).firstWhere((k) => (k as Map)['id'] == 'gu01') as Map<String, Object?>,
-            )
-            ..['type'] = '인형'
-            ..['line'] = '봉제인형';
-      final k = Kit.fromJson(json)!;
-      expect(needsAssembly(k), isFalse);
-      await _pump(tester, store, KitDetailScreen(kit: k, loaders: _loaders()));
       await tester.drag(find.byType(Scrollable).first, const Offset(0, -600));
       await _settle(tester);
-      expect(find.text('조립 중'), findsNothing);
+      expect(find.byIcon(Icons.construction), findsNothing); // 조립 중 칸
       expect(find.byKey(ValueKey('paint-${k.id}')), findsNothing);
+      expect(store.stageOf(k.id), BuildStage.building);
+      expect(store.buildOf(k.id).painted, isTrue);
     });
 
     testWidgets('재판매: 꼬리표 + 소식 줄 (지난 것도 줄에는) · 파일이 없으면 숨김', (tester) async {
@@ -206,7 +186,7 @@ void main() {
     });
   });
 
-  testWidgets('캘린더 내 일정: 예약 도착 · 이번 달 낼 돈 · 좋아요 상품 재판매', (tester) async {
+  testWidgets('캘린더 내 일정: 예약 도착 · 이번 달 결제 예정 · 좋아요 상품 재판매', (tester) async {
     final store = UserStore.memory()
       ..putPreorder('gu03', const Preorder(shop: 'PB', price: 12000, deposit: 2000, arrival: '2026-10-28'))
       ..putPreorder('gu04', const Preorder(price: 5000, paid: true, arrival: '2026-10'));
@@ -223,15 +203,19 @@ void main() {
     );
     await tester.tap(find.byTooltip('내 일정'));
     await _settle(tester);
-    expect(find.byKey(const ValueKey('month-due')), findsOneWidget);
-    expect(find.text('10,000원'), findsOneWidget);
-    expect(find.text(' · 1건'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('재판매'), 200, scrollable: find.byType(Scrollable).first);
-    expect(find.text('재판매'), findsOneWidget); // gu03 (좋아요) 만, gu01(구매함) 추첨은 아님
-    expect(find.text('예약'), findsNWidgets(2)); // 10.28 도착 · 날짜 미정(10월 중)
+    // 예약 도착 · 재판매는 줄 둘째 줄의 상태 글 (알약 없이)
+    final restock = find.textContaining(RegExp('^재판매 · '), skipOffstage: false);
+    await tester.scrollUntilVisible(restock, 200, scrollable: find.byType(Scrollable).first);
+    expect(restock, findsOneWidget); // gu03 (좋아요) 만, gu01(구매함) 추첨은 아님
+    expect(find.textContaining(RegExp('^예약 · '), skipOffstage: false), findsNWidgets(2)); // 10.28 도착 · 날짜 미정(10월 중)
+    // 이번 달 결제 예정은 목록 맨 끝
+    final due = find.byKey(const ValueKey('month-due'));
+    await tester.scrollUntilVisible(due, 200, scrollable: find.byType(Scrollable).first);
+    expect(find.descendant(of: due, matching: find.text('10,000원')), findsOneWidget);
+    expect(find.descendant(of: due, matching: find.text('1')), findsOneWidget); // 1건
   });
 
-  testWidgets('바코드 겹침: 갖고 있는 상품이면 수량 · 조립 상태 시트, 다시 찍기 = false', (tester) async {
+  testWidgets('바코드 겹침: 갖고 있는 상품이면 수량 시트 (조립 상태는 보이지 않음), 다시 찍기 = false', (tester) async {
     final store = UserStore.memory()
       ..setStatus('gu01', CollectStatus.owned)
       ..setQuantity('gu01', 2)
@@ -252,8 +236,8 @@ void main() {
     await tester.tap(find.text('scan'));
     await _settle(tester);
     expect(find.byKey(const ValueKey('scan-dup')), findsOneWidget);
-    expect(find.text('이미 갖고 있어요 ×2'), findsOneWidget);
-    expect(find.text('조립 중'), findsOneWidget);
+    expect(find.text('이미 구매함에 있어요 ×2'), findsOneWidget);
+    expect(find.text('조립 중'), findsNothing); // 기록은 있어도 화면에서 뺐다 (2026-11-20)
     await tester.tap(find.text('다시 찍기'));
     await _settle(tester);
     expect(result, isFalse);
@@ -297,7 +281,7 @@ void main() {
       size: small,
     );
     expect(find.byKey(const ValueKey('mypage-share')), findsOneWidget);
-    expect(find.byTooltip('미조립'), findsOneWidget);
+    expect(find.byTooltip('미조립'), findsNothing); // 미조립 칸은 뺐다 (2026-11-20)
     expect(tester.takeException(), isNull);
   });
 
@@ -318,7 +302,6 @@ void main() {
                 liked: 3,
                 owned: 7,
                 preorders: 1,
-                backlog: 4,
                 thumbs: ['', '', ''],
               ),
             ),
@@ -327,7 +310,7 @@ void main() {
       );
       expect(find.text('HA · @nyang'), findsOneWidget);
       expect(find.text('@nyang'), findsOneWidget);
-      for (final n in ['3', '7', '1', '4']) {
+      for (final n in ['3', '7', '1']) {
         expect(find.text(n), findsOneWidget);
       }
       final png = await tester.runAsync(() => captureCard(key, pixelRatio: 1));

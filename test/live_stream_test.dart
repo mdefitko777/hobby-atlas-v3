@@ -765,14 +765,19 @@ void main() {
             body: CalendarScreen(myChannels: const ['gundam'], onMyChannelsChanged: (_) {}, loaders: loaders),
           ),
         );
-        final rows = {for (final r in tester.widgetList<ThumbRow>(find.byType(ThumbRow, skipOffstage: false))) r.id: r};
-        expect(rows.keys.toSet(), {'live-27', 'news-20'});
-        expect(rows['live-27']!.tag, lang == AppLang.zh ? '21:00 直播' : '21:00 라이브');
-        expect(rows['live-27']!.tagColor, Gp.accent); // 곧 = 파랑 (발매 알약 · 예고 알약과 다른 색 꼬리표)
-        expect(rows['news-20']!.tagColor, isNull);
+        Finder row(String id) => find.byKey(ValueKey('event-$id'), skipOffstage: false);
+        expect(row('live-27'), findsOneWidget);
+        expect(row('news-20'), findsOneWidget);
+        expect(row('live-undated'), findsNothing); // 시간 미정은 캘린더에 없다
+        expect(row('live-nov'), findsNothing); // 다음 달
+        // 상태는 둘째 줄 글자 (테두리 알약 없이): "21:00 라이브 · 출처"
+        final live = lang == AppLang.zh ? '21:00 直播' : '21:00 라이브';
+        expect(find.descendant(of: row('live-27'), matching: find.textContaining(live)), findsOneWidget);
+        // 오른쪽 D-n 꼬리표(SoftTag)만 있고, 상태 글은 꼬리표 안에 없다
+        final tags = find.descendant(of: row('live-27'), matching: find.byType(SoftTag));
+        expect(find.descendant(of: tags, matching: find.textContaining(live)), findsNothing);
         // 27일 줄 머리 아래에 있다 (발표일 20일이 아니라)
-        final y = tester.getTopLeft(find.byWidget(rows['live-27']!, skipOffstage: false)).dy;
-        expect(y, greaterThan(tester.getTopLeft(find.byWidget(rows['news-20']!, skipOffstage: false)).dy));
+        expect(tester.getTopLeft(row('live-27')).dy, greaterThan(tester.getTopLeft(row('news-20')).dy));
         expect(tester.takeException(), isNull);
       }
     });

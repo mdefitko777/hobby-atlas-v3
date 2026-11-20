@@ -1,11 +1,11 @@
-// 조립 상태 · 예약 조각 — 단계 아이콘 · 상세 줄 · 편집 시트 · 도착 → 구매함 · 바코드 겹침 경고 (규칙은 lib/logic/)
-// 기록은 UserStore local_state 'build_status' · 'preorders' (수집 기록 items 와 따로 — lib/data/user_store/kit_progress.dart)
+// 예약 조각 — 상세 줄 · 편집 시트 · 도착 → 구매함 · 바코드 겹침 경고 (규칙은 lib/logic/)
+// 기록은 UserStore local_state 'preorders' (수집 기록 items 와 따로 — lib/data/user_store/kit_progress.dart).
+// 조립 상태(build_status) 칸 · 단추는 2026-11-20 주인 결정으로 뺐다 — 기록 · 동기화는 그대로 둔다
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show FilteringTextInputFormatter;
 
 import '../format.dart';
 import '../l10n/l10n.dart';
-import '../logic/build_status.dart';
 import '../logic/collection_rules.dart' show ScanDupKind, scanDuplicate;
 import '../logic/preorder.dart';
 import '../marks.dart';
@@ -18,163 +18,20 @@ import 'icons.dart';
 import 'sections.dart';
 import 'sheets.dart';
 
-// ── 조립 상태 ──
-/// 단계 아이콘: 상자(미조립) · 공구(조립 중) · ✓(완성)
-IconData buildStageIcon(BuildStage s) => switch (s) {
-  BuildStage.unbuilt => Icons.inventory_2_outlined,
-  BuildStage.building => Icons.construction,
-  BuildStage.built => Icons.check_circle_outline,
-};
-
-/// 단계 색: 미조립 옅은 회색 · 조립 중 파랑 · 완성 민트(가진 것)
-Color buildStageColor(BuildStage s) => switch (s) {
-  BuildStage.unbuilt => Gp.faint,
-  BuildStage.building => Gp.accent,
-  BuildStage.built => Gp.own,
-};
-
-/// 단계 아이콘 + 도색이면 오른쪽 아래 작은 붓
-class BuildStageIcon extends StatelessWidget {
-  const BuildStageIcon({super.key, required this.record, this.size = Gp.iM});
-  final BuildRecord record;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) => SizedBox.square(
-    dimension: size + 4,
-    child: Stack(
-      children: [
-        Icon(buildStageIcon(record.stage), size: size, color: buildStageColor(record.stage)),
-        if (record.painted)
-          Positioned(
-            right: 0,
-            bottom: 0,
-            child: Icon(paintIcon, size: Gp.iXS, color: Gp.star),
-          ),
-      ],
-    ),
-  );
-}
-
-/// ? 도움말 줄 — 조립 단계 · 도색 · 예약 · 도착 · 재판매 (컬렉션 · 상세가 같이 쓴다)
+// ── 예약 ──
+/// ? 도움말 줄 — 예약 · 도착 · 재판매 (컬렉션 · 상세가 같이 쓴다). 조립 상태는 화면에서 뺐다 (2026-11-20, 기록은 남김)
 List<HelpItem> kitProgressHelp({bool restock = false}) => [
-  for (final s in BuildStage.values) HelpItem(buildStageIcon(s), s.label, color: buildStageColor(s)),
-  HelpItem(paintIcon, tr('도색함'), color: Gp.star),
   HelpItem(preorderIcon, tr('예약'), color: Gp.reserve),
   HelpItem(arrivedIcon, tr('도착했어요 → 구매함으로'), color: Gp.reserve),
   if (restock) HelpItem(restockIcon, tr('재판매 소식'), color: Gp.resale),
 ];
 
-/// 한 번 눌러 다음 단계 (미조립 → 조립 중 → 완성 → 미조립) + 토스트 되돌리기
-void cycleBuild(BuildContext context, String kitId) {
-  final store = Marks.read(context).store;
-  final before = store.buildOf(kitId);
-  store.setBuild(kitId, stage: before.stage.next); // STATE: 조립 상태 (기기 local_state)
-  showToast(context, before.stage.next.label, onUndo: () => store.putBuild(kitId, before));
-}
-
-/// F-5c 컬렉션 줄 오른쪽 단계 아이콘 — 누르면 다음 단계, 길게 누르면 시트(도색까지)
-class BuildStatusButton extends StatelessWidget {
-  const BuildStatusButton({super.key, required this.kitId});
-  final String kitId;
-
-  @override
-  Widget build(BuildContext context) {
-    final rec = Marks.of(context).store.buildOf(kitId);
-    return Tooltip(
-      message: joinDot([rec.stage.label, if (rec.painted) tr('도색')]),
-      child: InkResponse(
-        key: ValueKey('build-$kitId'),
-        onTap: () => cycleBuild(context, kitId),
-        onLongPress: () => showBuildSheet(context, kitId),
-        radius: 22,
-        child: SizedBox.square(
-          dimension: 40,
-          child: Center(child: BuildStageIcon(record: rec)),
-        ),
-      ),
-    );
-  }
-}
-
-/// D-5f 상세 · 시트 공용: 단계 세 칸 + 붓(도색 켜고 끄기)
-class BuildStatusRow extends StatelessWidget {
-  const BuildStatusRow({super.key, required this.kitId});
-  final String kitId;
-
-  /// 상세의 다른 기록 줄(수량 · 예약 · 구매가)과 같은 높이
-  static const rowHeight = 44.0;
-
-  @override
-  Widget build(BuildContext context) {
-    final store = Marks.of(context).store;
-    final rec = store.buildOf(kitId);
-    return Row(
-      children: [
-        Expanded(
-          child: SquareSegments<BuildStage>(
-            values: BuildStage.values,
-            current: rec.stage,
-            height: rowHeight,
-            onPick: (s) => store.setBuild(kitId, stage: s), // STATE: 조립 상태
-            child: (s) => Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(buildStageIcon(s), size: Gp.iS, color: s == rec.stage ? buildStageColor(s) : Gp.faint),
-                const SizedBox(width: 4),
-                Flexible(child: Text(s.label, overflow: TextOverflow.ellipsis)),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Tooltip(
-          message: rec.painted ? tr('도색함') : tr('도색 안 함'),
-          child: InkWell(
-            key: ValueKey('paint-$kitId'),
-            onTap: () => store.setBuild(kitId, painted: !rec.painted), // STATE: 도색
-            borderRadius: BorderRadius.circular(Gp.rSmall),
-            child: Container(
-              width: rowHeight,
-              height: rowHeight,
-              decoration: BoxDecoration(
-                color: rec.painted ? Gp.star.withValues(alpha: 0.12) : Gp.panel,
-                borderRadius: BorderRadius.circular(Gp.rSmall),
-                border: Border.all(color: rec.painted ? Gp.star : Gp.line),
-              ),
-              child: Icon(paintIcon, size: Gp.iS, color: rec.painted ? Gp.star : Gp.faint),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-Future<void> showBuildSheet(BuildContext context, String kitId) => showGpSheet<void>(
-  context,
-  builder: (_) => SafeArea(
-    child: Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SectionHeader(tr('조립 상태'), padding: const EdgeInsets.fromLTRB(0, 0, 0, 12)),
-          BuildStatusRow(kitId: kitId),
-        ],
-      ),
-    ),
-  ),
-);
-
-// ── 예약 ──
 /// 예약 한 줄 요약: "프리미엄 반다이 · 8,800원 · 2026.12 도착 · 미결제"
 String preorderSummary(Preorder p) => joinDot([
   p.shop,
   if (p.price != null) won(p.price!),
   if (p.arrival.isNotEmpty) trf('{date} 도착', {'date': arrivalLabel(p.arrival)}),
-  if (p.arrivedAt.isNotEmpty) tr('도착함') else (p.paid ? tr('결제 완료') : tr('미결제')),
+  if (p.arrivedAt.isNotEmpty) tr('도착했어요') else (p.paid ? tr('결제 완료') : tr('미결제')),
 ]);
 
 /// D-5g 상세 줄 (구매함이 아닐 때): 적어 둔 예약 요약. 오른쪽 📥 = 도착했어요.
@@ -300,7 +157,7 @@ class _PreorderSheetState extends State<_PreorderSheet> {
   void _save() {
     final a = normalizeArrival(_arrival.text);
     if (_arrival.text.trim().isNotEmpty && a.isEmpty) {
-      showToast(widget.host, tr('도착 예정은 2026-12 또는 2026-12-15 처럼 적어요'));
+      showToast(widget.host, tr('도착 예정은 2026-12 또는 2026-12-15처럼 적어요'));
       return;
     }
     final next = Preorder(
@@ -404,11 +261,7 @@ Future<bool> warnIfCollected(BuildContext context, List<Kit> kits) async {
   final d = scanDuplicate(kits, marks.store, marks.statusOf);
   if (d == null) return true;
   final (Widget icon, String head, String detail) = switch (d.kind) {
-    ScanDupKind.owned => (
-      const OwnedIcon(size: Gp.iL),
-      trf('이미 갖고 있어요 ×{n}', {'n': d.quantity}),
-      joinDot([d.build.stage.label, if (d.build.painted) tr('도색')]),
-    ),
+    ScanDupKind.owned => (const OwnedIcon(size: Gp.iL), trf('이미 구매함에 있어요 ×{n}', {'n': d.quantity}), ''),
     ScanDupKind.preorder => (
       const Icon(preorderIcon, size: Gp.iL, color: Gp.reserve),
       tr('이미 예약했어요'),
@@ -436,7 +289,6 @@ Future<bool> warnIfCollected(BuildContext context, List<Kit> kits) async {
                     style: const TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w700),
                   ),
                 ),
-                if (d.kind == ScanDupKind.owned) BuildStageIcon(record: d.build),
               ],
             ),
             const SizedBox(height: 8),

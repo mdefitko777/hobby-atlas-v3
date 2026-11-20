@@ -31,7 +31,7 @@ void main() {
     expect(authMessage('over_email_send_rate_limit', 'Email rate limit exceeded', '429'), contains('너무 자주'));
     expect(authMessage('email_address_not_authorized', 'Email address not authorized', '400'), contains('SMTP'));
     expect(authMessage(null, 'Error sending magic link email', '500'), contains('SMTP'));
-    expect(authMessage(null, 'Failed host lookup', null), '인터넷에 연결되지 않았어요');
+    expect(authMessage(null, 'Failed host lookup', null), '인터넷에 연결하지 못했어요');
   });
 
   test('앱이 컴파일된다', () => expect(const HobbyAtlasApp(), isNotNull));

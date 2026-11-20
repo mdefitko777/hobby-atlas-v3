@@ -1,4 +1,4 @@
-// 섹션 · 탭 · 진행 — 색 막대 제목 · 흰 띠 · 밑줄 탭 · 넘김 점 · 진행 막대
+// 섹션 · 탭 · 진행 — 색 막대 제목 · 흰 띠 · 밑줄 탭 · 넘김 점 · 진행 막대 · 목록 맨 끝 합계
 import 'package:flutter/material.dart';
 
 import '../theme.dart';
@@ -184,7 +184,7 @@ class AccentBar extends StatelessWidget {
   }
 }
 
-/// 흰 띠 섹션 — 위에 회백색 틈 10을 두어 섹션마다 층이 보이게 (홈 · 상세)
+/// 흰 띠 섹션 — 위에 회백색 틈 10을 두어 섹션마다 층이 보이게 (홈 · 상세). 흰 바탕이라 틈 위에 머리카락 줄
 class SectionPanel extends StatelessWidget {
   const SectionPanel({super.key, required this.child, this.padding = const EdgeInsets.fromLTRB(16, 18, 16, 18)});
   final Widget child;
@@ -197,6 +197,7 @@ class SectionPanel extends StatelessWidget {
       // Material: 안의 ListTile · InkWell 누름 물결이 흰 바탕 위에 보이게
       child: Material(
         color: Gp.panel,
+        shape: const Border(top: Gp.bandLine),
         child: SizedBox(
           width: double.infinity,
           child: Padding(padding: padding, child: child),
@@ -226,5 +227,45 @@ class BarTitle extends StatelessWidget {
           style: const TextStyle(fontSize: Gp.t12, color: Gp.own, fontWeight: FontWeight.w500),
         ),
     ],
+  );
+}
+
+/// 목록 맨 끝의 조용한 합계 — 큰 숫자 + 작은 이름 짝들 (컬렉션 F-4 · 캘린더 H-9c). 판 · 테두리 없이 가는 줄 아래.
+/// 탭 · 목록 머리에는 수를 쓰지 않고 여기에만 (2026-11-20 주인)
+class ListSummary extends StatelessWidget {
+  const ListSummary(this.items, {super.key});
+
+  /// (숫자 글자, 이름) — 값이 없는 짝은 부르는 쪽이 뺀다
+  final List<(String, String)> items;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.fromLTRB(16, 18, 16, 0),
+    padding: const EdgeInsets.only(top: 14),
+    decoration: const BoxDecoration(
+      border: Border(top: BorderSide(color: Gp.line)),
+    ),
+    child: Wrap(
+      spacing: 28,
+      runSpacing: 12,
+      children: [
+        for (final (value, label) in items)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                value,
+                style: const TextStyle(fontSize: Gp.t19, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+              ),
+            ],
+          ),
+      ],
+    ),
   );
 }

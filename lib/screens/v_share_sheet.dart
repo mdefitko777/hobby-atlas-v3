@@ -3,7 +3,7 @@
 // ┌──────── 디자인 가이드 대응표: V 공유 카드 ─────────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
 // │ V-1  │ 바텀 시트 + RepaintBoundary 미리보기 │ 공유할 카드 그대로 보기                  │ P02 · P01     │
-// │ V-2  │ CollectionShareCard                 │ 내 컬렉션: 아바타 · Lv · ♡ · 리본 · 예약 · 미조립 · 박스 아트 │ P07 · P08 │
+// │ V-2  │ CollectionShareCard                 │ 내 컬렉션: 아바타 · Lv · ♡ · 리본 · 예약 · 박스 아트 │ P07 · P08 │
 // │ V-3  │ GuideShareCard                      │ 도감 작품: 켜진 칸 / 전체 · 칸 격자        │ P01 · P07     │
 // │ V-4  │ 워터마크 "HA · @아이디"              │ 어디서 만든 카드인지 (내 아이디)          │ P10           │
 // │ V-5  │ 아이콘 버튼 두 개: 공유 · 저장        │ 안드로이드 공유 창(share_plus) · 파일로 저장 │ P07 · P03   │
@@ -19,7 +19,6 @@ import '../api.dart';
 import '../data/catalog.dart';
 import '../l10n/l10n.dart';
 import '../level.dart';
-import '../logic/build_status.dart';
 import '../logic/level_math.dart';
 import '../marks.dart';
 import '../models.dart';
@@ -59,7 +58,8 @@ class _ShareSheetState extends State<_ShareSheet> {
       if (png == null) throw StateError(tr('카드를 그리지 못했어요'));
       await f(png);
     } on Object catch (e) {
-      if (mounted) showToast(context, trf('만들지 못했어요: {error}', {'error': e}));
+      // "Bad state:" 같은 머리 없이
+      if (mounted) showToast(context, trf('만들지 못했어요: {error}', {'error': errorText(e)}));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -144,7 +144,6 @@ Future<void> openCollectionShare(BuildContext context, {Loaders loaders = const 
       liked: me.wantedCount,
       owned: owned.length,
       preorders: me.activePreorders.keys.where((id) => me.statusOf(id) != CollectStatus.owned).length,
-      backlog: backlogCount(owned.where((id) => byId[id] != null && needsAssembly(byId[id]!)), me.stageOf),
       thumbs: [
         for (final id in owned)
           if (byId[id]?.image case final img? when img.isNotEmpty) img,

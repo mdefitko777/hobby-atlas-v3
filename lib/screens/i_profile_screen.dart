@@ -2,18 +2,17 @@
 // 같은 화면을 친구 보기로도 쓴다: 친구 이름을 누르면 그 친구의 숫자 · 사진 벽 · 태그 (편집 없음, 친구 끊기)
 // v3: 이름 · @아이디 · 친구는 Gunpula 계정(v3 get_me), 숫자는 내 기록(Marks), 태그는 preferences.tags,
 //     사진 벽은 직접 찍은 사진만 (공식 상품 사진은 넣지 않는다). 친구 사진은 Storage(docs/supabase-v3-photos.sql).
-//     아바타 · 배경 · 사진 공개 범위 · 공유 공간은 u_social.dart (서버 = docs/supabase-v3-social.sql, 없으면 기기에만).
+//     아바타 · 배경 · 사진 공개 범위는 u_social.dart (서버 = docs/supabase-v3-social.sql, 없으면 기기에만). 공유 공간 칸은 뺐다 (2026-11-20).
 // 숫자 · 아이콘은 My Page(A-21)와 같은 모양: ♡ | 리본, 이번 달 | 총 지출을 평평한 한 줄에 (떠 있는 판 없음).
 //
 // ┌──────── 디자인 가이드 대응표: I 내 정보 ───────────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
 // │ I-1  │ 배경 사진 위 색 고리 큰 아바타(사진) · 이름 · Lv · @아이디 │ 내 프로필 (U-1 · U-3)  │ P04 · P02  │
 // │ I-2  │ TagPill 줄                          │ 내 취향 태그 (친구에게도 보임)            │ P06           │
-// │ I-3  │ ✎ 아이콘 → 바텀 시트(액션 목록)       │ 아바타 · 배경 · 이름 · 아이디 · 태그 바꾸기 │ P03 · P07     │
-// │ I-4  │ 떠 있는 숫자 묶음 2개 (아이콘 + 숫자)  │ ♡ · 리본 · 미조립 → 컬렉션 / 이번 달 · 총 지출 │ P01 · P07   │
+// │ I-3  │ ✎ 아이콘 → 바텀 시트(액션 목록)       │ 프로필 사진 · 배경 사진 · 이름 · 아이디 · 태그 바꾸기 │ P03 · P07 │
+// │ I-4  │ 떠 있는 숫자 묶음 2개 (아이콘 + 숫자)  │ ♡ · 리본 → 컬렉션 / 이번 달 · 총 지출     │ P01 · P07   │
 // │ I-14 │ 머리 공유 아이콘 → V 공유 카드        │ 내 컬렉션 카드 (그림으로 공유 · 저장)      │ P07 · P10     │
 // │ I-5  │ 친구 줄: 👥 n · 추가 · 요청 아이콘     │ 친구 추가 (아이디로) · 받은 요청 · 내 아이디 복사 │ P07 · P08 │
-// │ I-5b │ WorkspaceMembers (U-6, 있을 때만)    │ 공유 공간 이름 · 멤버 · 역할 (읽기만)       │ P06 · P08     │
 // │ I-6  │ PhotoWall 3열 (T-1)                 │ 사진 벽: 직접 찍은 사진만                   │ P02 · P06     │
 // │ I-7  │ 사진 칸 → T 사진 보기                │ 친구에게 보이기 · 워터마크 저장            │ P05 · P10     │
 // │ I-9  │ 👥/🔒 아이콘 → 바텀 시트(U-5)         │ 사진 공개 범위 (전체 끄기 · 친구별 숨기기)  │ P05 · P07     │
@@ -35,7 +34,6 @@ import '../data/social_local.dart' show ProfileImageKind;
 import '../detail_pane.dart';
 import '../l10n/l10n.dart';
 import '../level.dart';
-import '../logic/build_status.dart';
 import '../logic/level_math.dart';
 import '../marks.dart';
 import '../models.dart';
@@ -195,8 +193,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              row(Icons.account_circle_outlined, tr('아바타'), () => editProfileImage(context, ProfileImageKind.avatar)),
-              row(Icons.wallpaper_outlined, tr('배경'), () => editProfileImage(context, ProfileImageKind.cover)),
+              row(
+                Icons.account_circle_outlined,
+                tr('프로필 사진'),
+                () => editProfileImage(context, ProfileImageKind.avatar),
+              ),
+              row(Icons.wallpaper_outlined, tr('배경 사진'), () => editProfileImage(context, ProfileImageKind.cover)),
               row(Icons.edit_outlined, tr('이름'), () {
                 if (ensureSignedIn(context)) askDisplayName(context);
               }),
@@ -240,7 +242,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (dialog) => AlertDialog(
         title: Text(trf('{name}님과 친구를 끊을까요?', {'name': m.name})),
-        content: Text(tr('서로의 컬렉션 · 사진이 더 이상 보이지 않아요.')),
+        content: Text(tr('서로의 컬렉션 · 사진이 더 이상 보이지 않아요')),
         actions: [
           TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(tr('취소'))),
           FilledButton(
@@ -289,13 +291,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
         future: _future,
         builder: (context, snap) {
           if (snap.connectionState != ConnectionState.done) return const LoadingView(); // I-8
-          if (snap.hasError) return ErrorView(message: '${snap.error}', onRetry: () => setState(_load));
+          if (snap.hasError) {
+            return ErrorView(message: errorText(snap.error ?? ''), onRetry: () => setState(_load));
+          }
           if (friend == null) return _mine(snap.data!.profile, snap.data!);
           return FutureBuilder<_FriendData>(
             future: _friendFuture,
             builder: (context, fs) {
               if (fs.connectionState != ConnectionState.done) return const LoadingView();
-              if (fs.hasError) return ErrorView(message: '${fs.error}', onRetry: () => setState(_load));
+              if (fs.hasError) {
+                return ErrorView(message: errorText(fs.error ?? ''), onRetry: () => setState(_load));
+              }
               return _friend(fs.data ?? _FriendData(friend, const FriendWall()));
             },
           );
@@ -355,15 +361,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: CollectionStats(
             liked: liked,
             owned: owned,
-            backlog: backlogCount([
-              for (final k in mine)
-                if (marks.owned(k) && needsAssembly(k)) k.id,
-            ], store.stageOf),
             month: store.spendInMonth(appNow()),
             total: store.spendKrw,
             onLiked: jump == null ? null : () => jump(CollectionJump.liked),
             onOwned: jump == null ? null : () => jump(CollectionJump.owned),
-            onBacklog: jump == null ? null : () => jump(CollectionJump.backlog),
           ),
         ),
         PhotoWall(
@@ -383,12 +384,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           tiles: [for (final ph in photos) MyPhotoTile(ph)],
         ),
         if (signedIn) _friendsPanel(account),
-        if (signedIn && account.sync.workspace != null)
-          SectionPanel(
-            // I-5b 공유 공간 (읽기만)
-            padding: const EdgeInsets.only(bottom: 6),
-            child: WorkspaceMembers(workspace: account.sync.workspace!),
-          ),
       ],
     );
   }
@@ -432,7 +427,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Container(
               margin: const EdgeInsets.only(right: 8, top: 2),
               padding: const EdgeInsets.fromLTRB(12, 2, 2, 2),
-              decoration: BoxDecoration(color: Gp.bg, borderRadius: BorderRadius.circular(Gp.radius)),
+              decoration: BoxDecoration(color: Gp.soft, borderRadius: BorderRadius.circular(Gp.radius)),
               child: Row(
                 children: [
                   Expanded(
@@ -506,7 +501,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
         PhotoWall(
-          // I-6 친구가 보이기로 둔 사진만
+          // I-6 친구가 공개한 사진만
           tiles: [for (final ph in d.wall.photos) FriendPhotoTile(ph)],
         ),
         if (real)
@@ -743,7 +738,7 @@ class _TagSheetState extends State<_TagSheet> {
               hintText: tr('건담 · 베이블레이드 …'),
               counterText: '',
               suffixIcon: IconButton(
-                tooltip: tr('태그 더하기'),
+                tooltip: tr('태그 추가'),
                 onPressed: _add,
                 icon: const Icon(Icons.add, size: Gp.iM),
               ),
@@ -758,10 +753,9 @@ class _TagSheetState extends State<_TagSheet> {
 /// I-15 ? 도움말 — 내 정보
 List<HelpItem> profileHelp() => [
   HelpItem(Icons.ios_share, tr('공유 카드 (그림으로 공유 · 저장)')),
-  HelpItem(Icons.edit_outlined, tr('프로필 편집 (아바타 · 배경 · 이름 · 아이디 · 태그)')),
+  HelpItem(Icons.edit_outlined, tr('프로필 편집 (프로필 사진 · 배경 사진 · 이름 · 아이디 · 태그)')),
   HelpItem.widget(const LikedIcon(size: Gp.iL), tr('좋아요 수 → 컬렉션')),
   HelpItem.widget(const OwnedIcon(size: Gp.iL), tr('구매함 수 → 컬렉션')),
-  HelpItem(Icons.inventory_2_outlined, tr('미조립 수 → 구매함')),
   HelpItem(Icons.calendar_month_outlined, tr('이번 달 지출')),
   HelpItem(Icons.account_balance_wallet_outlined, tr('총 지출')),
   HelpItem(Icons.person_add_alt_1_outlined, tr('아이디로 친구 추가')),
@@ -778,6 +772,6 @@ List<HelpItem> friendProfileHelp() => [
   HelpItem.widget(const LikedIcon(size: Gp.iL), tr('친구의 좋아요')),
   HelpItem.widget(const OwnedIcon(size: Gp.iL), tr('친구의 구매함')),
   HelpItem(Icons.auto_awesome_mosaic_outlined, tr('도감 비교')),
-  HelpItem(Icons.photo_library_outlined, tr('친구가 보이기로 둔 사진')),
+  HelpItem(Icons.photo_library_outlined, tr('친구가 공개한 사진')),
   HelpItem(Icons.person_remove_outlined, tr('친구 끊기')),
 ];

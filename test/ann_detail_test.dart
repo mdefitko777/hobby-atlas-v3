@@ -1,5 +1,5 @@
 // 예고 상세의 「상품 소개」(J-8) — announcement-details.json 읽기(보일 것이 없으면 버튼 없음) · 버튼 하나로 펼치고 접기 ·
-// 일본어 글 그대로(고를 수 있게) · 사진 누르면 크게 · 이 예고 시트에도 · 비공식은 늘 없음 · 360dp · 중국어 칸 이름.
+// 일본어 글 그대로(고를 수 있게) · 사진 누르면 크게 · 이 예고 시트에도 · 비공식은 늘 없음 · 360dp · 중국어 칸 이름 · 사양 이름 고정 표.
 // 위젯은 글자보다 Key · 타입으로 찾는다 (일본어 글은 데이터라 화면 언어와 상관없다).
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -188,7 +188,11 @@ void main() {
       expect(find.descendant(of: body, matching: find.byType(ImagePager)), findsOneWidget);
       expect(find.textContaining('GNアームズTYPE-K', skipOffstage: false), findsOneWidget);
       expect(find.text('全高：約190mm', skipOffstage: false), findsOneWidget);
-      expect(find.text('・本体', skipOffstage: false), findsOneWidget);
+      expect(find.text('· 本体', skipOffstage: false), findsOneWidget); // 머리표는 일본어 ・ 가 아닌 ·
+      // 사양 이름은 고정 표로 화면 언어 (商品サイズ → 크기 · 商品素材 → 소재), 값은 번역을 켜지 않았으니 원문
+      expect(find.text('크기', skipOffstage: false), findsOneWidget);
+      expect(find.text('소재', skipOffstage: false), findsOneWidget);
+      expect(find.text('商品サイズ', skipOffstage: false), findsNothing);
       expect(find.text('¥38,500', skipOffstage: false), findsOneWidget);
       expect(find.text('2027.06', skipOffstage: false), findsOneWidget);
       // 예약 기간: 예고의 시각이 있으면 그것 (상품 페이지는 날짜만)
@@ -263,7 +267,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('360dp 에서 펼쳐도 넘치지 않는다 · 중국어 화면은 칸 이름만 중국어 (글은 일본어 그대로)', (tester) async {
+    testWidgets('360dp 에서 펼쳐도 넘치지 않는다 · 중국어 화면은 칸 · 사양 이름만 중국어 (번역을 끈 글은 일본어 그대로)', (tester) async {
       for (final lang in AppLang.values) {
         L10n.debugSet(lang);
         await _pump(
@@ -283,6 +287,7 @@ void main() {
           expect(find.text('配件清单', skipOffstage: false), findsOneWidget);
           expect(find.text('规格', skipOffstage: false), findsOneWidget);
           expect(find.text('预计发货', skipOffstage: false), findsOneWidget);
+          expect(find.text('尺寸', skipOffstage: false), findsOneWidget); // 商品サイズ
         }
       }
     });

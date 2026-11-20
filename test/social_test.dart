@@ -24,6 +24,7 @@ import 'package:hobby_atlas/sync/photo_share.dart';
 import 'package:hobby_atlas/sync/profile_images.dart';
 import 'package:hobby_atlas/sync/sync_service.dart';
 import 'package:hobby_atlas/theme.dart';
+import 'package:hobby_atlas/widgets.dart' show UnderlineTab;
 
 import 'support/fake_backend.dart';
 
@@ -132,7 +133,7 @@ void main() {
       expect(find.text('빵'), findsOneWidget); // 사진 전엔 첫 글자
       await tester.tap(find.byTooltip('프로필 편집'));
       await settle(tester);
-      await tester.tap(find.text('아바타'));
+      await tester.tap(find.text('프로필 사진'));
       await settle(tester);
       expect(find.text('지우기'), findsNothing); // 아직 사진이 없음
       await tester.tap(find.text('갤러리'));
@@ -153,7 +154,7 @@ void main() {
       photoPicker = (_) async => _jpeg2;
       await tester.tap(find.byTooltip('프로필 편집'));
       await settle(tester);
-      await tester.tap(find.text('배경'));
+      await tester.tap(find.text('배경 사진'));
       await settle(tester);
       await tester.tap(find.text('갤러리'));
       await settle(tester);
@@ -171,7 +172,7 @@ void main() {
       await show(tester, ProfileScreen(loaders: _loaders, onJump: (_) {}));
       await tester.tap(find.byTooltip('프로필 편집'));
       await settle(tester);
-      await tester.tap(find.text('아바타'));
+      await tester.tap(find.text('프로필 사진'));
       await settle(tester);
       await tester.tap(find.text('갤러리'));
       await settle(tester);
@@ -326,40 +327,28 @@ void main() {
     });
   });
 
-  group('I-5 · M-6 공유 공간', () {
-    Workspace ws() => Workspace.parse({
-      'workspace_name': '우리집 컬렉션',
-      'revision': 3,
-      'can_edit': true,
-      'members': [
-        {'name': '빵빵한빵디', 'role': 'owner', 'is_self': true},
-        {'name': '곰돌', 'role': 'viewer', 'is_self': false},
-      ],
-    })!;
-
-    testWidgets('공유 공간이 있으면 서랍에 탭 · 멤버와 역할, 내 정보에도', (tester) async {
-      account.sync.workspace = ws();
-      await openDrawer(tester);
-      expect(find.byKey(const ValueKey('tab-space')), findsOneWidget);
-      await tester.tap(find.byKey(const ValueKey('tab-space')));
-      await settle(tester);
-      expect(find.byKey(const ValueKey('workspace-members')), findsOneWidget);
-      expect(find.text('우리집 컬렉션'), findsOneWidget);
-      expect(find.byTooltip('관리자'), findsOneWidget);
-      expect(find.byTooltip('보기만'), findsOneWidget);
-
-      await show(tester, ProfileScreen(loaders: _loaders, onJump: (_) {}));
-      await tester.scrollUntilVisible(find.byKey(const ValueKey('workspace-members')), 200);
-      expect(find.byKey(const ValueKey('workspace-members')), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('공유 공간이 없는 계정이면 탭도 칸도 없다', (tester) async {
+  group('I-5 · M-6 공유 공간 (화면에서 뺐다 — 동기화 값은 그대로)', () {
+    testWidgets('공유 공간이 있는 계정도 서랍엔 친구만 (탭 줄 없음) · 내 정보에도 칸 없음', (tester) async {
+      account.sync.workspace = Workspace.parse({
+        'workspace_name': '우리집 컬렉션',
+        'revision': 3,
+        'can_edit': true,
+        'members': [
+          {'name': '빵빵한빵디', 'role': 'owner', 'is_self': true},
+          {'name': '곰돌', 'role': 'viewer', 'is_self': false},
+        ],
+      })!;
       await openDrawer(tester);
       expect(find.byKey(const ValueKey('tab-space')), findsNothing);
       expect(find.byKey(const ValueKey('workspace-members')), findsNothing);
+      expect(
+        find.descendant(of: find.byType(FriendsDrawer), matching: find.byType(UnderlineTab)),
+        findsNothing,
+      ); // 탭 줄 없음
+      expect(find.text('우리집 컬렉션'), findsNothing);
       await show(tester, ProfileScreen(loaders: _loaders, onJump: (_) {}));
       expect(find.byKey(const ValueKey('workspace-members')), findsNothing);
+      expect(account.sync.workspace?.name, '우리집 컬렉션'); // 동기화 쪽 값은 그대로
       expect(tester.takeException(), isNull);
     });
   });

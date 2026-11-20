@@ -1,7 +1,9 @@
 // IP 채널 목록 — 하드코딩 상수 (AGENTS.md: 데이터는 상수 또는 GET).
 // "내 채널"은 사람마다 다르므로 앱 셸이 들고 있고, 채널 관리 화면에서 바꾼다 (모두에게 같은 IP 를 고정하지 않는다).
+import 'models.dart' show CoverStyle;
+
 class Channel {
-  const Channel({required this.id, required this.label, this.image = '', this.hasData = true});
+  const Channel({required this.id, required this.label, this.image = '', this.hasData = true, this.cover});
 
   /// 카탈로그 kit 의 franchise 와 같은 값
   final String id;
@@ -10,8 +12,11 @@ class Channel {
   /// 채널 아이콘(상품 사진을 원으로 자름). 비어 있으면 첫 글자.
   final String image;
 
-  /// false = 아직 수록 상품이 없는 IP (빈 상태를 보여 준다)
+  /// false = 아직 상품이 없는 채널 (빈 상태를 보여 준다)
   final bool hasData;
+
+  /// [image] 가 atlas 공식 그림일 때 그 모양 (로고 · 그림 · 바탕색) — 앱 안 기본 그림이면 null
+  final CoverStyle? cover;
 }
 
 const allChannels = <Channel>[
@@ -41,9 +46,19 @@ const allChannels = <Channel>[
 /// 채널 대표 그림 — Gunpula atlas-groups.json `channels` 의 공식 그림 (Catalog 가 채운다). 없으면 위 기본 그림
 final channelCovers = <String, String>{};
 
+/// 채널 대표 그림의 모양 (`channels.<id>.cover_kind` · `cover_bg` · `cover_fg`, Catalog 가 채운다)
+final channelCoverStyles = <String, CoverStyle>{};
+
 /// 종류별 도감 카드의 공식 그림 — atlas-groups.json `line_covers` (채널 → 종류 이름 → 그림, Catalog 가 채운다).
 /// 종류 이름 = 앱의 라인 이름(lib/data/gunpula.dart lineLabel). 없으면 그 종류의 최근 상품 사진
 final lineCovers = <String, Map<String, String>>{};
+
+/// [lineCovers] 그림의 모양 (`line_covers.<채널>.<코드>` 의 kind · bg · fg, 같은 키). 옛 데이터(그림 경로 글자만)면 없다
+final lineCoverStyles = <String, Map<String, CoverStyle>>{};
+
+/// 공식 로고 · 상품 사진이 없는 종류 칸의 아이콘 종류 — atlas-groups.json `line_icons` (채널 → 종류 이름 → goods · plush ·
+/// figure …, Catalog 가 채운다, 2026-11-19 계약). 없으면(옛 데이터) 칸 키 · 상품 유형으로 정한다 (category_browse cellKind)
+final lineIcons = <String, Map<String, String>>{};
 
 /// Gunpula 에 상품 파일이 있는 채널 (manifest `franchises`, Catalog 가 채운다). 비어 있으면 모름 → 위 hasData 그대로.
 /// 앱이 먼저 아는 새 채널(닌텐도)은 Gunpula 가 파일을 내기 전까지 회색으로
@@ -60,5 +75,12 @@ Channel channelOf(String id) {
   final cover = channelCovers[id];
   final hasData = c.hasData && (channelsWithData.isEmpty || channelsWithData.contains(id));
   if ((cover == null || cover.isEmpty) && hasData == c.hasData) return c;
-  return Channel(id: c.id, label: c.label, image: cover == null || cover.isEmpty ? c.image : cover, hasData: hasData);
+  final official = cover != null && cover.isNotEmpty;
+  return Channel(
+    id: c.id,
+    label: c.label,
+    image: official ? cover : c.image,
+    hasData: hasData,
+    cover: official ? channelCoverStyles[id] : null,
+  );
 }

@@ -2,7 +2,7 @@
 //
 // ┌──────── 디자인 가이드 대응표: C 채널 ──────────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                    │ 비즈니스 명칭(한글)              │ 원칙(P번호)   │
-// │ C-0  │ ChannelHeader                     │ 아바타 줄 + 채널 바 (네 탭 공용)  │ P04           │
+// │ C-0  │ ChannelHeader (CollapsingHeader)  │ 아바타 줄 + 채널 바 (네 탭 공용) · 아래로 스크롤하면 접힘 (S-13) │ P04 · P08 │
 // │ C-1  │ ChannelBar (가로 스크롤 텍스트 탭) │ 내 채널 바 (전체 + 내 IP) · 홈 내용을 좌우로 밀어도 바뀜 │ P06 · P04 │
 // │ C-2  │ IconButton(ChannelGlyph 세 줄)     │ 채널 관리 열기                   │ P07 · P03     │
 // │ C-3  │ CupertinoPageRoute                │ 오른쪽에서 밀려 들어오는 관리 화면 │ P03           │
@@ -89,7 +89,7 @@ mixin ChannelScope<T extends StatefulWidget> on State<T> {
   }
 }
 
-/// C-0 아바타 줄 + 채널 바 — 네 탭이 같은 머리를 쓴다
+/// C-0 아바타 줄 + 채널 바 — 네 탭이 같은 머리를 쓴다. 접기는 앱 셸의 HeaderCollapse 가 정한다 (S-13)
 class ChannelHeader extends StatelessWidget {
   const ChannelHeader({
     super.key,
@@ -109,17 +109,19 @@ class ChannelHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (leading != null) Padding(padding: const EdgeInsets.fromLTRB(16, 10, 8, 2), child: leading),
-        ChannelBar(
-          myChannels: myChannels,
-          selected: selected,
-          onSelect: onSelect,
-          onMyChannelsChanged: onMyChannelsChanged,
-        ),
-      ],
+    return CollapsingHeader(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (leading != null) Padding(padding: const EdgeInsets.fromLTRB(16, 10, 8, 2), child: leading),
+          ChannelBar(
+            myChannels: myChannels,
+            selected: selected,
+            onSelect: onSelect,
+            onMyChannelsChanged: onMyChannelsChanged,
+          ),
+        ],
+      ),
     );
   }
 }

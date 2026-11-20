@@ -107,7 +107,7 @@ void main() {
       expect(r.date, '2027-01');
       expect(r.body, '재판매 · 2027.01 · 좋아요한 상품 · PB 재판매');
       final a = buildAlerts(p.records).single;
-      expect(a.title, '재판매 · 「상품 a」 2027.01');
+      expect(a.title, '재판매 · 상품 a 2027.01');
       expect(a.payload, 'kit:a');
       expect(a.channel, 'restock');
     });
@@ -173,14 +173,14 @@ void main() {
       final day = DateTime(2026, 11, 2, 9);
       final recs = preorderRecords(cfg(dues), {}, day);
       expect(recs.map((r) => r.id), ['pre-a-2026-11-month', 'pre-b-2026-11-02-month', 'pre-b-2026-11-02-d0']);
-      expect(recs.first.body, '예약 · 이번 달 도착 예정 · PB · 낼 돈 7,000원');
+      expect(recs.first.body, '예약 · 이번 달 도착 예정 · PB · 결제 예정 7,000원');
       expect(recs.last.body, '예약 · 오늘 도착 예정 · 결제 완료');
       expect(recs.first.channel, 'preorder');
       expect(NotifyState.isInboxId(recs.first.id), isTrue);
       expect(preorderRecords(cfg(dues), {for (final r in recs) r.id}, day), isEmpty);
       expect(preorderRecords(cfg(dues, on: false), {}, day), isEmpty);
       final alert = buildAlerts(recs).first;
-      expect(alert.title, '예약 도착 · 「A」');
+      expect(alert.title, '예약 도착 · A');
       expect(alert.payload, 'kit:a');
     });
 

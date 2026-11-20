@@ -231,7 +231,7 @@ void main() {
     await tester.tap(find.text('취향 태그'));
     await settle(tester);
     await tester.enterText(find.byType(TextField), '건담');
-    await tester.tap(find.byTooltip('태그 더하기'));
+    await tester.tap(find.byTooltip('태그 추가'));
     await settle(tester);
     await tester.tap(find.byTooltip('저장'));
     await settle(tester);

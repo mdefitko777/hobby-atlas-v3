@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hobby_atlas/channels.dart';
+import 'package:hobby_atlas/data/catalog.dart';
 import 'package:hobby_atlas/data/gunpula.dart';
 import 'package:hobby_atlas/l10n/l10n.dart';
 import 'package:hobby_atlas/logic/category_browse.dart';
@@ -72,8 +73,70 @@ void main() {
   test('종류 둘러보기: 게임 → 본체 · 주변기기 → amiibo → 굿즈 순서', () {
     final secs = typeSections('nintendo', kits);
     expect(secs.map((s) => s.title), ['게임', '본체 · 주변기기', 'amiibo', '굿즈']);
-    expect(secs.first.entries.single.kits, hasLength(2), reason: '게임 칸이 영상 · 책 묶음의 게임 칸으로 새지 않는다');
+    expect(secs.first.entries.single.kits, hasLength(2), reason: '게임 칸이 게임 · 티켓 묶음으로 새지 않는다');
     expect(worldSectionOf('nintendo', 'nintendo-nintendo_mario'), '시리즈');
+  });
+
+  test('피규어 · 봉제인형 등급 (NIN_SCALE …): 코드 대신 라인 이름 · 유형은 Fate · 마도카와 같게 · 종류 묶음', () {
+    final figs = _map([
+      for (final c in ['NIN_SCALE', 'NIN_ACTION', 'NIN_MINI', 'NIN_PRIZE', 'NIN_PLUSH', 'NIN_PLAMO']) _rec('n-$c', c),
+    ]);
+    expect(
+      {for (final k in figs) k.id.substring(2): (k.line, k.type)},
+      {
+        'NIN_SCALE': ('스케일', '피규어'),
+        'NIN_ACTION': ('액션 피규어', '액션'),
+        'NIN_MINI': ('미니 · 트레이딩', '피규어'),
+        'NIN_PRIZE': ('경품', '경품'),
+        'NIN_PLUSH': ('인형', '인형'),
+        'NIN_PLAMO': ('프라모델', '프라모델'),
+      },
+    );
+    expect(figs.where((k) => k.line.startsWith('NIN_')), isEmpty);
+    final secs = typeSections('nintendo', [...kits, ...figs]);
+    expect(secs.map((s) => s.title), ['게임', '본체 · 주변기기', 'amiibo', '피규어 · 봉제인형', '가샤폰 · 경품 · 이치방쿠지', '굿즈']);
+    expect(secs[3].entries.map((e) => e.key), ['스케일', '액션 피규어', '미니 · 트레이딩', '프라모델', '인형']);
+    // 다른 채널의 같은 꼬리 등급도 유형이 같다 (grades.json 분류가 other 여도)
+    expect(typeLabel('EVA_PLUSH', 'other'), '인형');
+    expect(typeLabel('EVA_PRIZE', 'other'), '경품');
+    expect(typeLabel('EVA_PLAMO', 'other'), '프라모델');
+  });
+
+  test('atlas-groups.json: line_covers 값은 경로 글자(옛 {image}도) · line_icons 는 종류 이름 (없으면 비움)', () async {
+    addTearDown(Catalog.instance.debugForget);
+    addTearDown(lineCovers.clear);
+    addTearDown(lineIcons.clear);
+    Catalog.instance.debugSet(
+      slim: const [],
+      aux: {
+        'atlas-groups.json': {
+          'line_covers': {
+            'nintendo': {'NIN_AMIIBO': './assets/lines/amiibo.png'},
+            'gundam': {
+              'MG': {'image': './assets/lines/mg.png'},
+            },
+          },
+          'line_icons': {
+            'nintendo': {'NIN_PLUSH': 'plush', 'NIN_GAME': 'game', 'NIN_X': ''},
+          },
+        },
+      },
+    );
+    await pumpEventQueue();
+    expect(lineCovers['nintendo'], {'amiibo': endsWith('assets/lines/amiibo.png')});
+    expect(lineCovers['gundam'], {'MG': endsWith('assets/lines/mg.png')});
+    expect(lineIcons['nintendo'], {'인형': 'plush', '게임': 'game'});
+
+    // 옛 데이터 (line_icons 없음)
+    lineIcons.clear();
+    Catalog.instance.debugSet(
+      slim: const [],
+      aux: {
+        'atlas-groups.json': {'line_covers': <String, Object?>{}},
+      },
+    );
+    await pumpEventQueue();
+    expect(lineIcons, isEmpty);
   });
 
   test('가격: 한국 가게뿐이라 ₩ 정가 그대로, 플래티넘 포인트 굿즈는 가격 미정 · 필터의 나라 · 돈 칸은 숨김', () {
@@ -93,7 +156,7 @@ void main() {
     addTearDown(() => L10n.debugSet(AppLang.ko));
     expect(tr('닌텐도'), '任天堂');
     expect(tr('닌텐도 전체'), '全部任天堂');
-    expect(tr('본체 · 주변기기'), '主机 · 配件');
+    expect(tr('본체 · 주변기기'), '主机 · 周边设备');
     expect(tr('채널 맞춰 보기'), '频道同步');
     expect(kitPrice(byId('nintendo-kr-14917')), '₩74,800');
     // 데이터 값: 한국 가게 브랜드 · amiibo 시리즈 (세부 시리즈 칸은 tr 로 보인다)

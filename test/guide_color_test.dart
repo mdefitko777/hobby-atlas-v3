@@ -1,4 +1,5 @@
 // 도감 한 벌: 칸은 늘 컬러(흑백 · 흐림 없음) · 상태는 ♡ · 리본 표시로만 · 분류 칸 = 그림 + 이름(숫자 없음) · 도감 필터 = 상품 필터와 같은 상태 줄
+// · 도감에 레벨 막대 · 수집 n / m 없음
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -118,33 +119,43 @@ void main() {
       expect(t.takeException(), isNull);
     });
 
-    testWidgets('누르는 칸은 상품 사진과 같은 MarkOverlay (♡ · 리본)', (t) async {
-      await _pump(
-        t,
-        SizedBox(
-          width: 100,
-          height: 140,
-          child: GuideCell(
-            image: 'assets/test/u.png',
-            name: '칸',
-            tier: CellTier.owned,
-            liked: true,
-            onTap: () {},
-            onLike: () {},
-            onOwn: () {},
-          ),
+    testWidgets('누르는 칸은 상품 카드처럼 그림 위 ♡ 만 · 길게 = 구매함 (리본 + 없음, 구매함이면 ✓)', (t) async {
+      var owns = 0;
+      Widget cell(CellTier tier) => SizedBox(
+        width: 100,
+        height: 140,
+        child: GuideCell(
+          image: 'assets/test/u.png',
+          name: '칸',
+          tier: tier,
+          liked: true,
+          onTap: () {},
+          onLike: () {},
+          onOwn: () => owns++,
         ),
       );
+      await _pump(t, cell(CellTier.owned));
       final o = t.widget<MarkOverlay>(find.byType(MarkOverlay));
-      expect([o.liked, o.owned], [isTrue, isTrue]);
+      expect([o.liked, o.owned, o.onOwn], [isTrue, isTrue, isNull]);
       expect(find.byType(StatusMarks), findsNothing);
+      expect(_icon(find.byType(GuideCell), Icons.check), findsOneWidget);
+      expect(_icon(find.byType(GuideCell), Icons.add), findsNothing);
       _expectFullColour(t, find.byType(GuideCell));
+      await t.longPress(find.byType(GuideCell));
+      expect(owns, 1);
+      // 아직 칸: 리본 자리는 비고(+ 없음) ♡ 만
+      await _pump(t, cell(CellTier.none));
+      expect(_icon(find.byType(GuideCell), Icons.add), findsNothing);
+      expect(_icon(find.byType(GuideCell), Icons.check), findsNothing);
+      expect(_icon(find.byType(GuideCell), Icons.favorite), findsOneWidget);
+      await t.longPress(find.byType(GuideCell));
+      expect(owns, 2);
     });
 
     testWidgets('작품 도감 기체 칸: 아무것도 없는 칸도 흑백이 아니다', (t) async {
       me.setStatus('hg-strike', CollectStatus.wanted);
       await _pump(t, _gundam());
-      await t.tap(find.text('SEED'));
+      await t.tap(find.descendant(of: find.byKey(guideDirKey), matching: find.text('SEED')));
       await _settle(t);
       expect(find.byType(GuideCell), findsWidgets);
       _expectFullColour(t, find.byType(Scaffold).last);
@@ -190,24 +201,28 @@ void main() {
         final tile = e.widget as CategoryTile;
         final texts = t.widgetList<Text>(find.descendant(of: find.byWidget(tile), matching: find.byType(Text)));
         for (final x in texts) {
-          expect(x.data, tile.name); // 이름(또는 그림 자리 이름)뿐 — 수집 n/m · % 없음
+          expect(x.data, keepWords(tile.name)); // 이름뿐 (낱말 안에서 안 끊는 글자) — 수집 n/m · % 없음
         }
         expect(find.descendant(of: find.byWidget(tile), matching: find.byType(AccentBar)), findsNothing);
       }
     }
 
     for (final width in [320.0, 390.0]) {
-      testWidgets('건담 작품 칸 · 시대 머리에 숫자 없음 (폭 $width)', (t) async {
+      testWidgets('건담 도감: 묶음 목록 · 기체 칸에 숫자 · 진행 막대 · 레벨 없음, 펴면 한 줄 3칸 (폭 $width)', (t) async {
         me.setStatus('ex-archangel', CollectStatus.owned);
         await _pump(t, _gundam(), width: width);
-        expect(find.text('코즈믹 에라'), findsOneWidget);
+        expect(find.byKey(const ValueKey('guide-era-코즈믹 에라')), findsOneWidget);
         expect(find.textContaining('수집'), findsNothing);
-        expectNameOnly(t);
-        // 폰 390 = 한 줄 4칸, 작은 폰 320 = 3칸
-        final grid = t.widget<GridView>(find.byType(GridView).first);
-        final cols = (grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount).crossAxisCount;
-        expect(cols, width == 390 ? 4 : 3);
+        expect(find.byType(AccentBar), findsNothing);
+        expect(find.byType(LevelBar), findsNothing);
+        // 칸 크기 = 검색 탭 종류 · 세대 칸 (SideGrid) — 폰 390 · 작은 폰 320 모두 묶음 목록을 펴면 3칸 (기체가 넉넉한 SEED 로)
+        await t.tap(find.descendant(of: find.byKey(guideDirKey), matching: find.text('SEED')));
+        await _settle(t);
+        final ys = [for (final e in find.byType(GuideCell).evaluate()) t.getTopLeft(find.byWidget(e.widget)).dy];
+        final top = ys.reduce((a, b) => a < b ? a : b);
+        expect(ys.where((y) => (y - top).abs() < 1).length, 3);
         expect(t.takeException(), isNull);
+        await t.pump(const Duration(seconds: 3));
       });
 
       testWidgets('채널 고르기 · 태그 입구도 분류 칸 (폭 $width)', (t) async {
@@ -290,12 +305,19 @@ void main() {
       });
     }
 
-    testWidgets('상품 필터 시트와 같은 상태 줄 · 같은 순서', (t) async {
+    testWidgets('상품 상태와 같은 순서 · 상품 필터 시트는 같은 ♡ · 리본을 아이콘 줄로', (t) async {
+      expect([for (final g in GuideTier.values) ?g.mine], MineState.values, reason: '도감 상태 = 상품 상태 + 내 사진');
+      // 상품 필터는 아직 없음 칸을 뺐다 (2026-11-19) — ♡ · 리본은 아이콘 줄
       await open(t, (c) => showFilterSheet(c, kits: const [], initial: KitFilter()));
-      final kit = t.widgetList<MineStateLabel>(find.byType(MineStateLabel)).map((l) => l.state).toList();
-      expect(kit, MineState.values);
-      expect(find.text('아직 없음'), findsOneWidget);
-      expect([for (final g in GuideTier.values) ?g.mine], kit, reason: '도감 상태 = 상품 상태 + 내 사진');
+      expect(find.byType(MineStateLabel), findsNothing);
+      expect(
+        find.descendant(of: find.byKey(const ValueKey('toggle-liked')), matching: find.byType(LikedIcon)),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: find.byKey(const ValueKey('toggle-owned')), matching: find.byType(OwnedIcon)),
+        findsOneWidget,
+      );
     });
   });
 }

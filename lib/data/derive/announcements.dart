@@ -33,6 +33,7 @@ Announcement announcementOf(Map<String, Object?> m) {
     title: _shown(m['names']),
     status: annStageLabels[jStr(m['status'])] ?? '공식 발표',
     date: jStr(m['announced_at']),
+    // 데이터의 일본어 이름 그대로 (표에 없는 출처도 있어서) — 보일 때만 sourceLabel (lib/logic/data_labels.dart)
     source: jStr(m['source_name']),
     image: resolveAsset(m['thumbnail_url']),
     hero: false,

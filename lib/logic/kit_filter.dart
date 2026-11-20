@@ -3,6 +3,7 @@ import '../clock.dart';
 import '../format.dart';
 import '../l10n/l10n.dart';
 import '../models.dart';
+import 'data_labels.dart';
 import 'kit_rules.dart';
 
 enum MineState { any, liked, owned, none }
@@ -36,9 +37,10 @@ extension PriceBandLabel on PriceBand {
     (PriceBand.low, PriceCurrency.krw) => tr('3만원 이하'),
     (PriceBand.mid, PriceCurrency.krw) => tr('3만–10만원'),
     (PriceBand.high, PriceCurrency.krw) => tr('10만원 이상'),
-    (PriceBand.low, _) => tr('¥3,000 이하'),
-    (PriceBand.mid, _) => '¥3,000 – ¥10,000',
-    (PriceBand.high, _) => tr('¥10,000 이상'),
+    // 엔도 원과 같은 모양 (3만원 이하 · 3만–10만원 · 10만원 이상)
+    (PriceBand.low, _) => tr('3천엔 이하'),
+    (PriceBand.mid, _) => tr('3천–1만엔'),
+    (PriceBand.high, _) => tr('1만엔 이상'),
   };
 
   /// 필터 시트 칸 (좁아서 짧게 — 360dp 네 칸 하나가 약 80dp, 중국어 "3万–10万韩元" 은 잘렸다. 돈은 위 원 · 엔 칸에)
@@ -49,7 +51,7 @@ extension PriceBandLabel on PriceBand {
     (PriceBand.high, PriceCurrency.krw) => tr('₩10만 이상'),
     (PriceBand.low, _) => tr('¥3천 이하'),
     (PriceBand.mid, _) => tr('3천–1만'),
-    (PriceBand.high, _) => tr('¥10천 이상'),
+    (PriceBand.high, _) => tr('¥1만 이상'),
   };
 
   bool _inBand(int? p, PriceCurrency c) {
@@ -136,7 +138,7 @@ extension SaleStateLabel on SaleState {
     SaleState.regular => tr('일반'),
     SaleState.limited => tr('한정'),
     SaleState.pb => 'PB',
-    SaleState.base => tr('베이스'),
+    SaleState.base => tr('건담베이스 · 이벤트'),
   };
 }
 
@@ -197,11 +199,11 @@ int earliestYear(Iterable<String> dates, {int fallback = 1980}) {
 /// 'YYYY-MM' → 'YYYY.MM' (빈 글자는 그대로)
 String monthDot(String ym) => ym.replaceAll('-', '.');
 
-/// 기간 한 줄: 2023.01–2024.06 · 2023.01 부터 · 2024.06 까지 · 빈 글자
+/// 기간 한 줄: 2023.01–2024.06 · 2023.01부터 · 2024.06까지 · 빈 글자
 String periodLabel(String from, String to) => switch ((from.isEmpty, to.isEmpty)) {
   (true, true) => '',
-  (false, true) => trf('{from} 부터', {'from': monthDot(from)}),
-  (true, false) => trf('{to} 까지', {'to': monthDot(to)}),
+  (false, true) => trf('{from}부터', {'from': monthDot(from)}),
+  (true, false) => trf('{to}까지', {'to': monthDot(to)}),
   _ => from == to ? monthDot(from) : '${monthDot(from)}–${monthDot(to)}',
 };
 
@@ -217,6 +219,9 @@ bool inPeriod(String date, String from, String to) {
   final ym = date.substring(0, 7);
   return (from.isEmpty || ym.compareTo(from) >= 0) && (to.isEmpty || ym.compareTo(to) <= 0);
 }
+
+/// 세부 종류([KitFilter.goodsKinds])가 딸린 상품 종류
+const goodsType = '굿즈';
 
 /// 필터 조건 (이 목록 안에서만, 저장하지 않음)
 class KitFilter {
@@ -292,20 +297,47 @@ class KitFilter {
     workNames: {...workNames},
   )..statusOf = statusOf;
 
-  /// 모든 조건 비우기 (필터 시트 초기화)
-  void clear() {
+  /// 모든 조건 비우기 (필터 시트 초기화). [keepToggles] = 아이콘 줄(좋아요 · 구매함 · 발매 예정 · 나라) 조건은 둔다 —
+  /// 검색 탭은 그 줄이 시트 밖에 있어, 시트의 초기화가 보이지 않는 줄까지 끄면 안 된다 (2026-11-19 리뷰)
+  void clear({bool keepToggles = false}) {
     works.clear();
     types.clear();
     lines.clear();
     goodsKinds.clear();
-    mine = MineState.any;
-    release = ReleaseState.any;
     sale = SaleState.any;
     price = PriceBand.any;
     currency = null;
-    region = SaleRegion.any;
     from = '';
     to = '';
+    if (keepToggles) return;
+    mine = MineState.any;
+    release = ReleaseState.any;
+    region = SaleRegion.any;
+  }
+
+  /// 검색 탭 위 아이콘 줄(좋아요 · 구매함 · 발매 예정 · 나라)이 맡는 조건 수
+  int get toggleCount =>
+      (mine == MineState.any ? 0 : 1) + (release == ReleaseState.any ? 0 : 1) + (region == SaleRegion.any ? 0 : 1);
+
+  /// 시트에서 고른 조건 수 — 아이콘 줄을 밖에 둔 화면(검색 탭)의 필터 버튼 숫자
+  int get sheetCount => count - toggleCount;
+
+  /// 화면에서 뺀 칸(아직 없음 · 이번 달 · 발매됨 · 판매 줄)이 걸려 있으면 푼다 — 보이지 않는 조건에 갇히지 않게
+  /// (2026-11-19: 이번 달은 기간이, 판매 줄은 실데이터에서 거의 비어 뺐다). 굿즈 종류도 굿즈를 고를 때만 보이니
+  /// 굿즈를 풀면 같이 푼다 (안 풀면 종류 칸이 굿즈 하나만 남았다). 바꿨으면 true
+  bool dropHidden() {
+    final strayGoods = goodsKinds.isNotEmpty && !types.contains(goodsType);
+    if (strayGoods) goodsKinds.clear();
+    final hidden =
+        mine == MineState.none ||
+        release == ReleaseState.thisMonth ||
+        release == ReleaseState.released ||
+        sale != SaleState.any;
+    if (!hidden) return strayGoods;
+    if (mine == MineState.none) mine = MineState.any;
+    if (release != ReleaseState.upcoming) release = ReleaseState.any;
+    sale = SaleState.any;
+    return true;
   }
 
   int get count =>
@@ -366,12 +398,37 @@ class KitFilter {
     if (sale != SaleState.any) sale.label,
     if (region != SaleRegion.any) region.label,
     for (final w in works) workNames[w] ?? w,
-    ...types.map(tr),
-    ...lines.map(tr),
-    ...goodsKinds.map(tr),
+    ...types.map(dataLabel),
+    ...lines.map(dataLabel),
+    ...goodsKinds.map(dataLabel),
     if (price != PriceBand.any) price.labelIn(currency),
   ];
 }
+
+/// 체크 칸에 보일 값 — 그 칸 하나만 골라도 맞는 상품이 있는 값(많은 순) + 이미 고른 값.
+/// 맞는 상품이 없는 칸은 옅게 두지 않고 숨긴다 (2026-11-19 실데이터 감사: 위 조건과 겹쳐 0 이 된 회색 칸).
+/// [field] 를 비운 조건으로 한 번만 거른다 — 값 하나만 고른 조건과 같은 결과이고 값마다 다시 세지 않는다
+List<String> liveValues(
+  Iterable<Kit> pool,
+  KitFilter f,
+  String Function(Kit) valueOf,
+  Set<String> Function(KitFilter) field,
+) {
+  final g = f.copy();
+  field(g).clear();
+  final shown = [for (final (v, _) in valueCounts(pool.where(g.matches).map(valueOf))) v];
+  return [
+    ...shown,
+    for (final v in field(f))
+      if (!shown.contains(v)) v,
+  ];
+}
+
+/// 고를 값이 하나뿐인 줄(라인 · 작품)은 숨긴다 — 이미 고른 것이 있으면 풀 수 있게 둔다
+bool showChoices(List<String> values, Set<String> picked) => values.length > 1 || picked.isNotEmpty;
+
+/// 정가가 하나라도 있는 목록인가 (없으면 가격 줄을 숨긴다 — 레고 · 정가 없는 채널)
+bool hasAnyPrice(Iterable<Kit> pool) => pool.any((k) => k.priceKrw != null || k.priceJpy != null);
 
 /// 값별 개수, 많은 순
 List<(String, int)> valueCounts(Iterable<String> values) {

@@ -3,12 +3,10 @@ import 'package:flutter/material.dart';
 
 import '../theme.dart';
 
-/// 예약 · 도착 · 재판매 · 도색 — 같은 뜻은 어디서나 이 아이콘 (상세 · 컬렉션 · 캘린더 · 공유 카드 · 도움말).
-/// 조립 단계(미조립 · 조립 중 · 완성)는 kit_progress.dart buildStageIcon
+/// 예약 · 도착 · 재판매 — 같은 뜻은 어디서나 이 아이콘 (상세 · 컬렉션 · 캘린더 · 공유 카드 · 도움말)
 const preorderIcon = Icons.event_available_outlined;
 const arrivedIcon = Icons.move_to_inbox_outlined;
 const restockIcon = Icons.autorenew;
-const paintIcon = Icons.brush;
 
 /// 국내 시세 · 내 구매가 (상세). ↗ north_east 는 공식 · 바깥 링크에만 — 시세가 같은 화살표라 링크로 읽혔다 (2026-11-14)
 const marketIcon = Icons.show_chart;
@@ -79,7 +77,7 @@ class VerifiedBadge extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: Gp.own, // 인증 = 가진 것 (민트)
+        color: Gp.own, // 인증 = 구매함과 같은 민트
         border: Border.all(color: Gp.panel, width: 1.5),
       ),
       child: Icon(Icons.workspace_premium, size: size * 0.66, color: Colors.white),

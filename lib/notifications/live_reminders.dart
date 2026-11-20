@@ -10,6 +10,7 @@ import '../data/gunpula.dart' show pickName;
 import '../json_util.dart';
 import '../l10n/l10n.dart';
 import '../logic/announcement_match.dart' show annReplacedOf;
+import '../logic/data_labels.dart' show sourceLabel, sourceName;
 import '../logic/live_stream.dart';
 import 'notify_models.dart';
 
@@ -68,7 +69,8 @@ List<NoticeRecord> liveRecords(
               s.at == null
                   ? const NoticePart.key('라이브 예정 · 시간 미정')
                   : NoticePart.key('라이브 예정 · {when}', {'when': liveWhen(s.at!, now, relative: false)}),
-              if (s.source.isNotEmpty) NoticePart.value(s.source),
+              // 출처는 받은 일본어 대신 표준 이름 — 중국어 화면에서는 NoticePart 가 trData 로 바꾼다
+              if (s.source.isNotEmpty) NoticePart.value(sourceName(s.source)),
             ];
             return NoticeRecord(
               id: 'stream-${s.id}',
@@ -265,4 +267,4 @@ LiveReminderPlan planStartReminders(
 bool _canRemind(DateTime at, DateTime now) => at.subtract(liveLead).isAfter(now.add(liveMargin));
 
 /// 휴대폰 알림 둘째 줄: 방송 이름 · 출처
-String liveReminderBody(LiveStream s) => [s.shown, if (s.source.isNotEmpty) s.source].join(' · ');
+String liveReminderBody(LiveStream s) => [s.shown, if (s.source.isNotEmpty) sourceLabel(s.source)].join(' · ');

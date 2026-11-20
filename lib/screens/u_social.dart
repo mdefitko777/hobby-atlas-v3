@@ -1,8 +1,9 @@
-// 화면 조각 U: 친구 쪽 공용 — 아바타 사진 · 배경 · 사진 공개 범위 시트 · 공유 공간 · 알 수도 있는 친구 · 친구 상태 줄
+// 화면 조각 U: 친구 쪽 공용 — 프로필 사진 · 배경 사진 · 사진 공개 범위 시트 · 알 수도 있는 사람 · 친구 상태 줄
 // 앱 셸(S) · 친구 서랍(M) · 내 정보 / 친구 보기(I) · 친구 컬렉션(L)이 같이 쓴다.
 // 데이터: 내 아바타 · 배경 = 기기 파일(UserStore.social) → Storage `<uid>/profile/…` (lib/sync/profile_images.dart),
 //        친구 아바타 = 사진 벽 avatar_path 를 기기에 받아 둔 것, 공개 범위 = lib/sync/photo_share.dart,
-//        공유 공간 = v2 get_state 의 members (SyncService.workspace, 읽기만), 알 수도 있는 친구 = gunpula_v3_suggest_friends.
+//        알 수도 있는 친구 = gunpula_v3_suggest_friends.
+//        공유 공간(v2 members · 역할) 칸은 뺐다 (2026-11-20 주인 요청) — SyncService.workspace 는 동기화 · 계정 이름에 그대로.
 // 서버 SQL: docs/supabase-v3-social.sql — 없으면 첫 글자 아바타 · 공개 범위 ⚠ · 알 수도 있는 친구 칸 숨김.
 //
 // ┌──────── 디자인 가이드 대응표: U 친구 쪽 공용 ──────────────────────────────────────┐
@@ -12,8 +13,7 @@
 // │ U-3  │ ProfileCover                       │ 배경 사진 (I-1 머리 뒤)                  │ P02           │
 // │ U-4  │ editProfileImage → 바텀 시트         │ 아바타 · 배경 바꾸기 · 지우기 (I-3)        │ P03 · P07     │
 // │ U-5  │ 바텀 시트: 스위치 + 친구 체크 목록     │ 사진 공개 범위 (I-9 전체 끄기 · 친구별 숨기기) │ P05 · P07 │
-// │ U-6  │ WorkspaceMembers                   │ 공유 공간 이름 · 멤버 · 역할 (I-5 · M-6, 읽기만) │ P06    │
-// │ U-7  │ SuggestionsPanel (줄 + 👤+ · ×)      │ 알 수도 있는 친구 · 함께 아는 친구 n명 (M-5) │ P07 · P05   │
+// │ U-7  │ SuggestionsPanel (줄 + 👤+ · ×)      │ 알 수도 있는 사람 · 함께 아는 친구 n명 (M-5) │ P07 · P05   │
 // │ U-8  │ FriendStatusLine                   │ 친구 상태 한 줄: 최근 담은 것 · 사진 (M-7)   │ P01           │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 아바타 · 배경 · 공개 범위 → 덮기(바텀 시트). 친구 요청 → 토스트.
@@ -30,7 +30,6 @@ import '../l10n/l10n.dart';
 import '../logic/friends.dart';
 import '../sync/account.dart';
 import '../sync/friends_service.dart';
-import '../sync/sync_service.dart' show Workspace;
 import '../theme.dart';
 import '../widgets.dart';
 import 't_photo_screen.dart' show PhotoChoice, askPhotoSource, photoPicker;
@@ -288,76 +287,7 @@ class _PrivacySheet extends StatelessWidget {
   }
 }
 
-/// 역할 → 아이콘 · 뜻 (v2 gunpula_v2_members.role)
-(IconData, String) roleIcon(String role) => switch (role) {
-  'owner' => (Icons.workspace_premium_outlined, tr('관리자')),
-  'viewer' => (Icons.visibility_outlined, tr('보기만')),
-  _ => (Icons.edit_outlined, tr('편집')),
-};
-
-/// U-6 공유 공간 (I-5 · M-6) — 이름 · 멤버 · 역할. 읽기만 (초대 코드 만들기는 서버 함수가 없어 없음)
-class WorkspaceMembers extends StatelessWidget {
-  const WorkspaceMembers({super.key, required this.workspace, this.onSelf});
-  final Workspace workspace;
-
-  /// 나를 누르면 (서랍 → 내 정보)
-  final VoidCallback? onSelf;
-
-  @override
-  Widget build(BuildContext context) {
-    final w = workspace;
-    return Column(
-      key: const ValueKey('workspace-members'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
-          child: Row(
-            children: [
-              const Icon(Icons.home_outlined, size: Gp.iM, color: Gp.ink),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  w.name.isEmpty ? tr('공유 공간') : w.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w700),
-                ),
-              ),
-              if (!w.canEdit)
-                Tooltip(
-                  message: tr('읽기 전용'),
-                  child: const Icon(Icons.lock_outline, size: Gp.iS, color: Gp.muted),
-                ),
-            ],
-          ),
-        ),
-        for (final m in w.members)
-          ListTile(
-            dense: true,
-            leading: m.isSelf
-                ? MyAvatar(
-                    fallback: m.name.characters.isEmpty ? tr('나') : m.name.characters.first,
-                    size: 32,
-                    ringWidth: 2,
-                  )
-                : CircleThumb(image: '', label: m.name.isEmpty ? '?' : m.name, size: 36),
-            title: Text(
-              m.name,
-              style: TextStyle(fontSize: Gp.t14, fontWeight: m.isSelf ? FontWeight.w700 : FontWeight.w400),
-            ),
-            trailing: Tooltip(
-              message: roleIcon(m.role).$2,
-              child: Icon(roleIcon(m.role).$1, size: Gp.iM, color: Gp.muted),
-            ),
-            onTap: m.isSelf ? onSelf : null,
-          ),
-      ],
-    );
-  }
-}
-
-/// U-7 알 수도 있는 친구 (M-5) — 서버 함수가 없거나 아무도 없으면 칸 자체가 없다
+/// U-7 알 수도 있는 사람 (M-5) — 서버 함수가 없거나 아무도 없으면 칸 자체가 없다
 class SuggestionsPanel extends StatelessWidget {
   const SuggestionsPanel({super.key});
 
@@ -388,7 +318,7 @@ class SuggestionsPanel extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 2, 16, 2),
                 child: Tooltip(
-                  message: tr('알 수도 있는 친구'),
+                  message: tr('알 수도 있는 사람'),
                   child: const Icon(Icons.person_search_outlined, size: Gp.iM, color: Gp.ink),
                 ),
               ),

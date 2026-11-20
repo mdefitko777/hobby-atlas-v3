@@ -27,6 +27,7 @@ void main() {
     expect(atlasName({'ko': '우주세기', 'zh': '宇宙世纪'}, zh: true), '宇宙世纪');
     expect(atlasName({'ko': '우주세기', 'zh': '宇宙世纪'}, zh: false), '우주세기');
     expect(atlasName({'ko': '스트라이크', 'ja': 'ストライク', 'en': 'Strike'}, zh: true), 'Strike');
+    expect(atlasName({'ja': 'ストライク', 'en': 'Strike'}, zh: false), 'Strike'); // 한국어가 없으면 en 이 ja 앞
     final zh = _parse(zh: true);
     expect(zh.work('seed')!.name, 'Mobile Suit Gundam SEED');
     expect(zh.timeline('CE')!.name, 'Cosmic Era');
@@ -181,6 +182,45 @@ void main() {
       expect(c['seed']!.map((x) => x.episodes), ['1–3화', '5화', '9–10화']);
       expect(c['seed']!.first.name, '그 이름은 건담');
       expect(c['mobile-suit-gundam']!.map((x) => x.episodes), ['1화']); // 기체 없는 2화는 빠짐
+    });
+
+    test('화 제목: 한국어 화면 ko → en, 중국어 화면 zh → en, 일본어 제목만 있으면 비움', () {
+      final eps = {
+        'works': {
+          'w': {
+            'arcs': [],
+            'episodes': [
+              {
+                'no': 1,
+                'title_ja': 'ガンダム大地に立つ',
+                'title_en': 'Gundam Rises',
+                'ms': [
+                  {'ms': 'A'},
+                ],
+              },
+              {
+                'no': 2,
+                'title_ja': 'ガンダム破壊命令',
+                'title_ko': '건담 파괴 명령',
+                'title_zh': '高达破坏命令',
+                'ms': [
+                  {'ms': 'B'},
+                ],
+              },
+              {
+                'no': 3,
+                'title_ja': 'シャアの来襲',
+                'ms': [
+                  {'ms': 'C'},
+                ],
+              },
+            ],
+          },
+        },
+      };
+      expect(parseChapters(eps)['w']!.map((x) => x.name), ['Gundam Rises', '건담 파괴 명령', '']);
+      expect(parseChapters(eps, zh: true)['w']!.map((x) => x.name), ['Gundam Rises', '高达破坏命令', '']);
+      expect(parseChapters(eps)['w']!.map((x) => x.episodes), ['1화', '2화', '3화']);
     });
 
     test('withChapters: 칸이 없는 MS(함선 클래스)는 빼고, 빈 장도 뺀다', () {

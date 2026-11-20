@@ -10,7 +10,6 @@ import 'package:hobby_atlas/detail_pane.dart';
 import 'package:hobby_atlas/l10n/l10n.dart';
 import 'package:hobby_atlas/l10n/zh_text.dart';
 import 'package:hobby_atlas/logic/announcement_match.dart';
-import 'package:hobby_atlas/logic/live_stream.dart';
 import 'package:hobby_atlas/marks.dart';
 import 'package:hobby_atlas/models.dart';
 import 'package:hobby_atlas/notifications/feed_rules.dart';
@@ -342,7 +341,7 @@ void main() {
       }
     });
 
-    testWidgets('캘린더: 비공식 줄은 호박색 꼬리표 · 공식 줄은 그대로', (tester) async {
+    testWidgets('캘린더: 비공식 줄은 둘째 줄 「비공식 · …」 · 공식 줄은 단계 그대로 (알약 · 색 꼬리표 없이)', (tester) async {
       fixedNow = DateTime(2026, 10, 25, 21);
       final loaders = Loaders(kits: (_) async => const [], announcements: (_) async => anns);
       for (final lang in AppLang.values) {
@@ -355,11 +354,11 @@ void main() {
           ),
         );
         final rows = {for (final r in tester.widgetList<ThumbRow>(find.byType(ThumbRow, skipOffstage: false))) r.id: r};
-        expect(rows['fan-1']!.tag, lang == AppLang.zh ? '非官方' : '비공식');
-        expect(rows['fan-1']!.tagColor, unofficialColor);
-        expect(rows['fan-2']!.tag, lang == AppLang.zh ? '非官方 · 开始预订' : '비공식 · 예약 시작');
-        expect(rows['news-1']!.tag, lang == AppLang.zh ? '官方公告' : '공식 발표');
-        expect(rows['news-1']!.tagColor, isNull);
+        expect(rows['fan-1']!.subtitle, startsWith(lang == AppLang.zh ? '非官方' : '비공식'));
+        expect(rows['fan-1']!.tag, isEmpty);
+        expect(rows['fan-1']!.tagColor, isNull);
+        expect(rows['fan-2']!.subtitle, startsWith(lang == AppLang.zh ? '非官方 · 开始预订' : '비공식 · 예약 시작'));
+        expect(rows['news-1']!.subtitle, startsWith(lang == AppLang.zh ? '官方公告' : '공식 발표'));
         expect(tester.takeException(), isNull);
       }
     });
@@ -504,7 +503,7 @@ void main() {
         }
       });
 
-      testWidgets('캘린더 줄 — 비공식이 전한 라이브는 「21:00 비공식 · 라이브」 (색은 라이브 단계)', (tester) async {
+      testWidgets('캘린더 줄 — 비공식이 전한 라이브는 둘째 줄 「21:00 비공식 · 라이브」', (tester) async {
         fixedNow = DateTime(2026, 10, 25, 21);
         final loaders = Loaders(kits: (_) async => const [], announcements: (_) async => long);
         for (final lang in AppLang.values) {
@@ -521,9 +520,8 @@ void main() {
           final rows = {
             for (final r in tester.widgetList<ThumbRow>(find.byType(ThumbRow, skipOffstage: false))) r.id: r,
           };
-          expect(rows['fan-long']!.tag, lang == AppLang.zh ? '非官方 · 确定商品化' : '비공식 · 상품화 확정');
-          expect(rows['fan-live']!.tag, lang == AppLang.zh ? '21:00 非官方 · 直播' : '21:00 비공식 · 라이브');
-          expect(rows['fan-live']!.tagColor, liveColor(LiveStage.upcoming));
+          expect(rows['fan-long']!.subtitle, startsWith(lang == AppLang.zh ? '非官方 · 确定商品化' : '비공식 · 상품화 확정'));
+          expect(rows['fan-live']!.subtitle, startsWith(lang == AppLang.zh ? '21:00 非官方 · 直播' : '21:00 비공식 · 라이브'));
         }
       });
     });

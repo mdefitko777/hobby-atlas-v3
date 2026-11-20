@@ -17,7 +17,8 @@ import 'package:crypto/crypto.dart' show sha256;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
-import '../channels.dart' show channelCovers, channelOf, channelsWithData, lineCovers;
+import '../channels.dart'
+    show channelCoverStyles, channelCovers, channelOf, channelsWithData, lineCoverStyles, lineCovers, lineIcons;
 import '../json_util.dart';
 import '../l10n/l10n.dart';
 import '../l10n/zh_text.dart' show zhText;
@@ -63,7 +64,8 @@ class Catalog extends ChangeNotifier {
   /// 17: 찾기 낱말의 중국어(names.zh · labels.zh · search_zh)를 뒤로 모으고 그 자리(zhKeywordsFrom)
   /// 18: 파는 나라(한국 · 일본) · 같은 바코드 짝(twin) · 짝의 가격
   /// 19: 닌텐도 등급 · 한국 가게(BNKR · 아카데미) 브랜드, 두 나라 출처 상품(both)도 같은 바코드의 한국 상품과 한 카드로
-  static const mapVersion = 19;
+  /// 20: 가게 말머리([예약 판매]) 빼기 · 한글이 든 zh 이름은 건너뛰기 · 도감 이름 순서 (2026-11-20 용어 정리)
+  static const mapVersion = 20;
 
   CatalogPhase phase = CatalogPhase.empty;
   String error = '';
@@ -157,7 +159,7 @@ class Catalog extends ChangeNotifier {
     await (_loading ??= _start());
     if (!_ready) {
       _loading = null; // 다시 시도할 수 있게
-      throw CatalogException(error.isEmpty ? tr('상품 데이터를 받지 못했어요.') : error);
+      throw CatalogException(error.isEmpty ? tr('상품 데이터를 받지 못했어요') : error);
     }
   }
 
@@ -351,7 +353,7 @@ class Catalog extends ChangeNotifier {
   Object? auxLoaded(String file) => _aux[file];
 
   /// 새 등급의 라인 이름(grades.json name_ko · name_zh)을 이 isolate 에도 — 알림 피드의 종류(FeedItem.line)가 상품의
-  /// 라인과 같고, 중국어 화면의 tr(k.line) 이 grades.json 의 중국어 이름을 찾게 (손으로 쓴 번역이 있으면 그것)
+  /// 라인과 같고, 중국어 화면의 dataLabel(k.line) 이 grades.json 의 중국어 이름을 찾게 (손으로 쓴 번역이 있으면 그것)
   static void _useGrades(String? text) {
     if (text == null || text.isEmpty) return;
     try {
@@ -428,7 +430,7 @@ class Catalog extends ChangeNotifier {
     }
     try {
       final mText = await _get('data/split/manifest.json', count: true);
-      if (mText == null) throw CatalogException(tr('인터넷에 연결하지 못했어요.'));
+      if (mText == null) throw CatalogException(tr('인터넷에 연결하지 못했어요'));
       _fileDone();
       final m = jsonDecode(mText) as Map<String, Object?>;
       _checkedAt = DateTime.now();
@@ -444,7 +446,7 @@ class Catalog extends ChangeNotifier {
 
       final aux = <String, String>{};
       for (final f in auxFilesFor(want)) {
-        _step(trf('보조 데이터 {file}', {'file': f}));
+        _step(tr('도감 · 예고 데이터 받는 중')); // 안의 파일 이름(atlas-groups.json …)은 보여 주지 않는다
         final t = await _get('data/$f', count: true);
         if (t != null) aux[f] = t;
         // 못 받았거나 받은 내용이 지문과 다른 파일은 지문을 적지 않는다 → 다음 확인에서 그 파일만 다시
@@ -463,7 +465,7 @@ class Catalog extends ChangeNotifier {
         }
         _step(trf('{channel} 상품 받는 중', {'channel': _label(f)}));
         final raw = await _get('data/split/kits-$f.json', count: true);
-        if (raw == null) throw CatalogException(trf('{channel} 상품을 받지 못했어요.', {'channel': _label(f)}));
+        if (raw == null) throw CatalogException(trf('{channel} 상품을 받지 못했어요', {'channel': _label(f)}));
         _fileDone();
         slim.addAll(await compute(mapKitsJob, _mapMsg(f, raw, aux)));
       }
@@ -620,7 +622,7 @@ class Catalog extends ChangeNotifier {
     ];
     if (failed.isNotEmpty && failed.length == wanted.length) {
       throw CatalogException(
-        _channelErrors[failed.first] ?? trf('{channel} 상품을 받지 못했어요.', {'channel': _label(failed.first)}),
+        _channelErrors[failed.first] ?? trf('{channel} 상품을 받지 못했어요', {'channel': _label(failed.first)}),
       );
     }
   }
@@ -674,7 +676,7 @@ class Catalog extends ChangeNotifier {
         }
         final raw = await _get('data/split/kits-$f.json', channel: true);
         if (raw == null) {
-          _channelErrors[f] = trf('{channel} 상품을 받지 못했어요.', {'channel': _label(f)});
+          _channelErrors[f] = trf('{channel} 상품을 받지 못했어요', {'channel': _label(f)});
           continue;
         }
         slim = [...slim, ...await compute(mapKitsJob, _mapMsg(f, raw, aux))];
@@ -877,26 +879,49 @@ class Catalog extends ChangeNotifier {
   }
 
   /// 채널 대표 그림 (atlas-groups.json `channels.<id>.image`, 공식 그림) → channels.dart channelCovers
-  /// + 종류별 도감 카드 그림 (`line_covers.<채널>.<등급 코드>`, 공식 로고 · 대표 그림) → lineCovers
+  /// + 종류별 도감 카드 그림 (`line_covers.<채널>.<등급 코드>`, 공식 로고) → lineCovers
+  /// + 그 그림의 모양 · 바탕색 (`kind` · `bg` · `fg`, 채널은 `cover_kind` · `cover_bg` · `cover_fg`) → …Styles
+  /// + 로고가 없는 종류의 아이콘 종류 (`line_icons.<채널>.<등급 코드>` = goods · plush …) → lineIcons
+  /// 파싱한 값은 캐시에 남기지 않고 열 때마다 이 파일에서 다시 읽어 mapVersion 을 올릴 일이 없다
   Future<void> _loadChannelCovers() async {
     final groups = jMap(await aux('atlas-groups.json'));
     final ch = jMap(groups['channels']);
     for (final e in ch.entries) {
-      final img = resolveAsset(jMap(e.value)['image']);
-      if (img.isNotEmpty) channelCovers[e.key] = img;
+      final m = jMap(e.value);
+      final img = resolveAsset(m['image']);
+      if (img.isEmpty) continue;
+      channelCovers[e.key] = img;
+      final style = CoverStyle.parse(kind: m['cover_kind'], bg: m['cover_bg'], fg: m['cover_fg']);
+      if (style != null) channelCoverStyles[e.key] = style;
     }
+    // 베이 라인(BX · UX · CX)은 코드가 곧 이름, 건담 굿즈 묶음(GUNDAM_MERCH)의 그림은 가샤폰 로고라
+    // 종류 도감의 "가샤폰" 카드로, 나머지는 등급 코드 → 앱의 라인 이름
+    String labelOf(String channel, String code) =>
+        channel == 'beyblade' ? code : (code == 'GUNDAM_MERCH' ? '가샤폰' : lineLabel(code, '', ''));
     final lines = jMap(groups['line_covers']);
     for (final f in lines.entries) {
       final byLabel = lineCovers[f.key] = {};
+      final styles = lineCoverStyles[f.key] = {};
       for (final e in jMap(f.value).entries) {
-        final img = resolveAsset(jMap(e.value)['image']);
-        // 베이 라인(BX · UX · CX)은 코드가 곧 이름, 건담 굿즈 묶음(GUNDAM_MERCH)의 그림은 가샤폰 로고라
-        // 종류 도감의 "가샤폰" 카드로, 나머지는 등급 코드 → 앱의 라인 이름
-        final label = f.key == 'beyblade' ? e.key : (e.key == 'GUNDAM_MERCH' ? '가샤폰' : lineLabel(e.key, '', ''));
-        if (img.isNotEmpty) byLabel[label] = img;
+        // 값 = {image, kind, bg, fg …} (2026-11-20 계약). 그 앞의 그림 경로 글자 하나도 받는다
+        final m = jMap(e.value);
+        final img = resolveAsset(e.value is String ? e.value : m['image']);
+        if (img.isEmpty) continue;
+        final label = labelOf(f.key, e.key);
+        byLabel[label] = img;
+        if (CoverStyle.parse(kind: m['kind'], bg: m['bg'], fg: m['fg']) case final s?) styles[label] = s;
       }
     }
-    if (ch.isNotEmpty || lines.isNotEmpty) notifyListeners();
+    // 없으면(옛 데이터) 비운 채로 — 칸은 칸 키 · 상품 유형으로 아이콘을 고른다
+    final icons = jMap(groups['line_icons']);
+    for (final f in icons.entries) {
+      final byLabel = lineIcons[f.key] = {};
+      for (final e in jMap(f.value).entries) {
+        final kind = jStr(e.value).trim();
+        if (kind.isNotEmpty) byLabel[labelOf(f.key, e.key)] = kind;
+      }
+    }
+    if (ch.isNotEmpty || lines.isNotEmpty || icons.isNotEmpty) notifyListeners();
   }
 
   /// 1엔 = ? 원 (data/exchange-rates.json · Frankfurter, 매일). 못 받았으면 대략값

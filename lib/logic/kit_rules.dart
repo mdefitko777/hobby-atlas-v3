@@ -95,9 +95,10 @@ List<Kit> kitsWithBarcode(Iterable<Kit> kits, String raw) {
 /// 작품 묶음 이름 (홈 전체 목록 거르기). 베이블레이드는 작품이 하나라 series(한정 · UX…) 대신 이름 하나로
 String kitWork(Kit k) => k.franchiseId == 'beyblade' ? 'BEYBLADE X' : k.series;
 
-/// [kitWork] 칸의 이름 — 작품이 없는 채널(이펙트)만 있으면 series 가 이펙트 갈래(연기 · 폭발 …)라 「시리즈」
+/// [kitWork] 칸의 이름 — 작품이 없는 채널(이펙트)만 있으면 series 가 이펙트 갈래(연기 · 폭발 …)라 「이펙트 종류」
+/// (세대 묶음 이름 worldSectionOf 와 같은 말)
 String kitWorkTitle(Iterable<Kit> kits) =>
-    kits.isNotEmpty && kits.every((k) => noWorkChannels.contains(k.franchiseId)) ? '시리즈' : '작품';
+    kits.isNotEmpty && kits.every((k) => noWorkChannels.contains(k.franchiseId)) ? '이펙트 종류' : '작품';
 
 /// [kitWork] 를 화면에 보일 때 (중국어 화면이면 작품 중국어 이름) — 묶기 · 비교는 [kitWork] 그대로
 String kitWorkLabel(Kit k) => k.franchiseId == 'beyblade' ? 'BEYBLADE X' : k.seriesLabel;
@@ -105,7 +106,7 @@ String kitWorkLabel(Kit k) => k.franchiseId == 'beyblade' ? 'BEYBLADE X' : k.ser
 /// 워터마크 글자: 앱 이름 줄임(GP) + 올린 사람 아이디
 String watermarkText(String handle) => 'HA · @$handle';
 
-/// "새로 들어온" = 가장 늦게 들어온 날부터 7일 안 (새것부터, [limit] 개)
+/// 검색 첫 화면 「새 상품」 = 가장 늦게 들어온 날부터 7일 안 (새것부터, [limit] 개)
 List<Kit> newThisWeek(List<Kit> kits, {int limit = 8}) {
   final seen = [
     for (final k in kits)
@@ -124,7 +125,7 @@ List<Kit> newThisWeek(List<Kit> kits, {int limit = 8}) {
   final today = dayKey(now);
   if (wanted && k.pbCloses.length >= 10 && k.pbCloses.compareTo(today) >= 0) {
     final d = DateTime.parse(k.pbCloses).difference(DateTime(now.year, now.month, now.day)).inDays;
-    return (sortKey: k.pbCloses, label: d == 0 ? tr('PB 오늘') : 'PB D-$d', urgent: true);
+    return (sortKey: k.pbCloses, label: d == 0 ? tr('PB 오늘 마감') : 'PB D-$d', urgent: true);
   }
   if (k.date.length == 10 && k.date.compareTo(today) >= 0) {
     return (sortKey: k.date, label: dateDot(k.date.substring(5)), urgent: false);

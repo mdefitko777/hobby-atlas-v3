@@ -205,7 +205,7 @@ class FakeServer implements RpcClient {
     final p = roundTrip(params)! as Map<String, Object?>;
     calls.add((fn: fn, params: p));
     await Future<void>.delayed(Duration.zero);
-    if (offline) throw const OfflineException('인터넷에 연결되지 않았어요');
+    if (offline) throw const OfflineException('인터넷에 연결하지 못했어요');
     if (authExpired) throw const RpcException('42501', 'gunpula not signed in');
     if (missing.contains(fn)) throw RpcException('PGRST202', 'Could not find the function public.$fn');
     switch (fn) {
@@ -367,7 +367,7 @@ class FakePhotoStorage implements PhotoStorage {
 
   Future<void> _check() async {
     await Future<void>.delayed(Duration.zero);
-    if (offline) throw const OfflineException('인터넷에 연결되지 않았어요');
+    if (offline) throw const OfflineException('인터넷에 연결하지 못했어요');
     if (missingBucket) throw const PhotoStorageException('Bucket not found', status: '404');
   }
 

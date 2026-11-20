@@ -25,7 +25,13 @@ final _png = Uint8List.fromList(
   base64Decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='),
 );
 
-final _loaders = Loaders(kits: (_) async => catalog, kitsByIds: (ids) async => [for (final k in catalog) if (ids.contains(k.id)) k]);
+final _loaders = Loaders(
+  kits: (_) async => catalog,
+  kitsByIds: (ids) async => [
+    for (final k in catalog)
+      if (ids.contains(k.id)) k,
+  ],
+);
 
 Future<void> _pump(WidgetTester tester, Widget home, UserStore store) async {
   tester.view.physicalSize = const Size(390, 844);
@@ -34,7 +40,10 @@ Future<void> _pump(WidgetTester tester, Widget home, UserStore store) async {
   await tester.pumpWidget(
     MaterialApp(
       theme: buildGpTheme(),
-      builder: (context, child) => MarksHost(store: store, child: PaneHost(child: child!)),
+      builder: (context, child) => MarksHost(
+        store: store,
+        child: PaneHost(child: child!),
+      ),
       home: home,
     ),
   );
@@ -125,7 +134,7 @@ void main() {
     expect(find.text('100%'), findsOneWidget);
     expect(find.text('주소'), findsOneWidget);
     expect(find.text('HG 1 / 144 건담エアリアル'), findsOneWidget);
-    expect(find.byTooltip('사진 붙이기'), findsNothing); // 사진이 없으면 붙이기 없음
+    expect(find.byIcon(Icons.add_photo_alternate_outlined), findsNothing); // 사진이 없으면 넣기 없음
   });
 
   testWidgets('앱 셸: 공유로 받은 것이 있으면 바로 공유로 찾기를 연다 (공유로 켜진 경우)', (tester) async {

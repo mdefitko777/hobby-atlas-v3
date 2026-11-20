@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../api.dart';
 import '../../data/catalog.dart';
 import '../../detail_pane.dart';
+import '../../logic/data_labels.dart';
 import '../../logic/short_names.dart' show shortWorkName;
 import '../../l10n/l10n.dart';
 import '../../marks.dart';
@@ -23,7 +24,7 @@ void openUnitInGuide(BuildContext context, GuideIndex index, String unitId, {req
   openPage(context, WorkGuideScreen(work: w, loaders: loaders, focusUnit: unitId));
 }
 
-/// 기체에 연결된 상품 중 내가 가진 수 (지금 Marks 기준)
+/// 기체에 연결된 상품 중 내 보유 수 (지금 Marks 기준)
 int _ownedOf(Marks m, GuideUnit u) => u.kitIds.where((id) {
   final k = Catalog.instance.byId[id];
   return k != null && m.owned(k);
@@ -108,7 +109,7 @@ class GuideHits extends StatelessWidget {
               subtitle: joinDot([
                 u.nameEn,
                 shortWorkName(index.work(u.workId)?.name ?? ''),
-                if (_ownedOf(m, u) case final n when n > 0) trf('가짐 {n}', {'n': n}),
+                if (_ownedOf(m, u) case final n when n > 0) trf('보유 {n}', {'n': n}),
               ]),
               size: 48,
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
@@ -120,7 +121,7 @@ class GuideHits extends StatelessWidget {
   }
 }
 
-/// B-13 결과를 기체별로: 기체 머리(그림 · 이름 · 상품 n · 가짐 m · 도감 ›) 아래 상품 줄. 기체 없는 상품은 끝 "기타"
+/// B-13 결과를 기체별로: 기체 머리(그림 · 이름 · 상품 n · 보유 m · 도감 ›) 아래 상품 줄. 기체 없는 상품은 끝 "기타"
 class GroupedResults extends StatelessWidget {
   const GroupedResults({super.key, required this.kits, required this.index, required this.loaders, this.header});
   final List<Kit> kits;
@@ -160,7 +161,7 @@ class GroupedResults extends StatelessWidget {
           final Kit k => ThumbRow(
             image: k.image,
             title: k.name,
-            subtitle: joinDot([tr(k.line), k.date]),
+            subtitle: joinDot([dataLabel(k.line), k.date]),
             size: 48,
             padding: const EdgeInsets.fromLTRB(28, 4, 8, 4),
             trailing: KitMarkButtons(kit: k),
@@ -202,7 +203,7 @@ class _UnitHead extends StatelessWidget {
                 Text(
                   joinDot([
                     unit.nameEn,
-                    if (owned > 0) trf('가짐 {n}', {'n': owned}),
+                    if (owned > 0) trf('보유 {n}', {'n': owned}),
                   ]),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

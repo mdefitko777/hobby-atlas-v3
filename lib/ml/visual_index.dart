@@ -35,10 +35,10 @@ class VisualIndex {
     final dim = head.getUint32(0, Endian.little);
     final n = head.getUint32(4, Endian.little);
     final vecAt = scaleAt + 4 * n;
-    if (dim == 0 || bytes.length < vecAt + n * dim) throw const FormatException('생김새 표가 잘렸어요');
+    if (dim == 0 || bytes.length < vecAt + n * dim) throw const FormatException('생김새 데이터가 잘렸어요');
     final meta = readMeta(bytes);
     final ids = (meta['ids']! as List).cast<String>();
-    if (ids.length != n) throw const FormatException('생김새 표 줄 수가 맞지 않아요');
+    if (ids.length != n) throw const FormatException('생김새 데이터 줄 수가 맞지 않아요');
     // 배율은 4바이트 경계 (20 + jl, jl 은 4의 배수) — 복사해서 정렬 걱정 없이
     final scale = Float32List(n);
     final sd = ByteData.sublistView(bytes, scaleAt, vecAt);
@@ -58,17 +58,17 @@ class VisualIndex {
   /// 파일 머리 20바이트(이상) → 메타 JSON 이 끝나는 곳. 표 전체를 읽지 않고 메타만 볼 때 (받은 표가 어느 모델 것인지)
   static int metaEnd(Uint8List head) {
     if (head.length < 20 || ascii.decode(head.sublist(0, 4), allowInvalid: true) != 'HAIS' || head[4] != 1) {
-      throw const FormatException('생김새 표 파일이 아니에요');
+      throw const FormatException('생김새 데이터 파일이 아니에요');
     }
     final jl = ByteData.sublistView(head, 16, 20).getUint32(0, Endian.little);
-    if (jl % 4 != 0) throw const FormatException('생김새 표가 잘렸어요');
+    if (jl % 4 != 0) throw const FormatException('생김새 데이터가 잘렸어요');
     return 20 + jl;
   }
 
   /// 머리 + 메타 JSON 바이트 → 메타 ({model, updated, ids, src, …})
   static Map<String, Object?> readMeta(Uint8List bytes) {
     final end = metaEnd(bytes);
-    if (bytes.length < end) throw const FormatException('생김새 표가 잘렸어요');
+    if (bytes.length < end) throw const FormatException('생김새 데이터가 잘렸어요');
     return jsonDecode(utf8.decode(bytes.sublist(20, end))) as Map<String, Object?>;
   }
 

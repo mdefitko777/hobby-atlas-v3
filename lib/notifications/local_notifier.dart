@@ -33,24 +33,24 @@ class LocalNotifier {
     'catalog': AndroidNotificationChannel(
       'catalog_updates',
       tr('새 상품 · 변경'),
-      description: tr('내 채널과 알림 규칙(PB · SEED/00 · BBX …)에 맞는 새 상품과 바뀐 상품'),
+      description: tr('내 채널과 알림 규칙(PB · SEED / 00 · BBX …)에 맞는 새 상품과 바뀐 상품'),
     ),
     'wanted': AndroidNotificationChannel(
       'wanted_changes',
-      tr('좋아요한 상품'),
+      tr('좋아요한 상품 소식'),
       description: tr('좋아요한 상품의 가격 · 발매일 · 판매처가 바뀌면'),
       importance: Importance.high,
     ),
     'pb': AndroidNotificationChannel(
       'pb_windows',
-      tr('프리미엄 반다이 예약'),
+      tr('PB 예약'),
       description: tr('좋아요한 PB 상품의 예약 시작 · 마감 임박 (Wayback 기록이라 늦거나 틀릴 수 있어요)'),
       importance: Importance.high,
     ),
     'restock': AndroidNotificationChannel(
       'restocks',
       tr('재판매'),
-      description: tr('좋아요 · 구매함 상품의 재판매(再販) 소식'),
+      description: tr('좋아요 · 구매함 상품의 재판매 소식'),
       importance: Importance.high,
     ),
     'preorder': AndroidNotificationChannel(

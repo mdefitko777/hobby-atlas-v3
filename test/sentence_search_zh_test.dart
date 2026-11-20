@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hobby_atlas/data/gunpula.dart';
 import 'package:hobby_atlas/l10n/l10n.dart';
 import 'package:hobby_atlas/l10n/zh_text.dart';
+import 'package:hobby_atlas/logic/data_labels.dart';
 import 'package:hobby_atlas/logic/sentence_search.dart';
 import 'package:hobby_atlas/models.dart';
 import 'package:hobby_atlas/screens/b_search_screen.dart' show sentenceExamples, sentenceExamplesZh;
@@ -316,7 +317,7 @@ void main() {
     final hangul = RegExp(r'[가-힣]');
     final missing = [
       for (final c in sentenceConcepts)
-        if (hangul.hasMatch(c.label) && !zhText.containsKey(c.label)) c.label,
+        if (hangul.hasMatch(dataName(c.label)) && !zhText.containsKey(dataName(c.label))) c.label,
     ];
     expect(missing, isEmpty);
   });

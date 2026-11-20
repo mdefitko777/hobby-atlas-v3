@@ -1,16 +1,21 @@
-// 상품 카드 · 목록 한 줄 — 홈 가로 줄 · 검색 결과 · 목록이 같이 쓴다
+// 상품 카드 · 목록 한 줄 — 홈 가로 줄 · 검색 결과 · 목록이 같이 쓴다. 상품 카드는 사진 + 이름(두 줄, 낱말 안에서 안 끊음)
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../detail_pane.dart';
 import '../l10n/l10n.dart';
 import '../logic/kit_rules.dart' show kitPriceParts;
+import '../marks.dart';
 import '../models.dart';
 import '../theme.dart';
 import 'images.dart';
+import 'mark_overlay.dart';
 import 'tags.dart';
 
-/// 상품 카드: 사진(왼쪽 위 + 리본 · 왼쪽 아래 ♡) · 이름 · 보조 한 줄
+/// 상품 카드: 사진(왼쪽 아래 ♡) · 이름 두 줄 · 보조 한 줄. 카드를 길게 누르면 구매함 넣기 · 빼기 (진동 + 되돌리기 토스트)
 /// 홈 가로 줄 · 검색 결과가 같이 쓴다. [imageWidth]가 있으면 고정 너비(가로 줄), 없으면 칸 너비.
+/// 구매함 리본 +는 사진에 두지 않는다 (2026-11-20 주인: 사진 위에는 ♡ 만) — 길게 누르기로 옮겼다
 class ProductTile extends StatelessWidget {
   const ProductTile({
     super.key,
@@ -20,10 +25,11 @@ class ProductTile extends StatelessWidget {
     this.subtitle = '',
     this.note = '',
     this.marks,
+    this.kit,
     this.id,
     this.imageWidth,
     this.imageAspect = 1,
-    this.titleLines = 1,
+    this.titleLines = 2,
   });
 
   final String image;
@@ -34,8 +40,11 @@ class ProductTile extends StatelessWidget {
   final String note;
   final VoidCallback onTap;
 
-  /// 주면 사진 위에 겹친다 — 보통 [QuickMarks] (리본 + · ♡)
+  /// 주면 사진 위에 겹친다 — 보통 [QuickMarks] (♡)
   final Widget? marks;
+
+  /// 길게 눌러 구매함에 넣고 뺄 상품. 없으면 [marks] 가 [QuickMarks] 일 때 그 상품 (공식 예고 카드는 둘 다 없음)
+  final Kit? kit;
 
   /// 반반 화면에서 이 카드가 오른쪽 칸에 열려 있으면 사진에 파란 테두리
   final String? id;
@@ -43,7 +52,16 @@ class ProductTile extends StatelessWidget {
 
   /// 가로 / 세로 (1 = 정사각형, 공식 예고 배너는 16:9 쯤)
   final double imageAspect;
+
+  /// 이름 줄 수 — 칸 높이가 모자라면(옛 높이의 가로 줄) 들어가는 만큼만
   final int titleLines;
+
+  Kit? get _ownKit =>
+      kit ??
+      switch (marks) {
+        QuickMarks(:final kit) => kit,
+        _ => null,
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -72,40 +90,101 @@ class ProductTile extends StatelessWidget {
         ],
       ),
     );
-    final card = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        photo,
-        const SizedBox(height: 8),
-        Text(
-          title,
-          maxLines: titleLines,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: Gp.t14, height: 1.3),
-        ),
-        if (subtitle.isNotEmpty) ...[
-          const SizedBox(height: 3),
-          Text(
-            subtitle,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
-          ),
+    final lineH = _titleLineHeight(context);
+    Widget card(int lines, {required bool bounded}) {
+      final name = KeepWordsText(
+        title,
+        maxLines: lines,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontSize: Gp.t14, height: _titleHeight),
+      );
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          photo,
+          const SizedBox(height: _titleGap),
+          // 높이가 정해진 칸에서는 어림이 조금 틀려도 넘치지 않게 (글자는 칸 끝에서 잘린다)
+          if (bounded) Flexible(child: name) else name,
+          if (subtitle.isNotEmpty) ...[
+            const SizedBox(height: 3),
+            Text(
+              subtitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+            ),
+          ],
+          if (note.isNotEmpty)
+            Text(
+              note,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: Gp.t11, color: Gp.faint),
+            ),
         ],
-        if (note.isNotEmpty)
-          Text(
-            note,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: Gp.t11, color: Gp.faint),
-          ),
-      ],
+      );
+    }
+
+    final body = LayoutBuilder(
+      builder: (context, box) {
+        if (!box.hasBoundedHeight) return card(titleLines, bounded: false);
+        // 다른 화면의 옛 높이 가로 줄(사진 + 한 줄)에 두 줄을 넣으면 둘째 줄이 반쯤 잘려 보인다 → 들어가는 줄만
+        final scale = MediaQuery.textScalerOf(context);
+        var rest = box.maxHeight - box.maxWidth / imageAspect - _titleGap;
+        if (subtitle.isNotEmpty) rest -= 3 + scale.scale(Gp.t12) * 1.4;
+        if (note.isNotEmpty) rest -= scale.scale(Gp.t11) * 1.4;
+        return card((rest / lineH).floor().clamp(1, titleLines), bounded: true);
+      },
     );
+    final own = _ownKit;
     return GestureDetector(
       onTap: onTap,
-      child: imageWidth == null ? card : SizedBox(width: imageWidth, child: card),
+      // 길게 = 구매함 넣기 · 빼기 (Marks.toggleOwn 이 토스트 + 되돌리기)
+      onLongPress: own == null
+          ? null
+          : () {
+              Feedback.forLongPress(context);
+              Marks.read(context).toggleOwn(context, own);
+            },
+      child: imageWidth == null ? body : SizedBox(width: imageWidth, child: body),
     );
   }
+}
+
+/// 상품 카드 이름 글자 줄 높이 배수 · 사진과 이름 사이
+const _titleHeight = 1.3;
+const _titleGap = 8.0;
+
+double _titleLineHeight(BuildContext context) => MediaQuery.textScalerOf(context).scale(Gp.t14) * _titleHeight;
+
+/// 가로 줄에 놓는 상품 카드 높이 — 사진 + 이름 [titleLines] 줄 (글자 크기 설정을 따른다)
+double productTileHeight(BuildContext context, double imageWidth, {double imageAspect = 1, int titleLines = 2}) =>
+    imageWidth / imageAspect + _titleGap + titleLines * _titleLineHeight(context) + 2;
+
+/// 한국어 낱말 안에서 줄이 바뀌지 않게 (Flutter 는 한글을 글자마다 끊는다 — '베이블레이 / 드 X').
+/// 글자 사이에 단어 이음표(U+2060)를 넣어 띄어쓰기 · 붙임표(-) 뒤에서만 끊는다 ('Hi- / Resolution Model').
+/// 한 낱말이 칸보다 길면 그때만 글자에서 — 분류 칸은 [fitCategoryName] 이 글자를 줄여 그것도 막는다
+String keepWords(String s) =>
+    s.split(' ').map((w) => w.split('-').map((p) => p.characters.join(_wordJoiner)).join('$_wordJoiner-')).join(' ');
+
+/// 단어 이음표 U+2060 (보이지 않음)
+final _wordJoiner = String.fromCharCode(0x2060);
+
+/// 낱말 안에서 줄을 바꾸지 않는 글자 ([keepWords]). [data] 는 이음표 없는 원래 글 그대로 둔다 —
+/// 읽어 주기 · 테스트의 find.text 가 상품 이름 그대로 맞게
+class KeepWordsText extends Text {
+  const KeepWordsText(super.data, {super.key, super.style, super.maxLines, super.overflow, super.textAlign});
+
+  @override
+  Widget build(BuildContext context) => Text(
+    keepWords(data!),
+    style: style,
+    maxLines: maxLines,
+    overflow: overflow,
+    textAlign: textAlign,
+    semanticsLabel: data,
+  );
 }
 
 /// 목록 줄 오른쪽 정가 — 그 나라 돈 그대로(₩ · ¥). 한국 · 일본 정가가 다 있으면 둘째 정가는 아래 작은 줄로
@@ -148,6 +227,7 @@ class ThumbRow extends StatelessWidget {
     this.tag = '',
     this.tagStrong = false,
     this.tagColor,
+    this.titleLead,
     this.size = 56,
     this.titleLines = 1,
     this.padding = const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
@@ -174,6 +254,9 @@ class ThumbRow extends StatelessWidget {
 
   /// 뜻이 색으로 정해진 꼬리표 (예약 = Gp.reserve · 재판매 = Gp.resale) → SoftTag. 상세 · 캘린더 · 컬렉션이 같은 모양
   final Color? tagColor;
+
+  /// 제목 첫 줄 앞 작은 표시 (예: 캘린더 점 — 상태는 알약 대신 부제 글자로). 여러 줄 제목이면 첫 줄에 맞춘다
+  final Widget? titleLead;
   final double size;
   final int titleLines;
   final EdgeInsets padding;
@@ -204,7 +287,11 @@ class ThumbRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
+                    crossAxisAlignment: titleLead == null ? CrossAxisAlignment.center : CrossAxisAlignment.start,
                     children: [
+                      // t14 첫 줄(약 20dp) 가운데 — 점(6dp) 기준
+                      if (titleLead != null)
+                        Padding(padding: const EdgeInsets.only(top: 7, right: 6), child: titleLead),
                       if (tag.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(right: 6),
@@ -240,16 +327,45 @@ class ThumbRow extends StatelessWidget {
   }
 }
 
-/// 분류 칸 (도감 · 검색의 종류 · 세대) — 공식 그림(라인 로고 · 작품 로고)과 이름만. 숫자 · 진행 막대는 넣지 않는다.
-/// 칸 너비는 부모 격자가 정한다 ([categoryCols] — 폰에서 한 줄 4칸).
+/// 분류 칸 (도감 · 검색의 종류 · 세대) — 정사각 그림 + 아래 굵은 이름(두 줄, 낱말 안에서 안 끊음). 숫자 · 진행 막대는 넣지 않는다.
+/// 반다이 남코 Collectibles 의 브랜드 칸처럼 그림이 칸을 꽉 채운다 — 흰 안쪽 칸 · 테두리 없이 옅은 그림자만 (2026-11-20 주인):
+///   공식 로고 = 그 브랜드 바탕색(atlas `bg`, 없으면 흰색) 위에 칸의 80% 안으로
+///   키 비주얼 · 묶음 그림([style] logo false) = 칸 가득
+///   로고가 없으면 가장 새 상품 사진([photo])을 칸 가득 — 2026-11-19 "사진 대신 종류 아이콘" 결정을 주인이 되돌렸다
+///   사진도 없으면 바탕색(없으면 [color] = 채널 색) 위 흰(밝은 바탕이면 검정) 종류 아이콘 — 회색 칸은 없다
+/// 칸 너비는 부모 격자가 정한다 — 폰에서 묶음 목록을 접으면 한 줄 4칸 · 펴면 3칸 ([SideGrid]).
 class CategoryTile extends StatelessWidget {
-  const CategoryTile({super.key, required this.image, required this.name, required this.onTap, this.icon});
+  const CategoryTile({
+    super.key,
+    required this.image,
+    required this.name,
+    required this.onTap,
+    this.style,
+    this.photo = '',
+    this.color,
+    this.icon,
+    this.nameLines = 2,
+  });
+
+  /// 공식 그림 (라인 로고 · 작품 로고 · atlas 표지) — '' = 없음
   final String image;
   final String name;
   final VoidCallback onTap;
 
-  /// 공식 그림이 아직 없을 때 그림 자리 (예: MEZASTAR · Frienda) — 없으면 이름 글자 자리표시
+  /// [image] 의 모양 · 바탕색 (atlas kind · bg · fg). 없으면 로고로 보고 흰 바탕
+  final CoverStyle? style;
+
+  /// 로고가 없을 때 칸을 채우는 사진 (그 칸의 가장 새 상품)
+  final String photo;
+
+  /// 로고도 사진도 없을 때 바탕 (보통 채널 색 [Gp.channelColor]) — [style] 에 바탕색이 있으면 그것
+  final Color? color;
+
+  /// 그림이 없거나 열리지 않을 때 가운데 아이콘 (종류 아이콘 · MEZASTAR · Frienda)
   final IconData? icon;
+
+  /// 이름 줄 수
+  final int nameLines;
 
   @override
   Widget build(BuildContext context) => Semantics(
@@ -258,47 +374,138 @@ class CategoryTile extends StatelessWidget {
     child: InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(Gp.radius),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          AspectRatio(
-            aspectRatio: 1.25,
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Gp.panel,
-                borderRadius: BorderRadius.circular(Gp.radius),
-                border: Border.all(color: Gp.line),
+      child: LayoutBuilder(
+        builder: (context, box) {
+          final side = box.maxWidth;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AspectRatio(
+                aspectRatio: 1,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(Gp.radius), boxShadow: Gp.tileShadow),
+                  child: ClipRRect(borderRadius: BorderRadius.circular(Gp.radius), child: _art(side)),
+                ),
               ),
-              child: image.isEmpty && icon != null
-                  ? Icon(icon, size: Gp.iXL, color: Gp.accent)
-                  : AppImage(image, fit: BoxFit.contain, placeholder: name),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: Gp.t12),
-          ),
-        ],
+              const SizedBox(height: categoryNameGap),
+              // 높이가 정해진 칸에서 어림이 조금 틀려도 넘치지 않게 (글자는 칸 끝에서 잘린다)
+              Flexible(
+                child: KeepWordsText(
+                  name,
+                  maxLines: nameLines,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: fitCategoryName(context, name, side),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     ),
   );
+
+  Color? get _styleBg => switch (style?.bg) {
+    final int c => Color(c),
+    _ => null,
+  };
+
+  /// 바탕 위 아이콘 색 — atlas 바탕이면 그 fg, 아니면 밝기로 (밝은 바탕 = 검정 · 짙은 바탕 = 흰색)
+  Color _iconOn(Color bg) {
+    if (style case CoverStyle(bg: final int c, :final lightFg) when c == bg.toARGB32()) {
+      return lightFg ? Colors.white : Gp.ink;
+    }
+    return bg.computeLuminance() > 0.45 ? Gp.ink : Colors.white;
+  }
+
+  Widget _art(double side) {
+    final iconSize = (side * 0.42).clamp(Gp.iL, Gp.iXL).toDouble();
+    Widget glyph(Color bg) => Icon(icon ?? Icons.category_outlined, size: iconSize, color: _iconOn(bg));
+    final base = _styleBg ?? color ?? Gp.tilePalette.first;
+    final plain = ColoredBox(
+      color: base,
+      child: Center(child: glyph(base)),
+    );
+    // 사진 · 그림은 받는 동안에도 회색 대신 바탕색 (fallback 이 있으면 AppImage 는 빈 칸으로 기다린다)
+    Widget fill(String path, Widget fallback, {bool next = false}) => Stack(
+      fit: StackFit.expand,
+      children: [
+        ColoredBox(color: base),
+        AppImage(path, nextOnError: next, fallback: fallback),
+      ],
+    );
+    final photoOrPlain = photo.isEmpty ? plain : fill(photo, plain, next: true);
+    if (image.isEmpty) return photoOrPlain;
+    if (!(style?.logo ?? true)) return fill(image, photoOrPlain);
+    final logoBg = _styleBg ?? Gp.panel;
+    return ColoredBox(
+      color: logoBg,
+      child: Center(
+        child: FractionallySizedBox(
+          widthFactor: 0.8,
+          heightFactor: 0.8,
+          // 로고가 404 · 오프라인으로 안 열려도 회색 칸 대신 같은 바탕 위 아이콘
+          child: AppImage(
+            image,
+            fit: BoxFit.contain,
+            fallback: Center(child: glyph(logoBg)),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
-/// 분류 칸 한 줄 수 — 칸이 80dp 아래로 줄지 않게 (폰 390dp = 4칸, 작은 폰 320dp = 3칸)
-int categoryCols(double width) => (width / 88).floor().clamp(3, 8);
+/// 분류 칸 그림과 이름 사이
+const categoryNameGap = 4.0;
+
+/// 분류 칸 이름 — 굵게. 칸이 74dp 이상(360dp 폰에서 접어 4칸 · 큰 폰)이면 t14, 그보다 좁으면(펴서 3칸 약 69dp) t12:
+/// 69dp 칸에 t14 굵은 한글은 한 줄 네 자라 '넨도로이드' · '이치방쿠지' 가 낱말 안에서 끊겼다
+TextStyle categoryNameStyle(double cellW) =>
+    TextStyle(fontSize: cellW >= 74 ? Gp.t14 : Gp.t12, fontWeight: FontWeight.w700, height: 1.25);
+
+/// [categoryNameStyle] 인데, 가장 긴 낱말 하나가 칸보다 넓으면 그 낱말이 한 줄에 들 때까지 글자를 줄인다 (t11 까지).
+/// 'Hi-Resolution Model' 이 'Hi-Resolutio / n Model' 로 낱말 안에서 끊기던 것
+TextStyle fitCategoryName(BuildContext context, String name, double cellW) {
+  final style = categoryNameStyle(cellW);
+  final words = name.split(RegExp(r'[ ]+|(?<=-)')).where((w) => w.isNotEmpty);
+  var widest = 0.0;
+  for (final w in words) {
+    final p = TextPainter(
+      text: TextSpan(text: w, style: DefaultTextStyle.of(context).style.merge(style)),
+      textDirection: TextDirection.ltr,
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    )..layout();
+    widest = math.max(widest, p.width);
+    p.dispose();
+  }
+  if (widest <= cellW) return style;
+  final size = math.max(Gp.t11, (style.fontSize! * cellW / widest * 10).floorToDouble() / 10);
+  return style.copyWith(fontSize: size);
+}
+
+/// 분류 칸 이름 두 줄 + 틈 높이 — 기기 글자 크기(큰 글씨 1.15 · 1.3)를 따른다.
+/// 고정 42 였을 때 1.15 에서 둘째 줄이 4px 넘쳐 잘렸다 (2026-11-19 리뷰). 기본 크기에서는 전과 같은 42
+double categoryNameExtent(BuildContext context, double cellW) {
+  final p = TextPainter(
+    text: TextSpan(text: '가\n가', style: DefaultTextStyle.of(context).style.merge(categoryNameStyle(cellW))),
+    textDirection: TextDirection.ltr,
+    textScaler: MediaQuery.textScalerOf(context),
+  )..layout();
+  final h = p.height;
+  p.dispose();
+  return math.max(42, categoryNameGap + h + 2);
+}
+
+/// 분류 칸 한 줄 수 — 칸 최소 80dp (폰 360 · 390dp = 4칸, 작은 폰 320dp = 3칸). 88 이던 때는 360dp 폰이 3칸이었다
+int categoryCols(double width) => (width / 80).floor().clamp(3, 8);
 
 /// 분류 칸 격자 사이 (가로 · 세로)
 const categoryGridGap = 10.0;
 
-/// 분류 칸 한 칸 높이 비율 (그림 1.25 : 1 + 이름 한 줄)
-const categoryTileAspect = 0.78;
-
-/// 분류 칸 격자 — 목록 안에 넣는 [CategoryTile] 묶음 (폭에 맞춰 [categoryCols] 칸, 안에서 스크롤하지 않음)
+/// 분류 칸 격자 — 목록 안에 넣는 [CategoryTile] 묶음 (폭에 맞춰 [categoryCols] 칸, 안에서 스크롤하지 않음).
+/// 칸 높이 = 정사각 그림 + 이름 두 줄 ([categoryNameExtent] — 묶음 목록 격자 SideGrid 와 같은 크기)
 class CategoryGrid extends StatelessWidget {
   const CategoryGrid({
     super.key,
@@ -312,16 +519,22 @@ class CategoryGrid extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
     padding: padding,
     child: LayoutBuilder(
-      builder: (context, box) => GridView.count(
-        crossAxisCount: categoryCols(box.maxWidth),
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        padding: EdgeInsets.zero,
-        mainAxisSpacing: categoryGridGap,
-        crossAxisSpacing: categoryGridGap,
-        childAspectRatio: categoryTileAspect,
-        children: children,
-      ),
+      builder: (context, box) {
+        final cols = categoryCols(box.maxWidth);
+        final cellW = (box.maxWidth - categoryGridGap * (cols - 1)) / cols;
+        return GridView(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: EdgeInsets.zero,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: cols,
+            mainAxisSpacing: categoryGridGap,
+            crossAxisSpacing: categoryGridGap,
+            mainAxisExtent: cellW + categoryNameExtent(context, cellW),
+          ),
+          children: children,
+        );
+      },
     ),
   );
 }

@@ -62,7 +62,7 @@ void main() {
     expect(asked.last, 'gundam,beyblade'); // 전체
     // 섹션 제목 줄(가로 줄이 아닌 곳)에서 민다
     Future<void> swipe(double dx) async {
-      await tester.flingFrom(tester.getCenter(find.text('최근 추가').first), Offset(dx, 0), 1200);
+      await tester.flingFrom(tester.getCenter(find.text('새 상품').first), Offset(dx, 0), 1200);
       for (var i = 0; i < 4; i++) {
         await tester.pump(const Duration(milliseconds: 300));
       }
@@ -88,11 +88,12 @@ void main() {
       ),
     );
     expect(find.byType(FilterButton), findsOneWidget);
-    expect(find.textContaining('카르라 전용 이펙트'), findsOneWidget);
+    // 한 주 목록은 오늘부터라 앞날 줄은 위로 밀려 있다 (화면 밖이어도 목록에 있으면 된다)
+    expect(find.textContaining('카르라 전용 이펙트', skipOffstage: false), findsOneWidget);
     await tester.enterText(find.descendant(of: find.byType(FindBar), matching: find.byType(TextField)), '포켓프라');
     await tester.pump(const Duration(milliseconds: 300));
-    expect(find.textContaining('카르라 전용 이펙트'), findsNothing);
-    expect(find.textContaining('포켓프라 Quick'), findsOneWidget);
+    expect(find.textContaining('카르라 전용 이펙트', skipOffstage: false), findsNothing);
+    expect(find.textContaining('포켓프라 Quick', skipOffstage: false), findsOneWidget);
   });
 
   test('도감 필터: 켜진 것 · 아직', () {

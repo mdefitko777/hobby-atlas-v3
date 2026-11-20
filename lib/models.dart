@@ -114,7 +114,7 @@ class Kit {
   final CollectStatus status;
   final int wantedQty;
 
-  /// 최근 3일 신규 수록
+  /// 최근 3일 새 상품
   final bool recent;
 
   /// 이번 달 발매
@@ -257,6 +257,42 @@ class Kit {
   }
 }
 
+/// 분류 칸 그림의 모양 — Gunpula atlas-groups.json 의 `kind` · `bg` · `fg` (라인 로고) / `cover_kind` · `cover_bg` ·
+/// `cover_fg` (묶음 · 채널 표지). 로고면 그 브랜드 바탕색 위에, 그림(키 비주얼 · 상품 사진)이면 칸을 꽉 채운다.
+/// 값이 빠진 것(G제네 작품 로고 등)도 있어 바탕색은 없을 수 있다
+class CoverStyle {
+  const CoverStyle({this.logo = true, this.bg, this.lightFg = false});
+
+  /// false = 키 비주얼 · 사진 (칸을 꽉 채운다)
+  final bool logo;
+
+  /// 바탕색 0xAARRGGBB — 없으면 null
+  final int? bg;
+
+  /// 바탕 위 아이콘 · 글자를 흰색으로 (fg "light")
+  final bool lightFg;
+
+  /// [kind] 'logo' · 'key_visual' · 'picture', [bg] '#rrggbb', [fg] 'light' · 'dark'. 셋 다 없으면 null (옛 데이터).
+  /// fg 가 빠졌으면 바탕 밝기로 정한다 (짙은 바탕 = 흰 아이콘)
+  static CoverStyle? parse({Object? kind, Object? bg, Object? fg}) {
+    final k = jStr(kind);
+    final f = jStr(fg);
+    final color = parseHexColor(bg);
+    if (k.isEmpty && color == null && f.isEmpty) return null;
+    final dark =
+        color != null && (color >> 16 & 0xFF) * 299 + (color >> 8 & 0xFF) * 587 + (color & 0xFF) * 114 < 140000;
+    return CoverStyle(logo: k.isEmpty || k == 'logo', bg: color, lightFg: f.isNotEmpty ? f == 'light' : dark);
+  }
+}
+
+/// '#rrggbb' · 'rrggbb' → 0xFFrrggbb (모양이 다르면 null)
+int? parseHexColor(Object? v) {
+  final s = jStr(v).trim().replaceFirst('#', '');
+  if (s.length != 6) return null;
+  final n = int.tryParse(s, radix: 16);
+  return n == null ? null : 0xFF000000 | n;
+}
+
 /// 세계관 묶음 (건담 우주세기 · 포켓몬 세대 · Fate 작품 · AC 세대 · BBX 라인)
 class World {
   const World({
@@ -268,6 +304,7 @@ class World {
     required this.total,
     required this.owned,
     this.kitIds = const [],
+    this.cover,
   });
 
   final String id;
@@ -280,6 +317,9 @@ class World {
 
   /// 이 묶음의 상품 (도감 카드 → 상품 목록)
   final List<String> kitIds;
+
+  /// [image] 의 모양 (atlas `cover_kind` · `cover_bg` · `cover_fg`) — 없으면 옛 데이터 · 상품 사진
+  final CoverStyle? cover;
 
   static World? fromJson(Object? json) {
     if (json is! Map<String, Object?>) return null;
@@ -294,6 +334,7 @@ class World {
       total: _i(json, 'total'),
       owned: _i(json, 'owned'),
       kitIds: _strs(json['kitIds']),
+      cover: CoverStyle.parse(kind: json['coverKind'], bg: json['coverBg'], fg: json['coverFg']),
     );
   }
 }
@@ -772,7 +813,7 @@ class Member {
 /// 알림 종류 — 탭 묶음: 상품(발매 · 예약 · 시세) · 예고 · 친구(활동 · 요청)
 enum NoticeType { release, reserve, price, announce, friend, request }
 
-/// 알림 한 줄. 누르면 [kitId] → 상품 상세, [annId] → 공고, [friend] → 친구 프로필
+/// 알림 한 줄. 누르면 [kitId] → 상품 상세, [annId] → 예고, [friend] → 친구 프로필
 class AppNotice {
   const AppNotice({
     required this.id,

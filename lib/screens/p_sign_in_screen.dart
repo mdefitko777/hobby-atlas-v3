@@ -2,9 +2,9 @@
 //
 // ┌──────── 디자인 가이드 대응표: P 로그인 ────────────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
-// │ P-1  │ TextField(메일) + FilledButton      │ 메일로 6자리 코드 받기                  │ P07           │
+// │ P-1  │ TextField(이메일) + FilledButton    │ 이메일로 6자리 코드 받기                │ P07           │
 // │ P-2  │ TextField(숫자 6자리) + FilledButton │ 코드 넣고 로그인                        │ P07 · P05     │
-// │ P-3  │ 안내 글 · 오류 글                    │ 옛 Gunpula 와 같은 계정 · 메일이 안 올 때  │ P09 · P10     │
+// │ P-3  │ 안내 글 · 오류 글                    │ 옛 Gunpula 와 같은 계정 · 이메일이 안 올 때 │ P09 · P10     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 쌓기(push). 로그인되면 닫히고, 동기화가 옛 앱 컬렉션을 받아 온다.
 import 'package:flutter/material.dart';
@@ -60,7 +60,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
   void _send() {
     if (!_emailOk) {
-      setState(() => _error = tr('메일 주소를 확인해 주세요'));
+      setState(() => _error = tr('이메일 주소를 확인해 주세요'));
       return;
     }
     _run(() async {
@@ -71,7 +71,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
   void _verify() {
     if (_code.text.trim().length < 6) {
-      setState(() => _error = tr('메일에 온 6자리 코드를 넣어 주세요'));
+      setState(() => _error = tr('이메일로 온 6자리 코드를 넣어 주세요'));
       return;
     }
     _run(() async {
@@ -92,7 +92,7 @@ class _SignInScreenState extends State<SignInScreen> {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
         children: [
           Text(
-            tr('옛 Gunpula 앱과 같은 메일이면 구매함 · 좋아요가 그대로 와요 · 두 앱이 15초쯤 안에 맞춰져요'),
+            tr('옛 Gunpula 앱과 같은 이메일이면 구매함 · 좋아요가 그대로 와요 · 두 앱이 15초쯤 안에 맞춰져요'),
             style: const TextStyle(color: Gp.muted, height: 1.45),
           ),
           const SizedBox(height: 18),
@@ -106,7 +106,7 @@ class _SignInScreenState extends State<SignInScreen> {
             autofillHints: const [AutofillHints.email],
             textInputAction: TextInputAction.send,
             onSubmitted: (_) => _send(),
-            decoration: InputDecoration(labelText: tr('메일'), border: const OutlineInputBorder()),
+            decoration: InputDecoration(labelText: tr('이메일'), border: const OutlineInputBorder()),
           ),
           const SizedBox(height: 10),
           if (!_sent)
@@ -128,7 +128,7 @@ class _SignInScreenState extends State<SignInScreen> {
               textInputAction: TextInputAction.done,
               onSubmitted: (_) => _verify(),
               decoration: InputDecoration(
-                labelText: tr('메일로 온 코드'),
+                labelText: tr('이메일로 온 코드'),
                 border: const OutlineInputBorder(),
                 counterText: '',
               ),
@@ -143,10 +143,10 @@ class _SignInScreenState extends State<SignInScreen> {
               onPressed: _busy
                   ? null
                   : () => setState(() {
-                      _sent = false; // STATE: 메일 다시 쓰기
+                      _sent = false; // STATE: 이메일 다시 쓰기
                       _code.clear();
                     }),
-              child: Text(tr('메일 바꾸기 · 코드 다시 받기')),
+              child: Text(tr('이메일 바꾸기 · 코드 다시 받기')),
             ),
           ],
           if (_error.isNotEmpty)
@@ -157,7 +157,7 @@ class _SignInScreenState extends State<SignInScreen> {
             ),
           const SizedBox(height: 24),
           Text(
-            tr('메일이 안 오면 스팸함 · 1분 뒤 다시 · 처음 쓰는 메일은 새 계정 (같이 쓰는 사람 · 친구는 각자 메일)'),
+            tr('이메일이 안 오면 스팸함 · 1분 뒤 다시 · 처음 쓰는 이메일은 새 계정 (같이 쓰는 사람 · 친구는 각자 이메일)'),
             style: const TextStyle(fontSize: Gp.t12, color: Gp.faint, height: 1.45),
           ),
         ],

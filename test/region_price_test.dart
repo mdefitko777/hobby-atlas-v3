@@ -224,7 +224,7 @@ void main() {
       expect(f.labels, ['3만원 이하']);
       f.currency = PriceCurrency.jpy;
       expect(pool.where(f.matches).map((k) => k.id), ['kr', 'jp-only']);
-      expect(f.labels, ['¥3,000 이하']);
+      expect(f.labels, ['3천엔 이하']);
     });
 
     test('시트 칸 가격대는 짧게 — 360dp 네 칸에 중국어도 다 들어가게 (돈 이름은 위 칸에)', () {
@@ -397,9 +397,9 @@ void main() {
       expect(tiles.first.note, '₩19,000');
     });
 
-    testWidgets('필터 시트: 두 나라 · 두 돈이 섞인 목록에만 나라 · 돈 칸 · 체크 칸에 개수 없음', (t) async {
+    testWidgets('필터 시트: 두 나라 · 두 돈이 섞인 목록에만 나라 아이콘 · 돈 칸 · 체크 칸에 개수 없음', (t) async {
       await show(t, FilterSheet(kits: [_kr, _krOnly, _jpOnly], initial: KitFilter()));
-      expect(find.byKey(const ValueKey('filter-region')), findsOneWidget);
+      expect(find.byKey(const ValueKey('toggle-region')), findsOneWidget);
       await t.tap(find.text(tr('가격')));
       await t.pump(const Duration(milliseconds: 300));
       expect(find.byKey(const ValueKey('filter-currency')), findsOneWidget);
@@ -408,7 +408,7 @@ void main() {
       expect(checks.map((w) => w.data ?? '').where((s) => RegExp(r'^\d+$').hasMatch(s)), isEmpty);
 
       await show(t, FilterSheet(kits: [_gundam], initial: KitFilter()));
-      expect(find.byKey(const ValueKey('filter-region')), findsNothing);
+      expect(find.byKey(const ValueKey('toggle-region')), findsNothing);
       await t.tap(find.text(tr('가격')));
       await t.pump(const Duration(milliseconds: 300));
       expect(find.byKey(const ValueKey('filter-currency')), findsNothing);

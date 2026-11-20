@@ -1,5 +1,5 @@
 // 흑백 테마 — UI는 검정·회색·흰색, 브랜드 하늘색(Gp.accent)은 몇 군데에만 포인트로.
-// 색의 뜻은 둘뿐: 파랑(accent) = 고름 · 누를 수 있음 · 좋아요 / 민트(own) = 가진 것(구매함 · 도감 인증).
+// 색의 뜻은 둘뿐: 파랑(accent) = 고름 · 누를 수 있음 · 좋아요 / 민트(own) = 구매함 · 도감 인증.
 // 모양의 뜻도 둘뿐: ♡ = 좋아요, 책갈피 리본(+ / ✓) = 구매함. (P04 일관성 · P08 미니멀)
 import 'package:flutter/material.dart';
 
@@ -12,8 +12,21 @@ abstract final class Gp {
   static const line = Color(0xFFE6E6E6);
   static const soft = Color(0xFFF0F0EE);
 
-  /// 페이지 바탕: 아주 옅은 따뜻한 회백색 — 흰 버튼이 떠 보이게
-  static const bg = Color(0xFFF7F7F5);
+  /// 페이지 바탕: 흰색 (2026-11-20 주인이 회백색과 견주어 고름). 층은 회색 틈 대신 [bandLine] 머리카락 줄로 나눈다.
+  /// 흰 면 안의 작은 상자(공식 정보 표 · 아이디 칸 · 합계 칸)는 bg 가 아니라 [soft] 로 칠한다 — bg 면 흰 면에 녹는다
+  static const bg = Color(0xFFFFFFFF);
+
+  /// 흰 띠 섹션 위 머리카락 줄 (흰 바탕에서 층을 나눈다)
+  static const BorderSide bandLine = BorderSide(color: line, width: 0.5);
+
+  /// 상품 사진 테두리 — 0.5 머리카락 줄 (흰 바탕 상품 사진이 흰 페이지에 녹지 않게)
+  static const BorderSide photoEdge = BorderSide(color: line, width: 0.5);
+
+  /// 분류 칸 그림자 — 낮고 옅게. 흰 바탕에서 흰 로고 칸(PG · EG · MGEX)도 칸 끝이 보일 만큼 (테두리는 쓰지 않는다)
+  static const tileShadow = [
+    BoxShadow(color: Color(0x1F000000), blurRadius: 8, offset: Offset(0, 2)),
+    BoxShadow(color: Color(0x14000000), blurRadius: 1.5, offset: Offset(0, 0.5)),
+  ];
 
   /// 카드·시트 면
   static const panel = Color(0xFFFFFFFF);
@@ -84,12 +97,38 @@ abstract final class Gp {
   /// 아바타 고리 그라데이션의 끝 색(민트 그린)
   static const accent2 = Color(0xFF2CC6A0);
 
-  /// 가진 것(구매함 리본 ✓ · 구매함 테두리 · 인증 배지) — 민트를 흰 글자/아이콘이 보이게 조금 짙게
+  /// 구매함(리본 ✓ · 구매함 테두리 · 인증 배지) — 민트를 흰 글자/아이콘이 보이게 조금 짙게
   static const own = Color(0xFF12A07F);
 
   /// 떠 있는 흰 버튼(아바타 · + · 채널 타일): 흰→옅은 회색 그라데이션 + 부드러운 그림자
   /// 브랜드 그라데이션 (Lv 알약 · 인증 배지)
   static const accentGradient = LinearGradient(colors: [accent, accent2]);
+
+  /// 로고도 사진도 없는 분류 칸의 바탕 — 채널마다 한 색 (회색은 쓰지 않는다). 모르는 채널은 [tilePalette] 에서 고른다
+  static Color channelColor(String channel) =>
+      _channelColors[channel] ?? tilePalette[channel.codeUnits.fold<int>(0, (a, c) => a + c) % tilePalette.length];
+
+  static const _channelColors = {
+    'gundam': Color(0xFF2B4C7E),
+    'beyblade': Color(0xFF6C3CC4),
+    'pokemon': Color(0xFFE3350D),
+    'armored_core': Color(0xFF3D5A4C),
+    'fate': Color(0xFF7A1F2B),
+    'madoka': Color(0xFFC2477D),
+    'lego': Color(0xFFD01012),
+    'nintendo': Color(0xFFE60012),
+    'effects': Color(0xFF0F7C8C),
+  };
+
+  /// 흰 아이콘이 보이는 짙은 색들 (분류 칸 바탕)
+  static const tilePalette = [
+    Color(0xFF2B4C7E),
+    Color(0xFF6C3CC4),
+    Color(0xFF0F7C8C),
+    Color(0xFFC2477D),
+    Color(0xFF3D5A4C),
+    Color(0xFFD7263D),
+  ];
 
   static BoxDecoration raised({BoxShape shape = BoxShape.rectangle, double radius = Gp.radius}) => BoxDecoration(
     shape: shape,

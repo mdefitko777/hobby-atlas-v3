@@ -17,6 +17,7 @@ import 'package:hobby_atlas/notifications/notify_store.dart';
 import 'package:hobby_atlas/screens/d_kit_detail_screen.dart';
 import 'package:hobby_atlas/screens/f_collection_screen.dart';
 import 'package:hobby_atlas/screens/g_guide_view.dart';
+import 'package:hobby_atlas/screens/h_calendar_screen.dart';
 import 'package:hobby_atlas/screens/i_profile_screen.dart';
 import 'package:hobby_atlas/screens/k_notify_settings.dart';
 import 'package:hobby_atlas/screens/k_settings_screen.dart';
@@ -68,6 +69,7 @@ final fakeLoaders = Loaders(
 /// 작은 폰 · 보통 폰 · 가로 폰 · 태블릿 세로 · 넓은 창
 const sizes = <String, Size>{
   '작은 폰 320×568': Size(320, 568),
+  '폰 360×780': Size(360, 780),
   '보통 폰 390×844': Size(390, 844),
   '가로 폰 844×390': Size(844, 390),
   '폴드 펼침 세로 690×830': Size(690, 830),
@@ -76,7 +78,7 @@ const sizes = <String, Size>{
   '넓은 창 1280×800': Size(1280, 800),
 };
 
-Future<void> _show(WidgetTester tester, Size size, Widget home) async {
+Future<void> _show(WidgetTester tester, Size size, Widget home, {UserStore? store}) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
@@ -85,7 +87,7 @@ Future<void> _show(WidgetTester tester, Size size, Widget home) async {
     MaterialApp(
       theme: buildGpTheme(),
       builder: (context, child) => MarksHost(
-        store: UserStore.memory(),
+        store: store ?? UserStore.memory(),
         child: PaneHost(child: child!),
       ),
       home: home,
@@ -140,12 +142,88 @@ void main() {
     });
   }
 
+  // 2026-11-20 묶음: 상세 아래 버튼 ×n · 캘린더 한 달 격자 · 컬렉션 맨 끝 합계 · 도감 묶음 목록이 작은 폰부터 태블릿까지 넘치지 않는다
+  for (final size in const [Size(320, 568), Size(360, 780), Size(390, 844), Size(768, 1024)]) {
+    testWidgets('폭 ${size.width.toInt()}: 구매함 ×12 · 캘린더 한 달 · 컬렉션 합계 · 도감', (tester) async {
+      final store = UserStore.memory()
+        ..setStatus('gu02', CollectStatus.owned)
+        ..setQuantity('gu02', 12)
+        ..setCalendarMonthOpen(true);
+      await _show(
+        tester,
+        size,
+        KitDetailScreen(kit: kit, loaders: fakeLoaders),
+        store: store,
+      );
+      expect(tester.takeException(), isNull);
+      expect(
+        find.descendant(of: find.byKey(const ValueKey('detail-own')), matching: find.textContaining('×12')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey('qty-row'), skipOffstage: false), findsOneWidget); // 2 개 이상이면 줄도
+      await _show(
+        tester,
+        size,
+        Scaffold(
+          body: CalendarScreen(myChannels: const ['gundam'], onMyChannelsChanged: (_) {}, loaders: fakeLoaders),
+        ),
+        store: store,
+      );
+      expect(tester.takeException(), isNull);
+      expect(find.text('15'), findsOneWidget); // 펴 둔 한 달
+      await _show(
+        tester,
+        size,
+        Scaffold(
+          body: CollectionScreen(
+            myChannels: const ['gundam'],
+            onMyChannelsChanged: (_) {},
+            onGoSearch: () {},
+            loaders: fakeLoaders,
+            jump: CollectionJump.owned,
+          ),
+        ),
+        store: store,
+      );
+      expect(tester.takeException(), isNull);
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('list-summary')),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.byKey(const ValueKey('tab-guide')));
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('앱 셸 S-13: 홈을 내려 읽으면 위 줄 · 채널 바가 접히고 검색창 줄은 남는다, 살짝 올리면 다시', (tester) async {
+    await _show(tester, const Size(390, 844), AppShell(loaders: fakeLoaders));
+    final header = find.byType(CollapsingHeader).first;
+    final open = tester.getSize(header).height;
+    expect(open, greaterThan(60));
+    await tester.drag(find.byType(RefreshIndicator).first, const Offset(0, -400));
+    await tester.pump();
+    await tester.pump(headerSnapDuration);
+    expect(tester.getSize(header).height, 0);
+    expect(find.byType(GpSearchBar).hitTestable(), findsWidgets); // 검색창 줄은 목록 밖에 고정
+    // 살짝 올리면 다시 (아래 탭 바도 같이 나온다)
+    await tester.drag(find.byType(RefreshIndicator).first, const Offset(0, 40));
+    await tester.pump();
+    await tester.pump(headerSnapDuration);
+    expect(tester.getSize(header).height, open);
+    expect(tester.takeException(), isNull);
+  });
+
   // 반반 화면: 왼쪽에서 상품을 누르면 오른쪽 칸에 상세 (왼쪽 앱은 그대로)
   for (final size in const [Size(830, 690), Size(1280, 800)]) {
     testWidgets('반반 화면 ${size.width.toInt()}×${size.height.toInt()} · 상품 → 오른쪽 칸', (tester) async {
       await _show(tester, size, AppShell(loaders: fakeLoaders));
       expect(find.byType(DetailPaneView), findsOneWidget);
-      expect(find.text('상품 · 공고 · 친구를 고르면 여기에 보여요'), findsOneWidget);
+      expect(find.text('상품 · 예고 · 친구를 고르면 여기에 보여요'), findsOneWidget);
       // 홈 위쪽(내 보드 · 아이콘 칸 · 배너) 아래에 있는 상품 줄까지 내린다
       final vertical = find.byWidgetPredicate((w) => w is Scrollable && w.axisDirection == AxisDirection.down);
       for (var i = 0; i < 6 && find.byType(ProductTile).evaluate().isEmpty; i++) {
@@ -170,7 +248,7 @@ void main() {
     expect(find.byType(DetailPaneView), findsNothing);
   });
 
-  // 좋아요 · 구매함 한 벌: 상품 사진에서 ♡ 를 누르면 다른 화면(여기선 글자)도 같이 바뀐다
+  // 좋아요 · 구매함 한 벌: 상품 카드 ♡ 를 누르거나 카드를 길게 누르면(구매함) 다른 화면(여기선 글자)도 같이 바뀐다
   testWidgets('좋아요 한 벌 — 한 곳에서 누르면 다른 곳도 바뀜', (tester) async {
     final none = _list<Kit>('kits', Kit.fromJson).firstWhere((k) => k.status == CollectStatus.none);
     await tester.pumpWidget(
@@ -180,7 +258,13 @@ void main() {
         home: Scaffold(
           body: Column(
             children: [
-              SizedBox.square(dimension: 150, child: QuickMarks(kit: none)),
+              ProductTile(
+                image: '',
+                title: none.name,
+                imageWidth: 150,
+                marks: QuickMarks(kit: none),
+                onTap: () {},
+              ),
               Builder(builder: (c) => Text(Marks.of(c).liked(none) ? '좋아요 켜짐' : '좋아요 꺼짐')),
               Builder(builder: (c) => Text(Marks.of(c).owned(none) ? '구매함 켜짐' : '구매함 꺼짐')),
             ],
@@ -192,7 +276,7 @@ void main() {
     await tester.tap(find.byIcon(Icons.favorite_border));
     await tester.pump();
     expect(find.text('좋아요 켜짐'), findsOneWidget);
-    await tester.tap(find.byIcon(Icons.add)); // 리본 +
+    await tester.longPress(find.byType(ProductTile)); // 길게 = 구매함 (사진 위 리본 + 는 없앴다)
     await tester.pump();
     expect(find.text('구매함 켜짐'), findsOneWidget);
   });

@@ -143,15 +143,28 @@ void main() {
     await _save(t, '05_wide');
   });
 
-  testWidgets('검색 탭 · 전체 · 종류 · 세대 · 기체별 검색', (t) async {
+  testWidgets('검색 탭 · 전체 · 아이콘 줄 · 종류 · 세대 (묶음 목록 펴고 접기) · 기체별 검색', (t) async {
     await _open(t, phone, AppShell(loaders: fakeLoaders));
     await t.tap(find.byIcon(Icons.search).last);
     await _settle(t);
     await _save(t, '10_search_all');
+    // 검색창 아래 아이콘 줄 (발매 예정 켬)
+    await t.tap(find.byKey(const ValueKey('toggle-upcoming')));
+    await _settle(t);
+    await _save(t, '10e_search_toggles');
+    await t.tap(find.byKey(const ValueKey('toggle-upcoming')));
+    await _settle(t);
+    // 종류 · 세대: 왼쪽 묶음 목록 펴짐(한 줄 2칸) → 접힘(3칸)
     await t.tap(find.byKey(const ValueKey('view-1')));
     await _settle(t);
     await _save(t, '10b_search_by_type');
+    await t.tap(find.byKey(const ValueKey('dir-handle')));
+    await _settle(t);
+    await _save(t, '10b2_search_by_type_closed');
     await t.tap(find.byKey(const ValueKey('view-2')));
+    await _settle(t);
+    await _save(t, '10d2_search_by_era_closed');
+    await t.tap(find.byKey(const ValueKey('dir-handle')));
     await _settle(t);
     await _save(t, '10d_search_by_era');
     await t.enterText(find.byType(TextField).first, '스트라이크');

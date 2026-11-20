@@ -173,9 +173,9 @@ Future<void> _guard(Future<void> Function() f) async {
   } on AuthException catch (e) {
     throw AuthFailure(authMessage(e.code, e.message, e.statusCode));
   } on http.ClientException {
-    throw AuthFailure(tr('인터넷에 연결되지 않았어요'));
+    throw AuthFailure(tr('인터넷에 연결하지 못했어요'));
   } on TimeoutException {
-    throw AuthFailure(tr('인터넷에 연결되지 않았어요'));
+    throw AuthFailure(tr('인터넷에 연결하지 못했어요'));
   }
 }
 
@@ -191,16 +191,16 @@ String authMessage(String? code, String message, String? status) {
     return s == null ? tr('조금 뒤에 다시 보낼 수 있어요') : trf('{n}초 뒤에 다시 보낼 수 있어요', {'n': s});
   }
   if (code == 'over_email_send_rate_limit' || m.contains('rate limit')) {
-    return tr('메일을 너무 자주 보냈어요. 한 시간쯤 뒤에 다시 해 주세요 (Supabase 기본 메일은 시간당 몇 통만 보내요)');
+    return tr('이메일을 너무 자주 보냈어요. 한 시간쯤 뒤에 다시 해 주세요 (Supabase 기본 이메일은 시간당 몇 통만 보내요)');
   }
   if (code == 'email_address_not_authorized' || m.contains('not authorized') || m.contains('error sending')) {
     return tr(
-      '메일을 보내지 못했어요. Supabase 기본 메일은 프로젝트 팀원 주소로만 가요 — Supabase › Authentication › SMTP 에 메일 서비스를 연결해야 다른 사람도 받을 수 있어요',
+      '이메일을 보내지 못했어요. Supabase 기본 이메일은 프로젝트 팀원 주소로만 가요 — Supabase › Authentication › SMTP 에 이메일 서비스를 연결해야 다른 사람도 받을 수 있어요',
     );
   }
-  if (code == 'email_address_invalid' || code == 'validation_failed') return tr('메일 주소를 확인해 주세요');
+  if (code == 'email_address_invalid' || code == 'validation_failed') return tr('이메일 주소를 확인해 주세요');
   if (code == 'signup_disabled' || m.contains('signups not allowed')) return tr('이 프로젝트는 새 계정 만들기가 꺼져 있어요');
-  if (status == null) return tr('인터넷에 연결되지 않았어요');
+  if (status == null) return tr('인터넷에 연결하지 못했어요');
   return message;
 }
 
@@ -222,10 +222,10 @@ class SupabaseRpc implements RpcClient {
       throw RpcException(e.code ?? '', e.message);
     } on AuthException catch (e) {
       // 토큰 새로 받기 실패: 네트워크면 오프라인, 아니면 로그인 풀림
-      if (e is AuthRetryableFetchException || e.statusCode == null) throw OfflineException(tr('인터넷에 연결되지 않았어요'));
+      if (e is AuthRetryableFetchException || e.statusCode == null) throw OfflineException(tr('인터넷에 연결하지 못했어요'));
       throw RpcException('42501', e.message);
     } on http.ClientException {
-      throw OfflineException(tr('인터넷에 연결되지 않았어요'));
+      throw OfflineException(tr('인터넷에 연결하지 못했어요'));
     } on TimeoutException {
       throw OfflineException(tr('서버가 답하지 않아요'));
     }
@@ -252,7 +252,7 @@ class SupabasePhotoStorage implements PhotoStorage {
     } on StorageException catch (e) {
       throw PhotoStorageException(e.message, status: e.statusCode ?? '');
     } on http.ClientException {
-      throw OfflineException(tr('인터넷에 연결되지 않았어요'));
+      throw OfflineException(tr('인터넷에 연결하지 못했어요'));
     } on TimeoutException {
       throw OfflineException(tr('서버가 답하지 않아요'));
     }

@@ -12,9 +12,10 @@ import '../json_util.dart';
 import '../l10n/l10n.dart';
 import 'gunpula.dart' show pickName;
 
-/// Atlas 이름 고르는 순서 — 중국어 화면은 중국어 → 번체 → 영어 → 일본어 (한국어는 맨 뒤: 중국어 사용자가 못 읽는다)
+/// Atlas 이름 고르는 순서 — 고유 이름(시대 · 작품 · 기체)은 로마자(en)가 가나보다 읽기 쉬워 en 이 ja 앞.
+/// 중국어 화면은 중국어 → 번체 → 영어 → 일본어, 한국어는 이름이 비지 않게 맨 뒤에만 (중국어 사용자가 못 읽는다)
 List<String> atlasNameOrder({required bool zh}) =>
-    zh ? const ['zh', 'zh_tw', 'en', 'ja', 'ko'] : const ['ko', 'ja', 'en', 'zh'];
+    zh ? const ['zh', 'zh_tw', 'en', 'ja', 'ko'] : const ['ko', 'en', 'ja', 'zh'];
 
 /// Atlas `names` 에서 화면 언어의 이름
 String atlasName(Object? names, {required bool zh}) => pickName(names, atlasNameOrder(zh: zh));
@@ -553,7 +554,10 @@ Map<String, List<AtlasChapter>> parseChapters(Object? json, {bool zh = false}) {
         for (final ep in jList(w['episodes']))
           if (ids(jMap(ep)['ms']) case final ms when ms.isNotEmpty)
             AtlasChapter(
-              pickName({'ja': jMap(ep)['title_ja'], 'en': jMap(ep)['title_en']}, const ['ja', 'en']),
+              // 화 제목은 화면 언어 → 영어만 — 일본어 제목은 쓰지 않는다 (없으면 '' → 화면은 「{n}화」 만)
+              zh
+                  ? pickName({'zh': jMap(ep)['title_zh'], 'en': jMap(ep)['title_en']}, const ['zh', 'en'])
+                  : pickName({'ko': jMap(ep)['title_ko'], 'en': jMap(ep)['title_en']}, const ['ko', 'en']),
               ms,
               episodes: jInt(jMap(ep)['no']) == 0 ? '' : '${jInt(jMap(ep)['no'])}화',
             ),

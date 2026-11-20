@@ -121,9 +121,9 @@ class _VisualMatchesState extends State<VisualMatches> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(tr('생김새 모델 지우기')),
-        content: Text(tr('받아 둔 모델과 표(약 105 MB)를 지워요. 다시 쓰려면 또 받아야 해요.')),
+        content: Text(tr('받아 둔 생김새 모델(약 105 MB)을 지워요. 다시 쓰려면 또 받아야 해요.')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr('그대로'))),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(tr('취소'))),
           TextButton(onPressed: () => Navigator.pop(context, true), child: Text(tr('지우기'))),
         ],
       ),
@@ -160,19 +160,19 @@ class _VisualMatchesState extends State<VisualMatches> {
       VisualState.unsupported => null,
       VisualState.absent => _Offer(
         key: const ValueKey('visual-install'),
-        text: trf('사진 속 모양으로도 찾기 · 처음 한 번 모델 받기 ({size}, 와이파이 권장)', {'size': _size}),
+        text: trf('사진 속 생김새로도 찾기 · 처음 한 번 모델 받기 ({size}, 와이파이 권장)', {'size': _size}),
         onTap: _vs.install,
       ),
       VisualState.downloading => _Progress(value: _vs.progress),
       VisualState.failed => _Note(
         icon: Icons.cloud_off,
         text: trf('모델을 받지 못했어요 · {error}', {'error': _vs.error}),
-        action: TextButton(onPressed: _vs.install, child: Text(tr('다시'))),
+        action: TextButton(onPressed: _vs.install, child: Text(tr('다시 시도'))),
       ),
       VisualState.ready when _error.isNotEmpty => _Note(
         icon: Icons.error_outline,
         text: tr('생김새를 비교하지 못했어요'),
-        action: TextButton(onPressed: _run, child: Text(tr('다시'))),
+        action: TextButton(onPressed: _run, child: Text(tr('다시 시도'))),
       ),
       VisualState.ready when _hits == null => _Note(icon: null, text: tr('생김새 비교 중…')),
       VisualState.ready => _grid(context, _hits!),
@@ -249,25 +249,27 @@ class _VisualMatchesState extends State<VisualMatches> {
   Widget _kitGrid(BuildContext context, List<Kit> kits) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: Gp.gutter),
-      child: GridView.builder(
-        key: const ValueKey('visual-grid'),
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        padding: EdgeInsets.zero,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 12,
-          childAspectRatio: 0.74,
-        ),
-        itemCount: kits.length,
-        itemBuilder: (context, i) => ProductTile(
-          image: kits[i].image,
-          title: kits[i].name,
-          titleLines: 2,
-          id: kits[i].id,
-          marks: QuickMarks(kit: kits[i]),
-          onTap: () => openKitDetail(context, kits[i], loaders: widget.loaders, list: kits),
+      child: LayoutBuilder(
+        builder: (context, box) => GridView.builder(
+          key: const ValueKey('visual-grid'),
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: EdgeInsets.zero,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 12,
+            // 사진 + 이름 두 줄 (글자 크기 설정을 따른다 — 고정 비율이면 큰 글자에서 둘째 줄이 빠진다)
+            mainAxisExtent: productTileHeight(context, (box.maxWidth - 20) / 3),
+          ),
+          itemCount: kits.length,
+          itemBuilder: (context, i) => ProductTile(
+            image: kits[i].image,
+            title: kits[i].name,
+            id: kits[i].id,
+            marks: QuickMarks(kit: kits[i]),
+            onTap: () => openKitDetail(context, kits[i], loaders: widget.loaders, list: kits),
+          ),
         ),
       ),
     );

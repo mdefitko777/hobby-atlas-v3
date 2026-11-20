@@ -90,6 +90,8 @@ List<World> _atlasWorlds(String channelId, Map<String, Object?> atlas) {
             total: ids.length,
             owned: ids.where((id) => _kitStatus(id) == CollectStatus.owned).length,
             kitIds: ids,
+            // 로고 · 그림 · 바탕색 (분류 칸이 로고는 그 바탕색 위에, 그림은 칸 가득)
+            cover: CoverStyle.parse(kind: m['cover_kind'], bg: m['cover_bg'], fg: m['cover_fg']),
           );
         }(),
   ];

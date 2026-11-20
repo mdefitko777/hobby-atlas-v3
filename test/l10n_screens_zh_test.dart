@@ -115,7 +115,8 @@ void main() {
     if (!_hangul.hasMatch(s) || _allowed.contains(s)) return null;
     // 아바타 첫 글자 (데이터 이름의 첫 글자)
     if (s.length == 1 && data.any((d) => d.startsWith(s))) return null;
-    var rest = s;
+    // 상품 카드 이름은 낱말 이음표(U+2060, KeepWordsText)를 넣어 그린다 — 빼고 데이터 이름과 맞춘다
+    var rest = s.replaceAll(String.fromCharCode(0x2060), '');
     for (final d in data) {
       if (rest.contains(d)) rest = rest.replaceAll(d, '');
     }

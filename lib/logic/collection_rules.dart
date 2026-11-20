@@ -1,7 +1,6 @@
 // 컬렉션 규칙 — 여러 상품 중 가장 높은 상태 · 휴지통에 보일 것 · 바코드 겹침 (순수 Dart)
 import '../data/user_store.dart';
 import '../models.dart';
-import 'build_status.dart';
 import 'preorder.dart';
 
 /// 여러 상태 중 가장 높은 것 (구매함 > 좋아요 > 없음) — 도감 칸 · 작품 수집 수
@@ -22,7 +21,7 @@ Map<String, bool> trashView(UserStore me) => {
 };
 
 /// 바코드로 찾은 상품 중 이미 내 컬렉션에 있는 것 — 구매함 > 예약 > 좋아요 순으로 하나 (E-6b 겹침 경고)
-typedef ScanDup = ({Kit kit, ScanDupKind kind, int quantity, BuildRecord build, Preorder? preorder});
+typedef ScanDup = ({Kit kit, ScanDupKind kind, int quantity, Preorder? preorder});
 
 enum ScanDupKind { owned, preorder, liked }
 
@@ -40,13 +39,7 @@ ScanDup? scanDuplicate(List<Kit> kits, UserStore me, CollectStatus Function(Kit)
     };
     if (kind == null) continue;
     if (best == null || kind.index < best.kind.index) {
-      best = (
-        kit: k,
-        kind: kind,
-        quantity: me.quantityOf(k.id),
-        build: me.buildOf(k.id),
-        preorder: kind == ScanDupKind.preorder ? pre : null,
-      );
+      best = (kit: k, kind: kind, quantity: me.quantityOf(k.id), preorder: kind == ScanDupKind.preorder ? pre : null);
     }
   }
   return best;

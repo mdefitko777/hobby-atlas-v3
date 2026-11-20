@@ -327,7 +327,7 @@ bool validHandle(String h) => RegExp(r'^[a-z0-9_]{3,20}$').hasMatch(h);
 /// v3 SQL 의 오류 문장 → 한국어
 String friendlyError(RpcException e) {
   final m = e.message.toLowerCase();
-  if (e.isMissingFunction) return tr('서버에 친구 기능(Gunpula v3 SQL)이 아직 없어요');
+  if (e.isMissingFunction) return tr('서버 설정이 아직 없어 친구 기능을 쓸 수 없어요 (Gunpula v3 SQL)');
   if (m.contains('handle taken')) return tr('이미 누가 쓰는 아이디예요');
   if (m.contains('handle must be')) return tr('아이디는 영문 소문자 · 숫자 · _ 로 3–20자예요');
   if (m.contains('user not found')) return tr('그 아이디를 찾지 못했어요');

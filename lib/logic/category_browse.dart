@@ -1,9 +1,13 @@
-// 검색 탭 종류 · 세대 둘러보기 규칙 (순수 Dart) — 상품 카탈로그처럼 "분류 칸 = 공식 그림 + 이름"
-//   종류: 채널 상품 → 칸 키(라인 · 굿즈 세부 종류 · 베이 상품 형태) → 채널마다 정한 묶음(프라모델 · SD · 완성품 …)
+// 검색 탭 종류 · 세대 둘러보기 규칙 (순수 Dart) — 상품 카탈로그처럼 "분류 칸 = 공식 로고(없으면 가장 새 상품 사진) + 이름"
+//   종류: 채널 상품 → 칸 키(라인 · 굿즈 세부 종류 · 베이 상품 형태) → 채널마다 정한 묶음(프라모델 · SD건담 · 완성품 …)
+//   칸 이름: 키는 데이터 값 그대로, 보이는 이름만 dataLabel (lib/logic/data_labels.dart)
 //   세대: 건담 = 작품을 시대 묶음으로, 그 밖 = atlas 묶음(세대 · 작품)을 채널마다 정한 묶음으로
+//   칸 그림: 로고가 없는 칸은 가장 새 상품 사진 (TypeEntry.cover · newestCover — 2026-11-19 "사진 대신 아이콘" 결정을
+//   주인이 2026-11-20 되돌렸다), 사진도 없으면 종류 아이콘 (cellKind). 회색 칸 없이
 //   세부 시리즈: 상품 화면 위 줄 (HGUC · HGCE … · PB 한정)
 import '../l10n/l10n.dart';
 import '../models.dart';
+import 'data_labels.dart';
 
 /// 작은 칸을 모으는 이름 (같은 묶음 안 끝)
 const lineOtherKey = '기타';
@@ -16,12 +20,6 @@ const pbChoice = 'PB 한정';
 
 /// 굿즈 라인 안에서 따로 세우는 유형 (상품 이름으로 가른 것, lib/data/gunpula.dart typeLabel)
 const _goodsLineSplit = {'가샤폰', '카드'};
-
-/// 키 → 보이는 이름 (라인 코드 그대로인 것만 다듬는다)
-const _labels = {'RE100': 'RE/100', 'PGU': 'PG UNLEASHED'};
-
-/// 화면 이름 (고른 언어). 키는 한국어 그대로 — 묶기 · lineCovers 에 쓴다
-String lineGroupLabel(String key) => tr(_labels[key] ?? key);
 
 /// 상품 하나의 종류 칸 키: 굿즈 세부 종류 > 굿즈 라인 안의 가샤폰 · 카드 > 라인 > 유형 > 기타
 String lineGroupKey(Kit k) {
@@ -66,10 +64,11 @@ const _goods = _Sec(
   types: {'굿즈', '카드'},
   merge: true,
 );
-const _media = _Sec('영상 · 책 · 이벤트', ['티켓 · 이벤트', '블루레이 · DVD', '음반', '책 · 화보', '팸플릿', '게임', '보드게임'], merge: true);
+const _books = _Sec('도서 · 음반 · 영상', ['책 · 화보', '팸플릿', '음반', '블루레이 · DVD'], merge: true);
+const _games = _Sec('게임 · 티켓', ['게임', '보드게임', '티켓 · 이벤트'], merge: true);
 
-/// 닌텐도는 게임이 맨 위 묶음이라 영상 · 책 묶음에서 '게임' 칸을 뺀다 (같은 키가 두 묶음에 있으면 뒤의 것이 이긴다)
-const _mediaNoGame = _Sec('영상 · 책 · 이벤트', ['티켓 · 이벤트', '블루레이 · DVD', '음반', '책 · 화보', '팸플릿', '보드게임'], merge: true);
+/// 닌텐도는 게임이 맨 위 묶음이라 티켓만 따로 (같은 키가 두 묶음에 있으면 뒤의 것이 이겨 _games 를 쓰면 게임 칸을 뺏긴다)
+const _ticketsOnly = _Sec('티켓', ['티켓 · 이벤트'], merge: true);
 
 /// 채널마다 종류 묶음 (위에서 아래 순서). 없는 채널 = 한 묶음 '종류'
 const _typeSectionDefs = <String, List<_Sec>>{
@@ -79,10 +78,10 @@ const _typeSectionDefs = <String, List<_Sec>>{
       ['PG', 'PGU', 'MG', 'MGEX', 'RG', 'HG', 'EG', 'RE100', 'FM', 'Hi-Resolution Model', 'MEGA', '옵션 파츠'],
       types: {'프라모델'},
     ),
-    _Sec('옛 등급 · 특수', ['No Grade', 'AG', 'FG', 'BMC', 'EX', 'HY2M', 'UCHG', 'HAROPLA']),
-    _Sec('SD', ['MGSD', 'SD', 'SDW', 'SDEX', 'SDCS', 'BB', '元祖 SD']),
+    _Sec('기타 등급', ['No Grade', 'AG', 'FG', 'BMC', 'EX', 'HY2M', 'UCHG', 'HAROPLA']),
+    _Sec('SD건담', ['MGSD', 'SD', 'SDW', 'SDEX', 'SDCS', 'BB', '元祖 SD']),
     _Sec(
-      '완성품 피규어',
+      '완성품',
       [
         'ROBOT魂',
         'METAL BUILD',
@@ -100,60 +99,79 @@ const _typeSectionDefs = <String, List<_Sec>>{
       types: {'피규어'},
     ),
     _Sec(
-      '식완 · 가샤폰',
+      '가샤폰 · 식완',
       ['G FRAME FA', 'CONVERGE', 'MS 앙상블', '가샤폰 전사 f', 'MOBILITY JOINT', '건담 아티팩트', 'Superior Define', '가샤폰'],
       types: {'식완', '가샤폰'},
     ),
     _goods,
-    _media,
+    _books,
+    _games,
   ],
   'pokemon': [
-    _Sec('인형 · 피규어', ['봉제인형', '몬콜레', '피규어', '포켓프라'], types: {'인형', '피규어', '프라모델'}),
-    _Sec('가샤폰 · 경품 · 복권', ['가샤폰', '경품', '제일복권'], types: {'가샤폰', '식완', '경품', '제일복권'}),
+    _Sec('피규어 · 봉제인형', ['봉제인형', '몬콜레', '피규어', '포켓프라'], types: {'인형', '피규어', '프라모델'}),
+    _Sec('가샤폰 · 경품 · 이치방쿠지', ['가샤폰', '경품', '제일복권'], types: {'가샤폰', '식완', '경품', '제일복권'}),
     _goods,
-    _media,
+    _books,
+    _games,
   ],
   'fate': [
-    _Sec('피규어 · 인형', ['스케일', '넨도로이드', 'figma', '액션 피규어', '미니 · 트레이딩', '인형'], types: {'피규어', '액션', '인형'}),
-    _Sec('경품 · 가샤폰 · 복권', ['경품', '가샤폰', '제일복권'], types: {'경품', '가샤폰', '식완', '제일복권'}),
+    _Sec('피규어 · 봉제인형', ['스케일', '넨도로이드', 'figma', '액션 피규어', '미니 · 트레이딩', '인형'], types: {'피규어', '액션', '인형'}),
+    _Sec('가샤폰 · 경품 · 이치방쿠지', ['가샤폰', '경품', '제일복권'], types: {'경품', '가샤폰', '식완', '제일복권'}),
     _goods,
-    _media,
+    _books,
+    _games,
   ],
   'madoka': [
-    _Sec('피규어', ['스케일', '넨도로이드', 'figma', '액션 피규어', '미니 · 트레이딩'], types: {'피규어', '액션'}),
-    _Sec('경품 · 인형', ['경품', '제일복권', '인형'], types: {'경품', '제일복권', '인형', '가샤폰', '식완'}),
+    _Sec('피규어 · 봉제인형', ['스케일', '넨도로이드', 'figma', '액션 피규어', '미니 · 트레이딩', '인형'], types: {'피규어', '액션', '인형'}),
+    _Sec('가샤폰 · 경품 · 이치방쿠지', ['가샤폰', '경품', '제일복권'], types: {'가샤폰', '식완', '경품', '제일복권'}),
     _goods,
-    _media,
+    _books,
+    _games,
   ],
   'lego': [
     _Sec('세트', ['세트'], types: {'세트'}),
-    _Sec('미니피규어 · 부품', ['미니피규어', '부품'], types: {'피규어', '부품'}),
+    _Sec('미니피겨 · 부품', ['미니피규어', '부품'], types: {'피규어', '부품'}),
     _goods,
-    _media,
+    _books,
+    _games,
   ],
   'armored_core': [
     _Sec('프라모델', ['V.I.', '30MM', 'SMP'], types: {'프라모델'}),
-    _Sec('식완 · 가샤폰', ['식완'], types: {'식완', '가샤폰'}),
+    _Sec('가샤폰 · 식완', ['식완'], types: {'식완', '가샤폰'}),
     _goods,
-    _media,
+    _books,
+    _games,
   ],
   'beyblade': [
-    _Sec('베이', ['스타터', '부스터', '랜덤 부스터'], types: {'배틀 토이'}),
-    _Sec('세트 · 도구', ['세트', '런처 · 도구'], types: {'툴'}),
+    _Sec('스타터 · 부스터', ['스타터', '부스터', '랜덤 부스터'], types: {'배틀 토이'}),
+    _Sec('세트 · 런처 · 스타디움', ['세트', '런처 · 도구']),
     _goods,
-    _media,
+    _books,
+    _games,
   ],
-  // 라인 = Gunpula 등급 NIN_GAME · NIN_HW · NIN_AMIIBO · NIN_GOODS (lib/data/gunpula.dart)
+  // 라인 = Gunpula 등급 NIN_GAME · NIN_HW · NIN_AMIIBO · NIN_GOODS + 피규어 · 인형 NIN_SCALE … (lib/data/gunpula.dart)
   'nintendo': [
-    _Sec('게임', ['게임'], types: {'게임'}),
+    _Sec('게임', ['게임', '보드게임'], types: {'게임'}),
     _Sec('본체 · 주변기기', ['본체 · 주변기기'], types: {'본체 · 주변기기'}),
-    _Sec('amiibo', ['amiibo'], types: {'피규어'}),
+    _Sec('amiibo', ['amiibo']),
+    _Sec('피규어 · 봉제인형', ['스케일', '액션 피규어', '미니 · 트레이딩', '프라모델', '인형'], types: {'피규어', '액션', '인형', '프라모델'}),
+    _Sec('가샤폰 · 경품 · 이치방쿠지', ['가샤폰', '경품', '제일복권'], types: {'경품', '가샤폰', '식완', '제일복권'}),
     _goods,
-    _mediaNoGame,
+    _books,
+    _ticketsOnly,
+  ],
+  // 이펙트 라인(魂EFFECT · THE SIMPLE EFFECT …)은 모두 한 종류라 한 묶음
+  'effects': [
+    _Sec('이펙트', [], types: {'이펙트'}),
   ],
 };
 
-/// 종류 칸 하나 — 상품(새것부터) · 대표 그림 (공식 로고는 화면이 lineCovers 에서 먼저 찾는다)
+/// 채널의 종류 묶음 이름 (위 → 아래, 끝의 기타 빼고) — 없는 채널 = 한 묶음 '종류'
+List<String> typeSectionTitles(String channel) => [
+  for (final d in _typeSectionDefs[channel] ?? const [_Sec('종류', [])]) d.title,
+];
+
+/// 종류 칸 하나 — 상품(새것부터) · 대표 그림 = 가장 새 상품 사진 (공식 로고는 화면이 lineCovers 에서 먼저 찾고, 없을 때 이것)
 class TypeEntry {
   const TypeEntry({required this.key, required this.label, required this.kits, required this.cover});
 
@@ -199,6 +217,19 @@ List<TypeSection> typeSections(String channel, Iterable<Kit> kits, {int minGroup
     final keys = bySec[i];
     if (keys == null) continue;
     final def = i < defs.length ? defs[i] : const _Sec(lineOtherKey, []);
+    int rank(String key) {
+      final r = def.keys.indexOf(key);
+      return r >= 0 ? r : def.keys.length;
+    }
+
+    // 같은 이름이 되는 칸은 한 칸으로 (데이터 '인형' · '봉제인형' = 봉제인형 — 안 모으면 같은 이름 칸이 나란히 선다)
+    final byName = <String, String>{};
+    for (final key in [...keys]..sort((a, b) => rank(a) != rank(b) ? rank(a).compareTo(rank(b)) : a.compareTo(b))) {
+      final first = byName.putIfAbsent(dataName(key), () => key);
+      if (first == key) continue;
+      byKey[first]!.addAll(byKey.remove(key)!);
+      keys.remove(key);
+    }
     // 작은 칸 모으기: 굿즈 종류 · 목록에 없는 칸만 (공식 라인은 작아도 제 칸)
     final small = [
       for (final key in keys)
@@ -211,11 +242,6 @@ List<TypeSection> typeSections(String channel, Iterable<Kit> kits, {int minGroup
         merged.addAll(byKey[key]!);
       }
     }
-    int rank(String key) {
-      final r = def.keys.indexOf(key);
-      return r >= 0 ? r : def.keys.length;
-    }
-
     keys.sort((a, b) {
       final r = rank(a).compareTo(rank(b));
       if (r != 0) return r;
@@ -229,12 +255,69 @@ List<TypeSection> typeSections(String channel, Iterable<Kit> kits, {int minGroup
 
     out.add(
       TypeSection(def.title, [
-        for (final key in keys) entry(key, lineGroupLabel(key), byKey[key]!),
+        for (final key in keys) entry(key, dataLabel(key), byKey[key]!),
         if (merged.isNotEmpty) entry('${def.title}/$lineOtherKey', tr(lineOtherKey), merged),
       ]),
     );
   }
   return out;
+}
+
+// ── 칸 아이콘 ────────────────────────────────────────────────────────────
+
+/// 칸 아이콘 종류 — Gunpula atlas-groups.json `line_icons` 와 같은 이름 (2026-11-19 계약). 화면이 아이콘으로 바꾼다
+const cellKinds = {
+  'goods',
+  'plush',
+  'figure',
+  'prize',
+  'game',
+  'hardware',
+  'card',
+  'apparel',
+  'food',
+  'capsule',
+  'plamo',
+  'misc',
+};
+
+/// 칸 키(굿즈 세부 종류 · 라인 이름)로 바로 아는 종류 — 상품 유형보다 정확하다 (굿즈 라인 안의 의류 · 식품 …)
+const _keyKinds = {
+  '의류': 'apparel',
+  '식품': 'food',
+  '게임': 'game',
+  '보드게임': 'game',
+  '카드': 'card',
+  '카드 게임': 'card',
+  '가샤폰': 'capsule',
+  '봉제인형': 'plush',
+  '인형': 'plush',
+  '경품': 'prize',
+  '제일복권': 'prize',
+  '본체 · 주변기기': 'hardware',
+  'amiibo': 'figure',
+};
+
+/// 상품 유형(lib/data/gunpula.dart typeLabel) → 칸 아이콘 종류
+String kindOfType(String type) => switch (type) {
+  '프라모델' || '세트' || '부품' => 'plamo',
+  '피규어' || '액션' => 'figure',
+  '인형' => 'plush',
+  '경품' || '제일복권' => 'prize',
+  '게임' => 'game',
+  '본체 · 주변기기' => 'hardware',
+  '카드' => 'card',
+  '가샤폰' => 'capsule',
+  '식완' => 'food',
+  '굿즈' => 'goods',
+  _ => 'misc',
+};
+
+/// 로고 · 상품 사진이 없는(또는 열리지 않는) 칸의 아이콘 종류: Gunpula 가 정한 것([listed], line_icons) → 칸 키 →
+/// 칸 상품에 가장 많은 유형
+String cellKind(String key, Iterable<Kit> kits, {String? listed}) {
+  if (listed != null && cellKinds.contains(listed)) return listed;
+  return _keyKinds[key] ?? kindOfType(_mostCommon(kits.map((k) => k.type)));
 }
 
 String _mostCommon(Iterable<String> values) {
@@ -302,18 +385,20 @@ String _fateSection(String id) {
 String worldSectionOf(String channel, String worldId) {
   final id = worldId.startsWith('$channel-') ? worldId.substring(channel.length + 1) : worldId;
   return switch (channel) {
-    'pokemon' => RegExp(r'^gen\d+$').hasMatch(id) ? '본편 세대' : '공통 굿즈',
+    'pokemon' => RegExp(r'^gen\d+$').hasMatch(id) ? '본편 세대' : '여러 세대',
     'fate' => _fateSection(id),
-    'armored_core' => '시리즈',
+    'armored_core' => '작품',
     'beyblade' => RegExp(r'^[a-z]{1,2}x[a-z]?$').hasMatch(id) ? '라인' : '블레이더', // bx · ux · cx · bxa
     'madoka' => '캐릭터',
-    'lego' || 'nintendo' || 'effects' => '시리즈',
+    'lego' => '테마',
+    'nintendo' => '시리즈',
+    'effects' => '이펙트 종류',
     _ => '세대',
   };
 }
 
 /// 작품이 없는 채널 — 이펙트 상품은 work_title · universe 가 비고, series 는 이펙트 갈래(연기 · 폭발 · 불꽃 …)다
-/// (어느 작품에도 안 붙는 범용 파츠). 그래서 series 를 작품이 아니라 「시리즈」라고 부르고, atlas 묶음이 없으면
+/// (어느 작품에도 안 붙는 범용 파츠). 그래서 series 를 작품이 아니라 「이펙트 종류」라고 부르고, atlas 묶음이 없으면
 /// 세대 탭 · 도감 칸을 [noWorkGroupKey] 로 묶는다 (안 묶으면 상품이 있어도 「아직 없어요」 였다)
 const noWorkChannels = {'effects'};
 
@@ -323,7 +408,7 @@ String noWorkGroupKey(Kit k) => k.seriesKey.isNotEmpty
     : (k.subline.isNotEmpty ? k.subline : (k.line.isNotEmpty ? k.line : lineOtherKey));
 
 /// [noWorkGroupKey] 묶음의 이름 (고른 언어)
-String noWorkGroupLabel(Kit k) => k.seriesKey.isNotEmpty ? k.seriesLabel : lineGroupLabel(noWorkGroupKey(k));
+String noWorkGroupLabel(Kit k) => k.seriesKey.isNotEmpty ? k.seriesLabel : dataLabel(noWorkGroupKey(k));
 
 /// 세대 묶음들 → 묶음 순서대로 (Fate 는 정한 순서, 그 밖은 처음 나온 순서 · 묶음 안은 받은 순서)
 List<(String, List<T>)> worldSections<T>(String channel, Iterable<T> items, String Function(T) idOf) {
@@ -336,6 +421,12 @@ List<(String, List<T>)> worldSections<T>(String channel, Iterable<T> items, Stri
   if (channel == 'fate') out.sort((a, b) => _fateSections.indexOf(a.$1).compareTo(_fateSections.indexOf(b.$1)));
   return out;
 }
+
+/// 세대 칸의 공식 그림 자리에 쓸 묶음 그림(World.image)인가 — atlas 공식 표지(`assets/atlas/covers/` = 작품 로고 · 키 비주얼)만.
+/// 마도카 · 블레이더 · 레고 · 닌텐도 · 이펙트 묶음의 그림은 「가장 새 상품 사진」(atlas `cover_source` 'newest …',
+/// 2026-11-19 확인)이라 칸의 사진 자리(그 칸 상품의 newestCover)로 간다. 로고 · 그림 구분과 바탕색은 World.cover
+/// (cover_kind · cover_bg), 옛 데이터에는 없어 경로로 가른다
+bool isAtlasCover(String image) => image.contains('assets/atlas/covers/');
 
 /// 베이 라인 묶음(World id 'beyblade-bx')인가 (블레이더 묶음이 아니라)
 bool isBeyLineWorld(String worldId) => RegExp(r'^beyblade-[a-z]{1,2}x[a-z]?$').hasMatch(worldId);

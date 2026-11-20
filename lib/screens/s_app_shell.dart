@@ -5,7 +5,7 @@
 // │ S-1  │ MyAvatar (색 고리 + 사진, 채널 바 위)  │ 친구 서랍 열기 → 서랍 머리에서 내 정보    │ P04 · P06     │
 // │ S-2  │ BackdropFilter 바닥 탭 바       │ 반투명 하단 탭 바 (양옆 여백 없음)      │ P08           │
 // │ S-3  │ 하단 탭 4개 (폰 · 반반 화면 왼쪽)      │ 홈 · 검색 · 캘린더 · 컬렉션(+도감)        │ P06 · P04     │
-// │ S-4  │ 가운데 카메라 버튼              │ 찍어서 찾기 (사진 · 바코드 · 앨범)     │ P07           │
+// │ S-4  │ 가운데 카메라 버튼              │ 찍어서 찾기 (사진 · 바코드 · 갤러리)   │ P07           │
 // │ S-5  │ NavigationRail (가로 폰: 높이 <520)    │ 측면 탭 (아바타 / 탭 4개 / 🔔 ⚙)          │ 적응형 · P04  │
 // │ S-6  │ IndexedStack                    │ 탭 상태 유지                           │ P03           │
 // │ S-7  │ 내 채널 목록(UserStore 에 저장)    │ 네 화면이 같이 쓰는 내 IP 채널         │ P04           │
@@ -14,12 +14,13 @@
 // │ S-10 │ 오른쪽 위 ⚙                     │ 설정 열기 (K)                          │ P04 · P06     │
 // │ S-19 │ 오른쪽 위 ? (HelpButton)          │ 위 줄 + 이 탭 아이콘 뜻 한 줄씩           │ P10           │
 // │ S-11 │ Drawer (아바타 · 홈 가장자리 밀기)     │ 친구 서랍 (M)                          │ P07           │
-// │ S-13 │ AnimatedAlign(heightFactor) 아바타 줄 │ 아래로 스크롤하면 위 줄도 접힘          │ P08           │
+// │ S-13 │ HeaderCollapse · CollapsingHeader │ 아래로 스크롤하면 위 줄 · 채널 바가 위로 접힘, 살짝 올리면 다시 (200ms, 검색창 줄은 남음) │ P08 │
 // │ S-12 │ Row(왼쪽 폰 화면 | 오른쪽 Navigator)│ 반반 화면 (폴드 · 태블릿 · 넓은 창 ≥700dp) │ 적응형      │
 // │ S-8  │ AnimatedSlide · AnimatedPositioned │ 아래로 스크롤하면 탭 바 숨김, 카메라만 오른쪽 아래 │ P08 · P07 │
 // └────────────────────────────────────────────────────────────────────────────────┘
 // 전환: S-3 옆으로(탭) · S-4 덮기(bottom sheet) · S-1 덮기(Drawer → M) · S-9 · S-10 쌓기(push, 넓은 화면은 오른쪽 칸).
 // S-8: X · Threads처럼 내용을 내려 읽는 동안 탭 바를 숨겨 화면을 넓히고, 카메라 버튼만 남긴다.
+// S-13: 네 탭 모두 같은 하나(HeaderCollapse)가 스크롤을 보고 머리를 접는다 — 탭 화면은 머리를 CollapsingHeader 로 감싸기만.
 // 왜 이렇게: 위 IP 줄 + 아래 화면 줄 + 도감 안 탭처럼 길을 여럿 두지 않고, 아래 탭 하나 + 화면 안 채널 바 하나.
 import 'dart:async' show Timer;
 import 'dart:ui' show DisplayFeatureType, ImageFilter;
@@ -104,6 +105,9 @@ class _AppShellState extends State<AppShell> {
   /// 하단 탭 바가 보이는지 (아래로 스크롤하면 숨김)
   bool _barShown = true;
 
+  /// S-13 탭 위 머리(위 줄 · 채널 바)를 접었나 — 네 탭이 한 벌. 탭을 바꾸거나 다른 탭으로 보내면 편다
+  final _header = HeaderCollapseController();
+
   /// 홈 검색 알약 → 검색 탭 검색창에 커서
   int _searchFocusTick = 0;
 
@@ -185,6 +189,7 @@ class _AppShellState extends State<AppShell> {
     LocalNotifier.taps.removeListener(_onNotificationTap);
     ShareIntake.instance.incoming.removeListener(_onShared);
     _me?.removeListener(_onUserStore);
+    _header.dispose();
     super.dispose();
   }
 
@@ -201,7 +206,10 @@ class _AppShellState extends State<AppShell> {
 
   /// 탭 바꾸기 — 떠나는 탭이 옛 데이터로 남아 있었으면 지금 다시 만든다 (보이지 않는 동안)
   void _setTab(int i) {
-    if (i != _tab) _pageGen[_tab] = _dataVersion;
+    if (i != _tab) {
+      _pageGen[_tab] = _dataVersion;
+      _header.show(); // 옮겨 간 탭은 어디까지 내려 있었는지 모른다 → 머리부터 보인다
+    }
     _tab = i;
   }
 
@@ -280,6 +288,7 @@ class _AppShellState extends State<AppShell> {
     _setTab(1); // STATE: 검색으로 → 검색 탭 + 커서
     _searchFocusTick++;
     _barShown = true;
+    _header.show();
   });
 
   void _openAdd() {
@@ -318,6 +327,7 @@ class _AppShellState extends State<AppShell> {
     _jump = j;
     _jumpTick++;
     _barShown = true;
+    _header.show();
   });
 
   void _openProfile() => openProfile(
@@ -372,8 +382,8 @@ class _AppShellState extends State<AppShell> {
       onPressed: () => openSettings(context),
       icon: const Icon(Icons.settings_outlined, color: Gp.ink),
     );
-    // S-13 아바타 줄은 늘 그대로 — 스크롤 중에 접으면 목록 높이가 바뀌어 손가락 아래 내용이 흔들린다.
-    // 아래로 스크롤할 때는 아래 탭 바만 내용 위로 미끄러져 나간다 (_NarrowLayout)
+    // S-13 위 줄은 채널 바와 같이 접힌다 (HeaderCollapse) — 손가락을 따라 조금씩이 아니라 200ms 에 한 번에 접고 펴서
+    // 목록 높이가 바뀌는 것은 그때 한 번뿐이다
     final topRow = Row(
       children: [
         avatar,
@@ -453,15 +463,22 @@ class _AppShellState extends State<AppShell> {
     // 화면 모양이 바뀌어도(폴드 접기/펴기) 탭들의 상태가 그대로 옮겨 가게 GlobalKey
     final body = KeyedSubtree(
       key: _bodyKey,
-      child: IndexedStack(
-        // S-6 P03
-        index: _tab,
-        children: [
-          for (var i = 0; i < _tabs.length; i++)
-            // 뒤에 살아 있는 탭의 스크롤 알림은 막는다 — 위 줄이 접히면 그 탭들도 크기가 바뀌어
-            // "스크롤할 게 없음" 알림을 보내 탭 바를 도로 꺼내 버린다
-            NotificationListener<ScrollMetricsNotification>(onNotification: (_) => i != _tab, child: page(i)),
-        ],
+      child: HeaderCollapse(
+        // S-13 네 탭 머리 접기 한 벌 (화면 모양이 바뀌어도 접힌 상태가 그대로 가게 _bodyKey 안)
+        controller: _header,
+        child: IndexedStack(
+          // S-6 P03
+          index: _tab,
+          children: [
+            for (var i = 0; i < _tabs.length; i++)
+              // 뒤에 살아 있는 탭의 스크롤 알림은 막는다 — 위 줄이 접히면 그 탭들도 크기가 바뀌어
+              // "스크롤할 게 없음" 알림을 보내 탭 바 · 머리를 도로 꺼내 버린다
+              NotificationListener<Notification>(
+                onNotification: (n) => i != _tab && (n is ScrollNotification || n is ScrollMetricsNotification),
+                child: page(i),
+              ),
+          ],
+        ),
       ),
     );
     final narrow = _NarrowLayout(
@@ -472,6 +489,7 @@ class _AppShellState extends State<AppShell> {
         onSelect: (i) => setState(() {
           _setTab(i); // STATE: 탭 번호 → IndexedStack
           _barShown = true;
+          _header.show();
         }),
       ),
       camera: _CameraButton(onTap: _openAdd),
@@ -587,7 +605,7 @@ class _TwoPane extends StatelessWidget {
   }
 }
 
-/// S-4 카메라 버튼 — 홈 카드의 +(좋아요 담기)와 구분되게 카메라 모양
+/// S-4 카메라 버튼 — 찍어서 찾기라 카메라 모양 (+ 로 두면 무엇을 더하는지 헷갈린다)
 class _CameraButton extends StatelessWidget {
   const _CameraButton({required this.onTap});
   final VoidCallback onTap;
@@ -749,7 +767,7 @@ class _BottomBar extends StatelessWidget {
   }
 }
 
-/// S-4 찍어서 찾기 시트: 사진으로 찾기 · 바코드 · 앨범 → E 화면
+/// S-4 찍어서 찾기 시트: 사진으로 찾기 · 바코드 · 갤러리 → E 화면
 class AddSheet extends StatelessWidget {
   const AddSheet({super.key, required this.onPick});
 
@@ -766,20 +784,20 @@ class AddSheet extends StatelessWidget {
           children: [
             ListTile(
               leading: const Icon(Icons.center_focus_strong_outlined),
-              title: Text(tr('사진으로 찾기')),
+              title: Text(tr('찍어서 찾기')),
               subtitle: Text(tr('상자나 실물을 찍으면 후보를 보여 줘요')),
               onTap: () => onPick('photo'),
             ),
             ListTile(
               leading: const Icon(Icons.qr_code_scanner),
-              title: Text(tr('바코드 스캔')),
+              title: Text(tr('바코드로 찾기')),
               subtitle: Text(tr('상자 뒷면 바코드로 정확히 찾기')),
               onTap: () => onPick('barcode'),
             ),
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
-              title: Text(tr('앨범에서 선택')),
-              subtitle: Text(tr('저장해 둔 사진·캡처로 찾기')),
+              title: Text(tr('사진으로 찾기')),
+              subtitle: Text(tr('저장해 둔 사진 · 캡처로 찾기')),
               onTap: () => onPick('album'),
             ),
           ],

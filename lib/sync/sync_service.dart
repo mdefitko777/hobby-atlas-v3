@@ -359,7 +359,7 @@ class SyncService extends ChangeNotifier with WidgetsBindingObserver {
         store.markSynced(startRev);
       }
     } else {
-      throw RpcException('PGRST202', tr('서버에 동기화 함수(Gunpula v2/v3 SQL)가 없어요'));
+      throw RpcException('PGRST202', tr('서버 설정이 아직 없어 동기화할 수 없어요 (Gunpula v2/v3 SQL)'));
     }
   }
 

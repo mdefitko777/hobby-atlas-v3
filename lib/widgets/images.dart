@@ -25,6 +25,8 @@ import 'tags.dart' show SoftTag;
 /// 상세 사진 넘기기 · 크게 보기는 [BrokenImages.keep] 이 장을 빼니 켜지 않는다)
 /// [fullSize] = 원본 주소 · 원본 크기로 풀기 (크게 보기 — 두 손가락으로 키운다). 나머지는 칸 크기만큼만 풀고,
 /// 작은 칸은 작은 그림 주소로 받는다 (lib/logic/image_size.dart)
+/// [fallback] = 회색 칸 + 글자 대신 그릴 것 (분류 칸의 종류 아이콘 — 로고가 404 · 오프라인이어도 회색 칸이 없게).
+/// 받는 동안은 빈 칸 (아이콘 → 로고로 바뀌며 깜빡이지 않게)
 class AppImage extends StatelessWidget {
   const AppImage(
     this.path, {
@@ -34,18 +36,24 @@ class AppImage extends StatelessWidget {
     this.grayscale = false,
     this.nextOnError = false,
     this.fullSize = false,
+    this.fallback,
   }) : _rest = null,
        _decodeScale = 1,
        _noThumb = false;
 
   /// 앞 사진이 열리지 않아 이어 그리는 다음 사진 — [rest] = 그다음 후보들
-  const AppImage._next(this.path, List<String> rest, {required this.fit, required this.placeholder})
-    : grayscale = false,
-      nextOnError = true,
-      fullSize = false,
-      _rest = rest,
-      _decodeScale = 1,
-      _noThumb = false;
+  const AppImage._next(
+    this.path,
+    List<String> rest, {
+    required this.fit,
+    required this.placeholder,
+    required this.fallback,
+  }) : grayscale = false,
+       nextOnError = true,
+       fullSize = false,
+       _rest = rest,
+       _decodeScale = 1,
+       _noThumb = false;
 
   /// 흐리게 깔 뒤 그림 — 칸의 1/4 로만 풀어도 흐림(sigma 18) 뒤에서는 차이가 없다
   const AppImage._blurred(this.path)
@@ -54,6 +62,7 @@ class AppImage extends StatelessWidget {
       grayscale = false,
       nextOnError = false,
       fullSize = false,
+      fallback = null,
       _rest = null,
       _decodeScale = 0.25,
       _noThumb = false;
@@ -66,6 +75,7 @@ class AppImage extends StatelessWidget {
       grayscale = false, // 흑백은 바깥(처음 그린 쪽)이 이미 씌웠다
       nextOnError = o.nextOnError,
       fullSize = o.fullSize,
+      fallback = o.fallback,
       _rest = o._rest,
       _decodeScale = o._decodeScale,
       _noThumb = true;
@@ -76,6 +86,7 @@ class AppImage extends StatelessWidget {
   final bool grayscale;
   final bool nextOnError;
   final bool fullSize;
+  final Widget? fallback;
   final List<String>? _rest;
   final double _decodeScale;
   final bool _noThumb;
@@ -90,17 +101,16 @@ class AppImage extends StatelessWidget {
     return [...all.where((u) => !ImageHosts.isDown(u)), ...all.where(ImageHosts.isDown)];
   }
 
-  /// 못 열었을 때 — 다음 후보가 있으면 그것, 없으면 이름 글자 자리표시
+  /// 못 열었을 때 — 다음 후보가 있으면 그것, 없으면 [fallback] 이나 이름 글자 자리표시
   Widget _failed() {
-    if (!nextOnError) return _Placeholder(placeholder);
-    final rest = _alive();
-    if (rest.isEmpty) return _Placeholder(placeholder);
-    return AppImage._next(rest.first, rest.sublist(1), fit: fit, placeholder: placeholder);
+    final rest = nextOnError ? _alive() : const <String>[];
+    if (rest.isEmpty) return fallback ?? _Placeholder(placeholder);
+    return AppImage._next(rest.first, rest.sublist(1), fit: fit, placeholder: placeholder, fallback: fallback);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (path.isEmpty) return _Placeholder(placeholder);
+    if (path.isEmpty) return fallback ?? _Placeholder(placeholder);
     if (path.startsWith(localPhotoPrefix)) return LocalPhotoImage(path.substring(localPhotoPrefix.length), fit: fit);
     // 이미 열리지 않은 사진 · 멈춘 서버의 사진이면 다시 받지 않고 바로 다음 후보
     // (목록을 내렸다 올릴 때마다 막힌 주소를 또 부르지 않게 · 멈춘 서버를 기다리지 않게)
@@ -167,7 +177,7 @@ class AppImage extends StatelessWidget {
       frameBuilder: (_, child, frame, sync) => sync
           ? child
           : frame == null
-          ? const ColoredBox(color: Gp.soft)
+          ? (fallback == null ? const ColoredBox(color: Gp.soft) : const SizedBox.expand())
           : _FadeIn(child: child),
       errorBuilder: (_, error, _) {
         // 잠깐의 실패(시간 초과 · 멈춘 서버)는 기억하지 않는다 — 다음에 다시 그리면 다시 받는다
@@ -463,7 +473,7 @@ class CircleThumb extends StatelessWidget {
   }
 }
 
-/// 둥근 모서리 상품 사진 (회백색 바탕)
+/// 둥근 모서리 상품 사진 (회백색 바탕) + 0.5 머리카락 테두리 (Gp.photoEdge — 흰 페이지에 녹지 않게)
 class PhotoThumb extends StatelessWidget {
   const PhotoThumb(this.image, {super.key, this.radius = Gp.radius});
   final String image;
@@ -471,9 +481,17 @@ class PhotoThumb extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
+    final photo = ClipRRect(
       borderRadius: BorderRadius.circular(radius),
       child: ColoredBox(color: Gp.soft, child: AppImage(image, nextOnError: true)),
+    );
+    return DecoratedBox(
+      position: DecorationPosition.foreground,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.fromBorderSide(Gp.photoEdge),
+      ),
+      child: photo,
     );
   }
 }

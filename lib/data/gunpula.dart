@@ -170,7 +170,7 @@ String pickName(Object? names, [List<String> order = const ['ko', 'ja', 'en', 'z
   return '';
 }
 
-// ── 제품 라인 · 상품 유형 (grades.json 의 한국어 이름은 새 등급에만 있다) ────────────────
+// ── 라인 · 상품 유형 (grades.json 의 한국어 이름은 새 등급에만 있다) ────────────────
 const _lineLabels = {
   'GUNDAM_MERCH': '굿즈',
   'ROBOT_SPIRITS': 'ROBOT魂',
@@ -232,6 +232,13 @@ const _lineLabels = {
   'NIN_HW': '본체 · 주변기기',
   'NIN_AMIIBO': 'amiibo',
   'NIN_GOODS': '굿즈',
+  // 닌텐도 피규어 · 인형 (Gunpula 2026-11-19) — grades.json 에 이름이 오기 전에도 코드 그대로 보이지 않게, Fate · 마도카와 같은 이름
+  'NIN_SCALE': '스케일',
+  'NIN_ACTION': '액션 피규어',
+  'NIN_MINI': '미니 · 트레이딩',
+  'NIN_PRIZE': '경품',
+  'NIN_PLUSH': '인형',
+  'NIN_PLAMO': '프라모델',
   // 이펙트 (Gunpula effects, 계약 2026-11-15) — 계약에 이름이 정해진 두 라인만. 그 밖의 이펙트 등급(MODEROID_EFFECT …)은
   // grades.json name_ko 로 ([useGradeNames])
   'TAMASHII_EFFECT': '魂EFFECT',
@@ -242,7 +249,7 @@ const _lineLabels = {
 /// 매핑(mapKitsJob)과 알림 피드(FeedItem.line)가 같은 이름을 쓰도록 둘 다 [lineLabel] 이 여기서 찾는다. isolate 마다 따로 채운다
 final _gradeKo = <String, String>{};
 
-/// 그 한국어 라인 이름 → 중국어 (grades.json name_zh) — 화면의 tr(k.line) 이 찾게 catalog 가 번역 표에 더한다
+/// 그 한국어 라인 이름 → 중국어 (grades.json name_zh) — 화면의 dataLabel(k.line) 이 찾게 catalog 가 번역 표에 더한다
 final gradeZhNames = <String, String>{};
 
 // 코드 그대로가 라인 이름인 분류 (HG · MG · RE100 · SDX · BEYBLADE_X …) — 다른 곳(OCR · 조립 여부)이 그 글자로 비교해서
@@ -277,6 +284,10 @@ void useGradeNames(Object? grades) {
 
 /// 전각 영숫자 → 반각 (ＨＧＵＣ → HGUC) — lib/format.dart
 const _halfWidth = halfWidth;
+
+/// 가게가 이름 앞에 붙이는 예약 말머리 (한국 포켓몬스토어 · 반다이 남코 코리아 몰)
+final _shopPrefix = RegExp(r'^\[(예약 판매|예약판매|사전 예약)\]\s*');
+final _hangul = RegExp(r'[가-힣]');
 
 /// 세부 시리즈 이름 — 세부 시리즈가 실제로 갈리는 라인만 (그 밖의 subline 은 라인 풀네임 · 탄 번호 · 판매처라 버린다)
 ///   HG → HGUC · HGCE · HGBF · HGBD:R … / ROBOT魂 · METAL ROBOT魂 → ver. A.N.I.M.E. · Ka signature /
@@ -440,6 +451,13 @@ String typeLabel(String code, String category, [String name = '']) {
     case 'NIN_AMIIBO':
       return '피규어';
   }
+  // 채널 머리만 다른 같은 종류 (NIN_PLUSH · NIN_PRIZE …) — 새 채널 등급이 grades.json 분류(other)로 굿즈가 되지 않게
+  // (2026-11-19 감사: 닌텐도 인형 · 경품 · 프라모델이 다 피규어 · 굿즈로 묶였다). 이름은 Fate · 마도카와 같다
+  if (code.endsWith('_PLUSH')) return '인형';
+  if (code.endsWith('_PRIZE')) return '경품';
+  if (code.endsWith('_PLAMO')) return '프라모델';
+  if (code.endsWith('_ACTION')) return '액션';
+  if (code.endsWith('_SCALE') || code.endsWith('_MINI')) return '피규어';
   return switch (category) {
     'core' || 'core_subline' || 'one_hundred' || 'sd' || 'historical' || 'special' || 'plastic_model' => '프라모델',
     'tamashii_figure' => '피규어',
@@ -634,6 +652,10 @@ List<Map<String, Object?>> mapKitsJob(Map<String, String> msg) {
     final id = jStr(r['kit_id']);
     if (id.isEmpty) continue;
     final names = {for (final e in jMap(r['names']).entries) e.key: unescapeHtml(jStr(e.value))};
+    // 가게 말머리 [예약 판매] · [사전 예약] 는 이름이 아니다 (예약 상태는 앱이 따로 보여 준다)
+    for (final l in const ['ko', 'zh', 'ja']) {
+      if (names[l] case final s?) names[l] = s.replaceFirst(_shopPrefix, '');
+    }
     final series = jMap(r['series']);
     final labels = jMap(series['labels']);
     final code = correctedCode(jStr(r['grade_code']), jStr(names['ja']));
@@ -669,8 +691,10 @@ List<Map<String, Object?>> mapKitsJob(Map<String, String> msg) {
     final name = '$legoNo${pickName(names)}';
     final nameJa = '$legoNo${pickName(names, const ['ja', 'en', 'ko'])}';
     final seriesLabel = pickName(labels);
-    // 중국어 화면 (lib/l10n): Gunpula names.zh (번역이 아직이면 일본어 원문) · series.labels.zh
-    final nameZh = '$legoNo${pickName(names, const ['zh', 'ja', 'en', 'ko'])}';
+    // 중국어 화면 (lib/l10n): Gunpula names.zh (번역이 아직이면 일본어 원문) · series.labels.zh.
+    // 한글이 든 zh 는 Gunpula 가 ko 를 그대로 옮긴 것 (포켓몬스토어 한국 · 닌텐도 한국, 2026-11-20) — 없는 것으로 친다
+    final zhNames = _hangul.hasMatch(names['zh'] ?? '') ? ({...names}..remove('zh')) : names;
+    final nameZh = '$legoNo${pickName(zhNames, const ['zh', 'ja', 'en', 'ko'])}';
     final seriesZh = jStr(labels['zh']);
     final line = lineLabel(code, subline, id);
     final goodsKind = jStr(r['goods_kind']);

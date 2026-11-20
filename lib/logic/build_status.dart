@@ -2,6 +2,7 @@
 // 기기 local_state 'build_status' 에 kit_id 별로 둔다 (lib/data/user_store/kit_progress.dart).
 // 수집 기록(items[kit_id])에는 넣지 않는다 — 옛 Gunpula 앱이 동기화 때 모르는 칸을 버릴 수 있다.
 // 조립하는 상품만 단계가 있다 ([needsAssembly]) — 피규어 · 인형 · 굿즈는 사면 끝.
+// 2026-11-20 주인 결정으로 화면에서 뺐다 (상세 · 컬렉션 거르기 · 미조립 숫자 · 공유 카드). 적어 둔 기록 · 동기화는 그대로 — 지우거나 옮기지 않는다.
 import '../json_util.dart';
 import '../l10n/l10n.dart';
 import '../models.dart';
@@ -76,19 +77,3 @@ class BuildRecord {
 Map<String, BuildRecord> buildRecordsFrom(Object? raw) => {
   for (final e in jMap(raw).entries) e.key: ?BuildRecord.fromJson(e.value),
 };
-
-/// 컬렉션 구매함 거르기 — 전체 · 단계 하나
-BuildStage? buildFilterAt(int i) => i <= 0 || i > BuildStage.values.length ? null : BuildStage.values[i - 1];
-
-/// [ownedIds] 의 단계별 수 (기록 없음 = 미조립)
-Map<BuildStage, int> stageCounts(Iterable<String> ownedIds, BuildStage Function(String id) stageOf) {
-  final out = {for (final s in BuildStage.values) s: 0};
-  for (final id in ownedIds) {
-    out[stageOf(id)] = out[stageOf(id)]! + 1;
-  }
-  return out;
-}
-
-/// 쌓인 것 (미조립 수) — My Page · 컬렉션 · 공유 카드
-int backlogCount(Iterable<String> ownedIds, BuildStage Function(String id) stageOf) =>
-    ownedIds.where((id) => stageOf(id) == BuildStage.unbuilt).length;

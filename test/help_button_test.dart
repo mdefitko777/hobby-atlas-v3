@@ -104,8 +104,8 @@ void main() {
     await _frames(tester);
     await tester.tap(find.byTooltip('도움말'));
     await _frames(tester, 3);
-    expect(find.text('산 날 (내 일정)'), findsOneWidget);
-    expect(find.text('PB 예약 마감 (내 일정)'), findsOneWidget);
+    expect(find.text('좋아요 · 예약한 상품'), findsOneWidget); // 점 색은 둘뿐 (파랑 · 회색)
+    expect(find.text('그 밖의 일정'), findsOneWidget);
     expect(find.byTooltip('점 색'), findsNothing); // 달력 위 ? 는 합쳤다
     expect(tester.takeException(), isNull);
   });
@@ -113,7 +113,7 @@ void main() {
   testWidgets('검색 ? 에 기체별 묶기 · 컬렉션 ? 에 휴지통 · 편집 · 도감 칸 (늘 컬러)', (tester) async {
     expect(searchHelp().map((i) => i.text), contains('검색 결과를 기체별로 묶기'));
     final c = collectionHelp().map((i) => i.text);
-    expect(c, containsAll(['휴지통 (30일 동안 되살리기)', '편집 (골라서 지우기)', '리본 = 구매함 · +10']));
+    expect(c, containsAll(['휴지통 (30일 동안 복원)', '편집 (골라서 지우기)', '리본 = 구매함 · +10']));
     expect(c.join(), isNot(contains('흑백'))); // 도감 칸은 늘 컬러
   });
 

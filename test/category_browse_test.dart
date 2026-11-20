@@ -3,6 +3,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hobby_atlas/data/gunpula.dart' show cleanSubline;
 import 'package:hobby_atlas/logic/category_browse.dart';
+import 'package:hobby_atlas/logic/data_labels.dart';
 import 'package:hobby_atlas/models.dart';
 
 import 'support/line_kits.dart';
@@ -43,8 +44,8 @@ void main() {
       expect(lineGroupKey(lineKit('f', line: '굿즈', type: '굿즈', goodsKind: '기타')), '굿즈');
       expect(lineGroupKey(lineKit('g', line: '', type: '피규어')), '피규어');
       expect(lineGroupKey(lineKit('h', line: '', type: '')), lineOtherKey);
-      expect(lineGroupLabel('RE100'), 'RE/100');
-      expect(lineGroupLabel('PGU'), 'PG UNLEASHED');
+      expect(dataLabel('RE100'), 'RE/100');
+      expect(dataLabel('PGU'), 'PG UNLEASHED');
     });
 
     test('베이블레이드 X = 상품 형태 (라인 BX · UX · CX 는 세대 쪽)', () {
@@ -56,7 +57,7 @@ void main() {
   });
 
   group('종류 묶음', () {
-    test('건담: 프라모델 → 옛 등급 → SD → 완성품 → 식완 · 가샤폰 → 굿즈 → 영상 · 책 · 이벤트, 빈 칸 · 빈 묶음 없음', () {
+    test('건담: 프라모델 → 기타 등급 → SD건담 → 완성품 → 가샤폰 · 식완 → 굿즈 → 도서 · 음반 · 영상, 빈 칸 · 빈 묶음 없음', () {
       final s = typeSections('gundam', [
         ..._many('hg', 4),
         ..._many('mg', 3, line: 'MG'),
@@ -76,14 +77,17 @@ void main() {
       ]);
       expect(_shape(s), [
         '프라모델: PG · MG · HG · RE100',
-        '옛 등급 · 특수: No Grade · BMC',
-        'SD: SD · 元祖 SD',
-        '완성품 피규어: ROBOT魂 · SDX',
-        '식완 · 가샤폰: CONVERGE · 가샤폰',
+        '기타 등급: No Grade · BMC',
+        'SD건담: SD · 元祖 SD',
+        '완성품: ROBOT魂 · SDX',
+        '가샤폰 · 식완: CONVERGE · 가샤폰',
         '굿즈: 굿즈 · 의류',
-        '영상 · 책 · 이벤트: 블루레이 · DVD',
+        '도서 · 음반 · 영상: 블루레이 · DVD',
       ]);
+      // 칸 이름은 표준 이름 (키는 데이터 값 그대로)
       expect(s.first.entries.last.label, 'RE/100');
+      expect(s[1].entries.first.label, '무등급');
+      expect(s[2].entries.last.label, '원조 SD건담');
     });
 
     test('모르는 라인 = 상품 유형으로 묶음, 유형도 모르면 끝의 기타 묶음', () {
@@ -93,7 +97,7 @@ void main() {
         ..._many('fx', 3, line: 'NEWFIG', type: '피규어'),
         ..._many('zz', 3, line: 'ODD', type: '배틀 토이'),
       ]);
-      expect(_shape(s), ['프라모델: HG · NEWGRADE', '완성품 피규어: NEWFIG', '기타: ODD']);
+      expect(_shape(s), ['프라모델: HG · NEWGRADE', '완성품: NEWFIG', '기타: ODD']);
     });
 
     test('작은 굿즈 칸이 둘 이상이면 그 묶음 끝 기타로 · 공식 라인과 하나뿐인 작은 칸은 그대로', () {
@@ -106,7 +110,8 @@ void main() {
         ..._many('tk', 4, channel: 'fate', line: '굿즈', type: '굿즈', goodsKind: '티켓 · 이벤트'),
         lineKit('bk', channel: 'fate', line: '굿즈', type: '굿즈', goodsKind: '책 · 화보'),
       ]);
-      expect(_shape(s), ['피규어 · 인형: 스케일 · figma', '굿즈: 굿즈 · 굿즈/기타', '영상 · 책 · 이벤트: 티켓 · 이벤트 · 책 · 화보']);
+      expect(_shape(s), ['피규어 · 봉제인형: 스케일 · figma', '굿즈: 굿즈 · 굿즈/기타', '도서 · 음반 · 영상: 책 · 화보', '게임 · 티켓: 티켓 · 이벤트']);
+      expect(s.first.entries.first.label, '스케일 피규어');
       final other = s[1].entries.last;
       expect(other.label, lineOtherKey);
       expect([for (final k in other.kits) k.id]..sort(), ['ac', 'fd']);
@@ -124,7 +129,7 @@ void main() {
             lineKit('kj', channel: 'pokemon', line: '제일복권', type: '제일복권'),
           ]),
         ),
-        ['인형 · 피규어: 봉제인형 · 몬콜레', '가샤폰 · 경품 · 복권: 가샤폰 · 제일복권'],
+        ['피규어 · 봉제인형: 봉제인형 · 몬콜레', '가샤폰 · 경품 · 이치방쿠지: 가샤폰 · 제일복권'],
       );
       expect(
         _shape(
@@ -134,7 +139,7 @@ void main() {
             lineKit('sk', channel: 'armored_core', line: '식완', type: '식완'),
           ]),
         ),
-        ['프라모델: V.I. · 30MM', '식완 · 가샤폰: 식완'],
+        ['프라모델: V.I. · 30MM', '가샤폰 · 식완: 식완'],
       );
       expect(
         _shape(
@@ -145,8 +150,47 @@ void main() {
             lineKit('to', channel: 'beyblade', line: 'BX', type: '배틀 토이', subline: '런처 · 도구'),
           ]),
         ),
-        ['베이: 스타터 · 부스터 · 랜덤 부스터', '세트 · 도구: 런처 · 도구'],
+        ['스타터 · 부스터: 스타터 · 부스터 · 랜덤 부스터', '세트 · 런처 · 스타디움: 런처 · 도구'],
       );
+    });
+
+    test('같은 묶음 순서 · 같은 이름이 되는 칸은 한 칸 (인형 · 봉제인형 = 봉제인형)', () {
+      final madoka = typeSections('madoka', [
+        ..._many('pl', 3, channel: 'madoka', line: '봉제인형', type: '인형'),
+        ..._many('dl', 2, channel: 'madoka', line: '인형', type: '인형'),
+        ..._many('sc', 3, channel: 'madoka', line: '스케일', type: '피규어'),
+        ..._many('kj', 3, channel: 'madoka', line: '제일복권', type: '제일복권'),
+        ..._many('gp', 3, channel: 'madoka', line: '가샤폰', type: '가샤폰'),
+      ]);
+      expect(_shape(madoka), ['피규어 · 봉제인형: 스케일 · 인형', '가샤폰 · 경품 · 이치방쿠지: 가샤폰 · 제일복권']);
+      final plush = madoka.first.entries.last;
+      expect(plush.label, '봉제인형');
+      expect(plush.kits, hasLength(5));
+      // 닌텐도: 게임 · 보드게임이 맨 위 묶음, 티켓은 따로 끝에
+      expect(
+        _shape(
+          typeSections('nintendo', [
+            ..._many('gm', 3, channel: 'nintendo', line: '게임', type: '게임'),
+            ..._many('bg', 3, channel: 'nintendo', line: '굿즈', type: '굿즈', goodsKind: '보드게임'),
+            ..._many('tk', 3, channel: 'nintendo', line: '굿즈', type: '굿즈', goodsKind: '티켓 · 이벤트'),
+            ..._many('bk', 3, channel: 'nintendo', line: '굿즈', type: '굿즈', goodsKind: '책 · 화보'),
+          ]),
+        ),
+        ['게임: 게임 · 보드게임', '도서 · 음반 · 영상: 책 · 화보', '티켓: 티켓 · 이벤트'],
+      );
+      // 레고 미니피겨 (데이터 값 '미니피규어')
+      final lego = typeSections('lego', _many('mf', 3, channel: 'lego', line: '미니피규어', type: '피규어'));
+      expect(_shape(lego), ['미니피겨 · 부품: 미니피규어']);
+      expect(lego.single.entries.single.label, '미니피겨');
+    });
+
+    test('이펙트 = 한 묶음 이펙트', () {
+      final s = typeSections('effects', [
+        ..._many('te', 3, channel: 'effects', line: '魂EFFECT', type: '이펙트'),
+        ..._many('se', 3, channel: 'effects', line: 'the simple effect', type: '이펙트'),
+      ]);
+      expect([for (final x in s) x.title], ['이펙트']);
+      expect({for (final e in s.single.entries) e.label}, {'TAMASHII EFFECT', 'THE SIMPLE EFFECT'});
     });
 
     test('모르는 채널 = 한 묶음 · 많은 순', () {
@@ -208,11 +252,14 @@ void main() {
       expect([for (final (t, ws) in s) '$t: ${ws.map((w) => w.id).join(' · ')}'], ['UC: w10 · w810', 'SEED: w3000']);
     });
 
-    test('포켓몬 세대 · Fate 작품 · AC · 베이', () {
+    test('포켓몬 세대 · Fate 작품 · AC 작품 · 베이 라인 · 레고 테마 · 이펙트 종류', () {
       expect(worldSectionOf('pokemon', 'pokemon-gen1'), '본편 세대');
-      expect(worldSectionOf('pokemon', 'pokemon-pokemon_common'), '공통 굿즈');
-      expect(worldSectionOf('armored_core', 'armored_core-ac6'), '시리즈');
+      expect(worldSectionOf('pokemon', 'pokemon-pokemon_common'), '여러 세대');
+      expect(worldSectionOf('armored_core', 'armored_core-ac6'), '작품');
       expect(worldSectionOf('beyblade', 'beyblade-bx'), '라인');
+      expect(worldSectionOf('lego', 'lego-star_wars'), '테마');
+      expect(worldSectionOf('effects', 'effects-fire'), '이펙트 종류');
+      expect(worldSectionOf('nintendo', 'nintendo-mario'), '시리즈');
       final fate = worldSections('fate', [
         'fate-fgo_fes',
         'fate-tsukihime',
@@ -232,6 +279,41 @@ void main() {
           'TYPE-MOON · 기타: fate-tsukihime',
         ],
       );
+    });
+
+    test('칸 아이콘 종류: Gunpula line_icons → 칸 키 → 칸 상품에 가장 많은 유형 (사진은 쓰지 않는다)', () {
+      final hg = [lineKit('a'), lineKit('b')];
+      expect(cellKind('HG', hg), 'plamo');
+      expect(cellKind('HG', hg, listed: 'goods'), 'goods');
+      expect(cellKind('HG', hg, listed: 'spaceship'), 'plamo', reason: '모르는 종류 이름은 버린다');
+      expect(cellKind('의류', [lineKit('c', line: '굿즈', type: '굿즈')]), 'apparel');
+      expect(cellKind('봉제인형', [lineKit('d', type: '인형')]), 'plush');
+      expect(cellKind('', [lineKit('e', type: '피규어'), lineKit('f', type: '피규어'), lineKit('g')]), 'figure');
+      expect(cellKind('', const []), 'misc');
+      expect(
+        {
+          for (final t in ['식완', '가샤폰', '카드', '경품', '게임', '본체 · 주변기기', '배틀 토이']) t: kindOfType(t),
+        },
+        {
+          '식완': 'food',
+          '가샤폰': 'capsule',
+          '카드': 'card',
+          '경품': 'prize',
+          '게임': 'game',
+          '본체 · 주변기기': 'hardware',
+          '배틀 토이': 'misc',
+        },
+      );
+      expect(cellKinds, hasLength(12));
+    });
+
+    test('세대 칸 그림 = atlas 공식 표지만 (마도카 · 블레이더 · 레고의 「가장 새 상품 사진」은 아니다)', () {
+      expect(isAtlasCover('https://x.github.io/gunpula/app/assets/atlas/covers/fate-zero.png'), isTrue);
+      expect(isAtlasCover('assets/atlas/covers/po_gen1.png'), isTrue);
+      expect(isAtlasCover('https://x.github.io/gunpula/app/assets/catalog/madoka/aniplex-01.jpg'), isFalse);
+      expect(isAtlasCover('https://x.github.io/gunpula/app/assets/bbx/cx17-cb63e16152.jpg'), isFalse);
+      expect(isAtlasCover('https://cdn.rebrickable.com/media/sets/75192-1.jpg'), isFalse);
+      expect(isAtlasCover(''), isFalse);
     });
 
     test('베이 라인 묶음 = 라인이 같은 상품', () {

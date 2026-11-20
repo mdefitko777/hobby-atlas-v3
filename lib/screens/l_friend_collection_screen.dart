@@ -2,24 +2,24 @@
 //
 // ┌──────── 디자인 가이드 대응표: L 친구 컬렉션 ───────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
-// │ L-1  │ 밑줄 탭 3개 + 개수                   │ 친구의 좋아요 · 구매함 · 도감            │ P06 · P04     │
-// │ L-2  │ ThumbRow + TagPill                  │ 겹침 표시: "나도 있음" · "내 좋아요"      │ P01 · P09     │
+// │ L-1  │ 밑줄 탭 3개 (수 없이)                │ 친구의 좋아요 · 구매함 · 도감            │ P06 · P04     │
+// │ L-2  │ ThumbRow + TagPill                  │ 겹침 표시: "나도 구매함" · "내 좋아요" · 부제 채널 · 라인 · 작품 (컬렉션과 같게) │ P01 · P09 │
 // │ L-3  │ 작품 줄 + 친구/나 진행 막대 두 줄 · 📷 n │ 도감 비교 (친구 n · 나 n · 친구 사진 n)   │ P01           │
 // │ L-6  │ AppBar 오른쪽 ? (HelpButton)       │ 겹침 꼬리표 뜻 (긴 안내 줄 대신)          │ P10           │
 // │ L-4  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 빈 목록             │ P01 · P09     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 친구 프로필 숫자 → 쌓기. 상품 줄 → D 상품 상세(쌓기).
-// 쓰임: 선물 고르기(친구 좋아요) · 겹쳐 사지 않기(친구 구매함에 "내 좋아요" 표시) · 도감 비교.
+// 쓰임: 선물 고르기(친구 좋아요) · 중복 구매 피하기(친구 구매함에 "내 좋아요" 표시) · 도감 비교.
 // v3: 친구의 좋아요 · 구매함 id 는 Gunpula v3 get_friend_collection (I 화면이 받아서 넘겨 줌), 도감 칸은 그 구매함으로 센다.
-//     친구 사진 수 = 친구가 보이기로 둔 사진(get_friend_wall)의 상품을 같은 도감 셈(friendGuide)에 넣은 것.
+//     친구 사진 수 = 친구가 공개한 사진(get_friend_wall)의 상품을 같은 도감 셈(friendGuide)에 넣은 것.
 //     "손으로 켜기"(guide_manual_lit)는 서버에 없어 친구 쪽 비교에는 들어가지 않는다 (산 상품 기준).
 import 'package:flutter/cupertino.dart' show CupertinoPageRoute;
 import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../marks.dart';
-import '../channels.dart';
 import '../l10n/l10n.dart';
+import '../logic/kit_meta.dart';
 import '../logic/short_names.dart' show shortWorkName;
 import '../models.dart';
 import '../theme.dart';
@@ -77,6 +77,21 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
   late CollectionJump _tab = widget.initial;
   late Future<_FriendData> _future = _load();
 
+  /// 건담 줄 부제의 공식 작품 이름 (컬렉션 F-5 와 같은 셈) — 목록을 막지 않고 뒤에서 한 번, 못 받으면 series 이름
+  GuideIndex _works = GuideIndex.empty;
+  bool _worksAsked = false;
+
+  void _askWorks(List<Kit> kits) {
+    if (_worksAsked || !kits.any((k) => k.franchiseId == 'gundam')) return;
+    _worksAsked = true;
+    widget.loaders.guideIndex().then(
+      (i) {
+        if (mounted) setState(() => _works = i); // STATE: 도감 작품 이름 → 줄 부제
+      },
+      onError: (Object _) {}, // 건담 도감이 없는 기기 — series 이름 그대로
+    );
+  }
+
   Future<_FriendData> _load() async {
     // STATE: 친구 좋아요 · 구매함 상품 · 내 상품 · 건담 작품
     final f = widget.friend;
@@ -121,9 +136,9 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
             return ErrorView(message: '${snap.error}', onRetry: () => setState(() => _future = _load()));
           }
           final d = snap.data!;
-          Widget tab(String label, CollectionJump j, {int? count}) => UnderlineTab(
+          // 탭 옆 수는 쓰지 않는다 (목록 머리는 조용하게 — 컬렉션 F-2 와 같게, 수는 친구 프로필 숫자에)
+          Widget tab(String label, CollectionJump j) => UnderlineTab(
             label: label,
-            count: count,
             selected: _tab == j,
             onTap: () => setState(() => _tab = j), // STATE: 탭 → 목록
           );
@@ -134,8 +149,8 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
                 padding: const EdgeInsets.fromLTRB(8, 4, 8, 6),
                 child: Row(
                   children: [
-                    tab(tr('좋아요'), CollectionJump.liked, count: d.liked.length), // L-1
-                    tab(tr('구매함'), CollectionJump.owned, count: d.owned.length),
+                    tab(tr('좋아요'), CollectionJump.liked), // L-1
+                    tab(tr('구매함'), CollectionJump.owned),
                     tab(tr('도감'), CollectionJump.guide),
                   ],
                 ),
@@ -143,7 +158,7 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
               Expanded(
                 child: switch (_tab) {
                   CollectionJump.liked => _kits(d.liked, d.mine, liked: true),
-                  CollectionJump.owned || CollectionJump.backlog => _kits(d.owned, d.mine, liked: false),
+                  CollectionJump.owned => _kits(d.owned, d.mine, liked: false),
                   CollectionJump.guide => _guide(d.works, d.photosByWork),
                 },
               ),
@@ -162,7 +177,8 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
       );
     }
     final m = Marks.of(context); // 앱 전체 한 벌 — 방금 누른 ♡ 도 반영
-    String mark(Kit k) => m.owned(k) ? '나도 있음' : (m.liked(k) ? '내 좋아요' : '');
+    _askWorks(kits);
+    String mark(Kit k) => m.owned(k) ? '나도 구매함' : (m.liked(k) ? '내 좋아요' : '');
 
     return ListView(
       padding: const EdgeInsets.only(bottom: 32),
@@ -175,9 +191,10 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
             title: k.name,
             titleLines: 2,
             size: 64,
-            subtitle: joinDot([tr(channelOf(k.franchiseId).label), tr(k.line), k.seriesLabel]),
+            // 라인은 표준 이름 · 작품은 반복 머리 없이 · 같은 말은 한 번 (컬렉션 줄과 같게)
+            subtitle: kitMetaLine(k, work: kitWorkName(k, _works)),
             tag: tr(mark(k)),
-            tagStrong: mark(k) == '내 좋아요' && !liked, // 친구가 이미 샀는데 나도 원함 → 겹쳐 사기 주의
+            tagStrong: mark(k) == '내 좋아요' && !liked, // 친구가 이미 샀는데 나도 원함 → 중복 구매 주의
             trailing: KitPriceLines(k),
             onTap: () => openKitDetail(context, k, loaders: widget.loaders),
           ),
@@ -221,15 +238,15 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
             Expanded(
               child: Text(
                 '  ${joinDot([
-                  if (f.verified > 0) trf('인증 {n}개', {'n': f.verified}),
-                  trf('점등 {n}칸 (산 상품 기준)', {'n': f.lit}),
+                  if (f.verified > 0) trf('사진 {n}장', {'n': f.verified}),
+                  trf('켜진 칸 {n}개 (구매함 기준)', {'n': f.lit}),
                 ])}',
                 style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
               ),
             ),
             if (widget.photoKitIds.isNotEmpty)
               Tooltip(
-                // 친구가 보이기로 둔 사진
+                // 친구가 공개한 사진
                 key: const ValueKey('friend-photo-count'),
                 message: tr('사진'),
                 child: Row(
@@ -298,7 +315,7 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
 
 /// L-6 ? 도움말 — 줄 앞 꼬리표 (겹침 표시)
 List<HelpItem> friendCollectionHelp() => [
-  HelpItem.widget(TagPill(tr('나도 있음')), tr('나도 가진 상품')),
+  HelpItem.widget(TagPill(tr('나도 구매함')), tr('내 구매함에도 있는 상품')),
   HelpItem.widget(TagPill(tr('내 좋아요')), tr('내가 좋아요한 상품 (선물 참고)')),
-  HelpItem.widget(TagPill(tr('내 좋아요'), strong: true), tr('친구가 이미 산 내 좋아요 — 겹쳐 사기 주의')),
+  HelpItem.widget(TagPill(tr('내 좋아요'), strong: true), tr('친구가 이미 구매한 내 좋아요 — 중복 구매 주의')),
 ];

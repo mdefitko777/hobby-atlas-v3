@@ -1,4 +1,5 @@
-// 사진 위 표시 — 왼쪽 위 책갈피 리본 = 구매함 · 왼쪽 아래 ♡ = 좋아요 (모든 상품 사진 · 도감 칸). 누르지 않는 칸은 StatusMarks
+// 사진 위 표시 — 왼쪽 위 책갈피 리본 = 구매함 · 왼쪽 아래 ♡ = 좋아요 (태그 칸). 상품 카드(QuickMarks) · 도감 기체 칸은 ♡ 만
+// (구매함은 길게 누르기, 리본은 구매함일 때 ✓ 표시만). 누르지 않는 칸은 StatusMarks
 import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
@@ -7,72 +8,99 @@ import '../models.dart';
 import '../theme.dart';
 import 'icons.dart';
 
-/// 사진 위 표시 (모든 상품 사진 · 도감 칸 공통): 왼쪽 위 책갈피 리본 = 구매함(+ → ✓) · 왼쪽 아래 ♡ = 좋아요
-/// 보이는 크기는 작아도 누르는 자리는 44dp 이상 (P09 접근성)
+/// 사진 위 표시 (도감 칸 · 태그 칸): 왼쪽 위 책갈피 리본 = 구매함(+ → ✓) · 왼쪽 아래 ♡ = 좋아요
+/// 보이는 크기는 작아도 누르는 자리는 44dp 이상 (P09 접근성).
+/// [onOwn] 이 없으면 리본은 누르지 않고 구매함일 때만 ✓ (도감 기체 칸 — 그림 위에는 ♡ 만, 구매함은 칸 길게 누르기)
 class MarkOverlay extends StatelessWidget {
   const MarkOverlay({
     super.key,
     required this.liked,
     required this.owned,
     required this.onLike,
-    required this.onOwn,
+    this.onOwn,
     this.size = 28,
   });
 
   final bool liked;
   final bool owned;
   final VoidCallback onLike;
-  final VoidCallback onOwn;
+  final VoidCallback? onOwn;
   final double size;
 
   @override
   Widget build(BuildContext context) {
     final inset = size * 0.22;
+    final onOwn = this.onOwn;
     return Stack(
       children: [
-        Positioned(
-          left: 0,
-          top: 0,
-          child: Semantics(
-            button: true,
-            selected: owned,
-            label: tr('구매함'),
-            child: GestureDetector(
-              onTap: onOwn,
-              behavior: HitTestBehavior.opaque,
-              child: Container(
-                // 누르는 자리 44 × 52
-                width: 44,
-                height: 52,
-                alignment: Alignment.topLeft,
-                padding: EdgeInsets.only(left: inset + 2),
-                child: _Ribbon(on: owned, size: size),
+        if (onOwn == null && owned)
+          Positioned(
+            left: inset + 2,
+            top: 0,
+            child: IgnorePointer(
+              child: Semantics(
+                label: tr('구매함'),
+                child: _Ribbon(on: true, size: size),
+              ),
+            ),
+          )
+        else if (onOwn != null)
+          Positioned(
+            left: 0,
+            top: 0,
+            child: Semantics(
+              button: true,
+              selected: owned,
+              label: tr('구매함'),
+              child: GestureDetector(
+                onTap: onOwn,
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  // 누르는 자리 44 × 52
+                  width: 44,
+                  height: 52,
+                  alignment: Alignment.topLeft,
+                  padding: EdgeInsets.only(left: inset + 2),
+                  child: _Ribbon(on: owned, size: size),
+                ),
               ),
             ),
           ),
-        ),
-        Positioned(
-          left: 0,
-          bottom: 0,
-          child: Semantics(
-            button: true,
-            selected: liked,
-            label: tr('좋아요'),
-            child: GestureDetector(
-              onTap: onLike,
-              behavior: HitTestBehavior.opaque,
-              child: Container(
-                // 누르는 자리 44 × 44
-                width: 44,
-                height: 44,
-                alignment: Alignment.bottomLeft,
-                padding: EdgeInsets.only(left: inset, bottom: inset),
-                child: _Heart(on: liked, size: size),
-              ),
-            ),
-          ),
-        ),
+        _HeartButton(liked: liked, onLike: onLike, size: size),
       ],
+    );
+  }
+}
+
+/// 사진 왼쪽 아래 ♡ 누르는 칸 (누르는 자리 44 × 44) — [MarkOverlay] · [QuickMarks] 같은 자리 · 모양
+class _HeartButton extends StatelessWidget {
+  const _HeartButton({required this.liked, required this.onLike, required this.size});
+  final bool liked;
+  final VoidCallback onLike;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final inset = size * 0.22;
+    return Positioned(
+      left: 0,
+      bottom: 0,
+      child: Semantics(
+        button: true,
+        selected: liked,
+        label: tr('좋아요'),
+        child: GestureDetector(
+          onTap: onLike,
+          behavior: HitTestBehavior.opaque,
+          child: Container(
+            width: 44,
+            height: 44,
+            alignment: Alignment.bottomLeft,
+            padding: EdgeInsets.only(left: inset, bottom: inset),
+            child: _Heart(on: liked, size: size),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -151,7 +179,8 @@ class _Heart extends StatelessWidget {
   );
 }
 
-/// 상품 카드용 MarkOverlay — 앱 전체 좋아요 · 구매함(Marks)을 보고 바꾼다 (토스트 + 되돌리기)
+/// 상품 카드 사진 위 ♡ — 앱 전체 좋아요(Marks)를 보고 바꾼다 (토스트 + 되돌리기).
+/// 구매함은 사진에 두지 않고 카드를 길게 누른다 ([ProductTile], 2026-11-20 주인: 사진 위에는 ♡ 만)
 class QuickMarks extends StatelessWidget {
   const QuickMarks({super.key, required this.kit, this.size = 28});
   final Kit kit;
@@ -159,13 +188,9 @@ class QuickMarks extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final m = Marks.of(context);
-    return MarkOverlay(
-      liked: m.liked(kit),
-      owned: m.owned(kit),
-      onLike: () => Marks.read(context).toggleLike(context, kit),
-      onOwn: () => Marks.read(context).toggleOwn(context, kit),
-      size: size,
+    final liked = Marks.of(context).liked(kit);
+    return Stack(
+      children: [_HeartButton(liked: liked, onLike: () => Marks.read(context).toggleLike(context, kit), size: size)],
     );
   }
 }

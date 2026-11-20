@@ -94,6 +94,15 @@ class UserStore extends ChangeNotifier with _AtlasLocal, _History, _ProfileLocal
   /// 채널 맞춰 보기 (설정 › 앱): 홈 · 검색 · 캘린더 · 컬렉션이 같은 채널. 끄면 탭마다 따로 — 처음 값은 켜짐
   bool channelSync = true;
 
+  /// 검색 탭 종류 · 세대의 왼쪽 묶음 목록을 펴 둠 (기기에만, 계정에 맞추지 않음) — 처음 값은 펴짐
+  bool browseDirOpen = true;
+
+  /// 도감(G)의 왼쪽 묶음 목록을 펴 둠 — 검색 탭과 따로 (기기에만) · 처음 값은 펴짐
+  bool guideDirOpen = true;
+
+  /// 캘린더 달력을 한 달로 펴 둠 (기기에만) — 처음 값은 오늘이 든 한 주
+  bool calendarMonthOpen = false;
+
   /// 친구 쪽 기기 기록 (아바타 · 배경 · 사진 공개 범위 · 알 수도 있는 친구 닫음 · 서랍 본 시각) — lib/data/social_local.dart
   late final SocialLocal social = SocialLocal(_changed);
 
@@ -173,6 +182,9 @@ class UserStore extends ChangeNotifier with _AtlasLocal, _History, _ProfileLocal
       ..addAll(jList(local['special_friends']).whereType<String>());
     legoScope = local['lego_scope'] == 'all' ? LegoScope.all : LegoScope.recent;
     channelSync = local['channel_sync'] != false;
+    browseDirOpen = local['browse_dir_open'] != false;
+    guideDirOpen = local['guide_dir_open'] != false;
+    calendarMonthOpen = local['calendar_month_open'] == true;
     social.load(local);
     _photos
       ..clear()
@@ -215,6 +227,10 @@ class UserStore extends ChangeNotifier with _AtlasLocal, _History, _ProfileLocal
       // 처음 값(recent)도 늘 적는다 — 빠지면 동기화가 '지움'으로 보고 다른 기기의 '전부'가 되살아난다
       'lego_scope': legoScope.name,
       'channel_sync': channelSync,
+      // 처음 값(펴짐)이면 적지 않는다 — 저장 파일 모양(골든)을 그대로 두려고
+      if (!browseDirOpen) 'browse_dir_open': false,
+      if (!guideDirOpen) 'guide_dir_open': false,
+      if (calendarMonthOpen) 'calendar_month_open': true,
       ...social.toJson(),
       'photos': [for (final p in _photos) p.toJson()],
       'profile_tags': profileTags,
@@ -283,7 +299,7 @@ class UserStore extends ChangeNotifier with _AtlasLocal, _History, _ProfileLocal
   /// 구매가를 안 적은 상품의 값 (Catalog 가 정가 × 환율로 채운다)
   int? Function(String id)? listPrice;
 
-  /// 수량 1–99 (기록이 없으면 1) — 좋아요 = 갖고 싶은 수, 구매함 = 가진 수
+  /// 수량 1–99 (기록이 없으면 1) — 좋아요 = 갖고 싶은 수, 구매함 = 보유 수
   int quantityOf(String kitId) => entryQuantity(_items[kitId]);
 
   /// 구매함 지출 합 (원) — 적어 둔 구매가, 없으면 정가 × 환율 (lib/logic/spend.dart)
@@ -414,6 +430,24 @@ class UserStore extends ChangeNotifier with _AtlasLocal, _History, _ProfileLocal
   void setChannelSync(bool on) {
     if (on == channelSync) return;
     channelSync = on;
+    _changed();
+  }
+
+  void setBrowseDirOpen(bool open) {
+    if (open == browseDirOpen) return;
+    browseDirOpen = open;
+    _changed();
+  }
+
+  void setGuideDirOpen(bool open) {
+    if (open == guideDirOpen) return;
+    guideDirOpen = open;
+    _changed();
+  }
+
+  void setCalendarMonthOpen(bool open) {
+    if (open == calendarMonthOpen) return;
+    calendarMonthOpen = open;
     _changed();
   }
 

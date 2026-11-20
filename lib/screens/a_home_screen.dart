@@ -3,14 +3,14 @@
 // ┌──────── 디자인 가이드 대응표: A 홈 ────────────────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
 // │ A-1  │ ChannelHeader                      │ 아바타 줄 + 내 채널 바 (C-0 공용)       │ P04 · P06     │
-// │ A-2  │ GpSearchBar 입구 (탭하면 검색 탭)   │ 검색창(검색 화면과 같은 모양) · 카메라  │ P07 · P04     │
+// │ A-2  │ GpSearchBar 입구 (탭하면 검색 탭)   │ 검색창(검색 화면과 같은 모양) · 카메라 · 목록 위에 고정(머리가 접혀도 남음) │ P07 · P04 │
 // │ A-3  │ PageView(화면 끝까지) + 점 표시     │ 예고 배너 (공식 먼저 · 모자라면 비공식, 4초마다 다음 장, 끝없이) │ P08 · P02     │
 // │ A-4  │ 배너 아래 AnnTag · 제목             │ 예고 상태(공식 발표·상품화 확정·예약) · 라이브 · 예약 때 · 비공식 │ P01 │
 // │ A-5  │ SectionHeader (색 막대 + ›)         │ 줄 이름 · 전체 보기 → O 전체 목록(홈 안)  │ P06 · P07     │
-// │ A-6  │ 가로 ListView + ProductTile         │ 최근 추가 · 10월 발매 · 공식 예고(비공식이 섞이면 예고) · 최근 본 │ P08 │
+// │ A-6  │ 가로 ListView + ProductTile         │ 새 상품 · 10월 발매 · 공식 예고(비공식이 섞이면 예고) · 최근 본 (사진 + 이름 두 줄) │ P08 │
 // │ A-7  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 빈 채널           │ P01 · P09     │
-// │ A-8  │ 흰 띠(섹션마다) + 회백색 틈          │ 줄과 줄 사이 층 구분                   │ P08 · P04     │
-// │ A-9  │ ProductTile 의 QuickMarks (리본 · ♡)  │ 좋아요 · 구매함 바로 담기 (앱 전체 한 벌)  │ P07 · P04     │
+// │ A-8  │ 흰 띠(섹션마다) + 머리카락 줄        │ 줄과 줄 사이 층 구분                   │ P08 · P04     │
+// │ A-9  │ ProductTile 의 QuickMarks (♡) · 길게 누르기 │ ♡ = 좋아요 · 카드 길게 = 구매함 넣기 · 빼기 (진동 + 되돌리기, 앱 전체 한 벌) │ P07 · P04 │
 // │ A-26 │ 위 줄 ? (S-19, homeHelp)            │ 검색창 줄 아이콘 뜻 한 줄씩              │ P10           │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: A-2 → 검색 탭(옆으로). › → 같은 탭 안에서 O 전체 목록(위쪽 머리 · 검색창은 그대로, 뒤로 = 홈). 상품 카드 → D 상품 상세(쌓기). 배너 · 예고 카드 → J 공식 예고 상세(쌓기).
@@ -47,7 +47,7 @@ List<String> get recentViewedIds => UserStore.instance.recentViewed;
 /// 이번 달 발매 줄 제목
 String get currentMonthTitle => trf('{m}월 발매', {'m': appNow().month});
 
-/// "최근 추가" 기간 = 데이터에 가장 늦게 들어온 날 기준 3일 (Gunpula 갱신이 멈추면 그 날짜에 머문다)
+/// "새 상품" 기간 = 데이터에 가장 늦게 들어온 날 기준 3일 (Gunpula 갱신이 멈추면 그 날짜에 머문다)
 String get recentRangeLabel {
   final c = Catalog.instance;
   if (c.recentSince.isEmpty) return tr('최근 3일');
@@ -95,7 +95,7 @@ class _HomeData {
   final List<Announcement> announcements;
 }
 
-/// 가로 줄 한 칸 (사진 + 이름). [kit]이 있으면 상품(상세 · 좋아요 담기), 없으면 공식 예고
+/// 가로 줄 한 칸 (사진 + 이름). [kit]이 있으면 상품(상세 · ♡ · 길게 = 구매함), 없으면 공식 예고
 class _Item {
   const _Item(this.image, this.title, {this.kit, this.ann});
   final String image;
@@ -106,10 +106,10 @@ class _Item {
 
 /// 전체 목록 제목 — 예고 줄은 비공식 소식이 섞였으면 「예고」, 공식뿐이면 「공식 예고」 ([anns] = 지금 채널의 예고)
 String _titleOf(HomeSection s, List<Announcement> anns) => switch (s) {
-  HomeSection.recent => tr('최근 추가'),
+  HomeSection.recent => tr('새 상품'),
   HomeSection.month => currentMonthTitle,
   HomeSection.announcements => tr(annSectionTitle(anns)),
-  HomeSection.viewed => tr('최근 본'),
+  HomeSection.viewed => tr('최근 본 상품'),
 };
 
 /// 가로 줄 하나
@@ -158,7 +158,7 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
   /// 전체 목록의 필터 · 격자/목록 (위 검색창 줄 아이콘이 바꾼다)
   var _listTools = ListTools();
 
-  /// 홈 가로 줄(최근 추가 · 이번 달 · 최근 본) 필터 — 검색창 줄의 필터 아이콘
+  /// 홈 가로 줄(새 상품 · 이번 달 · 최근 본) 필터 — 검색창 줄의 필터 아이콘
   KitFilter _homeFilter = KitFilter();
 
   void _openSection(HomeSection s) => setState(() {
@@ -326,23 +326,25 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
     final ids = scopeIds;
     if (data.kits.isEmpty && data.announcements.isEmpty) {
       final noData = ids.isNotEmpty && ids.every((id) => !channelOf(id).hasData);
-      return ListView(
-        children: [
-          search,
-          EmptyView(
-            // A-7 P09
-            icon: Icons.auto_awesome_outlined,
-            message: ids.isEmpty
-                ? tr('내 채널이 비어 있어요')
-                : noData
-                ? trf('{channel}은(는) 아직 수록된 상품이 없어요', {'channel': tr(channelOf(ids.first).label)})
-                : tr('새 소식이 없어요'),
-            detail: ids.isEmpty ? tr('채널 관리에서 관심 IP를 추가하세요') : tr('상품이 들어오면 여기에 먼저 보여요'),
-            action: channel == allChannelId
-                ? null
-                : OutlinedButton(onPressed: () => selectChannel(allChannelId), child: Text(tr('전체 보기'))),
-          ),
-        ],
+      return _pinned(
+        search,
+        ListView(
+          children: [
+            EmptyView(
+              // A-7 P09
+              icon: Icons.auto_awesome_outlined,
+              message: ids.isEmpty
+                  ? tr('내 채널이 비어 있어요')
+                  : noData
+                  ? trf('{channel} 상품이 아직 없어요', {'channel': tr(channelOf(ids.first).label)})
+                  : tr('새 소식이 없어요'),
+              detail: ids.isEmpty ? tr('채널 관리에서 채널을 추가해 보세요') : tr('상품이 들어오면 여기에 먼저 보여요'),
+              action: channel == allChannelId
+                  ? null
+                  : OutlinedButton(onPressed: () => selectChannel(allChannelId), child: Text(tr('전체 보기'))),
+            ),
+          ],
+        ),
       );
     }
 
@@ -350,35 +352,30 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
 
     // O 전체 목록 (홈 위쪽은 그대로, 아래만 바뀜)
     if (_section case final sec?) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          search,
-          Expanded(
-            child: SectionListView(
-              key: ValueKey(sec),
-              title: _titleOf(sec, data.announcements),
-              subtitle: joinDot([
-                if (channel != allChannelId) tr(channelOf(channel).label),
-                if (sec == HomeSection.recent) recentRangeLabel,
-              ]),
-              kits: lists[sec] ?? const [],
-              announcements: sec == HomeSection.announcements ? data.announcements : null,
-              history: sec == HomeSection.viewed,
-              sort: sec == HomeSection.month ? KitSort.release : KitSort.newest,
-              query: _query,
-              tools: _listTools,
-              onBack: _closeSection,
-              loaders: widget.loaders,
-            ),
-          ),
-        ],
+      return _pinned(
+        search,
+        SectionListView(
+          key: ValueKey(sec),
+          title: _titleOf(sec, data.announcements),
+          subtitle: joinDot([
+            if (channel != allChannelId) tr(channelOf(channel).label),
+            if (sec == HomeSection.recent) recentRangeLabel,
+          ]),
+          kits: lists[sec] ?? const [],
+          announcements: sec == HomeSection.announcements ? data.announcements : null,
+          history: sec == HomeSection.viewed,
+          sort: sec == HomeSection.month ? KitSort.release : KitSort.newest,
+          query: _query,
+          tools: _listTools,
+          onBack: _closeSection,
+          loaders: widget.loaders,
+        ),
       );
     }
 
     final rows = [
       _Row(
-        tr('최근 추가'),
+        tr('새 상품'),
         [for (final k in recent) kitItem(k)],
         subtitle: joinDot([
           recentRangeLabel,
@@ -394,57 +391,68 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
         wide: true,
         onMore: () => _openSection(HomeSection.announcements),
       ),
-      _Row(tr('최근 본'), [for (final k in viewed) kitItem(k)], onMore: () => _openSection(HomeSection.viewed)),
+      _Row(tr('최근 본 상품'), [for (final k in viewed) kitItem(k)], onMore: () => _openSection(HomeSection.viewed)),
     ];
     final heroes = annHeroes(data.announcements); // 공식 먼저, 채운 비공식은 뒤
 
     // 당겨서 새로 고침 = Gunpula 새 데이터 확인 (바뀌면 앱 셸이 화면을 다시 불러온다)
-    return RefreshIndicator(
-      onRefresh: () async {
-        final changed = await Catalog.instance.refresh();
-        if (!changed && mounted) setState(reloadScope);
-      },
-      child: ListView(
-        padding: EdgeInsets.only(bottom: navClearance(context)),
-        children: [
-          search,
-          if (_mine)
-            MyPageView(
-              // A-20~25
-              loaders: widget.loaders,
-              onJump: widget.onJump,
-              query: _mineFind.query,
-              filter: _mineFind.filter,
-            ),
-          if (!_mine && heroes.isNotEmpty)
-            _HeroBanner(
-              // A-3 떠 있는 카드
-              items: heroes,
-              onTap: (a) => openAnnouncement(context, a, loaders: widget.loaders, list: heroes),
-            ),
-          if (!_mine)
-            for (final row in rows)
-              if (row.items.isNotEmpty)
-                SectionPanel(
-                  // A-8 흰 띠 + 회백색 틈 = 층 구분 (상세와 같은 부품)
-                  padding: const EdgeInsets.only(bottom: 18),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SectionHeader(
-                        // A-5 P06
-                        row.title,
-                        subtitle: row.subtitle,
-                        onMore: row.onMore, // → O 전체 목록
-                      ),
-                      _HorizontalRow(row: row, loaders: widget.loaders), // A-6 P08
-                    ],
+    return _pinned(
+      search,
+      RefreshIndicator(
+        onRefresh: () async {
+          final changed = await Catalog.instance.refresh();
+          if (!changed && mounted) setState(reloadScope);
+        },
+        child: ListView(
+          padding: EdgeInsets.only(bottom: navClearance(context)),
+          children: [
+            if (_mine)
+              MyPageView(
+                // A-20~25
+                loaders: widget.loaders,
+                onJump: widget.onJump,
+                query: _mineFind.query,
+                filter: _mineFind.filter,
+              ),
+            if (!_mine && heroes.isNotEmpty)
+              _HeroBanner(
+                // A-3 떠 있는 카드
+                items: heroes,
+                onTap: (a) => openAnnouncement(context, a, loaders: widget.loaders, list: heroes),
+              ),
+            if (!_mine)
+              for (final row in rows)
+                if (row.items.isNotEmpty)
+                  SectionPanel(
+                    // A-8 흰 띠 + 머리카락 줄 = 층 구분 (상세와 같은 부품)
+                    padding: const EdgeInsets.only(bottom: 18),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SectionHeader(
+                          // A-5 P06
+                          row.title,
+                          subtitle: row.subtitle,
+                          onMore: row.onMore, // → O 전체 목록
+                        ),
+                        _HorizontalRow(row: row, loaders: widget.loaders), // A-6 P08
+                      ],
+                    ),
                   ),
-                ),
-        ],
+          ],
+        ),
       ),
     );
   }
+
+  /// A-2 검색창 줄은 목록 밖 위에 고정 — 내려 읽으면 위 줄 · 채널 바만 접히고(S-13) 검색창 줄은 남는다 (네 탭 같게)
+  Widget _pinned(Widget search, Widget list) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      search,
+      Expanded(child: list),
+    ],
+  );
 }
 
 /// A-3 예고 배너 — 화면 끝까지 꽉 찬 16:9 사진, 아래에 상태와 제목.
@@ -567,7 +575,7 @@ class _HeroBannerState extends State<_HeroBanner> {
   }
 }
 
-/// A-6 가로 스크롤 줄 — ProductTile (사진 + 이름 한 줄, 날짜·가격 없음)
+/// A-6 가로 스크롤 줄 — ProductTile (사진 + 이름 두 줄, 날짜·가격 없음)
 class _HorizontalRow extends StatelessWidget {
   const _HorizontalRow({required this.row, required this.loaders});
   final _Row row;
@@ -583,7 +591,7 @@ class _HorizontalRow extends StatelessWidget {
     // 화면 밖 몇 칸도 미리 받아 둔다 — 옆으로 밀거나 「전체 보기」를 열면 바로 보이게
     prefetchImages(context, [for (final it in row.items.take(12)) it.image], size: width);
     return SizedBox(
-      height: width / aspect + 32,
+      height: productTileHeight(context, width, imageAspect: aspect), // 이름 두 줄 (글자 크기 설정을 따른다)
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: Gp.gutter),
@@ -599,6 +607,7 @@ class _HorizontalRow extends StatelessWidget {
             imageWidth: width,
             imageAspect: aspect,
             id: kit?.id ?? item.ann?.id,
+            kit: kit, // 길게 = 구매함 넣기 · 빼기 (공식 예고 카드는 없음)
             onTap: () {
               if (kit != null) {
                 openKitDetail(context, kit, loaders: loaders, list: [for (final it in row.items) ?it.kit]);
@@ -606,7 +615,7 @@ class _HorizontalRow extends StatelessWidget {
                 openAnnouncement(context, ann, loaders: loaders, list: [for (final it in row.items) ?it.ann]);
               }
             },
-            // A-9 P07 상품 = 리본 · ♡ / 라이브 예고 · 아직 안 열린 예약 = 사진 귀퉁이에 때 / 비공식 소식 = 「비공식」
+            // A-9 P07 상품 = ♡ / 라이브 예고 · 아직 안 열린 예약 = 사진 귀퉁이에 때 / 비공식 소식 = 「비공식」
             // (보통 예고는 사진 + 이름만)
             marks: kit != null
                 ? QuickMarks(kit: kit)
@@ -628,6 +637,7 @@ class _HorizontalRow extends StatelessWidget {
 List<HelpItem> get homeHelp => [
   HelpItem(Icons.photo_camera_outlined, tr('찍어서 찾기')),
   HelpItem(Icons.tune, tr('필터')),
+  HelpItem(Icons.touch_app_outlined, tr('상품 카드 길게 = 구매함에 넣기 · 빼기')),
   HelpItem(Icons.newspaper_outlined, tr('전체 소식')),
   HelpItem(Icons.person_outline, tr('My Page (내 것 · ★ 친구)')),
   HelpItem(Icons.ios_share, tr('공유 카드 (My Page 숫자 줄 끝)')),

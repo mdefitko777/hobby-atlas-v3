@@ -7,7 +7,7 @@
 // │ D-2b │ 사진 누르기 → openImageViewer       │ 크게 보기 (확대 · 넘기기)               │ P02 · P08     │
 // │ D-2c │ SoftTag "참고 그림 · 같은 기체"       │ 공식 사진이 없는 상품 — 같은 기체 상품 사진  │ P02 · P09     │
 // │ D-2d │ BrokenImages.keep                  │ 열리지 않는 사진은 빼기 (장 · 점 함께)    │ P09           │
-// │ D-4  │ 제목 + 일본어 원래 이름              │ 상품명 (공식 사이트 검색용 원문)        │ P02           │
+// │ D-4  │ 제목 (일본어 이름은 공식 정보 시트) │ 상품명 (공식 사이트 검색용 원문)        │ P02           │
 // │ D-5  │ Text(₩ · ¥) + 발매일 + 한정 표시     │ 한국 · 일본 정가 · 발매 · 한정/PB        │ P02 · P01     │
 // │ D-5i │ 둘째 정가 줄 + ↗ (짝 상품만)          │ 같은 바코드의 다른 나라 정가 · 각 가게 페이지 │ P02 · P10   │
 // │ D-5a │ Wrap(ChipButton …) 정가 아래 한 줄   │ 아직 적은 것이 없는 줄 대신 작은 버튼: 시세 찾아보기 · 예약 적기 · 구매가 적기 │ P08 · P07 │
@@ -15,14 +15,13 @@
 // │ D-5c │ 구매함: 적었으면 "내 구매가" 줄, 아니면 칩 → 입력 시트 │ 내가 낸 돈 기록 (한 개 값 · 동기화 · 정가 ≈ 어림은 시트 안) │ P01 · P03 │
 // │ D-5d │ KitPhotoStrip (T-8)                │ 구매함이면 이 상품의 내 사진 + 넣기       │ P07           │
 // │ D-5e │ 리본 · ♡ 아이콘 + @아이디              │ 이 상품을 가진 · 좋아요한 친구 (선물 · 겹침) │ P01 · P07   │
-// │ D-5f │ BuildStatusRow (단계 3칸 + 붓)        │ 조립 상태: 미조립 · 조립 중 · 완성 + 도색 (구매함) │ P01 · P03 │
 // │ D-5g │ 적었으면 PreorderRow, 아니면 칩 → 예약 시트 · 📥 도착 │ 예약: 가게 · 낸 돈 · 결제 · 도착 예정 → 구매함으로 │ P01 · P03 │
 // │ D-5h │ SoftTag 재판매 + 재판매 줄(날짜 · ↗)  │ 재판매(再販) 소식 (restocks.json, 없으면 숨김) │ P01 · P10   │
-// │ D-6  │ 하단 고정 바: ♡ 좋아요 · 리본 구매함   │ 좋아요 · 구매함 (따로 켜고 끔, 앱 전체 한 벌) │ P03 · P04 │
-// │ D-7  │ − n + (1–99)                       │ 수량: 좋아요 = 갖고 싶은 수 · 구매함 = 가진 수 │ P03 · P01 │
+// │ D-6  │ 하단 고정 바: ♡ 좋아요 · 리본 구매함 ×n │ 좋아요 · 구매함 (따로 켜고 끔, 앱 전체 한 벌) · 켜진 쪽에 수량 │ P03 · P04 │
+// │ D-7  │ 버튼 길게 → − n + 시트 · n>1 이면 같은 줄 │ 수량 (1–99): 좋아요 = 갖고 싶은 수 · 구매함 = 보유 수 │ P03 · P01 │
 // │ D-8  │ 가로 스크롤 요약 줄 → 바텀 시트       │ 공식 정보 (요약 → 전체 표)              │ P08 · P06     │
 // │ D-9  │ 시세 시트: 모은 시세 없음 · 플랫폼 3칸 │ 국내 시세 찾아보기 (Gunpula 에 시세 없음) │ P01 · P08   │
-// │ D-10 │ 가로 ProductTile                   │ 같은 작품의 다른 상품                   │ P06           │
+// │ D-10 │ 가로 ProductTile (이름 두 줄)        │ 같은 작품의 다른 상품                   │ P06           │
 // │ D-11 │ 세로 사진 목록                      │ 상품 상세 (공식 사진 전부)              │ P02           │
 // │ D-12 │ TextButton → reportDataIssue 시트   │ 정보 오류 제보 → GitHub 이슈(미리 채움)  │ P05 · P09     │
 // │ D-13 │ LayoutBuilder ≥720dp                │ 넓은 화면: 사진 왼쪽 · 정보 오른쪽      │ 적응형        │
@@ -41,7 +40,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../api.dart';
-import '../logic/build_status.dart' show needsAssembly;
+import '../logic/data_labels.dart';
 import '../logic/friends.dart';
 import '../logic/kit_link.dart';
 import '../logic/kit_rules.dart' show kitPrice, kitWorkTitle, shopUrl;
@@ -245,7 +244,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
 
   void _copy(String text, String what) {
     Clipboard.setData(ClipboardData(text: text));
-    showToast(context, trf('{what}을(를) 복사했어요', {'what': what}));
+    showToast(context, trf('{what} 복사했어요', {'what': what}));
   }
 
   /// 공식 상품 페이지 · 국내 시세 검색을 브라우저로. [url] 을 주면 그 주소 (짝 상품의 다른 나라 가게)
@@ -258,7 +257,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
       return;
     }
     final ok = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-    if (!ok && mounted) showToast(context, trf('{where}을(를) 열지 못했어요', {'where': tr(where)}));
+    if (!ok && mounted) showToast(context, trf('{where} 열지 못했어요', {'where': tr(where)}));
   }
 
   /// D-5 · D-5i 정가 줄 — 그 나라 돈 그대로 (₩ 한국 · ¥ 일본, 환산하지 않음). 상품 나라의 정가가 먼저 크게.
@@ -293,18 +292,29 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
   /// D-7 수량 (좋아요 · 구매함일 때) — 한 번 누를 때마다 저장 (동기화 · 컬렉션 합계)
   void _setQty(int q) => Marks.read(context).store.setQuantity(k.id, q); // STATE: 수량 (UserStore → Marks 다시 그림)
 
+  /// D-7 아래 버튼 길게 누르기 → 수량 시트. 늘 보이던 수량 줄은 거의 1 이라 빼고(2026-11-20), 2 개 이상일 때만 화면에 둔다
+  void _openQty() {
+    Feedback.forLongPress(context);
+    showGpSheet<void>(
+      context,
+      builder: (_) => _QtySheet(kitId: k.id, owned: _owned, onChanged: _setQty),
+    );
+  }
+
   /// 공식 정보 (요약 줄과 바텀 시트가 같은 목록을 쓴다)
   List<(String, String)> get _specs => [
     (tr('판매'), k.pb ? tr('PB 한정') : (k.limited ? tr('한정') : tr('일반 판매'))),
-    (tr('분류'), tr(channelOf(k.franchiseId).label)),
+    (tr('채널'), tr(channelOf(k.franchiseId).label)),
     (tr(kitWorkTitle([k])), k.seriesLabel),
-    (tr('제품 라인'), tr(k.line)),
-    (tr('상품 유형'), tr(k.type)),
+    (tr('라인'), dataLabel(k.line)),
+    (tr('종류'), dataLabel(k.type)),
     (tr('스케일'), k.scale),
     (tr('발매'), dateDot(k.date)),
     (tr('정가'), kitPrice(k)),
     (tr('브랜드'), k.brands.map(tr).join(' · ')),
-    if (k.pbOpens.isNotEmpty || k.pbCloses.isNotEmpty) (tr('PB 예약'), '${dateDot(k.pbOpens)} – ${dateDot(k.pbCloses)}'),
+    if (k.pbOpens.isNotEmpty || k.pbCloses.isNotEmpty)
+      (tr('PB 예약 기간'), '${dateDot(k.pbOpens)} – ${dateDot(k.pbCloses)}'),
+    (tr('일본어 이름'), k.nameJa), // 제목 아래 줄 대신 여기 (복사 · 시세 찾기는 그대로 nameJa)
     (tr('바코드'), k.jan),
   ].where((e) => e.$2.isNotEmpty).toList();
 
@@ -323,11 +333,13 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       bottomNavigationBar: _BottomActions(
-        // D-6 · D-14
+        // D-6 · D-7 · D-14
         wanted: _wanted,
         owned: _owned,
+        qty: Marks.of(context).store.quantityOf(k.id),
         onWanted: _toggleWanted,
         onOwned: _toggleOwned,
+        onQty: _openQty,
         onCopy: () => _copy(k.name, tr('상품명')),
         onOfficial: () => _external('공식 상품 페이지'),
       ),
@@ -335,7 +347,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
         builder: (context, box) {
           final wide = box.maxWidth >= detailWideBreakpoint; // D-13
           // D-2 · D-2b · D-2c · D-2d (예고 상품 소개 J-8 과 같은 사진 넘기기)
-          final gallery = ImagePager(images: _images, label: tr(k.line), reference: k.imageRef);
+          final gallery = ImagePager(images: _images, label: dataLabel(k.line), reference: k.imageRef);
           final info = _info(context);
           return Stack(
             children: [
@@ -437,6 +449,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
 
   List<Widget> _info(BuildContext context) {
     final hasPreorder = Marks.of(context).store.preorderOf(k.id) != null;
+    final qty = Marks.of(context).store.quantityOf(k.id);
     final prices = _priceLines;
     return [
       // 기본 정보: 이름 → 정가 → 시세 한 줄
@@ -448,13 +461,6 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
               k.name, // D-4 P02
               style: const TextStyle(fontSize: Gp.t19, fontWeight: FontWeight.w600, height: 1.3),
             ),
-            if (k.nameJa.isNotEmpty && k.nameJa != k.name) ...[
-              const SizedBox(height: 3),
-              Text(
-                k.nameJa,
-                style: const TextStyle(fontSize: Gp.t12, color: Gp.faint),
-              ),
-            ],
             const SizedBox(height: 14),
             // 정가 = ₩ · ¥ 기호, 내 구매가 · 시세 = "…원" (섞여 보여도 무엇인지 알게)
             Text(
@@ -535,14 +541,10 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
                   ),
               ],
             ),
-            if (_owned || _wanted) ...[
+            // D-7 1 개면 아래 버튼의 ×1 로 충분 — 2 개 이상일 때만 줄로 (길게 누르기를 몰라도 고칠 수 있게)
+            if ((_owned || _wanted) && qty > 1) ...[
               const SizedBox(height: 8),
-              _QtyRow(
-                // D-7
-                owned: _owned,
-                qty: Marks.of(context).store.quantityOf(k.id),
-                onChanged: _setQty,
-              ),
+              _QtyRow(owned: _owned, qty: qty, onChanged: _setQty),
             ],
             if (!_owned && hasPreorder) ...[
               const SizedBox(height: 8),
@@ -586,11 +588,8 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
                   ),
                 ),
               ],
+              // 조립 상태 줄은 뺐다 (2026-11-20 주인 결정) — 적어 둔 기록(build_status)은 지우지 않고 그대로 둔다
               const SizedBox(height: 8),
-              if (needsAssembly(widget.kit)) ...[
-                BuildStatusRow(kitId: widget.kit.id), // D-5f 조립 상태 (조립하는 상품만)
-                const SizedBox(height: 8),
-              ],
               KitPhotoStrip(kitId: widget.kit.id), // D-5d 내 사진 (사진 벽에도)
             ],
             _FriendsWithKit(kitId: widget.kit.id), // D-5e 이 상품을 가진 · 좋아요한 친구
@@ -630,7 +629,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
               children: [
                 SectionHeader(same.isNotEmpty ? tr('같은 작품의 다른 상품') : tr('같은 채널의 다른 상품')), // D-10 P06
                 SizedBox(
-                  height: 148 + 32,
+                  height: productTileHeight(context, 148), // 사진 + 이름 두 줄
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(horizontal: Gp.gutter),
@@ -662,7 +661,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(Gp.radius),
-                  child: AppImage(img, fit: BoxFit.fitWidth, placeholder: tr(k.line)),
+                  child: AppImage(img, fit: BoxFit.fitWidth, placeholder: dataLabel(k.line)),
                 ),
               ),
           ],
@@ -773,7 +772,7 @@ class _SpecSheet extends StatelessWidget {
               ),
             ),
             DecoratedBox(
-              decoration: BoxDecoration(color: Gp.bg, borderRadius: BorderRadius.circular(Gp.radius)),
+              decoration: BoxDecoration(color: Gp.soft, borderRadius: BorderRadius.circular(Gp.radius)),
               child: Column(
                 children: [
                   for (var r = 0; r < top.length; r += 2)
@@ -870,10 +869,9 @@ class _MarketCard extends StatelessWidget {
   }
 }
 
-/// D-7 수량 줄: 아이콘(♡ · 리본) + − n + (1–99)
-class _QtyRow extends StatelessWidget {
-  const _QtyRow({required this.owned, required this.qty, required this.onChanged});
-  final bool owned;
+/// D-7 − n + (1–99) — 화면 줄과 길게 누르기 시트가 같이 쓴다
+class _QtyStepper extends StatelessWidget {
+  const _QtyStepper({required this.qty, required this.onChanged});
   final int qty;
   final ValueChanged<int> onChanged;
 
@@ -885,7 +883,36 @@ class _QtyRow extends StatelessWidget {
       onPressed: to < 1 || to > 99 ? null : () => onChanged(to),
       icon: Icon(icon, size: Gp.iM),
     );
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        step(Icons.remove, tr('하나 빼기'), qty - 1),
+        SizedBox(
+          width: 28,
+          child: Text(
+            '$qty',
+            key: const ValueKey('kit-qty'),
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w600),
+          ),
+        ),
+        step(Icons.add, tr('하나 더'), qty + 1),
+      ],
+    );
+  }
+}
+
+/// D-7 수량 줄 (2 개 이상일 때만): 보유 수 · 갖고 싶은 수 + − n +
+class _QtyRow extends StatelessWidget {
+  const _QtyRow({required this.owned, required this.qty, required this.onChanged});
+  final bool owned;
+  final int qty;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
+      key: const ValueKey('qty-row'),
       padding: const EdgeInsets.fromLTRB(12, 2, 4, 2),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(Gp.radius),
@@ -894,42 +921,59 @@ class _QtyRow extends StatelessWidget {
       child: Row(
         children: [
           Text(
-            owned ? tr('가진 수') : tr('갖고 싶은 수'),
+            owned ? tr('보유 수') : tr('갖고 싶은 수'),
             style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
           ),
           const Spacer(),
-          step(Icons.remove, tr('하나 빼기'), qty - 1),
-          SizedBox(
-            width: 28,
-            child: Text(
-              '$qty',
-              key: const ValueKey('kit-qty'),
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w600),
-            ),
-          ),
-          step(Icons.add, tr('하나 더'), qty + 1),
+          _QtyStepper(qty: qty, onChanged: onChanged),
         ],
       ),
     );
   }
 }
 
-/// D-6 · D-14 하단 고정 바 — 왼쪽: 복사 · 공식 / 오른쪽: 좋아요 · 구매함
+/// D-7 수량 시트 (아래 버튼 길게 누르기) — 누를 때마다 시트 안 숫자도 바뀌게 Marks 를 직접 읽는다
+class _QtySheet extends StatelessWidget {
+  const _QtySheet({required this.kitId, required this.owned, required this.onChanged});
+  final String kitId;
+  final bool owned;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) => SafeArea(
+    child: Padding(
+      key: const ValueKey('qty-sheet'),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SectionHeader(owned ? tr('보유 수') : tr('갖고 싶은 수'), padding: const EdgeInsets.fromLTRB(0, 0, 0, 8)),
+          _QtyStepper(qty: Marks.of(context).store.quantityOf(kitId), onChanged: onChanged),
+        ],
+      ),
+    ),
+  );
+}
+
+/// D-6 · D-7 · D-14 하단 고정 바 — 왼쪽: 복사 · 공식 / 오른쪽: 좋아요 · 구매함 (켜진 쪽 ×n, 길게 누르면 수량)
 class _BottomActions extends StatelessWidget {
   const _BottomActions({
     required this.wanted,
     required this.owned,
+    required this.qty,
     required this.onWanted,
     required this.onOwned,
+    required this.onQty,
     required this.onCopy,
     required this.onOfficial,
   });
 
   final bool wanted;
   final bool owned;
+  final int qty;
   final VoidCallback onWanted;
   final VoidCallback onOwned;
+  final VoidCallback onQty;
   final VoidCallback onCopy;
   final VoidCallback onOfficial;
 
@@ -969,25 +1013,36 @@ class _BottomActions extends StatelessWidget {
                 small(Icons.content_copy_rounded, tr('복사'), onCopy), // P07
                 small(Icons.north_east, tr('공식'), onOfficial), // P10 출처
                 const SizedBox(width: 6),
+                // 켜진 쪽만 길게 누르기 — 꺼진 쪽은 수량이 없다 (한 상품에 상태는 하나).
+                // 꺼진 쪽도 빈 길게 누르기를 둔다: 없으면 길게 눌렀다 뗀 것이 누르기로 잡혀 상태가 바뀐다
                 Expanded(
-                  child: TogglePill(
-                    // P03
-                    label: tr('좋아요'),
-                    icon: Icons.favorite_border,
-                    activeIcon: Icons.favorite,
-                    active: wanted,
-                    onTap: onWanted,
+                  child: GestureDetector(
+                    key: const ValueKey('detail-like'),
+                    onLongPress: wanted ? onQty : () {},
+                    child: TogglePill(
+                      // P03
+                      label: wanted ? trf('좋아요 ×{n}', {'n': qty}) : tr('좋아요'),
+                      icon: Icons.favorite_border,
+                      activeIcon: Icons.favorite,
+                      active: wanted,
+                      onTap: onWanted,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: TogglePill(
-                    label: tr('구매함'),
-                    icon: Icons.bookmark_add_outlined, // 리본 + = 구매함 (상품 사진 위 리본과 같은 모양)
-                    activeIcon: Icons.bookmark_added,
-                    color: Gp.own,
-                    active: owned,
-                    onTap: onOwned,
+                  child: GestureDetector(
+                    key: const ValueKey('detail-own'),
+                    onLongPress: owned ? onQty : () {},
+                    child: TogglePill(
+                      // ×1 도 붙인다 — 길게 눌러 바꿀 수 있는 수라는 표시
+                      label: owned ? trf('구매함 ×{n}', {'n': qty}) : tr('구매함'),
+                      icon: Icons.bookmark_add_outlined, // 리본 + = 구매함 (도감 칸 리본과 같은 모양)
+                      activeIcon: Icons.bookmark_added,
+                      color: Gp.own,
+                      active: owned,
+                      onTap: onOwned,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 6),
@@ -1024,7 +1079,7 @@ class _RestockList extends StatelessWidget {
                   Icon(restockIcon, size: Gp.iS, color: e.quiet ? Gp.faint : Gp.resale),
                   const SizedBox(width: 8),
                   Text(
-                    e.dateEstimated ? trf('{date} 쯤', {'date': dateDot(e.date)}) : dateDot(e.date),
+                    e.dateEstimated ? trf('{date}쯤', {'date': dateDot(e.date)}) : dateDot(e.date),
                     style: TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w600, color: e.quiet ? Gp.faint : Gp.ink),
                   ),
                   const SizedBox(width: 8),
@@ -1079,7 +1134,7 @@ class _FriendsWithKit extends StatelessWidget {
         children: [
           if (f.owned.isNotEmpty)
             Tooltip(
-              message: tr('갖고 있는 친구'),
+              message: tr('구매함에 있는 친구'),
               child: line(const OwnedIcon(size: Gp.iS, filled: true), f.owned),
             ),
           if (f.liked.isNotEmpty)
@@ -1172,8 +1227,8 @@ class _ManualLink extends StatelessWidget {
 /// D-15 ? 도움말 — 열 때마다 만든다 (고른 언어를 따라가게)
 List<HelpItem> get detailHelp => [
   HelpItem(Icons.favorite_border, tr('좋아요 (갖고 싶은 것)')),
-  HelpItem(Icons.bookmark_add_outlined, tr('구매함 (가진 것)'), color: Gp.own),
-  HelpItem(Icons.add, tr('수량 (좋아요 = 갖고 싶은 수 · 구매함 = 가진 수)')),
+  HelpItem(Icons.bookmark_add_outlined, tr('구매함'), color: Gp.own),
+  HelpItem(Icons.add, tr('길게 누르면 수량 (좋아요 = 갖고 싶은 수 · 구매함 = 보유 수)')),
   HelpItem(Icons.content_copy_rounded, tr('상품명 복사')),
   HelpItem(Icons.share_outlined, tr('이 상품 보내기 (받은 사람이 앱에서 바로 열기)')),
   HelpItem(Icons.north_east, tr('공식 상품 페이지')),

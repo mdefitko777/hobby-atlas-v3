@@ -4,7 +4,7 @@
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
 // │ K-0  │ ListTile × 3 (로그인 · 상태 · 로그아웃) │ 계정 · 동기화 (옛 Gunpula 와 같은 계정)   │ P01 · P05 · P10 │
 // │ K-3  │ ListTile(요약 · ›) → 알림(쌓기)      │ 알림: 켜짐 · 규칙 n개 / 꺼짐 (k_notify_settings.dart) │ P01 · P07 │
-// │ K-2  │ ListTile → 고르는 시트              │ 언어: 한국어(기본) · 中文                │ P04 · P10     │
+// │ K-2  │ ListTile → 고르는 시트              │ 언어: 한국어(기본) · 中文（简体）          │ P04 · P10     │
 // │ K-2b │ SwitchListTile                     │ 채널 맞춰 보기: 홈 · 검색 · 캘린더 · 컬렉션이 같은 채널(기본 켜짐) │ P04 │
 // │ K-4  │ ListTile                           │ 상품 데이터 기준일 · 지금 새로 받기 · 버전 │ P10           │
 // │ K-4b │ ListTile → 고르는 시트              │ 미리 받기: 와이파이만 · 모바일 데이터도(기본) — 새 소식 사진 │ P07 · P10 │
@@ -12,7 +12,7 @@
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 앱 셸 ⚙ → 쌓기(push, 오른쪽에서). 알림 · 도움말 → 쌓기.
 // 레고 범위는 검색 탭 레고 채널로 옮겼다 (2026-11-12, 레고 설정은 레고에서).
-// 언어: 한국어(기본) · 中文. 중국어면 화면 글(lib/l10n) · 상품 이름(Gunpula names.zh) · 공지 번역(ML Kit 일→중) · 알림이 중국어.
+// 언어: 한국어(기본) · 中文. 중국어면 화면 글(lib/l10n) · 상품 이름(Gunpula names.zh) · 예고 번역(ML Kit 일→중) · 알림이 중국어.
 // 기기마다 따로 고른다 (lang.json, 계정에 맞추지 않음).
 // 로그인 → P 로그인 화면(쌓기). 로그아웃 → 확인 대화상자(덮기).
 
@@ -87,7 +87,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final c = Catalog.instance;
     showToast(
       context,
-      changed ? trf('새로 받았어요 · {n}개', {'n': c.kits.length}) : (c.error.isEmpty ? tr('이미 최신이에요') : c.error),
+      changed ? trf('새로 받았어요 · {n}개', {'n': c.kits.length}) : (c.error.isEmpty ? tr('이미 최신이에요') : tr(c.error)),
     );
   }
 
@@ -171,7 +171,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ListTile(
               leading: const Icon(Icons.login),
               title: Text(tr('로그인')),
-              subtitle: Text(tr('옛 앱과 같은 메일로')),
+              subtitle: Text(tr('옛 앱과 같은 이메일로')),
               trailing: const Icon(Icons.chevron_right, color: Gp.faint),
               onTap: () => openSignIn(context),
             )
@@ -282,8 +282,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   key: const Key('settings-language'),
                   leading: const Icon(Icons.language),
                   title: Text(tr('언어')),
-                  subtitle: Text(tr('화면 · 상품 이름 · 공지 번역 · 알림')),
-                  trailing: Text(L10n.isZh ? '中文' : '한국어', style: const TextStyle(color: Gp.muted)),
+                  subtitle: Text(tr('화면 · 상품 이름 · 예고 번역 · 알림')),
+                  trailing: Text(L10n.isZh ? '中文（简体）' : '한국어', style: const TextStyle(color: Gp.muted)),
                   onTap: () => _pickLanguage(context),
                 ),
                 SwitchListTile(
@@ -381,7 +381,7 @@ class HelpScreen extends StatelessWidget {
                   child: Wrap(
                     spacing: 16,
                     runSpacing: 8,
-                    children: [dot(Gp.accent, tr('파랑 = 고름 · 좋아요')), dot(Gp.own, tr('민트 = 가진 것'))],
+                    children: [dot(Gp.accent, tr('파랑 = 좋아요')), dot(Gp.own, tr('민트 = 구매함'))],
                   ),
                 ),
               ],
@@ -400,7 +400,7 @@ class HelpScreen extends StatelessWidget {
                 ),
                 tip(Icons.toys_outlined, tr('레고 정보'), tr('Rebrickable (rebrickable.com) 의 레고 카탈로그 데이터를 써요')),
                 tip(Icons.toys_outlined, tr('레고 범위'), tr('검색 탭 › 레고 채널 › 전체 · 종류 · 세대 줄 오른쪽')),
-                tip(Icons.payments_outlined, tr('가격'), tr('일본 정가만 · 국내 시세는 상세에서 검색으로')),
+                tip(Icons.payments_outlined, tr('가격'), tr('한국 · 일본 정가 · 국내 시세는 상세 › 시세 찾아보기')),
                 tip(Icons.flag_outlined, tr('틀린 정보'), tr('상품 상세 맨 아래 › 제보 (GitHub)')),
               ],
             ),
@@ -413,7 +413,7 @@ class HelpScreen extends StatelessWidget {
                 SectionHeader(tr('알림')),
                 tip(Icons.schedule, tr('3시간마다 확인'), tr('앱을 열 때도 한 번 더')),
                 tip(Icons.today_outlined, tr('좋아요한 상품'), tr('발매 D-7 · D-1 · 당일 (발매일이 정해진 것만)')),
-                tip(Icons.notifications_none, tr('새 상품 (채널별)'), tr('설정 › 알림 › 채널을 누르면 전부 · 규칙 · 골라서 알림')),
+                tip(Icons.notifications_none, tr('새 상품 (채널별)'), tr('설정 › 알림 › 채널을 누르면 전체 · 규칙 · 조건 알림')),
               ],
             ),
           ),
@@ -423,7 +423,7 @@ class HelpScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SectionHeader(tr('앱 업데이트')),
-                tip(Icons.system_update_outlined, tr('위 줄 ⬇ · 설정 › 앱 › 버전'), tr('새 빌드를 받아 안드로이드 설치 창으로')),
+                tip(Icons.system_update_outlined, tr('위 줄 ⬇ · 설정 › 앱 › 버전'), tr('새 버전을 받아 설치 창으로')),
                 tip(Icons.download_done, tr('작은 업데이트 (패치)'), tr('뒤에서 받아 두고 앱을 다시 열면 적용 · 설치 창 없음')),
               ],
             ),

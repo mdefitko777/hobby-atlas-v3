@@ -46,6 +46,28 @@ void main() {
     ]);
     expect(alerts.single.title, '4 个喜欢的商品有变动');
     expect(alerts.single.body, '「商品0」 · 「商品1」 和另外 2 个');
+    // 상품 하나의 제목은 「」 없이 「규칙 · 이름」 (여러 개 요약만 「」)
+    final one = NoticeRecord(
+      id: 'pre-k-2026-11-month',
+      kind: 'preorder',
+      kitId: 'k',
+      title: '沙扎比',
+      body: '',
+      at: DateTime.utc(2026, 11, 1),
+      wanted: true,
+    );
+    expect(buildAlerts([one]).single.title, '预订到货 · 沙扎比');
+    final restock = NoticeRecord(
+      id: 'feed-2026-11-01-k',
+      kind: 'restock',
+      kitId: 'k',
+      title: '沙扎比',
+      body: '',
+      at: DateTime.utc(2026, 11, 1),
+      date: '2027-03',
+      wanted: true,
+    );
+    expect(restockTitle(restock), '再贩 · 沙扎比 2027.03');
     for (final c in LocalNotifier.channels.values) {
       expect('${c.name} ${c.description}', isNot(matches(_hangul)));
     }
@@ -146,6 +168,74 @@ void main() {
       expect(old.body, '좋아요한 상품 · 가격 변경 ¥4,950');
     });
 
+    test('기기에 적은 대상(PB 예약 · 발매일 · 예약 · 알림 받는 예고)의 줄 이름도 언어를 따라간다', () {
+      addTearDown(() => L10n.debugSet(AppLang.ko));
+      L10n.debugSet(AppLang.ko);
+      final now = DateTime.utc(2026, 11, 1, 9);
+      // 한국어 화면에서 적은 대상 → 파일에 쓰고 다시 읽은 설정 (notify_config.json 과 같은 길)
+      final c = NotifyConfig.fromJson(
+        jsonDecode(
+          jsonEncode(
+            NotifyConfig(
+              wanted: {'k'},
+              pb: const [PbWindow(id: 'k', name: '사자비', nameZh: '沙扎比', opens: '2026-11-01')],
+              releases: const [ReleaseDay(id: 'k', name: '사자비', nameZh: '沙扎比', date: '2026-11-02')],
+              preorders: const [PreorderDue(id: 'k', name: '사자비', nameZh: '沙扎比', arrival: '2026-11')],
+              followed: {
+                'a1': const FollowedAnn(stage: 'announced', title: 'MG 사자비', titleZh: 'MG 沙扎比', franchise: 'gundam'),
+              },
+            ).toJson(),
+          ),
+        ),
+      );
+      final rows = [
+        ...pbWindowRecords(c, const {}, now),
+        ...releaseRecords(c, const {}, now),
+        ...preorderRecords(c, const {}, now),
+        ...annStageRecords(
+          c,
+          {
+            'announcements': [
+              {'id': 'a1', 'status': 'preorder_open'},
+            ],
+          },
+          const {},
+          now,
+        ),
+      ].map(saved).toList();
+      expect(rows.map((r) => r.kind).toSet(), {'pb_open', 'release', 'preorder', 'ann_stage'});
+      expect(rows.map((r) => r.title).toSet(), {'사자비', 'MG 사자비'});
+      L10n.debugSet(AppLang.zh);
+      expect(rows.map((r) => r.title).toSet(), {'沙扎比', 'MG 沙扎比'});
+      for (final r in rows) {
+        expect(r.body, isNot(matches(_hangul)), reason: r.id);
+      }
+    });
+
+    test('말을 바꾼 옛 조각 키는 지금 말로 보인다 (새로 수록 · 프리미엄 반다이 · 낼 돈)', () {
+      addTearDown(() => L10n.debugSet(AppLang.ko));
+      final old = NoticeRecord.fromJson({
+        'id': 'feed-2026-11-01-k',
+        'kind': 'added',
+        'kit': 'k',
+        'title': '사자비',
+        'body': '',
+        'at': '2026-11-01T00:00:00Z',
+        'body_parts': [
+          {'k': '새로 수록'},
+          {'k': '프리미엄 반다이'},
+          {
+            'k': '낼 돈 {n}원',
+            'a': {'n': '7,000'},
+          },
+        ],
+      })!;
+      L10n.debugSet(AppLang.ko);
+      expect(old.body, '새 상품 · PB 한정 · 결제 예정 7,000원');
+      L10n.debugSet(AppLang.zh);
+      expect(old.body, '新商品 · PB 限定 · 待付 7,000 韩元');
+    });
+
     test('피드 이름의 HTML 엔티티는 푼다 (Pok&eacute;mon)', () {
       final it = FeedItem.fromJson({
         'kit_id': 'pokemon-center-4521329427874',
@@ -182,11 +272,11 @@ void main() {
     final fromZh = NotifyCondition.fromJson({'franchise': 'pokemon', 'scope': 'group:gen1', 'scope_label': '宝可梦 红·绿'})!;
     L10n.debugSet(AppLang.ko);
     for (final x in [fromKo, fromZh]) {
-      expect(conditionLabel(x), '포켓몬 · 포켓몬스터 레드·그린 · 전부');
+      expect(conditionLabel(x), '포켓몬 · 포켓몬스터 레드·그린 · 전체');
     }
     L10n.debugSet(AppLang.zh);
     for (final x in [fromKo, fromZh]) {
-      expect(conditionLabel(x), '${tr('포켓몬')} · 宝可梦 红·绿 · ${tr('전부')}');
+      expect(conditionLabel(x), '${tr('포켓몬')} · 宝可梦 红·绿 · ${tr('전체')}');
     }
     // 묶음을 못 찾으면(파일 전 · 없어진 묶음) 적어 둔 이름
     final gone = NotifyCondition(franchise: 'pokemon', scope: 'group:gen99', scopeLabel: '포켓몬스터 옛 세대');

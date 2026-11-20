@@ -5,7 +5,7 @@
 // │ R-1  │ TagGameCards (CategoryTile)        │ 도감 › 포켓몬 '태그' 줄: MEZASTAR · Frienda 입구 (그림 + 이름만) │ P06 │
 // │ R-2  │ SquareSegments (KR · JP · HK · TW)  │ 메자스타 지역 고르기                     │ P04           │
 // │ R-3  │ ToolRow [검색창][필터][격자 · 목록]   │ 이 도감에서 찾기 (다른 탭과 같은 줄)      │ P04 · P07     │
-// │ R-4  │ 가로 탄 칸 + 진행 막대               │ 탄 · 시리즈 고르기 (구매함 n / 전체)      │ P01 · P06     │
+// │ R-4  │ 가로 탄 칸 (이름만)                  │ 탄 · 시리즈 고르기 (수 · 진행 막대 없이 — 진행은 칸 표시로) │ P06 │
 // │ R-5  │ TagCell 격자 (TierCell, 늘 컬러)     │ 아직 = 그림 그대로 · ♡ = 좋아요 · 리본 + 옅은 민트 테두리 = 구매함 │ P01 · P04 │
 // │ R-5b │ 칸 누르기 → 태그 상세 (R-6)           │ 상품 칸과 같음: 누르면 상세              │ P07 · P08     │
 // │ R-5c │ FriendaImages (기기에서 공식 페이지)  │ 프렌다 픽 그림: 탄을 열면 받아 7일 보관     │ P02 · P01     │
@@ -28,7 +28,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../channels.dart' show lineCovers;
+import '../channels.dart' show lineCoverStyles, lineCovers;
 import '../data/frienda_images.dart';
 import '../data/tag_atlas.dart';
 import '../data/user_store.dart' show UserStore;
@@ -104,6 +104,9 @@ class TagGameCards extends StatelessWidget {
       for (final g in only == null ? TagGame.values : [only!])
         CategoryTile(
           image: tagGameCover(g),
+          // 다른 분류 칸과 같이: 로고는 그 브랜드 바탕색 위, 그림이 없으면 포켓몬 채널 색 위 아이콘
+          style: lineCoverStyles['pokemon']?[g.label],
+          color: Gp.channelColor('pokemon'),
           icon: g == TagGame.mezastar ? Icons.style_outlined : Icons.catching_pokemon,
           name: g.label,
           onTap: () => openTagAtlas(context, g), // STATE: 입구 → R 태그 도감
@@ -402,24 +405,10 @@ class _TagAtlasScreenState extends State<TagAtlasScreen> {
   @override
   Widget build(BuildContext context) {
     final store = Marks.of(context).store; // 좋아요 · 구매함이 바뀌면 다시 그린다
-    final owned = store.tagOwned;
     return Scaffold(
       appBar: AppBar(
-        title: FutureBuilder<TagBook>(
-          future: _future,
-          builder: (context, snap) {
-            final b = snap.data;
-            return BarTitle(
-              widget.game == TagGame.mezastar ? '${widget.game.label} ${_region.id}' : widget.game.label,
-              count: b == null
-                  ? ''
-                  : trf('수집 {owned} / {total}', {
-                      'owned': b.cards.where((c) => owned.contains(c.id)).length,
-                      'total': b.cards.length,
-                    }),
-            );
-          },
-        ),
+        // 수집 n / m 은 두지 않는다 (2026-11-20 주인: 도감 화면에 숫자 · 진행 없이 — 칸의 ♡ · 리본으로)
+        title: BarTitle(widget.game == TagGame.mezastar ? '${widget.game.label} ${_region.id}' : widget.game.label),
         actions: [
           HelpButton(title: widget.game.label, items: tagHelp()),
           const SizedBox(width: 6),
@@ -446,7 +435,6 @@ class _TagAtlasScreenState extends State<TagAtlasScreen> {
   }
 
   Widget _body(TagBook book, UserStore store) {
-    final owned = store.tagOwned;
     final setId = _setOf(book);
     final images = FriendaImages.instance;
     final raw = book.inSet(setId);
@@ -460,9 +448,6 @@ class _TagAtlasScreenState extends State<TagAtlasScreen> {
         if (c.matches(_query) && _filter.hit(c, store.tagStatus(c.id))) c,
     ];
     final s = setId == null ? null : book.set(setId);
-    // 수집 = 구매함 (상품 도감과 같음) · 좋아요는 따로 센다
-    final haveInSet = inSet.where((c) => owned.contains(c.id)).length;
-    final likedInSet = inSet.where((c) => store.tagStatus(c.id) == CollectStatus.wanted).length;
     final bottom = MediaQuery.paddingOf(context).bottom + 32;
     return CustomScrollView(
       slivers: [
@@ -511,7 +496,6 @@ class _TagAtlasScreenState extends State<TagAtlasScreen> {
             // R-4
             book: book,
             current: setId,
-            owned: owned,
             onPick: (id) => setState(() {
               _setChosen = true; // STATE: 탄 → 그 탄의 칸
               _set = id;
@@ -522,10 +506,8 @@ class _TagAtlasScreenState extends State<TagAtlasScreen> {
           child: SectionHeader(
             s?.name ?? tr('전체'),
             subtitle: joinDot([
-              trf('수집 {owned} / {total}', {'owned': haveInSet, 'total': inSet.length}),
-              if (likedInSet > 0) trf('좋아요 {n}', {'n': likedInSet}),
               if (s != null && s.date.isNotEmpty) dateDot(s.date),
-              if (s != null && s.local != s.name) s.local,
+              if (s != null && s.local != s.name && _readable(s.local)) s.local,
             ]),
             padding: const EdgeInsets.fromLTRB(16, 14, 4, 8),
           ),
@@ -558,7 +540,7 @@ class _TagAtlasScreenState extends State<TagAtlasScreen> {
                   // R-8b 상품 줄과 같은 ♡ · 리본
                   card: c,
                   title: c.name,
-                  subtitle: joinDot([c.number, tr(c.badge), if (c.local != c.name) c.local]),
+                  subtitle: joinDot([c.number, tr(c.badge)]), // 지역 이름(local)은 찾기에만
                   size: 56,
                   onTap: () => showTagSheet(context, c, book: book), // R-6
                 );
@@ -596,18 +578,15 @@ class _TagAtlasScreenState extends State<TagAtlasScreen> {
 
 /// R-4 탄 고르기 — [전체] + 새 탄부터, 프로모 · 원더 같은 묶음은 끝
 class _SetStrip extends StatelessWidget {
-  const _SetStrip({required this.book, required this.current, required this.owned, required this.onPick});
+  const _SetStrip({required this.book, required this.current, required this.onPick});
   final TagBook book;
   final String? current;
-  final Set<String> owned;
   final ValueChanged<String?> onPick;
 
   @override
   Widget build(BuildContext context) {
     final sets = [...book.sets.where((s) => !s.extra).toList().reversed, ...book.sets.where((s) => s.extra)];
     Widget tile(String? id, String name) {
-      final cards = book.inSet(id);
-      final have = cards.where((c) => owned.contains(c.id)).length;
       final on = id == current;
       return Padding(
         padding: const EdgeInsets.only(right: 8),
@@ -624,33 +603,18 @@ class _SetStrip extends StatelessWidget {
               width: 116,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: Gp.t12,
-                        fontWeight: on ? FontWeight.w700 : FontWeight.w500,
-                        color: on ? Gp.accent : Gp.ink,
-                      ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: Gp.t12,
+                      fontWeight: on ? FontWeight.w700 : FontWeight.w500,
+                      color: on ? Gp.accent : Gp.ink,
                     ),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: AccentBar(value: cards.isEmpty ? 0 : have / cards.length, color: Gp.own),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          '$have/${cards.length}',
-                          style: const TextStyle(fontSize: Gp.t11, color: Gp.muted),
-                        ),
-                      ],
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -660,7 +624,7 @@ class _SetStrip extends StatelessWidget {
     }
 
     return SizedBox(
-      height: 58,
+      height: 48,
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: Gp.gutter),
@@ -827,7 +791,7 @@ class _TagSheet extends StatelessWidget {
                   ),
               ],
             ),
-            if (card.local.isNotEmpty && card.local != card.name)
+            if (card.local.isNotEmpty && card.local != card.name && _readable(card.local))
               Text(
                 card.local,
                 style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
@@ -845,7 +809,7 @@ class _TagSheet extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              joinDot([...sets, tr(card.variant)]),
+              joinDot([...sets, ...card.variant.split(' · ').where(_readable)]),
               style: const TextStyle(fontSize: Gp.t12, color: Gp.faint),
             ),
             const SizedBox(height: 14),
@@ -1166,7 +1130,7 @@ class _TagCollectionSectionState extends State<TagCollectionSection> {
 List<HelpItem> tagHelp() => [
   HelpItem.widget(tierHelpCell(CellTier.none), tr('그림 그대로 = 아직 (칸은 늘 컬러)')),
   HelpItem.widget(tierHelpCell(CellTier.liked), tr('♡ = 좋아요')),
-  HelpItem.widget(tierHelpCell(CellTier.owned), tr('리본 = 구매함 (수집 수)')),
+  HelpItem.widget(tierHelpCell(CellTier.owned), tr('리본 = 구매함')),
   HelpItem(Icons.bookmark_add_outlined, tr('칸 왼쪽 위 리본 = 구매함 켜고 끄기'), color: Gp.own),
   HelpItem(Icons.favorite_border, tr('칸 왼쪽 아래 ♡ = 좋아요 켜고 끄기'), color: Gp.accent),
   HelpItem(Icons.touch_app_outlined, tr('칸 누르기 = 태그 상세 (좋아요 · 구매함 버튼)')),
@@ -1176,3 +1140,9 @@ List<HelpItem> tagHelp() => [
   HelpItem(Icons.grid_view_outlined, tr('격자로 보기')),
   HelpItem(Icons.view_list_outlined, tr('목록으로 보기 (줄 오른쪽 ♡ · 리본)')),
 ];
+
+/// 지금 화면 언어로 읽히는 이름인가 — 데이터에 일본어(가나 · 한자)뿐인 변형 · 그림 · 지역 이름은 감춘다
+/// (한국어 화면에 가나 · 한자 없음, 중국어 화면에 가나 · 한글 없음 — docs/writing/data-names.md 태그 변형)
+bool _readable(String s) => !(L10n.isZh ? _notZh : _notKo).hasMatch(s);
+final _notKo = RegExp(r'[\u3040-\u30ff\u3400-\u9fff]');
+final _notZh = RegExp(r'[\u3040-\u30ff\uac00-\ud7a3]');

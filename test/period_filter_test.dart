@@ -1,4 +1,4 @@
-// 필터 「기간」 — 발매일을 달 단위로 (빠른 고르기 · 시작 · 끝 달)
+// 필터 「기간」 — 발매일을 달 단위로 (빠른 고르기 · 시작 월 · 종료 월)
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -29,8 +29,8 @@ void main() {
     expect(PeriodPreset.lastYearSpan.range('2026-12-01'), ('2026-01', '2026-12'));
     expect(PeriodPreset.any.range(today), ('', ''));
     expect(periodLabel('2023-01', '2024-06'), '2023.01–2024.06');
-    expect(periodLabel('2023-01', ''), '2023.01 부터');
-    expect(periodLabel('', '2024-06'), '2024.06 까지');
+    expect(periodLabel('2023-01', ''), '2023.01부터');
+    expect(periodLabel('', '2024-06'), '2024.06까지');
     expect(periodLabel('2024-06', '2024-06'), '2024.06');
   });
 
@@ -93,14 +93,14 @@ void main() {
     await t.pumpAndSettle();
     await t.tap(find.byKey(const ValueKey('period-from')));
     await t.pumpAndSettle();
-    expect(find.text('시작 달'), findsOneWidget);
-    await t.tap(find.byTooltip('작년'));
+    expect(find.text('시작 월'), findsOneWidget);
+    await t.tap(find.byTooltip('이전 해'));
     await t.pumpAndSettle();
     expect(find.byKey(const ValueKey('month-sheet-year')), findsOneWidget);
     expect(find.text('2025'), findsOneWidget);
     await t.tap(find.byKey(const ValueKey('month-1')));
     await t.pumpAndSettle();
-    expect(find.text('시작  2025.01'), findsOneWidget);
+    expect(find.text('시작 · 2025.01'), findsOneWidget);
     expect(find.text('${hits('2025-01', '2026-12')}개 보기'), findsOneWidget);
     expect(t.takeException(), isNull);
   });
@@ -137,7 +137,7 @@ void main() {
     await t.tap(find.byKey(const ValueKey('period-from')));
     await t.pumpAndSettle();
     expect(t.takeException(), isNull, reason: '시트보다 긴 내용은 밀어 본다');
-    final back = find.byTooltip('작년');
+    final back = find.byTooltip('이전 해');
     bool canGoBack() =>
         t.widget<IconButton>(find.ancestor(of: back, matching: find.byType(IconButton))).onPressed != null;
     for (var i = 0; i < 2026 - 1949; i++) {
@@ -146,13 +146,13 @@ void main() {
     }
     expect(find.text('1949'), findsOneWidget);
     expect(canGoBack(), isFalse);
-    // 맨 아래 「정하지 않기」도 밀어서 누를 수 있다
-    final open = find.text('정하지 않기 (열어 두기)');
+    // 맨 아래 「정하지 않음」도 밀어서 누를 수 있다
+    final open = find.text('정하지 않음');
     final sheet = find.ancestor(of: find.byKey(const ValueKey('month-sheet-year')), matching: find.byType(Scrollable));
     await t.scrollUntilVisible(open, 100, scrollable: sheet.first);
     await t.tap(open);
     await t.pumpAndSettle();
-    expect(find.text('시작 달'), findsNothing);
+    expect(find.text('시작 월'), findsNothing);
     expect(t.takeException(), isNull);
   });
 }

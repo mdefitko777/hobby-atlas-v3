@@ -273,7 +273,7 @@ class DeviceStateSync extends ChangeNotifier {
     DeviceSyncPhase.syncing => tr('기기 기록 맞추는 중…'),
     DeviceSyncPhase.synced => '',
     DeviceSyncPhase.offline => tr('오프라인 — 베이 · 도감 기록은 연결되면 맞춰요'),
-    DeviceSyncPhase.missing => tr('서버에 기기 기록 함수가 없어 베이 · 도감 기록은 이 기기에만 있어요'),
+    DeviceSyncPhase.missing => tr('서버 설정이 아직 없어 베이 · 도감 기록은 이 기기에만 있어요'),
     DeviceSyncPhase.error => trf('기기 기록을 맞추지 못했어요: {message}', {'message': message}),
     DeviceSyncPhase.off => '',
   };

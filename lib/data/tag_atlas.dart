@@ -215,6 +215,7 @@ class TagBook {
 
 // ── 한국어 이름표 ────────────────────────────────────────────────────────────────
 
+/// 등급 이름 — 노멀(등급) · 노말(타입)은 공식 표기가 달라 둘 다 둔다 (docs/terms.md)
 const rarityLabels = {
   'superstar': '슈퍼스타',
   'star': '스타',
@@ -227,7 +228,7 @@ const rarityLabels = {
   'super_treasure': '슈퍼 트레저',
   'treasure': '트레저',
   'wonder': '원더',
-  'shiny': '이로치',
+  'shiny': '색이 다른 포켓몬', // 포켓몬코리아 공식 말 ("이로치" 는 팬 말)
   'parallel': '패럴렐',
 };
 
@@ -309,8 +310,9 @@ String _setZh(Map<String, Object?> names, String ko, {bool promo = false, String
   return jStr(names['en']).trim();
 }
 
+/// 한국어 화면 이름 — 한국어가 없으면 en(로마자)이 가나보다 읽기 쉬워 ja 앞
 String _koName(Map<String, Object?> names) {
-  for (final l in const ['ko', 'ja', 'en', 'zh_hant']) {
+  for (final l in const ['ko', 'en', 'ja', 'zh_hant']) {
     final s = jStr(names[l]).trim();
     if (s.isNotEmpty) return s;
   }
@@ -550,7 +552,7 @@ class TagAtlas {
   /// 그 게임 · 지역 도감. 파일이 없으면 오류
   static Future<TagBook> book(TagGame game, TagRegion region) async {
     final raw = await source(region.file);
-    if (raw == null) throw CatalogException(tr('태그 데이터를 받지 못했어요.'));
+    if (raw == null) throw CatalogException(tr('태그 데이터를 받지 못했어요'));
     final key = '${game.name}/${region.id}';
     final hit = _cache[key];
     if (hit != null && identical(hit.$1, raw)) return hit.$2;

@@ -19,9 +19,10 @@ void main() {
         home: Scaffold(body: AddSheet(onPick: (_) {})),
       ),
     );
+    // 찍어서 = 카메라 · 바코드 · 사진으로 = 갤러리 · 캡처 (docs/terms.md 「찾기 · 화면」)
+    expect(find.text('拍照找'), findsOneWidget);
+    expect(find.text('扫条形码找'), findsOneWidget);
     expect(find.text('用照片找'), findsOneWidget);
-    expect(find.text('扫条形码'), findsOneWidget);
-    expect(find.text('从相册选'), findsOneWidget);
     expect(find.textContaining(RegExp(r'[가-힣]')), findsNothing);
   });
 

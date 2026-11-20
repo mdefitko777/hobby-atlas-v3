@@ -77,7 +77,7 @@ void main() {
     await none.check();
     expect(none.waiting, isFalse);
     expect(none.failed, isFalse);
-    expect(none.versionLabel, '개발 빌드');
+    expect(none.versionLabel, '개발 버전');
 
     // 엔진이 없는 빌드(isAvailable = false)는 읽지도 받지도 않는다
     final source = _FakeSource(isAvailable: false, current: 2, next: 3, onServer: 4);
@@ -96,7 +96,7 @@ void main() {
     var changes = 0;
     p.addListener(() => changes++);
     await p.refresh();
-    expect(p.versionLabel, '개발 빌드 · 패치 2');
+    expect(p.versionLabel, '개발 버전 · 패치 2');
     expect(p.waiting, isFalse);
     await p.refresh();
     expect(changes, 1, reason: '달라진 게 없으면 다시 그리지 않는다');
@@ -104,8 +104,8 @@ void main() {
     source.next = 3; // 뒤에서 자동으로 받아 둠
     await p.refresh();
     expect(p.waiting, isTrue);
-    expect(p.nextLabel, '개발 빌드 · 패치 3');
-    expect(p.versionLabel, '개발 빌드 · 패치 2', reason: '다시 열기 전에는 지금 패치 그대로');
+    expect(p.nextLabel, '개발 버전 · 패치 3');
+    expect(p.versionLabel, '개발 버전 · 패치 2', reason: '다시 열기 전에는 지금 패치 그대로');
 
     source.next = null; // 패치를 되돌림 → 다시 열면 릴리스로
     await p.refresh();
@@ -248,7 +248,7 @@ void main() {
     expect(find.byKey(const Key('patch-waiting')), findsNothing);
     await tester.tap(find.byType(ListTile));
     await tester.pump();
-    expect(find.byType(SnackBar), findsOneWidget); // 이 빌드는 앱 안 업데이트를 쓰지 않아요
+    expect(find.byType(SnackBar), findsOneWidget); // 이 버전은 앱 안 업데이트를 쓰지 않아요
     expect(find.byIcon(Icons.download_done), findsNothing);
   });
 }

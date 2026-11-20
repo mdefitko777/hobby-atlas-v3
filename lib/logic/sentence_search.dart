@@ -5,8 +5,8 @@
 //   3) 표에 없는 나머지 낱말은 조사를 떼고 그대로 상품 글자(이름 4개 언어 · 작품 · 라인 · 종류 · 키워드)에서 찾는다
 //   4) 상품마다 맞은 낱말의 무게 / 전체 무게 = 일치도 %, 맞은 낱말 = 이유
 // Flutter 위젯을 쓰지 않는다 (단위 테스트).
-import '../l10n/l10n.dart';
 import '../models.dart';
+import 'data_labels.dart';
 
 /// 낱말 표의 한 뜻
 enum ConceptField { name, series, line, type, franchise }
@@ -541,8 +541,8 @@ class SentenceHit {
   final int score;
   final List<String> matched;
 
-  /// 화면에 보이는 이유 — 표의 뜻 이름은 화면 언어로, 친 낱말은 그대로
-  String get reason => [for (final m in matched) _labels.contains(m) ? tr(m) : m].join(' · ');
+  /// 화면에 보이는 이유 — 표의 뜻 이름은 화면 언어로 (라인 · 종류 값 `포켓프라` · `인형` 은 표준 이름), 친 낱말은 그대로
+  String get reason => [for (final m in matched) _labels.contains(m) ? dataLabel(m) : m].join(' · ');
 }
 
 final _labels = {for (final c in sentenceConcepts) c.label};

@@ -13,7 +13,7 @@ class _StatsPanel extends StatelessWidget {
     final weight = w != null
         ? trf('무게 {g}', {'g': bbxGrams(w)})
         : stats.unknownWeightSlots.isNotEmpty
-        ? trf('무게 {g}+ (모르는 칸: {slots})', {
+        ? trf('무게 {g}+ (무게를 모르는 칸: {slots})', {
             'g': bbxGrams(stats.knownWeightG),
             'slots': stats.unknownWeightSlots.map(bbxSlotLabel).join(' · '),
           })

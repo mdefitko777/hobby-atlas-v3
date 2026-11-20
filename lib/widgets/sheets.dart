@@ -223,15 +223,15 @@ class CheckGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, box) => Wrap(
         children: [
+          // 칸마다 개수는 쓰지 않는다 (둘러보는 화면에 숫자를 늘어놓지 않기, 2026-11-14). 맞는 상품이 없는 칸은 옅게 두지 않고
+          // 숨긴다 (2026-11-20 주인: 회색 칸 싫음 — liveValues 와 같은 규칙). 고른 칸은 0 이어도 보여야 풀 수 있다
           for (final v in values)
-            SizedBox(
-              width: box.maxWidth / columns,
-              child: () {
-                final on = selected.contains(v);
-                // 칸마다 개수는 쓰지 않는다 (둘러보는 화면에 숫자를 늘어놓지 않기, 2026-11-14) — 맞는 상품이 없으면 옅게만
-                return Opacity(
-                  opacity: countOf(v) == 0 && !on ? 0.4 : 1,
-                  child: InkWell(
+            if (selected.contains(v) || countOf(v) > 0)
+              SizedBox(
+                width: box.maxWidth / columns,
+                child: () {
+                  final on = selected.contains(v);
+                  return InkWell(
                     onTap: () => onToggle(v),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 2),
@@ -261,10 +261,9 @@ class CheckGrid extends StatelessWidget {
                         ],
                       ),
                     ),
-                  ),
-                );
-              }(),
-            ),
+                  );
+                }(),
+              ),
         ],
       ),
     );

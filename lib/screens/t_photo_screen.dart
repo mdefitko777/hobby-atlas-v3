@@ -9,14 +9,15 @@
 // │ T-3  │ PhotoViewScreen                    │ 사진 한 장 보기 (워터마크 미리보기)        │ P02 · P10     │
 // │ T-4  │ SwitchListTile(👥)                  │ 친구에게 보이기 (사진마다)                │ P05 · P01     │
 // │ T-5  │ SwitchListTile(워터마크) · ⤓ 저장     │ 저장할 때 "HA · @아이디"                 │ P05 · P10     │
-// │ T-6  │ 🔗 → 바텀 시트(구매함 격자)           │ 사진에 상품 잇기 · 끊기                   │ P07           │
+// │ T-6  │ 🔗 → 바텀 시트(구매함 격자)           │ 사진에 상품 연결 · 연결 해제              │ P07           │
 // │ T-7  │ ⚠ 아이콘 + 툴팁                     │ 서버에 사진 공유가 아직 없음 → 기기에만     │ P09 · P01     │
 // │ T-8  │ KitPhotoStrip (상품 상세)            │ 이 상품의 내 사진 + 넣기                  │ P07           │
 // └──────────────────────────────────────────────────────────────────────────────────┘
-// 전환: 사진 칸 → 쌓기(push). 넣기 · 상품 잇기 → 덮기(바텀 시트). 지우기 → 확인 대화상자.
+// 전환: 사진 칸 → 쌓기(push). 넣기 · 상품 연결 → 덮기(바텀 시트). 지우기 → 확인 대화상자.
 library;
 
 import '../l10n/l10n.dart';
+import '../logic/data_labels.dart';
 import '../logic/kit_rules.dart';
 import 'dart:async';
 import 'dart:ui' as ui;
@@ -272,7 +273,7 @@ class _FriendImage extends StatelessWidget {
   );
 }
 
-/// T-3 사진 한 장 보기 — [mine] = 내 사진 id (스위치 · 지우기 · 상품 잇기), [friend] = 친구 사진 (저장만)
+/// T-3 사진 한 장 보기 — [mine] = 내 사진 id (스위치 · 지우기 · 상품 연결), [friend] = 친구 사진 (저장만)
 class PhotoViewScreen extends StatefulWidget {
   const PhotoViewScreen({super.key, this.mine, this.friend}) : assert((mine == null) != (friend == null));
   final String? mine;
@@ -343,7 +344,7 @@ class _PhotoViewScreenState extends State<PhotoViewScreen> {
     nav.maybePop();
   }
 
-  /// T-6 상품 잇기 — 구매함에서 고르기
+  /// T-6 상품 연결 — 구매함에서 고르기
   Future<void> _link(MyPhoto p) async {
     final store = Marks.read(context).store;
     final cat = Catalog.instance;
@@ -389,7 +390,7 @@ class _PhotoViewScreenState extends State<PhotoViewScreen> {
                             borderRadius: BorderRadius.circular(Gp.rSmall),
                             child: ColoredBox(
                               color: Gp.soft,
-                              child: AppImage(k.image, fit: BoxFit.contain, placeholder: tr(k.line)),
+                              child: AppImage(k.image, fit: BoxFit.contain, placeholder: dataLabel(k.line)),
                             ),
                           ),
                         ),
@@ -505,7 +506,7 @@ class _PhotoViewScreenState extends State<PhotoViewScreen> {
               trailing: p == null
                   ? null
                   : IconButton(
-                      tooltip: tr('상품 끊기'),
+                      tooltip: tr('상품 연결 해제'),
                       onPressed: () => _update(p.copyWith(kitId: ''), reupload: p.shared),
                       icon: const Icon(Icons.link_off, size: Gp.iM, color: Gp.muted),
                     ),
@@ -514,7 +515,7 @@ class _PhotoViewScreenState extends State<PhotoViewScreen> {
           else if (p != null)
             ListTile(
               leading: const Icon(Icons.link, size: Gp.iM, color: Gp.muted),
-              title: Text(tr('상품 잇기'), style: const TextStyle(fontSize: Gp.t14)),
+              title: Text(tr('상품 연결'), style: const TextStyle(fontSize: Gp.t14)),
               onTap: () => _link(p),
             ),
         ],

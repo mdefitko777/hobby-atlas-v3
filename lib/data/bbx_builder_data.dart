@@ -70,6 +70,6 @@ Future<BbxBuilderData> deriveBbxBuilder() async {
 Future<BbxBuilderData> _build(Catalog cat) async {
   await cat.ensureLoaded();
   final db = jMap(await cat.aux('bbx-database.json'));
-  if (jMap(db['parts']).isEmpty) throw CatalogException(tr('베이 부품 데이터를 받지 못했어요.'));
+  if (jMap(db['parts']).isEmpty) throw CatalogException(tr('베이 부품 데이터를 받지 못했어요'));
   return Isolate.run(() => BbxBuilderData.fromJson(db));
 }

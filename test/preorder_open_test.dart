@@ -793,14 +793,14 @@ void main() {
           size: const Size(360, 1400),
         );
         expect(tester.takeException(), isNull);
-        final rows = {for (final r in tester.widgetList<ThumbRow>(find.byType(ThumbRow, skipOffstage: false))) r.id: r};
+        Finder row(String id) => find.byKey(ValueKey('event-$id'), skipOffstage: false);
+        Finder status(String id, String text) => find.descendant(of: row(id), matching: find.textContaining(text));
         final zh = lang == AppLang.zh;
-        expect(rows['pre-today']!.tag, zh ? '${clock(_open)} 开始预订' : '${clock(_open)} 예약 시작');
-        expect(rows['pre-today']!.tagColor, Gp.accent);
-        expect(rows['pre-day']!.tag, zh ? '非官方 · 开始预订' : '비공식 · 예약 시작');
+        // 상태는 둘째 줄 글자 "18:00 예약 시작 · 출처" (테두리 알약 없이)
+        expect(status('pre-today', zh ? '${clock(_open)} 开始预订' : '${clock(_open)} 예약 시작'), findsOneWidget);
+        expect(status('pre-day', zh ? '非官方 · 开始预订' : '비공식 · 예약 시작'), findsOneWidget);
         // 20일 줄 머리 아래 (발표일 12일이 아니라)
-        final y = tester.getTopLeft(find.byWidget(rows['pre-day']!, skipOffstage: false)).dy;
-        expect(y, greaterThan(tester.getTopLeft(find.byWidget(rows['pre-today']!, skipOffstage: false)).dy));
+        expect(tester.getTopLeft(row('pre-day')).dy, greaterThan(tester.getTopLeft(row('pre-today')).dy));
       }
     });
 

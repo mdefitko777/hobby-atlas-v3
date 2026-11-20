@@ -1,4 +1,4 @@
-// 화면 E: 찍어서 찾기 — 바코드(기기 안에서 읽기) · 사진(이름 · 설명으로 찾고 내 상품에 붙이기)
+// 화면 E: 찍어서 찾기 — 바코드(기기 안에서 읽기) · 사진(이름 · 설명으로 찾고 내 상품에 넣기)
 //
 // ┌──────── 디자인 가이드 대응표: E 찍어서 찾기 ───────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
@@ -6,14 +6,14 @@
 // │ E-2  │ 사진 | 바코드 전환                   │ 찍는 방식 고르기                        │ P07 · P06     │
 // │ E-3  │ ⌨ 번호 입력                         │ 카메라가 안 될 때 바코드 숫자 직접 넣기   │ P09 · P07     │
 // │ E-4  │ 틀 안 "찾는 중…"                     │ 읽은 바코드로 상품 찾는 중               │ P01           │
-// │ E-5  │ image_picker (카메라 · 갤러리)        │ 사진 찍기 · 앨범에서 고르기              │ P07           │
+// │ E-5  │ image_picker (카메라 · 갤러리)        │ 사진 찍기 · 갤러리에서 고르기            │ P07           │
 // │ E-6  │ 바코드 결과: 상세 / 여러 개면 목록    │ 바코드 = JAN 이 같은 상품               │ P01 · P10     │
 // │ E-6b │ 겹침 시트 (warnIfCollected)          │ 이미 갖고 있어요 ×n (조립 상태) · 예약 · 좋아요 │ P05 · P01 │
 // │ E-7  │ 모르는 바코드 패널 (제보 · 다시 · 검색) │ 이 바코드의 상품이 아직 없어요          │ P09 · P03     │
 // │ E-10 │ LoadingView / ErrorView / EmptyView  │ 불러오기 3상태                          │ P01 · P09     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 앱 셸 카메라 버튼 → 추가 시트 → 바코드: E 카메라(아래에서 올라옴) → 찾으면 D 상세로 바꿔 쌓기.
-//       사진 · 앨범: 휴대폰 카메라 / 사진 고르기 → E-8 사진으로 찾기(쌓기) → D 상세(쌓기).
+//       사진 · 갤러리: 휴대폰 카메라 / 사진 고르기 → E-8 사진으로 찾기(쌓기) → D 상세(쌓기).
 // 사진은 기기 안 ML Kit 로 상자 · 화면의 "글자"를 읽어 상품 후보를 고르고 (lib/logic/ocr_lookup.dart), 생김새(E-18)로도 찾는다.
 import 'dart:async';
 import 'dart:typed_data';
@@ -26,6 +26,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../l10n/l10n.dart';
 import '../api.dart';
 import '../channels.dart';
+import '../logic/data_labels.dart';
 import '../logic/kit_rules.dart';
 import '../models.dart';
 import '../report.dart';
@@ -58,7 +59,7 @@ void openCamera(
   );
 }
 
-/// E-5 앨범에서 고르기 → E-8
+/// E-5 갤러리에서 고르기 → E-8
 void openAlbum(BuildContext context, {required Loaders loaders, required VoidCallback onGoSearch, String? channel}) =>
     unawaited(_pickPhoto(context, ImageSource.gallery, loaders: loaders, onGoSearch: onGoSearch, channel: channel));
 
@@ -151,10 +152,11 @@ class _BarcodeScanScreenState extends State<BarcodeScanScreen> {
     List<Kit> kits;
     try {
       kits = await widget.loaders.kitsByJan(code);
-    } on Object catch (e) {
+    } on Object {
+      // 오류 객체 글(Exception: …)은 화면에 내지 않는다
       if (!mounted) return;
       setState(() => _looking = false);
-      showToast(context, '$e');
+      showToast(context, tr('상품 정보를 불러오지 못했어요'));
       unawaited(_camera?.start());
       return;
     }
@@ -351,7 +353,7 @@ class _BarcodeScanScreenState extends State<BarcodeScanScreen> {
                 child: Row(
                   children: [
                     IconButton(
-                      tooltip: tr('앨범'), // E-5
+                      tooltip: tr('갤러리'), // E-5
                       onPressed: _toAlbum,
                       icon: const Icon(Icons.photo_library_outlined, color: Gp.ink),
                     ),
@@ -471,7 +473,7 @@ class BarcodeResultScreen extends StatelessWidget {
               image: k.image,
               title: k.name,
               titleLines: 2,
-              subtitle: joinDot([tr(channelOf(k.franchiseId).label), tr(k.line), dateDot(k.date)]),
+              subtitle: joinDot([tr(channelOf(k.franchiseId).label), dataLabel(k.line), dateDot(k.date)]),
               onTap: () => openKitDetail(context, k, loaders: loaders, list: kits),
             ),
         ],

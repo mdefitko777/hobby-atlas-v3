@@ -1,5 +1,5 @@
 // 공유 카드 그림 — 내 컬렉션 요약 · 도감 작품 진행. RepaintBoundary 로 감싸 PNG 로 찍는다 (lib/screens/v_share_sheet.dart).
-// 모든 카드 아래에 워터마크 "HA · @아이디". 글자보다 아이콘 (♡ · 리본 · 예약 · 미조립)
+// 모든 카드 아래에 워터마크 "HA · @아이디". 글자보다 아이콘 (♡ · 리본 · 예약)
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -8,9 +8,7 @@ import 'package:flutter/rendering.dart' show RenderRepaintBoundary;
 
 import '../l10n/l10n.dart';
 import '../theme.dart';
-import '../logic/build_status.dart' show BuildStage;
 import 'icons.dart';
-import 'kit_progress.dart' show buildStageIcon;
 import 'images.dart';
 import 'sections.dart';
 import 'tier_cell.dart' show CellTier;
@@ -75,7 +73,7 @@ class ShareCardFrame extends StatelessWidget {
   );
 }
 
-/// (a) 내 컬렉션 요약: 아바타 · 이름 · @아이디 · Lv / ♡ · 리본 · 예약 · 미조립 / 최근 산 것 박스 아트
+/// (a) 내 컬렉션 요약: 아바타 · 이름 · @아이디 · Lv / ♡ · 리본 · 예약 / 최근 산 것 박스 아트 (미조립 칸은 2026-11-20 뺐다)
 class CollectionShareCard extends StatelessWidget {
   const CollectionShareCard({
     super.key,
@@ -85,7 +83,6 @@ class CollectionShareCard extends StatelessWidget {
     required this.liked,
     required this.owned,
     required this.preorders,
-    required this.backlog,
     required this.thumbs,
     this.level,
   });
@@ -96,7 +93,7 @@ class CollectionShareCard extends StatelessWidget {
 
   /// Lv 알약 (lib/level.dart LevelChip)
   final Widget? level;
-  final int liked, owned, preorders, backlog;
+  final int liked, owned, preorders;
 
   /// 박스 아트 (최근 산 것부터, 앞의 8개)
   final List<String> thumbs;
@@ -154,13 +151,12 @@ class CollectionShareCard extends StatelessWidget {
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.symmetric(vertical: 10),
-            decoration: BoxDecoration(color: Gp.bg, borderRadius: BorderRadius.circular(Gp.radius)),
+            decoration: BoxDecoration(color: Gp.soft, borderRadius: BorderRadius.circular(Gp.radius)),
             child: Row(
               children: [
                 stat(const LikedIcon(size: Gp.iM), liked, tr('좋아요')),
                 stat(const OwnedIcon(size: Gp.iM), owned, tr('구매함')),
                 stat(const Icon(preorderIcon, size: Gp.iM, color: Gp.reserve), preorders, tr('예약')),
-                stat(Icon(buildStageIcon(BuildStage.unbuilt), size: Gp.iM, color: Gp.muted), backlog, tr('미조립')),
               ],
             ),
           ),

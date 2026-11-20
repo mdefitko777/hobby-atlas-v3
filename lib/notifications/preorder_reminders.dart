@@ -9,6 +9,7 @@ import '../data/gunpula.dart' show pickName;
 import '../json_util.dart';
 import '../l10n/l10n.dart';
 import '../logic/announcement_match.dart' show annReplacedOf, unofficialLabel;
+import '../logic/data_labels.dart' show sourceLabel;
 import '../logic/live_stream.dart';
 import 'live_reminders.dart';
 import 'notify_models.dart';
@@ -103,7 +104,7 @@ LiveReminderPlan planPreorderReminders({
               if (p.unofficial) tr(unofficialLabel),
               trf('예약 {time} 시작', {'time': liveClock(at)}),
             ].join(' · '),
-            body: [p.shown, if (p.source.isNotEmpty) p.source].join(' · '),
+            body: [p.shown, if (p.source.isNotEmpty) sourceLabel(p.source)].join(' · '),
             payload: 'ann:${p.franchise}:${p.id}',
             channel: 'ann',
           ),

@@ -28,7 +28,7 @@ void main() {
     final i = UpdateInfo.fromJson(jsonDecode(_json))!;
     expect(i.build, 42);
     expect(i.versionLabel, '1.1.42');
-    expect(UpdateInfo.fromJson({'build': 5})!.versionLabel, '빌드 5'); // 옛 version.json
+    expect(UpdateInfo.fromJson({'build': 5})!.versionLabel, '버전 5'); // 옛 version.json
     expect(i.major, isTrue);
     expect(i.sizeLabel, '30 MB');
     expect(i.notes, hasLength(2));
@@ -78,7 +78,7 @@ void main() {
     expect(fetches, 2);
   });
 
-  testWidgets('새 빌드가 있으면 ⬇ → 시트에 바뀐 점 · 설정 줄에 "있음"', (tester) async {
+  testWidgets('새 빌드가 있으면 ⬇ → 시트에 바뀐 점 · 설정 줄에 "새 버전"', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -92,12 +92,12 @@ void main() {
       ),
     );
     expect(find.byTooltip('업데이트'), findsNothing);
-    expect(find.text('Hobby Atlas · 개발 빌드'), findsOneWidget);
+    expect(find.text('Hobby Atlas · 개발 버전'), findsOneWidget);
 
     await u.check(fetch: (_) async => _json);
     await tester.pump();
     expect(find.byTooltip('업데이트'), findsOneWidget);
-    expect(find.text('Hobby Atlas · 개발 빌드 → 1.1.42 있음'), findsOneWidget);
+    expect(find.text('Hobby Atlas 개발 버전 · 새 버전 1.1.42'), findsOneWidget);
 
     await tester.tap(find.byTooltip('업데이트'));
     await tester.pumpAndSettle();

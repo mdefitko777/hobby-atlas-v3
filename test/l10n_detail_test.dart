@@ -81,7 +81,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  test('업데이트: 빌드 이름도 화면 언어로', () {
-    expect(UpdateInfo.fromJson({'build': 5})!.versionLabel, '构建 5');
+  test('업데이트: 버전 이름도 화면 언어로', () {
+    expect(UpdateInfo.fromJson({'build': 5})!.versionLabel, '版本 5');
   });
 }

@@ -1,7 +1,7 @@
 // 앱 업데이트 — GitHub 릴리스 apk-latest 의 version.json(.github/workflows/android-apk.yml 이 만든다)을 보고
 //   · 내 빌드보다 새것이면 위 줄에 ⬇ 아이콘 (빨간 점)
 //   · 큰 업데이트(major)면 앱을 열 때 한 번만 묻는다 (같은 빌드는 다시 묻지 않음)
-//   · 업데이트 → 앱 안에서 받기(진행률) → 안드로이드 설치 창 (ota_update). 처음 한 번 "알 수 없는 앱 설치 허용"
+//   · 업데이트 → 앱 안에서 받기(진행률) → 안드로이드 설치 창 (ota_update). 처음 한 번 「출처를 알 수 없는 앱 설치」 허용
 // 내 빌드 번호는 APK 를 만들 때 --dart-define=APP_BUILD 로 넣는다. 0 = 손으로 만든 개발 빌드 → 확인하지 않는다.
 // 다트 코드만 바뀐 업데이트는 새 APK 가 아니라 패치로 온다 (app_patch.dart) — version.json 의 build 는 그대로라
 // 이 파일의 ⬇ · 묻기는 뜨지 않고, patch 칸(번호 · 바뀐 점)만 달라진다.
@@ -24,7 +24,7 @@ const updateBase = 'https://github.com/mdefitko777/hobby-atlas-v3/releases/downl
 
 /// 설정 › 버전 에 보이는 글자
 String get appVersionLabel =>
-    appBuild <= 0 ? tr('개발 빌드') : (appVersion.isEmpty ? trf('빌드 {n}', {'n': appBuild}) : appVersion);
+    appBuild <= 0 ? tr('개발 버전') : (appVersion.isEmpty ? trf('버전 {n}', {'n': appBuild}) : appVersion);
 
 /// 이 APK 의 버전 이름 (1.1.6 = pubspec 앞 두 자리 + 빌드 번호, --dart-define=APP_VERSION)
 const appVersion = String.fromEnvironment('APP_VERSION');
@@ -47,7 +47,7 @@ class UpdateInfo {
 
   /// 1.1.6 (옛 version.json 에는 없다 → 빌드 번호로)
   final String version;
-  String get versionLabel => version.isEmpty ? trf('빌드 {n}', {'n': build}) : version;
+  String get versionLabel => version.isEmpty ? trf('버전 {n}', {'n': build}) : version;
   final String builtAt;
 
   /// true = 앱을 열 때 한 번 묻는다, false(커밋에 [minor]) = ⬇ 아이콘만
@@ -206,7 +206,7 @@ class AppUpdate extends ChangeNotifier {
               case OtaStatus.INSTALLING || OtaStatus.INSTALLATION_DONE:
                 progress = null; // 안드로이드 설치 창으로
               case OtaStatus.PERMISSION_NOT_GRANTED_ERROR:
-                _fail(tr('"알 수 없는 앱 설치"를 허용해야 업데이트할 수 있어요'));
+                _fail(tr('「출처를 알 수 없는 앱 설치」를 허용해야 업데이트할 수 있어요'));
               case OtaStatus.CHECKSUM_ERROR:
                 _fail(tr('받은 파일이 깨졌어요 · 다시 시도해 주세요'));
               case OtaStatus.ALREADY_RUNNING_ERROR:

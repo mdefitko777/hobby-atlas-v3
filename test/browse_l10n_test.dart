@@ -10,6 +10,7 @@ import 'package:hobby_atlas/data/tag_atlas.dart';
 import 'package:hobby_atlas/l10n/l10n.dart';
 import 'package:hobby_atlas/l10n/zh_text.dart';
 import 'package:hobby_atlas/logic/category_browse.dart';
+import 'package:hobby_atlas/logic/data_labels.dart';
 
 import 'support/line_kits.dart';
 
@@ -33,7 +34,7 @@ void main() {
     // 종류 · 세대 묶음 이름과 칸 이름은 category_browse.dart 안 글자 그대로 (모두 화면에 나온다)
     final src = File('lib/logic/category_browse.dart').readAsLinesSync().where((l) => !l.trimLeft().startsWith('//'));
     for (final m in RegExp(r"'([^'\n]*[가-힣][^'\n]*)'").allMatches(src.join('\n'))) {
-      labels.add(m[1]!);
+      labels.add(dataName(m[1]!)); // 칸 키(데이터 값)는 보이는 표준 이름으로
     }
     expect([
       for (final l in labels)
@@ -52,11 +53,42 @@ void main() {
     expect([for (final s in secs) ...s.entries.map((e) => (e.key, e.label))], [('옵션 파츠', '配件包'), ('의류', '服饰')]);
     expect(tr(channelOf('pokemon').label), '宝可梦');
     expect(tr(worldSectionOf('pokemon', 'pokemon-gen1')), '正篇世代');
+    expect(tr(worldSectionOf('pokemon', 'pokemon-pokemon_common')), '跨世代');
+    expect(['gundam', 'pokemon', 'nintendo', 'beyblade'].map((c) => typeSectionTitles(c).map(tr).toList()), [
+      ['拼装模型', '其他等级', 'SD高达', '成品', '扭蛋 · 食玩', '周边', '图书 · 音像', '游戏 · 门票'],
+      ['手办 · 毛绒玩偶', '扭蛋 · 景品 · 一番赏', '周边', '图书 · 音像', '游戏 · 门票'],
+      ['游戏', '主机 · 周边设备', 'amiibo', '手办 · 毛绒玩偶', '扭蛋 · 景品 · 一番赏', '周边', '图书 · 音像', '门票'],
+      ['入门套装 · 补充包', '套装 · 发射器 · 对战盘', '周边', '图书 · 音像', '游戏 · 门票'],
+    ]);
     expect((episodesLabel('1–3화'), episodesLabel('12화'), episodesLabel('')), ('第 1–3 集', '第 12 集', ''));
     expect(TagGame.frienda.subtitle, 'Frienda Pick');
 
     L10n.debugSet(AppLang.ko);
-    expect((episodesLabel('1–3화'), lineGroupLabel('의류'), TagGame.frienda.subtitle), ('1–3화', '의류', '프렌다 픽'));
+    expect((episodesLabel('1–3화'), dataLabel('의류'), TagGame.frienda.subtitle), ('1–3화', '의류', '프렌다 픽'));
+  });
+
+  test('중국어 화면: 모든 채널의 종류 · 세대 묶음 이름에 한글이 남지 않는다', () {
+    L10n.debugSet(AppLang.zh);
+    const worldIds = {
+      'pokemon': ['pokemon-gen1', 'pokemon-pokemon_common'],
+      'fate': ['fate-stay_night', 'fate-fgo_101', 'fate-fgo_308', 'fate-fgo_fes', 'fate-tsukihime'],
+      'armored_core': ['armored_core-ac6'],
+      'beyblade': ['beyblade-bx', 'beyblade-aiger'],
+      'madoka': ['madoka-madoka'],
+      'lego': ['lego-star_wars'],
+      'nintendo': ['nintendo-mario'],
+      'effects': ['effects-fire'],
+    };
+    final titles = [
+      for (final c in allChannels) ...typeSectionTitles(c.id),
+      for (final e in worldIds.entries)
+        for (final id in e.value) worldSectionOf(e.key, id),
+      lineOtherKey,
+    ];
+    expect([
+      for (final t in titles)
+        if (_hangul.hasMatch(tr(t))) t,
+    ], isEmpty);
   });
 
   test('태그 도감: 중국어 화면이면 데이터의 중국어 이름 · 탄 이름', () {

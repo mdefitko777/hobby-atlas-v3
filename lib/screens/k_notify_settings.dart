@@ -5,9 +5,9 @@
 // ┌──────── 디자인 가이드 대응표: K 설정 (알림) ───────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
 // │ K-1  │ SwitchListTile × 2                 │ 새 소식 알림(휴대폰) · 내 채널 소식만      │ P03 · P07     │
-// │ K-8  │ SwitchListTile × 6                 │ 내 상품: 좋아요한 상품 소식 · 발매 D-7 · D-1 · 재판매 · 예약 도착 · 예약 시작 전 · 라이브 시작 전 │ P03 · P07 │
-// │ K-9  │ ListTile(채널 그림 · 요약 · ›)       │ 새 상품 (채널별): 내 채널 → 더 많은 채널, 요약 = 전부 · SEED/00 · PB … · 끔 │ P01 · P06 │
-// │ K-5  │ 아래 시트: SwitchListTile + 조건 줄  │ 채널 규칙: <채널> 전체 · SEED / 00 · PB · PB 예약 기간 · BBX + 골라서 알림(조건 시트) │ P04 · P05 │
+// │ K-8  │ SwitchListTile × 6                 │ 내 상품: 좋아요한 상품 소식 · 발매 D-7 · D-1 · 당일 · 재판매 · 예약 도착 · 예약 시작 전 · 라이브 시작 전 │ P03 · P07 │
+// │ K-9  │ ListTile(채널 그림 · 요약 · ›)       │ 새 상품 (채널별): 내 채널 → 더 많은 채널, 요약 = 전체 · SEED / 00 · PB … · 끔 │ P01 · P06 │
+// │ K-5  │ 아래 시트: SwitchListTile + 조건 줄  │ 채널 규칙: <채널> 전체 · SEED / 00 · PB · PB 예약 · BBX + 조건 알림(조건 시트) │ P04 · P05 │
 // │ K-6  │ ListTile · 지금 확인                │ 마지막 확인 · 지금 확인 · 휴대폰 알림 권한  │ P10           │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 설정 K-3 · 알림 화면 ⚙ → 쌓기(openPage, 도움말과 같은 길). 채널 줄 → 아래 시트(덮기) → 조건 추가 시트(덮기).
@@ -36,18 +36,18 @@ String notifySummary(NotifyConfig c, {bool? permitted}) {
 }
 
 /// 채널 줄 요약에 쓰는 짧은 이름
-const _shortRule = {'seed_00': 'SEED/00', 'premium_bandai': 'PB', 'pb_window': 'PB 예약', 'bbx': 'BBX'};
+const _shortRule = {'seed_00': 'SEED / 00', 'premium_bandai': 'PB', 'pb_window': 'PB 예약', 'bbx': 'BBX'};
 
 /// 좋아요한 PB 상품의 예약 기간은 채널 범위와 상관없이 본다 (feed_rules pbWindowRecords) — 건담 시트에 있지만 늘 센다
 const _anyChannelRules = {'pb_window'};
 
-/// 채널 줄 요약: "전부" · "SEED/00 · PB · 조건 2개" · "끔".
+/// 채널 줄 요약: "전체" · "SEED / 00 · PB · 조건 2개" · "끔".
 /// 내 채널 소식만이 켜져 있고 [mine] 이 아니면 규칙은 걸리지 않는다 (feed_rules ruleHits) — 그때는 조건만 센다
 String channelNotifySummary(NotifyConfig c, String channel, {required bool mine}) {
   final rulesApply = !c.onlyMine || mine;
   final parts = <String>[];
   if (rulesApply && notifyWorldRules.contains(channel) && c.rule(channel)) {
-    parts.add(tr('전부'));
+    parts.add(tr('전체'));
   } else {
     for (final k in notifyChannelRules[channel] ?? const <String>[]) {
       if (c.rule(k) && (rulesApply || _anyChannelRules.contains(k))) parts.add(tr(_shortRule[k] ?? k));
@@ -106,7 +106,7 @@ class _NotifySettingsScreenState extends State<NotifySettingsScreen> {
       r == null
           ? tr('이미 확인 중이에요')
           : (r.error.isNotEmpty
-                ? r.error
+                ? tr(r.error) // 오류 글은 한국어로 저장된다 (뒤 작업과 같은 파일) — 보일 때 번역
                 : (r.liveCount == 0 ? tr('새 소식이 없어요') : trf('새 알림 {n}개', {'n': r.liveCount}))),
     );
   }
@@ -187,7 +187,7 @@ class _NotifySettingsScreenState extends State<NotifySettingsScreen> {
               SectionHeader(tr('내 상품')),
               _ruleSwitch('wanted', Icons.favorite_border, tr('좋아요한 상품의 가격 · 발매일 · 판매처가 바뀌면')),
               _ruleSwitch('release_soon', Icons.today_outlined, tr('발매 D-7 · D-1 · 당일 (발매일이 정해진 것만)')),
-              _ruleSwitch('restock', Icons.replay, tr('좋아요 · 구매함 상품의 재판매(再販) 소식')),
+              _ruleSwitch('restock', Icons.replay, tr('좋아요 · 구매함 상품의 재판매 소식')),
               _ruleSwitch('preorder_arrival', Icons.local_shipping_outlined, tr('예약한 상품의 도착 달 · 도착 날 (내가 적은 도착 예정)')),
               // 라이브와 같은 까닭으로 당일에 올라온 예약은 놓칠 수 있다 (GUNDAM.INFO 「本日11時」는 15분 전에 올라온다)
               _ruleSwitch(
@@ -306,7 +306,7 @@ class _ChannelSheet extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 10, 16, 2),
                   child: Text(
-                    tr('골라서 알림 (채널 · 작품 · 종류)'),
+                    tr('조건 알림 (작품 · 라인)'),
                     style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
                   ),
                 ),

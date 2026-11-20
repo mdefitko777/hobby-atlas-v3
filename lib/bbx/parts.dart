@@ -262,11 +262,14 @@ class PartMold {
   /// True when the mold can be picked for a combo.
   bool get selectable => !placeholder && !assembled && components.isEmpty;
 
-  /// Base name in [lang], falling back to Japanese then English.
+  /// Base name in [lang], falling back to English, then Japanese, then the key.
+  /// 영문(로마자)이 가나보다 한국어 · 중국어 화면에서 읽기 쉬워 ja 보다 en 먼저 (docs/writing/data-names.md)
   String name(String lang) {
-    final n = names[lang];
-    if (n != null && n.isNotEmpty) return n;
-    return names['ja']?.isNotEmpty == true ? names['ja']! : (names['en'] ?? key);
+    for (final l in [lang, 'en', 'ja']) {
+      final n = names[l];
+      if (n != null && n.isNotEmpty) return n;
+    }
+    return key;
   }
 
   @override

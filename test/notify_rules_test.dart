@@ -302,7 +302,7 @@ void main() {
       expect(a.single.id, isNot(b.single.id));
       expect(buildAlerts(batch('c', 5)), hasLength(5));
       expect(a.single.title, '새 상품 6개');
-      expect(a.single.body, startsWith('11.03 · 「a0」 · 「a1」 외 4'));
+      expect(a.single.body, startsWith('11.03 · 「a0」 · 「a1」 외 4개'));
     });
 
     test('요약 제목은 SEED / 00 규칙과 상관없이 개수 — 바뀐 것만이면 「변경 n개」', () {

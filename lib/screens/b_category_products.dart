@@ -1,12 +1,12 @@
 // 화면 B (검색 탭에서 쌓는 화면): 분류 상품 — 종류 · 세대 칸(B-20 · B-21)을 누르면 그 상품 전부.
-// 검색 결과와 같은 줄(검색창 + 필터 + 격자/목록) · 같은 격자/목록(O 전체 목록 SectionListView) — 내 상태는 칸 위 ♡ · 리본뿐.
+// 검색 결과와 같은 줄(검색창 + 필터 + 격자/목록) · 같은 격자/목록(O 전체 목록 SectionListView) — 사진 위 ♡ · 카드 길게 = 구매함.
 //
 // ┌──────── 디자인 가이드 대응표: B 검색 (분류 상품) ──────────────────────────────────┐
 // │ 번호 │  Flutter 위젯명                          │ 비즈니스 명칭(한글)                          │ 원칙(P번호) │
 // │ B-23  │ AppBar 제목 + 작은 공식 로고              │ 어느 분류인지 (HG · 기동전사 건담 · 1세대 …)   │ P03 · P06   │
-// │ B-23a │ ToolRow(GpSearchBar + ListToolIcons)    │ 이 분류 안에서 찾기 · 필터(상태 = 좋아요 · 구매함 · 아직 …) · 격자/목록 — 검색 결과와 같은 줄 │ P04 · P07 │
+// │ B-23a │ ToolRow(GpSearchBar + ListToolIcons)    │ 이 분류 안에서 찾기 · 필터(좋아요 · 구매함 · 발매 예정 · 종류 …) · 격자/목록 — 검색 결과와 같은 줄 │ P04 · P07 │
 // │ B-23b │ UnderlineTab 줄 (가로 스크롤)            │ 세부 시리즈: 전체 · HGUC · HGCE … · PB 한정 (상품 2개 이상인 것만) │ P06 · P07 │
-// │ B-23c │ SectionListView (O-3 · O-4 재사용)       │ 상품 격자/목록 · 정렬 (♡ · 리본 = 내 상태)    │ P04 · P08   │
+// │ B-23c │ SectionListView (O-3 · O-4 재사용)       │ 상품 격자/목록 · 정렬 (♡ · 길게 = 구매함)     │ P04 · P08   │
 // │ B-23d │ TextButton "기체별로 묶기" + GroupedResults │ 건담 작품: 기체별로 묶기 (B-13 과 같은 목록)  │ P01 · P07   │
 // │ B-23e │ AppBar ? (HelpButton)                  │ 이 화면 아이콘 뜻                            │ P10         │
 // └──────────────────────────────────────────────────────────────────────────────────┘
@@ -18,6 +18,7 @@ import '../l10n/l10n.dart';
 import '../api.dart';
 import '../detail_pane.dart';
 import '../logic/category_browse.dart';
+import '../logic/data_labels.dart';
 import '../logic/kit_rules.dart' show kitMatches;
 import '../marks.dart';
 import '../models.dart';
@@ -59,6 +60,7 @@ class CategoryProductsScreen extends StatefulWidget {
     this.groupByUnit = false,
   });
 
+  /// 보이는 분류 이름 그대로 (앞 화면이 dataLabel · 고른 언어로 만든 것 — 다시 번역하지 않는다)
   final String title;
 
   /// 제목 옆 작은 공식 그림 (없으면 글자만)
@@ -110,7 +112,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
             ],
             Flexible(
               child: Text(
-                tr(widget.title),
+                widget.title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w600),
@@ -120,7 +122,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
         ),
         actions: [
           HelpButton(
-            title: tr(widget.title),
+            title: widget.title,
             items: categoryProductsHelp(groupByUnit: widget.groupByUnit),
           ), // B-23e
           const SizedBox(width: 6),
@@ -133,7 +135,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
             // B-23a 검색 결과와 같은 줄
             field: GpSearchBar(
               controller: _controller,
-              hint: trf('{name}에서 찾기', {'name': tr(widget.title)}),
+              hint: trf('{name}에서 찾기', {'name': widget.title}),
               onChanged: (q) => setState(() => _query = q.trim()), // STATE: 찾기 → 상품
             ),
             tools: [
@@ -167,7 +169,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
                   for (final c in ['', ..._choices])
                     UnderlineTab(
                       key: ValueKey('sub-$c'),
-                      label: c.isEmpty ? tr('전체') : tr(c),
+                      label: c.isEmpty ? tr('전체') : (c == pbChoice ? tr(c) : dataLabel(c)),
                       fontSize: Gp.t14,
                       selected: _choice == c,
                       onTap: () => setState(() => _choice = c), // STATE: 세부 시리즈 → 상품
@@ -198,7 +200,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
   Widget _listBody(List<Kit> kits) => SectionListView(
     tools: _tools,
     titleRow: false,
-    title: tr(widget.title),
+    title: widget.title,
     kits: kits,
     query: _query,
     loaders: widget.loaders,
@@ -228,7 +230,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
 
 /// B-23e 분류 상품 ? — 검색 결과와 같은 아이콘
 List<HelpItem> categoryProductsHelp({bool groupByUnit = false}) => [
-  HelpItem(Icons.tune, tr('필터 (상태: 좋아요 · 구매함 · 아직 · 발매 · 판매 · 종류 · 가격)')),
+  HelpItem(Icons.tune, tr('필터 (좋아요 · 구매함 · 발매 예정 · 종류 · 라인 · 작품 · 기간 · 가격)')),
   HelpItem(Icons.grid_view_outlined, tr('격자로 보기')),
   HelpItem(Icons.view_list_outlined, tr('목록으로 보기')),
   HelpItem(Icons.swap_vert, tr('정렬: 최신 · 발매일 · 가격')),
@@ -236,5 +238,5 @@ List<HelpItem> categoryProductsHelp({bool groupByUnit = false}) => [
   if (groupByUnit) HelpItem(Icons.account_tree_outlined, tr('기체별로 묶기')),
   HelpItem.group(tr('상품 사진 위')),
   HelpItem(Icons.favorite_border, tr('좋아요 (사진 왼쪽 아래)'), color: Gp.accent),
-  HelpItem(Icons.bookmark_border, tr('구매함 (사진 왼쪽 위 리본)'), color: Gp.own),
+  HelpItem(Icons.touch_app_outlined, tr('상품 카드 길게 = 구매함에 넣기 · 빼기'), color: Gp.own),
 ];

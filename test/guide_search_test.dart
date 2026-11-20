@@ -41,12 +41,7 @@ Future<void> _settle(WidgetTester tester) async {
 }
 
 Widget _screen() => Scaffold(
-  body: SearchScreen(
-    myChannels: const ['gundam'],
-    onMyChannelsChanged: (_) {},
-    onCamera: () {},
-    loaders: fakeLoaders,
-  ),
+  body: SearchScreen(myChannels: const ['gundam'], onMyChannelsChanged: (_) {}, onCamera: () {}, loaders: fakeLoaders),
 );
 
 Widget _collection({CollectionJump jump = CollectionJump.liked, int tick = 0}) => Scaffold(
@@ -93,7 +88,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('tab-guide')));
     await _settle(tester);
     expect(find.byType(GuideView), findsOneWidget);
-    expect(find.byTooltip('공유 카드'), findsOneWidget);
+    expect(find.byTooltip('내 컬렉션 공유 카드'), findsOneWidget); // 작품 칸 머리의 공유 카드(그 작품)와 따로
     expect(find.byTooltip('편집'), findsNothing);
     await tester.tap(find.byKey(const ValueKey('tab-liked')));
     await _settle(tester);

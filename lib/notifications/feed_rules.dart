@@ -1,6 +1,6 @@
 // "내 채널의 새 소식" 계산 — Gunpula 의 새 소식 파일을 지난번 본 날짜와 비교해 알림함에 넣을 줄을 만든다.
 //   data/atlas/notify-feed.json : 날짜마다 알릴 만한 변화 전부 (kits.json 의 git 판끼리 비교, 개수 제한 없음 · 사진만 바뀐 것은 뺌)
-//   data/update-feed-lite.json  : 위 파일이 아직 없거나 늦을 때만. 날짜마다 추가 20 · 변경 20개까지라 바쁜 날엔 PB · SEED/00 ·
+//   data/update-feed-lite.json  : 위 파일이 아직 없거나 늦을 때만. 날짜마다 추가 20 · 변경 20개까지라 바쁜 날엔 PB · SEED / 00 ·
 //                                 좋아요한 상품의 가격 변경이 잘려 나간다 (2026-11-01: 새 상품 312개 중 20개만)
 //   두 파일 모두 entries[].added[] · changed[] 의 상품 모양이 같아 parseFeed 하나로 읽는다.
 // 규칙은 옛 Gunpula 앱(app/main.js updateEntryMatchesNotificationFilters · app/update-feed.js itemIsPremiumBandai)과 같고,
@@ -10,7 +10,7 @@
 //   · SEED / 00 은 series_key 로 본다 (watch_tags 의 '00' 은 BBX 의 BX-00 · CX-00 에도 붙는다)
 //   · 좋아요한 PB 상품의 예약 시작 · 마감 임박 (Wayback 기록이라 "바뀌었을 수 있어요" 를 붙인다)
 //   · 좋아요한 상품의 발매 D-7 · D-1 · 당일 (발매일이 하루까지 정해진 것만, 기기 안에서 날짜만 비교)
-//   · 좋아요 · 구매함 상품의 재판매(change_reasons 'restock', 규칙 '재판매') — "재판매 · 「이름」 YYYY.MM"
+//   · 좋아요 · 구매함 상품의 재판매(change_reasons 'restock', 규칙 '재판매') — "재판매 · 이름 YYYY.MM"
 //   · 예약한 상품의 도착 달 · 도착 날 (기기에 적은 예약, 규칙 '예약 도착')
 //   · 내 채널 공식 라이브: 처음 보인 라이브 · 시작 30분 전 (규칙 '라이브 시작 전' — live_reminders.dart)
 // 이 파일은 Flutter 위젯을 쓰지 않는다 (백그라운드 isolate · 단위 테스트).
@@ -18,6 +18,7 @@ import '../data/gunpula.dart' show correctedCode, lineLabel, pickName, unescapeH
 import '../l10n/l10n.dart';
 import '../logic/announcement_match.dart' show annReplacedOf, annStageText, moveAnnIds, unofficialLabel;
 import '../logic/lego_scope.dart';
+import '../logic/short_names.dart' show shortWorkName;
 import 'live_reminders.dart';
 import 'preorder_reminders.dart';
 import 'notify_models.dart';
@@ -157,7 +158,7 @@ class FeedItem {
     return r is List ? jMap(r.firstOrNull) : jMap(r);
   }
 
-  /// 알릴 만한 변화인가 — 새로 수록 · 가격 · 발매일 · 한정 · 판매처 (사진 · 이름 · 분류만 바뀐 것은 빼고)
+  /// 알릴 만한 변화인가 — 새 상품 · 가격 · 발매일 · 한정 · 판매처 (사진 · 이름 · 분류만 바뀐 것은 빼고)
   bool get meaningful => changeType == 'added' || reasons.any((r) => !quietReasons.contains(r));
 
   bool get isSeed00 =>
@@ -377,22 +378,23 @@ NoticeRecord? recordForItem(FeedItem it, FeedEntry e, NotifyConfig c, {bool seen
   );
 }
 
-/// 알림 둘째 줄: "좋아요한 상품 · 가격 변경 ¥5,940 · 프리미엄 반다이 · SEED"
+/// 알림 둘째 줄: "좋아요한 상품 · 가격 변경 ¥5,940 · PB 한정 · SEED"
 String itemBody(FeedItem it, {bool wanted = false}) => _shown(itemBodyParts(it, wanted: wanted));
 
 /// [itemBody] 의 조각 — 알림함에는 이것을 두고 보일 때 화면 언어로 만든다
 List<NoticePart> itemBodyParts(FeedItem it, {bool wanted = false}) => [
   if (wanted) const NoticePart.key('좋아요한 상품'),
   if (it.changeType == 'added')
-    const NoticePart.key('새로 수록')
+    const NoticePart.key('새 상품')
   else
     for (final r in it.reasons)
       if (!quietReasons.contains(r)) ..._reasonParts(r, it),
-  if (it.isPb) const NoticePart.key('프리미엄 반다이'),
+  if (it.isPb) const NoticePart.key('PB 한정'),
+  // 작품은 칸 · 제목처럼 반복 머리 없이 (기동전사 건담 SEED → SEED)
   if (it.seriesLabel.isNotEmpty && it.franchise != 'pokemon')
     it.seriesKo.isEmpty && it.seriesZh.isEmpty
-        ? NoticePart.value(it.seriesLabel)
-        : NoticePart.value(it.seriesKo, it.seriesZh),
+        ? NoticePart.value(shortWorkName(it.seriesLabel))
+        : NoticePart.value(shortWorkName(it.seriesKo), shortWorkName(it.seriesZh)),
   if (it.changeType == 'added' && it.releaseDate.isNotEmpty) NoticePart.key('{date} 발매', {'date': it.releaseDate}),
 ];
 
@@ -422,6 +424,9 @@ String _shown(List<NoticePart> parts, [String sep = ' · ']) => parts.map((p) =>
 /// 상품 이름 조각 — 피드에서 읽은 줄은 한국어 · 중국어 이름이 다 있다 (직접 만든 FeedItem 은 [FeedItem.name] 하나)
 NoticePart _titleOf(FeedItem it) =>
     it.nameKo.isEmpty && it.nameZh.isEmpty ? NoticePart.value(it.name) : NoticePart.value(it.nameKo, it.nameZh);
+
+/// 기기에 적어 둔 대상(PB 예약 · 발매일 · 예약 · 알림 받는 예고)의 이름 조각 — 언어를 바꾸면 알림함 줄 이름도 바뀐다
+NoticePart _nameOf(String ko, String zh) => NoticePart.value(ko, zh);
 
 /// PB 예약 기간 알림에 붙는 말 (Wayback 에서 읽은 날짜라)
 String get pbStaleNote => tr('Wayback 기록이라 바뀌었을 수 있어요');
@@ -465,8 +470,9 @@ NoticeRecord _pbRecord(String id, String kind, PbWindow w, String date, NoticePa
     id: id,
     kind: kind,
     kitId: w.id,
-    title: w.name,
+    title: _nameOf(w.name, w.nameZh).shown,
     body: _shown(parts),
+    titlePart: _nameOf(w.name, w.nameZh),
     bodyParts: parts,
     at: now.toUtc(),
     franchise: w.franchise,
@@ -502,8 +508,9 @@ List<NoticeRecord> releaseRecords(NotifyConfig c, Set<String> known, DateTime no
         id: id,
         kind: 'release',
         kitId: r.id,
-        title: r.name,
+        title: _nameOf(r.name, r.nameZh).shown,
         body: _shown(parts),
+        titlePart: _nameOf(r.name, r.nameZh),
         bodyParts: parts,
         at: now.toUtc(),
         franchise: r.franchise,
@@ -525,7 +532,7 @@ List<NoticeRecord> preorderRecords(NotifyConfig c, Set<String> known, DateTime n
   for (final p in c.preorders) {
     if (!p.arrival.startsWith(ym)) continue;
     final exact = p.arrival.length == 10;
-    final money = p.due > 0 ? NoticePart.key('낼 돈 {n}원', {'n': _comma(p.due)}) : const NoticePart.key('결제 완료');
+    final money = p.due > 0 ? NoticePart.key('결제 예정 {n}원', {'n': _comma(p.due)}) : const NoticePart.key('결제 완료');
     for (final (stage, label) in [
       ('month', exact ? NoticePart.key('{date} 도착 예정', {'date': _md(p.arrival)}) : const NoticePart.key('이번 달 도착 예정')),
       if (exact && p.arrival == today) ('d0', const NoticePart.key('오늘 도착 예정')),
@@ -538,8 +545,9 @@ List<NoticeRecord> preorderRecords(NotifyConfig c, Set<String> known, DateTime n
           id: id,
           kind: 'preorder',
           kitId: p.id,
-          title: p.name,
+          title: _nameOf(p.name, p.nameZh).shown,
           body: _shown(parts),
+          titlePart: _nameOf(p.name, p.nameZh),
           bodyParts: parts,
           at: now.toUtc(),
           franchise: p.franchise,
@@ -595,8 +603,9 @@ NoticeRecord _annStageRecord(String id, FollowedAnn from, String stage, DateTime
     kind: 'ann_stage',
     kitId: '',
     annId: id,
-    title: from.title,
+    title: _nameOf(from.title, from.titleZh).shown,
     body: _shown(parts, ' → '),
+    titlePart: _nameOf(from.title, from.titleZh),
     bodyParts: parts,
     bodySep: ' → ',
     at: now,
@@ -934,7 +943,7 @@ List<SystemAlert> buildAlerts(Iterable<NoticeRecord> fresh) {
       SystemAlert(
         id: stableId(r.id),
         channel: 'preorder',
-        title: trf('예약 도착 · 「{name}」', {'name': r.title}),
+        title: trf('예약 도착 · {name}', {'name': r.title}),
         body: r.body,
         payload: 'kit:${r.kitId}',
       ),
@@ -989,10 +998,10 @@ List<SystemAlert> buildAlerts(Iterable<NoticeRecord> fresh) {
   return out;
 }
 
-/// 재판매 휴대폰 알림 제목: "재판매 · 「이름」 2027.03"
+/// 재판매 휴대폰 알림 제목: "재판매 · 이름 2027.03" (상품 하나라 「」 없이 — 여러 개 요약만 「」)
 String restockTitle(NoticeRecord r) {
-  final ym = RegExp(r'^\d{4}-\d{2}').hasMatch(r.date) ? ' ${_ymDot(r.date)}' : '';
-  return trf('재판매 · 「{name}」{ym}', {'name': r.title, 'ym': ym});
+  final ym = RegExp(r'^\d{4}-\d{2}').hasMatch(r.date) ? _ymDot(r.date) : '';
+  return trf('재판매 · {name} {ym}', {'name': r.title, 'ym': ym}).trim();
 }
 
 /// '2027-03-15' · '2027-03' → '2027.03'
@@ -1001,10 +1010,10 @@ String _ymDot(String d) => d.length >= 7 ? d.substring(0, 7).replaceAll('-', '.'
 /// 'YYYY-MM' · 'YYYY-MM-DD' 만 (그 밖은 빈 글자)
 String _ymd(Object? v) => RegExp(r'^\d{4}-\d{2}(-\d{2})?').firstMatch(jStr(v))?.group(0) ?? '';
 
-/// 「A」 · 「B」 외 3
+/// 「A」 · 「B」 외 3개
 String _names(List<NoticeRecord> rs) {
   final head = rs.take(2).map((r) => '「${r.title}」').join(' · ');
-  return rs.length > 2 ? trf('{names} 외 {n}', {'names': head, 'n': rs.length - 2}) : head;
+  return rs.length > 2 ? trf('{names} 외 {n}개', {'names': head, 'n': rs.length - 2}) : head;
 }
 
 /// '2026-10-23' → '10.23'

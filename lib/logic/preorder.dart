@@ -40,7 +40,7 @@ class Preorder {
   /// 지금 기다리는 예약 (지우지 않았고 · 아직 안 옴)
   bool get active => !deleted && arrivedAt.isEmpty;
 
-  /// 아직 낼 돈 — 결제 완료면 0, 아니면 총액 − 예약금
+  /// 결제 예정 (아직 낼 돈) — 결제 완료면 0, 아니면 총액 − 예약금
   int get due {
     if (paid) return 0;
     final d = (price ?? 0) - (deposit ?? 0);
@@ -125,7 +125,7 @@ Iterable<MapEntry<String, Preorder>> arrivingIn(Map<String, Preorder> all, DateT
   return all.entries.where((e) => e.value.active && e.value.arrivalMonth == ym);
 }
 
-/// "이번 달 낼 돈" — [month] 에 도착 예정인 미결제 예약의 남은 돈 합 (원) · 건수
+/// "이번 달 결제 예정" — [month] 에 도착 예정인 미결제 예약의 남은 돈 합 (원) · 건수
 ({int total, int count}) monthDue(Map<String, Preorder> all, DateTime month) {
   var total = 0;
   var count = 0;

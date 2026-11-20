@@ -70,7 +70,7 @@ String bbxIssueText(RuleIssue i, BbxCatalog cat) {
     IssueCode.unknownCombo => tr('지운 조합이 덱에 남아 있어요'),
     IssueCode.beyIncomplete => trf('{n}번 조합이 덜 만들어졌어요', {'n': _beyNo(i)}),
     IssueCode.beyIllegal => trf('{n}번 조합이 규칙에 안 맞아요', {'n': _beyNo(i)}),
-    IssueCode.notEnoughParts => trf('{name}: 가진 개수로는 동시에 못 만들어요', {'name': n}),
+    IssueCode.notEnoughParts => trf('{name}: 보유 개수로는 동시에 못 만들어요', {'name': n}),
     IssueCode.repeatedMold => trf('{name} — {slots} 조합에 겹쳐요', {
       'name': n,
       'slots': [

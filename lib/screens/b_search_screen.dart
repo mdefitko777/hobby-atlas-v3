@@ -6,11 +6,12 @@
 // │ B-1  │ ChannelHeader                      │ 검색 범위 = 내 채널 (C-0 공용)          │ P04 · P06     │
 // │ B-2  │ GpSearchBar (지우기 + 카메라)       │ 검색창(홈과 같은 모양)                 │ P07 · P04     │
 // │ B-3  │ Wrap(InputChip ×) — 검색창을 누르면   │ 최근 검색어 (기기 저장 · 20개 · 되돌리기) │ P06 · P03     │
-// │ B-4  │ 2열 목록 (×횟수) · 새 상품 줄         │ 자주 찾은 (내 검색 횟수) · 새로 들어온    │ P06 · P01     │
+// │ B-4  │ 2열 목록 (×횟수) · 새 상품 줄         │ 자주 찾은 검색어 (내 검색 횟수) · 새 상품 │ P06 · P01     │
 // │ B-5  │ 예시 문장 칩                        │ 설명으로 찾기 (낱말 표 · AI 아님)        │ P10 · P07     │
-// │ B-6  │ ThumbRow + 일치도 %                 │ 설명과 겹친 상품 (맞은 낱말 = 이유)      │ P01 · P09     │
+// │ B-6  │ ThumbRow + 일치도 %                 │ 설명에 맞는 상품 (맞은 단어 = 이유)      │ P01 · P09     │
 // │ B-7  │ SectionListView (O 전체 목록 재사용) │ 검색 결과 · 필터 · 정렬 · 격자/목록      │ P08 · 적응형 │
 // │ B-9  │ 탭 "전체" (처음) → SectionListView │ 내 채널 상품 전부                        │ P07 · P06     │
+// │ B-17 │ KitFilterToggles (검색창 줄 아래 한 줄) │ ♡ 좋아요 · 구매함 · 발매 예정 · 나라(두 나라가 섞였을 때) — 필터 시트 위 줄을 밖으로 │ P07 · P04 │
 // │ B-14 │ UnderlineTab 전체 · 종류 · 세대      │ 둘러보기 세 가지 (검색창 줄 아래, 컬렉션 탭 줄과 같은 자리) │ P06 · P04 │
 // │ B-15 │ 탭 "종류" · "세대" → TypeBrowse · EraBrowse (B-20 · B-21) │ 공식 그림 + 이름만 → 그 분류 상품 (같은 필터) │ P06 · P08 │
 // │ B-16 │ B-14 줄 오른쪽 글자 단추 → 아래 시트   │ 레고 채널만: 레고 범위 (최근 정식 세트 · 전부) — 검색창 줄 아이콘은 세 칸 그대로 │ P06 · P10 │
@@ -21,7 +22,7 @@
 // │ B-11 │ 위 줄 ? (S-19, searchHelp)          │ 검색창 줄 아이콘 뜻 한 줄씩              │ P10           │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 검색은 기기 안: 받아 둔 Gunpula 목록에서 거른다. 설명으로 찾기 = lib/logic/sentence_search.dart (낱말 맞추기, 서버 · AI 없음).
-// 서버가 없어 "인기 검색어" 순위는 만들지 않는다 → 내 검색 횟수(자주 찾은)와 이번 주 새 상품으로.
+// 서버가 없어 "인기 검색어" 순위는 만들지 않는다 → 내 검색 횟수(자주 찾은 검색어)와 이번 주 새 상품으로.
 // 왜 이렇게: 정확한 이름을 몰라도 찾게 — 필터 입구를 여럿 두지 않고 검색창 하나 + 말로 찾기.
 import 'package:flutter/material.dart';
 
@@ -29,6 +30,7 @@ import '../l10n/l10n.dart';
 import '../api.dart';
 import '../data/user_store.dart';
 import '../channels.dart';
+import '../logic/data_labels.dart';
 import '../logic/kit_rules.dart';
 import '../logic/lego_scope.dart';
 import '../marks.dart';
@@ -178,7 +180,7 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
   void _removeRecent(UserStore me, String q) {
     final i = me.removeRecentSearch(q);
     if (i < 0) return;
-    showToast(context, trf('「{q}」을(를) 지웠어요', {'q': q}), onUndo: () => me.insertRecentSearch(i, q));
+    showToast(context, trf('「{q}」 지웠어요', {'q': q}), onUndo: () => me.insertRecentSearch(i, q));
   }
 
   void _clearRecent(UserStore me) {
@@ -222,6 +224,7 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
           tools: [
             ListToolIcons(
               tools: _tools,
+              togglesOutside: true, // B-17 이 검색창 아래에 있다
               pool: _all == null
                   ? null
                   : [
@@ -231,6 +234,8 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
             ),
           ],
         ),
+        // B-17 검색창을 눌러 최근 · 자주 찾은 판을 보는 동안은 거를 목록이 없어 숨긴다
+        if (_all != null && !(_query.isEmpty && _focus.hasFocus)) _toggleRow(_all!),
         if (_browsing) _viewTabs(), // B-14
         Expanded(
           child: FutureBuilder<List<Kit>>(
@@ -251,6 +256,23 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
       ],
     );
   }
+
+  /// B-17 아이콘 줄 — 필터 시트 맨 위에 있던 내 상태 · 발매 예정 · 나라를 검색창 아래로 (2026-11-19 주인 결정).
+  /// 같은 KitFilter 를 바꿔 전체 · 종류 · 세대 · 검색 결과가 같이 거른다. 나라는 지금 목록에 두 나라가 섞였을 때만
+  Widget _toggleRow(List<Kit> all) => ListenableBuilder(
+    listenable: _tools,
+    builder: (context, _) => Padding(
+      padding: const EdgeInsets.symmetric(horizontal: Gp.gutter - 8),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: KitFilterToggles(
+          filter: _tools.filter,
+          regions: hasBothRegions(all.where((k) => kitMatches(k, _query))),
+          onChanged: _tools.setFilter, // STATE: 아이콘 줄 → 목록 · 분류 칸
+        ),
+      ),
+    ),
+  );
 
   /// B-14 전체 · 종류 · 세대 (컬렉션의 좋아요 · 예약 · 구매함과 같은 밑줄 탭) + 레고 채널이면 B-16 범위
   Widget _viewTabs() => Padding(
@@ -303,8 +325,8 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
                 title: Text(_legoScopeLabel(v)),
                 subtitle: Text(
                   v == LegoScope.all
-                      ? tr('Rebrickable 의 레고 전부 (굿즈 · 책 · 옛 세트까지)')
-                      : trf('{year}년부터 나온 정식 세트 · 미니피규어', {'year': legoRecentFromYear}),
+                      ? tr('Rebrickable의 레고 전부 (굿즈 · 도서 · 옛 세트까지)')
+                      : trf('{year}년부터 나온 정식 세트 · 미니피겨', {'year': legoRecentFromYear}),
                 ),
                 trailing: v == me.legoScope ? const Icon(Icons.check, color: Gp.accent) : null,
                 onTap: () => Navigator.pop(sheet, v),
@@ -417,7 +439,7 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
             tr('최근 검색'),
             padding: const EdgeInsets.fromLTRB(16, 16, 4, 10),
             trailing: IconButton(
-              tooltip: tr('전체 삭제'),
+              tooltip: tr('모두 지우기'),
               visualDensity: VisualDensity.compact,
               onPressed: () => _clearRecent(me),
               icon: const Icon(Icons.delete_sweep_outlined, size: Gp.iM, color: Gp.muted),
@@ -428,7 +450,7 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
           ]),
         ],
         if (frequent.isNotEmpty) ...[
-          SectionHeader(tr('자주 찾은'), padding: const EdgeInsets.fromLTRB(16, 24, 12, 10)), // B-4 내 검색 횟수
+          SectionHeader(tr('자주 찾은 검색어'), padding: const EdgeInsets.fromLTRB(16, 24, 12, 10)), // B-4 내 검색 횟수
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: Gp.gutter),
             child: Row(
@@ -438,14 +460,14 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
           ),
         ],
         if (fresh.isNotEmpty) ...[
-          SectionHeader(tr('새로 들어온'), subtitle: tr('이번 주'), padding: const EdgeInsets.fromLTRB(16, 24, 12, 4)), // B-4
+          SectionHeader(tr('새 상품'), subtitle: tr('이번 주'), padding: const EdgeInsets.fromLTRB(16, 24, 12, 4)), // B-4
           for (final k in fresh)
             ThumbRow(
               image: k.image,
               title: k.name,
               size: 44,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
-              subtitle: joinDot([tr(channelOf(k.franchiseId).label), tr(k.line)]),
+              subtitle: joinDot([tr(channelOf(k.franchiseId).label), dataLabel(k.line)]),
               onTap: () => openKitDetail(context, k, loaders: widget.loaders, list: fresh),
             ),
         ],
@@ -483,9 +505,9 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
           EmptyView(
             // B-8 P09
             icon: Icons.search_off,
-            message: trf('「{q}」와 일치하는 상품이 없어요', {'q': _query}),
+            message: trf('「{q}」에 맞는 상품이 없어요', {'q': _query}),
             detail: channel == allChannelId
-                ? tr('이름 대신 생김새·작품을 문장으로 적어 보세요')
+                ? tr('이름 대신 생김새 · 작품을 문장으로 적어 보세요')
                 : trf('지금은 {channel} 안에서만 찾고 있어요', {'channel': tr(channelOf(channel).label)}),
             action: channel == allChannelId
                 ? OutlinedButton(onPressed: () => _setQuery(''), child: Text(tr('검색어 지우기')))
@@ -589,7 +611,7 @@ class SentenceCandidates extends StatelessWidget {
             children: [
               const Icon(Icons.manage_search, size: Gp.iM, color: Gp.accent),
               const SizedBox(width: 6),
-              Text(tr('설명과 겹친 상품'), style: const TextStyle(fontWeight: FontWeight.w700)),
+              Text(tr('설명에 맞는 상품'), style: const TextStyle(fontWeight: FontWeight.w700)),
             ],
           ),
           const SizedBox(height: 6),
@@ -614,8 +636,10 @@ class SentenceCandidates extends StatelessWidget {
 /// B-11 ? 도움말 (위 줄 ? 의 "검색" 묶음 — s_app_shell.dart)
 List<HelpItem> searchHelp() => [
   HelpItem(Icons.photo_camera_outlined, tr('찍어서 찾기 (사진 · 바코드)')),
-  HelpItem(Icons.tune, tr('필터 (상태 · 종류 · 작품 · 발매 · 가격) — 전체 · 종류 · 세대 · 검색 결과가 같이 쓴다')),
+  HelpItem(Icons.favorite_border, tr('검색창 아래 아이콘: 좋아요 · 구매함 · 발매 예정 · 나라 (누르면 켜기 · 다시 누르면 끄기)')),
+  HelpItem(Icons.tune, tr('필터 (종류 · 라인 · 작품 · 기간 · 가격) — 전체 · 종류 · 세대 · 검색 결과 공통')),
   HelpItem(Icons.grid_view_outlined, tr('격자로 보기')),
+  HelpItem(Icons.touch_app_outlined, tr('상품 카드 길게 = 구매함에 넣기 · 빼기')),
   HelpItem(Icons.view_list_outlined, tr('목록으로 보기')),
   HelpItem(Icons.account_tree_outlined, tr('검색 결과를 기체별로 묶기')),
   HelpItem(Icons.manage_search, tr('설명으로 찾기 예')),

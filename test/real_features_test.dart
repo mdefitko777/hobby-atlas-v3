@@ -386,7 +386,7 @@ void main() {
     await tester.tap(find.byType(TextField).first);
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('사자비'), findsOneWidget);
-    expect(find.text('자주 찾은'), findsOneWidget);
+    expect(find.text('자주 찾은 검색어'), findsOneWidget);
     expect(find.text('×2'), findsOneWidget);
     expect(find.text('설명으로 찾기'), findsOneWidget);
     expect(find.textContaining('AI'), findsNothing);
@@ -406,11 +406,18 @@ void main() {
       ),
       me,
     );
-    expect(find.text('갖고 싶은 수'), findsOneWidget);
+    // 1 개면 수량 줄 없이 아래 버튼 ×1 — 길게 누르면 수량 시트
+    expect(find.byKey(const ValueKey('qty-row')), findsNothing);
+    await tester.longPress(find.byKey(const ValueKey('detail-like')));
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(of: find.byKey(const ValueKey('qty-sheet')), matching: find.text('갖고 싶은 수')),
+      findsOneWidget,
+    );
     await tester.tap(find.byTooltip('하나 더'));
     await tester.pump();
     expect(me.quantityOf('q1'), 2);
-    expect(find.text('2'), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const ValueKey('qty-sheet')), matching: find.text('2')), findsOneWidget);
     expect(find.byKey(const ValueKey('chip-market')), findsOneWidget); // 국내 시세 찾아보기 (작은 버튼)
   });
 

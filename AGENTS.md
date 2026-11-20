@@ -12,7 +12,7 @@
   - 고르지 않은 채널의 내 상품: 내가 적어 둔 상품(좋아요 · 구매함 · 예약 · 조립 상태 · 휴지통 · 내 사진, `UserStore.markedKitIds`)은 채널을 빼거나 옛 7채널 캐시를 버리기 전에 `catalog_kept.json` 에 그 상품만 남긴다. byId(내 정보 · 알림 · 상세 · 친구 비교)에는 있고 둘러보는 목록(`kits`) · 컬렉션 탭(내 채널 상품으로 거름)에는 없다. 메자스타 · 프렌다 태그를 적어 두었으면 그 태그 도감 파일도 기기에 남긴다 (다시 받지는 않는다). 그 채널을 다시 고르면 받은 데이터가 이긴다. 이 기기 어디에도 없는 상품의 기록(다른 기기에서 적었고 이 기기는 그 채널을 받은 적이 없다)은 지우지 않고 수(내 정보 숫자 · 레벨)에는 세며, 그 채널을 고르면 목록에도 보인다.
 - 계정 · 공유는 Gunpula 의 Supabase 프로젝트를 같이 쓴다 (`docs/supabase-setup-v2.sql` · `-v3.sql`, 이메일 6자리 코드 로그인). 옛 앱과 같은 계정이라 **로그인만 하면 옛 컬렉션이 온다**.
   - 코드: `lib/sync/` — `collection_merge.dart`(옛 `collection-store.js` 를 그대로 옮김, `test/collection_merge_js_test.dart` 가 JS 결과와 비교), `sync_service.dart`, `device_state.dart` · `device_state_sync.dart`(기기 기록), `photo_restore.dart`(내 사진 되찾기), `friends_service.dart`, `account.dart`(AccountScope), `supabase_backend.dart`(supabase_flutter 를 부르는 유일한 파일).
-  - 친구 = v3 (`@아이디` 로 찾기 → 요청 → 수락, 서로의 컬렉션 읽기만). v2 초대 코드는 쓰지 않는다 (공유 공간은 v2 get_state 의 멤버 · 역할을 **읽기만** — 만들기 · 초대 코드는 서버 함수가 없어 없음, 공유 공간이 없는 계정은 탭 · 칸 숨김).
+  - 친구 = v3 (`@아이디` 로 찾기 → 요청 → 수락, 서로의 컬렉션 읽기만). v2 초대 코드는 쓰지 않는다 (공유 공간은 v2 get_state 의 멤버 · 역할을 **읽기만** — 만들기 · 초대 코드는 서버 함수가 없어 없음. 공유 공간 칸 · 서랍 탭은 2026-11-20 화면에서 뺐고, 설정 › 동기화 상태 줄에 이름만).
 
 ## 데이터 약속 (옛 앱과 함께 쓰는 동안)
 - 키는 Gunpula 의 `kit_id` · gget `unit_id` · phstudy `part_id` 그대로. 가짜 id(gu01 …)를 새로 만들지 않는다.
@@ -47,12 +47,13 @@
   - `derive.dart` = 카탈로그 + 내 기록 → 화면 모델, part `derive/` (guide · bbx · worlds · announcements · notifications · profile).
 - `lib/logic/` 규칙 — 순수 Dart (위젯 없음): kit_filter · guide_filter · kit_rules(찾기 · 바코드 · 다가오는 날짜) · collection_rules · spend · level_math · friends · announcement_match · live_stream(공식 라이브: 기기 시계로 본 단계 · 꼬리표 글) · sentence_search · bbx_builder · market. 엔진은 `lib/bbx/` · 알림 규칙은 `lib/notifications/` 그대로.
 - `lib/api.dart` `Loaders` = 화면이 데이터를 받는 입구 (테스트는 가짜 함수). 앱 전체 상태는 `MarksHost`/`UserStore` · `AccountScope` · `NotifyScope`.
-- `lib/widgets/` 공용 조각 — 화면은 묶음 `lib/widgets.dart` 하나만 import. 아래 시트는 `showGpSheet` 로 열고, 고르는 시트는 `GpPickSheet`(제목 · 초기화 · "n개 보기"), 도감 칸은 `TierCell`, 찾기 + 필터 짝은 `KitFind`. 그림 경로(인터넷 · 앱 안 · `local:` 내 사진)는 `images.dart` 한 곳.
+- `lib/widgets/` 공용 조각 — 화면은 묶음 `lib/widgets.dart` 하나만 import. 아래 시트는 `showGpSheet` 로 열고, 고르는 시트는 `GpPickSheet`(제목 · 초기화 · "n개 보기"), 도감 칸은 `TierCell`, 찾기 + 필터 짝은 `KitFind`, 왼쪽 묶음 목록 + 칸 격자(검색 종류 · 세대 · 도감)는 `SideDirectory` · `SideGrid`, 탭 위 머리 접기는 `HeaderCollapse` · `CollapsingHeader`(앱 셸 하나), 목록 맨 끝 합계는 `ListSummary`. 그림 경로(인터넷 · 앱 안 · `local:` 내 사진)는 `images.dart` 한 곳.
 - `lib/screens/` 화면 — 맨 위 화면은 글자 머리(a_ … u_) + 파일 맨 위 디자인 가이드 대응표(`tool/make_guide.py` 가 읽는다). 큰 화면은 하위 폴더로: `guide/`(G 도감, 대응표는 `g_guide_view.dart`) · `bbx_builder/`(T 의 part 파일). 화면 안에 JSON 파싱 · HTTP · BlobStore 를 두지 않는다.
 - 크기 · 색은 `lib/theme.dart` `Gp` 토큰만: 글자 t11–t24, 아이콘 iXS 12 · iS 16 · iM 20 · iL 24 · iXL 40, 모서리 rSmall · radius · rLarge, 옆 여백 gutter. 따로 둔 값: 상세 빈 칸 그림 · 첫 받기 앱 아이콘 72 · 진행 막대 캡슐 99 · 색 막대 2 · 견본 색 3.
 
 ## 쓰는 법 (여러 AI 가 나눠 고쳐도 한 사람이 쓴 것처럼)
 - 화면 글: [docs/terms.md](docs/terms.md) 용어집의 말과 말투만 쓴다. 새 말은 용어집에 먼저 넣는다. (중국어 화면을 붙인 뒤에는 화면 글이 번역 표 `lib/l10n/` 을 거친다.)
+- 화면 묶음마다 글 쓰는 법(어휘 · 문장 모양 · 하지 말 것 · 글이 있는 파일 · 데이터 이름을 보이는 법)은 [docs/writing/](docs/writing/README.md) — 화면 글을 고치기 전에 그 묶음 문서를 읽는다.
 - 주석: 한국어, 짧게. *무엇을* 하는지보다 *왜* 그렇게 하는지 (실측 날짜 · 실패했던 일 · 다른 길을 안 쓴 까닭). 파일 맨 위에는 그 파일이 맡은 일 한두 줄. 코드를 그대로 읽어 주는 주석은 쓰지 않는다.
 - 이름: 파일 `snake_case.dart`, 맨 위 화면은 글자 머리(`d_kit_detail_screen.dart`), 타입 `UpperCamel`, 나머지 `lowerCamel`, 비공개는 `_`. 같은 일을 하는 이름은 이미 있는 것을 따른다 (`kitsByIds` · `openKitDetail` · `showGpSheet` …) — 비슷한 도우미를 새로 만들기 전에 `lib/widgets.dart` · `lib/logic/` 에서 찾는다.
 - 모양: 고친 파일만 `dart format -l 120` (Claude Code 훅이 편집 뒤 자동으로 돌린다), `dart analyze lib test tool` 0 issues. 크기 · 색은 `Gp` 토큰, 시트는 `showGpSheet`, 그림은 `images.dart` — 화면마다 따로 만들지 않는다.

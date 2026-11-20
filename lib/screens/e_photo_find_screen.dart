@@ -5,18 +5,18 @@
 // ┌──────── 디자인 가이드 대응표: E-8 사진 · 공유로 찾기 ─────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                        │ 비즈니스 명칭(한글)                       │ 원칙(P번호)   │
 // │ E-8  │ 사진 + "이름으로 찾기" + 결과 줄        │ 글자로 못 찾으면 이름 · 설명으로 찾기        │ P09 · P10     │
-// │ E-9  │ 줄 오른쪽 📎 / 리본 / ♡                │ 구매함 상품에 사진 붙이기 · 바로 표시        │ P07 · P03     │
+// │ E-9  │ 줄 오른쪽 📎 / 리본 / ♡                │ 구매함 상품에 사진 넣기 · 바로 표시          │ P07 · P03     │
 // │ E-11 │ MiniSpinner "글자 읽는 중…"            │ 기기 안 글자 읽기 (ML Kit 일본어 · 한국어)   │ P01           │
-// │ E-12 │ _TokenChip Wrap (누르면 끄기 · 길게 = 검색창) │ 읽은 글자 조각 (JAN · 등급 · 축척 · 형식번호 · 낱말) │ P07 · P03 │
+// │ E-12 │ _TokenChip Wrap (누르면 끄기 · 길게 = 검색창) │ 읽은 글자 조각 (JAN · 등급 · 스케일 · 형식번호 · 단어) │ P07 · P03 │
 // │ E-13 │ ThumbRow + 일치도 알약 + 맞은 조각       │ 상품 후보 (JAN · 주소 = 100%)              │ P01 · P10     │
 // │ E-14 │ 아이콘 + 한 줄                          │ 글자를 찾지 못했어요 · 이름으로 찾기         │ P09           │
 // │ E-15 │ 공유로 받은 글 칸 (🔗)                  │ 공유로 받은 글 · 주소 → 주소 · 글자로 찾기   │ P01 · P07     │
 // │ E-16 │ SentenceCandidates                     │ 후보가 없을 때 낱말 맞추기 (설명과 겹친 상품) │ P09           │
-// │ E-17 │ AppBar 오른쪽 ? (HelpButton)       │ 글자 조각 아이콘 · ♡ · 리본 · 사진 붙이기 뜻 │ P10           │
+// │ E-17 │ AppBar 오른쪽 ? (HelpButton)       │ 글자 조각 아이콘 · ♡ · 리본 · 사진 넣기 뜻 │ P10           │
 // │ E-18 │ VisualMatches (e_visual_matches.dart) │ 생김새가 비슷한 상품 칸 (기기 안 모델, 처음 한 번 받기) · 채널 칩 │ P01 · P08 │
 // │ E-19 │ 사진 위 ✂ → PhotoCropScreen (e_photo_crop_screen.dart) │ 찾을 부분 고르기 (생김새만, 틀 끌기) │ P07 · P09 │
 // └────────────────────────────────────────────────────────────────────────────────────┘
-// 전환: E-5 사진 · 앨범 / 공유로 받기 → 이 화면(쌓기) → D 상세(쌓기).
+// 전환: E-5 사진 · 갤러리 / 공유로 받기 → 이 화면(쌓기) → D 상세(쌓기).
 // 글자 후보의 일치도는 글자가 겹친 정도 그대로다. 생김새(E-18)는 점수 없이 비슷한 순서로만 — 같은 기체의 다른 등급이 섞이므로 고르게 한다.
 import 'dart:async';
 import 'dart:typed_data';
@@ -27,6 +27,7 @@ import '../l10n/l10n.dart';
 import '../api.dart';
 import '../channels.dart';
 import '../data/photo_files.dart';
+import '../logic/data_labels.dart';
 import '../logic/kit_rules.dart' show kitMatches;
 import '../logic/ocr_lookup.dart';
 import '../logic/photo_crop.dart';
@@ -64,7 +65,7 @@ Future<void> openShared(
         if (context.mounted) showToast(context, tr('공유한 사진을 열지 못했어요'));
         return;
       }
-      // 스크린숏 · 원본 크기 사진이라 내 사진으로 붙이지 않는다 (붙이기는 찍기 · 앨범에서)
+      // 스크린숏 · 원본 크기 사진이라 내 사진으로 넣지 않는다 (넣기는 찍기 · 갤러리에서)
       nav.push(
         MaterialPageRoute<void>(
           builder: (_) => PhotoFindScreen(photo: bytes, attachable: false, loaders: loaders, onGoSearch: onGoSearch),
@@ -112,7 +113,7 @@ class PhotoFindScreen extends StatefulWidget {
   /// 공유로 받은 글 · 주소
   final String sharedText;
 
-  /// 구매함 상품에 이 사진을 붙일 수 있나 (찍기 · 앨범 = 줄인 JPEG)
+  /// 구매함 상품에 이 사진을 넣을 수 있나 (찍기 · 갤러리 = 줄인 JPEG)
   final bool attachable;
 
   /// 사진 찾기를 연 탭의 채널 — 생김새 후보의 기본 칩 (null = 전체)
@@ -147,7 +148,7 @@ class _PhotoFindScreenState extends State<PhotoFindScreen> {
   /// 이 화면에서 사진을 붙인 상품 (✓)
   final Set<String> _attached = {};
 
-  /// E-19 생김새를 비교할 부분 (글자 읽기 · 사진 붙이기는 사진 전체)
+  /// E-19 생김새를 비교할 부분 (글자 읽기 · 사진 넣기는 사진 전체)
   CropBox _crop = fullCrop;
 
   (String, List<SentenceHit>)? _memo;
@@ -236,7 +237,7 @@ class _PhotoFindScreenState extends State<PhotoFindScreen> {
     setState(() => _query = t.label); // STATE: 조각 → 이름으로 찾기
   }
 
-  /// E-9 이 상품에 사진 붙이기 (내 사진 목록 · 사진 벽 · 상세 사진 줄에 보인다)
+  /// E-9 이 상품에 사진 넣기 (내 사진 목록 · 사진 벽 · 상세 사진 줄에 보인다)
   Future<void> _attach(Kit k) async {
     final photo = widget.photo;
     if (photo == null) return;
@@ -250,7 +251,7 @@ class _PhotoFindScreenState extends State<PhotoFindScreen> {
     setState(() => _attached.add(k.id)); // STATE: 붙임 → ✓
     showToast(
       context,
-      trf('「{name}」에 사진을 붙였어요', {'name': k.name}),
+      trf('「{name}」에 사진을 넣었어요', {'name': k.name}),
       onUndo: () {
         store.removePhoto(p.id);
         share.syncSoon();
@@ -277,7 +278,7 @@ class _PhotoFindScreenState extends State<PhotoFindScreen> {
             child: Icon(Icons.check_circle, size: Gp.iM, color: Gp.accent),
           )
         : IconButton(
-            tooltip: tr('사진 붙이기'),
+            tooltip: tr('내 사진 넣기'),
             visualDensity: VisualDensity.compact,
             onPressed: () => _attach(k),
             icon: const Icon(Icons.add_photo_alternate_outlined, size: Gp.iM, color: Gp.ink),
@@ -289,7 +290,7 @@ class _PhotoFindScreenState extends State<PhotoFindScreen> {
     title: k.name,
     tag: tag,
     tagStrong: strong,
-    subtitle: reason.isNotEmpty ? reason : joinDot([tr(channelOf(k.franchiseId).label), tr(k.line)]),
+    subtitle: reason.isNotEmpty ? reason : joinDot([tr(channelOf(k.franchiseId).label), dataLabel(k.line)]),
     onTap: () => openKitDetail(context, k, loaders: widget.loaders, list: list),
     trailing: _marks(k),
   );
@@ -505,7 +506,7 @@ class _PhotoFindScreenState extends State<PhotoFindScreen> {
                 if (_query.isNotEmpty && byName.isEmpty && hits.isEmpty)
                   EmptyView(
                     icon: Icons.search_off,
-                    message: trf('「{q}」와 일치하는 상품이 없어요', {'q': _query}),
+                    message: trf('「{q}」에 맞는 상품이 없어요', {'q': _query}),
                     action: OutlinedButton.icon(
                       onPressed: () => reportDataIssue(context, kind: ReportKind.missingKit, unitName: _query),
                       icon: const Icon(Icons.flag_outlined, size: Gp.iM),
@@ -529,7 +530,7 @@ List<HelpItem> photoFindHelp() => [
   HelpItem(Icons.link, tr('공유로 받은 주소 (100%)')),
   HelpItem.widget(const LikedIcon(size: Gp.iL, filled: false, color: Gp.muted), tr('좋아요')),
   HelpItem.widget(const OwnedIcon(size: Gp.iL, filled: false, color: Gp.muted), tr('구매함')),
-  HelpItem(Icons.add_photo_alternate_outlined, tr('이 사진을 구매함 상품에 붙이기')),
+  HelpItem(Icons.add_photo_alternate_outlined, tr('이 사진을 구매함 상품에 넣기')),
   HelpItem(Icons.image_search, tr('생김새가 비슷한 상품 (기기 안 모델 · 처음 한 번 받기 · 사진은 밖으로 안 나감)')),
   HelpItem(Icons.crop, tr('찾을 부분 고르기 (물건만 틀에 넣으면 생김새를 더 잘 찾아요)')),
   HelpItem(Icons.delete_outline, tr('받아 둔 생김새 모델 지우기')),
@@ -583,10 +584,10 @@ class _TokenChip extends StatelessWidget {
   static String _label(OcrKind k) => switch (k) {
     OcrKind.jan => tr('JAN (바코드 숫자)'),
     OcrKind.grade => tr('등급'),
-    OcrKind.scale => tr('축척'),
+    OcrKind.scale => tr('스케일'),
     OcrKind.model => tr('형식번호'),
     OcrKind.bbx => tr('베이 부품 번호'),
-    OcrKind.word => tr('낱말'),
+    OcrKind.word => tr('단어'),
   };
 
   @override

@@ -1,4 +1,4 @@
-// 수집 레벨 한 벌 — 왼쪽 위 아바타 옆 Lv · 레벨 시트 · 도감 화면이 같은 막대 · 같은 ? 를 쓴다.
+// 수집 레벨 한 벌 — 왼쪽 위 아바타 옆 Lv · 레벨 시트가 같은 막대 · 같은 ? 를 쓴다 (도감 화면에는 막대를 두지 않는다).
 // 경험치: 구매 10 · 도감 새 칸 5 · 사진 인증 3 · 좋아요 0 (lib/logic/level_math.dart collectorXp)
 import 'package:flutter/material.dart';
 
@@ -13,7 +13,7 @@ import 'widgets.dart';
 /// 레벨 색 — 10레벨마다 바뀐다: 회색 · 초록 · 파랑 · 보라 · 금색 · 빨강(50+)
 Color levelColor(int level) => Gp.levelTiers[(level ~/ 10).clamp(0, Gp.levelTiers.length - 1)];
 
-/// Lv 표 (레벨 색) — My Page · 도감 레벨 막대 · 친구 서랍
+/// Lv 표 (레벨 색) — My Page · 레벨 시트 · 친구 서랍
 class LevelChip extends StatelessWidget {
   const LevelChip({super.key, required this.level, this.small = false});
   final int level;
@@ -85,7 +85,7 @@ Future<LevelData> loadLevel(Loaders loaders) async {
   return LevelData(owned: me.ownedCount, lit: lit, series: series);
 }
 
-/// 레벨 막대 — Lv 표 · 경험치 막대 · 남은 양 · ? (도감 화면 · 레벨 시트 공통)
+/// 레벨 막대 — Lv 표 · 경험치 막대 · 남은 양 · ? (레벨 시트. 도감 화면 위 막대는 2026-11-20 뺐다)
 class LevelBar extends StatelessWidget {
   const LevelBar({super.key, required this.xp, this.padding = const EdgeInsets.fromLTRB(16, 6, 16, 12)});
   final int xp;
@@ -313,30 +313,3 @@ Future<void> showLevelSheet(BuildContext context, Loaders loaders) => showGpShee
     },
   ),
 );
-
-/// 레벨 막대 (구매함이 바뀌면 다시 센다) — 도감 화면 위쪽
-class LiveLevelBar extends StatefulWidget {
-  const LiveLevelBar({super.key, required this.loaders});
-  final Loaders loaders;
-
-  @override
-  State<LiveLevelBar> createState() => _LiveLevelBarState();
-}
-
-class _LiveLevelBarState extends State<LiveLevelBar> {
-  Future<LevelData>? _data;
-  int _rev = -1;
-
-  @override
-  Widget build(BuildContext context) {
-    final rev = Marks.of(context).version;
-    if (rev != _rev || _data == null) {
-      _rev = rev;
-      _data = loadLevel(widget.loaders);
-    }
-    return FutureBuilder<LevelData>(
-      future: _data,
-      builder: (context, snap) => LevelBar(xp: snap.data?.xp ?? collectorXp(owned: UserStore.instance.ownedCount)),
-    );
-  }
-}

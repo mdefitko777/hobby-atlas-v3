@@ -83,7 +83,7 @@ void main() {
     expect(find.text('부품을 골라 주세요'), findsOneWidget);
 
     await _choose(tester, Slot.blade, swordDran);
-    // 가진 블레이드 → 칸에 책갈피
+    // 보유 블레이드 → 칸에 책갈피
     expect(
       find.descendant(of: find.byKey(const Key('bbx-slot-blade')), matching: find.byType(OwnedIcon)),
       findsOneWidget,
@@ -171,10 +171,10 @@ void main() {
     expect(find.text('내 드랜'), findsOneWidget);
     await tester.tap(find.byKey(Key('bbx-saved-${saved.id}')));
     await tester.pumpAndSettle();
-    // 만들기 탭에 그대로 불러옴 (고쳐 저장)
+    // 만들기 탭에 그대로 불러옴 (수정 저장)
     expect(tester.widget<Text>(find.byKey(const Key('bbx-box-name'))).data, boxName(saved, cat, lang: 'ko'));
     expect(find.byKey(const Key('bbx-legal')), findsOneWidget);
-    expect(find.text('고쳐 저장'), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const Key('bbx-save')), matching: find.text('수정 저장')), findsOneWidget);
 
     // 이름 바꾸기
     await tester.tap(_tab('저장'));

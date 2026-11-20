@@ -19,7 +19,7 @@ const notifyRuleDefaults = <String, bool>{
   'wanted': true,
   'pb_window': true,
   'release_soon': true,
-  // 좋아요 · 구매함 상품의 재판매(再販) 소식 (Gunpula 피드 change_reasons 'restock')
+  // 좋아요 · 구매함 상품의 재판매 소식 (Gunpula 피드 change_reasons 'restock')
   'restock': true,
   // 예약한 상품의 도착 달 · 도착 날 (기기에 적은 예약 — lib/logic/preorder.dart)
   'preorder_arrival': true,
@@ -67,8 +67,8 @@ const notifyRuleLabels = <String, String>{
   'seed_00': 'SEED / 00',
   'bbx': 'BBX',
   'wanted': '좋아요한 상품 소식',
-  'pb_window': 'PB 예약 기간',
-  'release_soon': '발매 D-7 · D-1',
+  'pb_window': 'PB 예약',
+  'release_soon': '발매 D-7 · D-1 · 당일',
   'restock': '재판매',
   'preorder_arrival': '예약 도착',
   'preorder_soon': '예약 시작 전',
@@ -124,17 +124,34 @@ class NotifyCondition {
 
 /// 좋아요한 PB 상품의 예약 기간 (kits 의 premium_bandai.order_opens_at · order_closes_at, Wayback 에서 읽은 값)
 class PbWindow {
-  const PbWindow({required this.id, required this.name, this.franchise = '', this.opens = '', this.closes = ''});
+  const PbWindow({
+    required this.id,
+    required this.name,
+    this.nameZh = '',
+    this.franchise = '',
+    this.opens = '',
+    this.closes = '',
+  });
 
   final String id;
+
+  /// 한국어 · 중국어 이름 — 알림함 줄이 보일 때 화면 언어로 고른다 ([NoticePart.value])
   final String name;
+  final String nameZh;
   final String franchise;
 
   /// YYYY-MM-DD (없으면 빈 글자)
   final String opens;
   final String closes;
 
-  Map<String, Object?> toJson() => {'id': id, 'name': name, 'franchise': franchise, 'opens': opens, 'closes': closes};
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'name': name,
+    if (nameZh.isNotEmpty) 'name_zh': nameZh,
+    'franchise': franchise,
+    'opens': opens,
+    'closes': closes,
+  };
 
   static PbWindow? fromJson(Object? json) {
     final j = jMap(json);
@@ -143,6 +160,7 @@ class PbWindow {
     return PbWindow(
       id: id,
       name: jStr(j['name']),
+      nameZh: jStr(j['name_zh']),
       franchise: jStr(j['franchise']),
       opens: _day(j['opens']),
       closes: _day(j['closes']),
@@ -152,23 +170,38 @@ class PbWindow {
 
 /// 좋아요한 상품의 정확한 발매일 (kits 의 release_date 가 YYYY-MM-DD 인 것만) — D-7 · D-1 · 당일 알림
 class ReleaseDay {
-  const ReleaseDay({required this.id, required this.name, required this.date, this.franchise = ''});
+  const ReleaseDay({required this.id, required this.name, required this.date, this.nameZh = '', this.franchise = ''});
 
   final String id;
+
+  /// 한국어 · 중국어 이름 ([PbWindow.name] 과 같음)
   final String name;
+  final String nameZh;
   final String franchise;
 
   /// YYYY-MM-DD
   final String date;
 
-  Map<String, Object?> toJson() => {'id': id, 'name': name, 'franchise': franchise, 'date': date};
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'name': name,
+    if (nameZh.isNotEmpty) 'name_zh': nameZh,
+    'franchise': franchise,
+    'date': date,
+  };
 
   static ReleaseDay? fromJson(Object? json) {
     final j = jMap(json);
     final id = jStr(j['id']);
     final date = _day(j['date']);
     if (id.isEmpty || date.isEmpty) return null;
-    return ReleaseDay(id: id, name: jStr(j['name']), franchise: jStr(j['franchise']), date: date);
+    return ReleaseDay(
+      id: id,
+      name: jStr(j['name']),
+      nameZh: jStr(j['name_zh']),
+      franchise: jStr(j['franchise']),
+      date: date,
+    );
   }
 }
 
@@ -178,25 +211,30 @@ class PreorderDue {
     required this.id,
     required this.name,
     required this.arrival,
+    this.nameZh = '',
     this.franchise = '',
     this.due = 0,
     this.shop = '',
   });
 
   final String id;
+
+  /// 한국어 · 중국어 이름 ([PbWindow.name] 과 같음)
   final String name;
+  final String nameZh;
   final String franchise;
 
   /// 'YYYY-MM' 또는 'YYYY-MM-DD'
   final String arrival;
 
-  /// 아직 낼 돈 (원, 결제 완료면 0)
+  /// 결제 예정 (원, 결제 완료면 0)
   final int due;
   final String shop;
 
   Map<String, Object?> toJson() => {
     'id': id,
     'name': name,
+    if (nameZh.isNotEmpty) 'name_zh': nameZh,
     'franchise': franchise,
     'arrival': arrival,
     if (due > 0) 'due': due,
@@ -211,6 +249,7 @@ class PreorderDue {
     return PreorderDue(
       id: id,
       name: jStr(j['name']),
+      nameZh: jStr(j['name_zh']),
       franchise: jStr(j['franchise']),
       arrival: arrival,
       due: j['due'] is num ? (j['due']! as num).toInt() : 0,
@@ -461,18 +500,33 @@ class NotifyConfig {
 
 /// 알림 받는 예고 한 개 — [stage] 는 announcements.json 의 status (announced · product_confirmed …)
 class FollowedAnn {
-  const FollowedAnn({required this.stage, required this.title, required this.franchise});
+  const FollowedAnn({required this.stage, required this.title, required this.franchise, this.titleZh = ''});
   final String stage;
+
+  /// 한국어(없으면 일본어) · 중국어 제목 — 단계 줄이 보일 때 화면 언어로 고른다
   final String title;
+  final String titleZh;
   final String franchise;
 
-  Map<String, Object?> toJson() => {'stage': stage, 'title': title, 'franchise': franchise};
+  FollowedAnn withStage(String next) => FollowedAnn(stage: next, title: title, titleZh: titleZh, franchise: franchise);
+
+  Map<String, Object?> toJson() => {
+    'stage': stage,
+    'title': title,
+    if (titleZh.isNotEmpty) 'title_zh': titleZh,
+    'franchise': franchise,
+  };
 
   static FollowedAnn? fromJson(Object? json) {
     final j = jMap(json);
     final stage = jStr(j['stage']);
     if (stage.isEmpty) return null;
-    return FollowedAnn(stage: stage, title: jStr(j['title']), franchise: jStr(j['franchise']));
+    return FollowedAnn(
+      stage: stage,
+      title: jStr(j['title']),
+      titleZh: jStr(j['title_zh']),
+      franchise: jStr(j['franchise']),
+    );
   }
 }
 
@@ -499,7 +553,8 @@ class NoticePart {
   static NoticePart? fromJson(Object? json) {
     final j = jMap(json);
     if (j['k'] is String) {
-      return NoticePart.key(jStr(j['k']), {
+      final k = jStr(j['k']);
+      return NoticePart.key(_renamedKeys[k] ?? k, {
         for (final e in jMap(j['a']).entries)
           if (e.value case final Object v) e.key: v,
       });
@@ -508,6 +563,10 @@ class NoticePart {
   }
 
   static List<NoticePart> listOf(Object? json) => [for (final p in jList(json)) ?fromJson(p)];
+
+  /// 말을 바꾼 옛 키 → 지금 키 (알림함 줄은 120일 남아 옛 키로 저장돼 있다 — 2026-11-20 용어 정리).
+  /// 옛 '프리미엄 반다이' 는 PB 한정 뜻이었다 (지금 '프리미엄 반다이' 는 가게 이름)
+  static const _renamedKeys = {'새로 수록': '새 상품', '프리미엄 반다이': 'PB 한정', '낼 돈 {n}원': '결제 예정 {n}원'};
 }
 
 /// 알림함 한 줄 — 만들어진 뒤 바뀌지 않는다 (읽음 · 지움은 [NoticeFlag] 로 따로)

@@ -163,15 +163,15 @@ void main() {
     expect(placed, hasLength(notifyRuleDefaults.length), reason: '두 곳에 있으면 한쪽만 바뀌어 보인다');
   });
 
-  test('요약: 설정 줄 "켜짐 · 규칙 n개" · 채널 줄 "전부 · SEED/00 · PB … · 끔"', () {
+  test('요약: 설정 줄 "켜짐 · 규칙 n개" · 채널 줄 "전체 · SEED / 00 · PB … · 끔"', () {
     final c = NotifyConfig();
     expect(notifySummary(c), '켜짐 · 규칙 10개'); // 처음 켜져 있는 규칙 10개 (예약 시작 전 · 라이브 시작 전 포함)
     expect(notifySummary(c, permitted: false), '꺼짐');
-    expect(channelNotifySummary(c, 'gundam', mine: true), 'SEED/00 · PB · PB 예약');
+    expect(channelNotifySummary(c, 'gundam', mine: true), 'SEED / 00 · PB · PB 예약');
     expect(channelNotifySummary(c, 'beyblade', mine: true), 'BBX');
     expect(channelNotifySummary(c, 'fate', mine: true), '끔');
     c.rules['gundam'] = true;
-    expect(channelNotifySummary(c, 'gundam', mine: true), '전부');
+    expect(channelNotifySummary(c, 'gundam', mine: true), '전체');
     // 내 채널 소식만 + 내 채널 밖: 규칙은 걸리지 않는다 (PB 예약 기간 · 내가 만든 조건만)
     expect(channelNotifySummary(c, 'gundam', mine: false), 'PB 예약');
     c.conditions.add(const NotifyCondition(franchise: 'fate', scope: 'group:saber', scopeLabel: '세이버'));

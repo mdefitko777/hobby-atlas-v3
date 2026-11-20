@@ -335,7 +335,8 @@ void main() {
       final store = UserStore.memory();
       await _pump(tester, const TagAtlasScreen(game: TagGame.mezastar, region: 'KR'), store);
       expect(find.byType(TagCell), findsNWidgets(4)); // 스타더스트 1탄 (한국)
-      expect(find.text('수집 0 / 4'), findsWidgets);
+      expect(find.textContaining('수집'), findsNothing); // 도감 화면에 수집 n / m 없음 (2026-11-20)
+      expect(find.byType(AccentBar), findsNothing);
       expect(find.byType(MarkOverlay), findsNWidgets(4)); // 상품 도감 칸과 같은 빠른 버튼
 
       await tester.enterText(find.byType(TextField), '뮤츠');
@@ -359,14 +360,12 @@ void main() {
       await _settle(tester);
       expect(cell().liked, isTrue);
       expect(tester.widget<TierCell>(find.byType(TierCell)).tier, CellTier.liked); // 컬러
-      expect(find.text('수집 0 / 4'), findsWidgets); // 좋아요는 수집이 아니다
-      expect(find.textContaining('좋아요 1'), findsOneWidget); // 탄 머리 줄
+      expect(store.tagOwned, isEmpty); // 좋아요는 구매함이 아니다
 
       await tester.tap(quick.first); // 리본 → 구매함 (좋아요에서 빠짐)
       await _settle(tester);
       expect(store.tagOwned, {'mz-intl:1-1-001@KR'});
       expect(store.tagLiked, isEmpty);
-      expect(find.text('수집 1 / 4'), findsWidgets);
       expect(cell().owned, isTrue);
       expect(tester.widget<TierCell>(find.byType(TierCell)).tier, CellTier.owned); // + 민트 테두리
       expect(find.text('「뮤츠」 구매함에 넣었어요'), findsOneWidget);
@@ -384,7 +383,7 @@ void main() {
       await tester.tap(find.text('TW'));
       await _settle(tester);
       expect(find.text('루기아'), findsOneWidget);
-      expect(find.text('수집 0 / 7'), findsOneWidget); // 대만 전체 (앱 바)
+      expect(find.text('MEZASTAR TW'), findsOneWidget); // 앱 바 = 게임 · 지역만
       expect(tester.takeException(), isNull);
     });
 

@@ -184,7 +184,7 @@ class _PartPickerSheetState extends State<_PartPickerSheet> {
               trailing: ToolIcon(
                 // T-5a P07
                 icon: _ownedOnly ? Icons.bookmark : Icons.bookmark_border,
-                tip: tr('가진 부품만'),
+                tip: tr('보유 부품만'),
                 on: _ownedOnly,
                 color: _ownedOnly ? Gp.own : null,
                 onTap: () {
@@ -195,15 +195,15 @@ class _PartPickerSheetState extends State<_PartPickerSheet> {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: GpSearchBar(hint: tr('이름 · 코드로 찾기'), onChanged: (v) => setState(() => _query = v.trim())),
+              child: GpSearchBar(hint: tr('이름 · 번호로 찾기'), onChanged: (v) => setState(() => _query = v.trim())),
             ),
             Expanded(
               child: molds.isEmpty
                   ? EmptyView(
                       message: _ownedOnly
-                          ? trf('가진 {slot}가 없어요', {'slot': bbxSlotLabel(widget.slot)})
+                          ? trf('보유한 {slot} 없음', {'slot': bbxSlotLabel(widget.slot)})
                           : tr('찾는 부품이 없어요'),
-                      detail: _ownedOnly ? tr('도감에서 가진 부품을 켜면 여기 보여요') : '',
+                      detail: _ownedOnly ? tr('도감에서 보유 부품을 켜면 여기 보여요') : '',
                       icon: Icons.search_off,
                     )
                   : ListView.builder(

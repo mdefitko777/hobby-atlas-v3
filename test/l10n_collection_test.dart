@@ -55,7 +55,10 @@ void main() {
     for (var i = 0; i < 6; i++) {
       await tester.pump(const Duration(milliseconds: 300));
     }
-    expect(find.textContaining('支出 ', findRichText: true), findsWidgets);
+    // 지출 합계는 목록 맨 끝
+    final sum = find.byKey(const ValueKey('list-summary'));
+    await tester.scrollUntilVisible(sum, 200, scrollable: find.byType(Scrollable).first);
+    expect(find.descendant(of: sum, matching: find.textContaining('支出合计')), findsOneWidget);
     expect(find.textContaining('지출', findRichText: true), findsNothing);
     expect(tester.takeException(), isNull);
   });

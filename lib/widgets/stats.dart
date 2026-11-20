@@ -1,13 +1,11 @@
-// 내 숫자 줄 — My Page(A-21) · 내 정보(I-4) 공용: 평평한 한 줄 (수집 ♡ · 리본 · 미조립 | 돈 이번 달 · 총).
+// 내 숫자 줄 — My Page(A-21) · 내 정보(I-4) 공용: 평평한 한 줄 (수집 ♡ · 리본 | 돈 이번 달 · 총). 미조립 칸은 뺐다 (2026-11-20).
 // 떠 있는 판 · 굵은 숫자로 튀어나오지 않게 — 바탕 위에 아이콘 + 숫자만, 묶음 사이 가는 세로 줄
 import 'package:flutter/material.dart';
 
 import '../format.dart';
 import '../l10n/l10n.dart';
-import '../logic/build_status.dart' show BuildStage;
 import '../theme.dart';
 import 'icons.dart';
-import 'kit_progress.dart' show buildStageIcon;
 
 /// 숫자 칸 하나 — 아이콘(18 높이) + 숫자 t14 (보통 굵기 · 옅은 색), 길게 누르면 [tip]
 class StatCell {
@@ -69,22 +67,20 @@ class StatGroups extends StatelessWidget {
   }
 }
 
-/// 내 수집 · 지출 숫자 다섯 칸 (♡ · 리본 · 미조립 | 이번 달 · 총 지출) — 누르면 그 목록
+/// 내 수집 · 지출 숫자 네 칸 (♡ · 리본 | 이번 달 · 총 지출) — 누르면 그 목록
 class CollectionStats extends StatelessWidget {
   const CollectionStats({
     super.key,
     required this.liked,
     required this.owned,
-    required this.backlog,
     required this.month,
     required this.total,
     this.onLiked,
     this.onOwned,
-    this.onBacklog,
     this.onShare,
   });
-  final int liked, owned, backlog, month, total;
-  final VoidCallback? onLiked, onOwned, onBacklog;
+  final int liked, owned, month, total;
+  final VoidCallback? onLiked, onOwned;
 
   /// 주면 줄 끝에 공유 카드 아이콘
   final VoidCallback? onShare;
@@ -95,12 +91,6 @@ class CollectionStats extends StatelessWidget {
       [
         StatCell(const LikedIcon(), '$liked', tr('좋아요'), onTap: onLiked),
         StatCell(const OwnedIcon(), '$owned', tr('구매함'), onTap: onOwned),
-        StatCell(
-          Icon(buildStageIcon(BuildStage.unbuilt), size: Gp.iS, color: Gp.muted),
-          '$backlog',
-          tr('미조립'),
-          onTap: onBacklog,
-        ),
       ],
       [
         StatCell(

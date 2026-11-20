@@ -1,5 +1,5 @@
 // 이펙트 채널 (Gunpula 계약 2026-11-15): 등급 TAMASHII_EFFECT · GSC_SIMPLE_EFFECT · grades.json 이름의 새 등급 → 라인 · 유형 ·
-// 맞춰 쓰는 피규어 라인, 작품이 없는 상품의 종류 · 시리즈(이펙트 갈래) · 도감 묶음, 일본 가게의 ¥ 정가, 알림 피드의 종류,
+// 맞춰 쓰는 피규어 라인, 작품이 없는 상품의 종류 · 이펙트 종류(이펙트 갈래) · 도감 묶음, 일본 가게의 ¥ 정가, 알림 피드의 종류,
 // 채널 · 알림 · 중국어 · 설명으로 찾기의 채널 말
 import 'dart:convert';
 
@@ -178,17 +178,17 @@ void main() {
     expect(hasBothCurrencies(kits), isFalse);
   });
 
-  test('종류 둘러보기: 한 묶음 안 라인 칸, 작품 자리의 값은 이펙트 갈래라 「시리즈」 라고 부른다', () {
+  test('종류 둘러보기: 한 묶음 이펙트 안 라인 칸, 작품 자리의 값은 이펙트 갈래라 「이펙트 종류」 라고 부른다', () {
     final secs = typeSections('effects', kits);
-    expect(secs, hasLength(1));
+    expect(secs.map((s) => s.title), ['이펙트']);
     expect(kits.map(lineGroupKey).toSet(), {'魂EFFECT', 'the simple effect', 'MODEROID 이펙트'});
     expect(secs.single.entries.first.key, '魂EFFECT', reason: '작은 칸(하나뿐인 라인)은 기타로 모인다');
     expect(secs.single.entries.first.kits.first.id, 'tamashii-effect-smoke', reason: '새것부터');
     expect(valueCounts(kits.map(kitWork)).map((e) => e.$1).toSet(), {'연기', '임팩트', '번개', '불꽃', '바람'});
-    expect(kitWorkTitle(kits), '시리즈');
-    expect(kitWorkTitle([byId('tamashii-effect-smoke')]), '시리즈');
+    expect(kitWorkTitle(kits), '이펙트 종류');
+    expect(kitWorkTitle([byId('tamashii-effect-smoke')]), '이펙트 종류');
     expect(kitWorkTitle(const []), '작품');
-    expect(worldSectionOf('effects', 'effects-effects_smoke'), '시리즈');
+    expect(worldSectionOf('effects', 'effects-effects_smoke'), '이펙트 종류');
     expect(noWorkChannels, contains('effects'));
     expect(kits.map(noWorkGroupKey).toSet(), {
       'effects_smoke',
@@ -211,7 +211,7 @@ void main() {
       ('effects-effects_impact', '임팩트', 1),
     ]);
     expect(worlds.every((w) => w.label.isNotEmpty && w.label != 'null' && w.image.isNotEmpty), isTrue);
-    expect(worlds.map((w) => worldSectionOf('effects', w.id)).toSet(), {'시리즈'});
+    expect(worlds.map((w) => worldSectionOf('effects', w.id)).toSet(), {'이펙트 종류'});
     // series 가 없는 레코드는 세부 시리즈 · 라인으로
     final bare = {..._recs.first}..remove('series');
     expect(noWorkGroupKey(_map([bare]).single), 'S.H.Figuarts');
@@ -249,7 +249,7 @@ void main() {
     addTearDown(() => L10n.debugSet(AppLang.ko));
     expect(tr('이펙트'), '特效件');
     expect(tr('이펙트 전체'), '全部特效件');
-    expect(tr(worldSectionOf('effects', 'effects-x')), '系列');
+    expect(tr(worldSectionOf('effects', 'effects-x')), '特效类别');
     expect(kitPrice(byId('tamashii-effect-smoke')), '¥3,300');
   });
 

@@ -1,5 +1,5 @@
 // 넓은 화면(폴드 펼침 · 태블릿 · 넓은 창)의 반반 화면 — QQ 처럼 왼쪽은 앱 그대로, 오른쪽은 자세히 칸.
-// 상세 · 공고 · 친구 · 내 정보 · 알림 · 설정 · 작품 도감은 openPage 로 연다:
+// 상세 · 예고 · 친구 · 내 정보 · 알림 · 설정 · 작품 도감은 openPage 로 연다:
 //   폰(칸 없음)  → 지금처럼 쌓기(push, 오른쪽에서)
 //   왼쪽에서 열기 → 오른쪽 칸의 내용을 바꿈 (메신저에서 대화방을 고르듯)
 //   오른쪽 안에서 열기 → 오른쪽 칸 안에서 쌓기 (‹ 로 돌아감)
@@ -14,7 +14,7 @@ import 'theme.dart';
 /// 오른쪽 자세히 칸의 Navigator — 앱에 칸은 하나뿐. 넓은 화면에서만 붙어 있다(아니면 currentState == null)
 final detailPaneKey = GlobalKey<NavigatorState>();
 
-/// 오른쪽 칸에 지금 열린 것의 id (상품 id · 공고 id · 친구 아이디) — 왼쪽 목록이 같은 줄을 칠한다.
+/// 오른쪽 칸에 지금 열린 것의 id (상품 id · 예고 id · 친구 아이디) — 왼쪽 목록이 같은 줄을 칠한다.
 /// MaterialApp.builder 에 둔다. 칸이 없거나(폰) 비면 null.
 class PaneHost extends StatefulWidget {
   const PaneHost({super.key, required this.child});
@@ -151,7 +151,7 @@ class _EmptyPane extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              tr('상품 · 공고 · 친구를 고르면 여기에 보여요'),
+              tr('상품 · 예고 · 친구를 고르면 여기에 보여요'),
               style: const TextStyle(fontSize: Gp.t12, color: Gp.faint),
             ),
           ],

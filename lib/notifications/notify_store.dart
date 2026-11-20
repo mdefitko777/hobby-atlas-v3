@@ -348,10 +348,22 @@ class NotifyStore extends ChangeNotifier {
     return true;
   }
 
-  /// [stage] = 지금 단계 (화면 글자). 이 단계보다 앞으로 넘어가면 알림
-  void setFollow(String annId, bool on, {required String stage, String title = '', String franchise = ''}) {
+  /// [stage] = 지금 단계 (화면 글자). 이 단계보다 앞으로 넘어가면 알림. [titleZh] 가 있으면 단계 줄이 언어를 따라 바뀐다
+  void setFollow(
+    String annId,
+    bool on, {
+    required String stage,
+    String title = '',
+    String titleZh = '',
+    String franchise = '',
+  }) {
     if (on) {
-      config.followed[annId] = FollowedAnn(stage: annStageKey(stage), title: title, franchise: franchise);
+      config.followed[annId] = FollowedAnn(
+        stage: annStageKey(stage),
+        title: title,
+        titleZh: titleZh,
+        franchise: franchise,
+      );
     } else {
       config.followed.remove(annId);
     }
@@ -380,7 +392,7 @@ class NotifyStore extends ChangeNotifier {
       final stage = r.reasons.firstOrNull;
       if (!r.isAnnStage || f == null || stage == null) continue;
       if (annRank(stage) > annRank(f.stage)) {
-        config.followed[r.annId] = FollowedAnn(stage: stage, title: f.title, franchise: f.franchise);
+        config.followed[r.annId] = f.withStage(stage);
         changed = true;
       }
     }
@@ -468,7 +480,8 @@ List<PreorderDue> preorderDuesFor(Map<String, Preorder> active, Map<String, Kit>
     if (e.value.arrival.isNotEmpty)
       PreorderDue(
         id: e.key,
-        name: byId[e.key]?.name ?? e.key,
+        name: byId[e.key]?.nameKo ?? e.key,
+        nameZh: byId[e.key]?.nameZh ?? '',
         franchise: byId[e.key]?.franchiseId ?? '',
         arrival: e.value.arrival,
         due: e.value.due,
@@ -483,7 +496,7 @@ List<ReleaseDay> releaseDaysFor(Iterable<String> wantedIds, Map<String, Kit> byI
   return [
     for (final id in wantedIds)
       if (byId[id] case final k? when exact.hasMatch(k.date) && k.date.compareTo(today) >= 0)
-        ReleaseDay(id: k.id, name: k.name, franchise: k.franchiseId, date: k.date),
+        ReleaseDay(id: k.id, name: k.nameKo, nameZh: k.nameZh, franchise: k.franchiseId, date: k.date),
   ];
 }
 
@@ -497,7 +510,14 @@ List<PbWindow> pbWindowsFor(Iterable<String> wantedIds, Map<String, Kit> byId, D
       if (byId[id] case final k?
           when (k.pbOpens.isNotEmpty || k.pbCloses.isNotEmpty) &&
               (k.pbCloses.isEmpty ? k.pbOpens.compareTo(recent) >= 0 : k.pbCloses.compareTo(today) >= 0))
-        PbWindow(id: k.id, name: k.name, franchise: k.franchiseId, opens: k.pbOpens, closes: k.pbCloses),
+        PbWindow(
+          id: k.id,
+          name: k.nameKo,
+          nameZh: k.nameZh,
+          franchise: k.franchiseId,
+          opens: k.pbOpens,
+          closes: k.pbCloses,
+        ),
   ];
 }
 

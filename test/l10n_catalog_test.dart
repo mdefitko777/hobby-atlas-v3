@@ -45,6 +45,15 @@ void main() {
     addTearDown(t.view.reset);
     final kits = [
       Kit.fromJson({'id': 'k1', 'franchiseId': 'gundam', 'name': 'K1', 'type': '굿즈', 'line': '굿즈', 'date': '2025-03'})!,
+      // 라인이 하나뿐이면 라인 줄을 숨겨서 둘
+      Kit.fromJson({
+        'id': 'k2',
+        'franchiseId': 'gundam',
+        'name': 'K2',
+        'type': '프라모델',
+        'line': 'HG',
+        'date': '2025-04',
+      })!,
     ];
     await t.pumpWidget(
       MaterialApp(
@@ -62,7 +71,7 @@ void main() {
     await t.tap(find.text('open'));
     await t.pumpAndSettle();
     expect(find.text('筛选'), findsOneWidget);
-    expect(find.text('即将发售'), findsOneWidget);
+    expect(find.byTooltip('即将发售'), findsOneWidget); // 아이콘 줄
     expect(find.text('产品线'), findsOneWidget);
     expect(t.takeException(), isNull);
   });
