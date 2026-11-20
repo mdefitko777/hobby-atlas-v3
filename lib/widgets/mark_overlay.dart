@@ -1,5 +1,4 @@
-// 사진 위 표시 — 왼쪽 위 책갈피 리본 = 구매함 · 왼쪽 아래 ♡ = 좋아요 (태그 칸). 상품 카드(QuickMarks) · 도감 기체 칸은 ♡ 만
-// (구매함은 길게 누르기, 리본은 구매함일 때 ✓ 표시만). 누르지 않는 칸은 StatusMarks
+// 사진 위 표시 — 왼쪽 위 책갈피 리본 = 구매함 · 왼쪽 아래 ♡ = 좋아요 (모든 상품 사진 · 도감 칸 · 태그 칸). 누르지 않는 칸은 StatusMarks
 import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
@@ -10,7 +9,7 @@ import 'icons.dart';
 
 /// 사진 위 표시 (도감 칸 · 태그 칸): 왼쪽 위 책갈피 리본 = 구매함(+ → ✓) · 왼쪽 아래 ♡ = 좋아요
 /// 보이는 크기는 작아도 누르는 자리는 44dp 이상 (P09 접근성).
-/// [onOwn] 이 없으면 리본은 누르지 않고 구매함일 때만 ✓ (도감 기체 칸 — 그림 위에는 ♡ 만, 구매함은 칸 길게 누르기)
+/// [onOwn] 이 없으면 리본은 누르지 않고 구매함일 때만 ✓
 class MarkOverlay extends StatelessWidget {
   const MarkOverlay({
     super.key,
@@ -179,8 +178,7 @@ class _Heart extends StatelessWidget {
   );
 }
 
-/// 상품 카드 사진 위 ♡ — 앱 전체 좋아요(Marks)를 보고 바꾼다 (토스트 + 되돌리기).
-/// 구매함은 사진에 두지 않고 카드를 길게 누른다 ([ProductTile], 2026-11-20 주인: 사진 위에는 ♡ 만)
+/// 상품 카드용 MarkOverlay — 앱 전체 좋아요 · 구매함(Marks)을 보고 바꾼다 (토스트 + 되돌리기)
 class QuickMarks extends StatelessWidget {
   const QuickMarks({super.key, required this.kit, this.size = 28});
   final Kit kit;
@@ -188,9 +186,13 @@ class QuickMarks extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final liked = Marks.of(context).liked(kit);
-    return Stack(
-      children: [_HeartButton(liked: liked, onLike: () => Marks.read(context).toggleLike(context, kit), size: size)],
+    final m = Marks.of(context);
+    return MarkOverlay(
+      liked: m.liked(kit),
+      owned: m.owned(kit),
+      onLike: () => Marks.read(context).toggleLike(context, kit),
+      onOwn: () => Marks.read(context).toggleOwn(context, kit),
+      size: size,
     );
   }
 }

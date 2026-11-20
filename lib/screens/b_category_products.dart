@@ -1,12 +1,12 @@
 // 화면 B (검색 탭에서 쌓는 화면): 분류 상품 — 종류 · 세대 칸(B-20 · B-21)을 누르면 그 상품 전부.
-// 검색 결과와 같은 줄(검색창 + 필터 + 격자/목록) · 같은 격자/목록(O 전체 목록 SectionListView) — 사진 위 ♡ · 카드 길게 = 구매함.
+// 검색 결과와 같은 줄(검색창 + 필터 + 격자/목록) · 같은 격자/목록(O 전체 목록 SectionListView) — 내 상태는 칸 위 ♡ · 리본뿐.
 //
 // ┌──────── 디자인 가이드 대응표: B 검색 (분류 상품) ──────────────────────────────────┐
 // │ 번호 │  Flutter 위젯명                          │ 비즈니스 명칭(한글)                          │ 원칙(P번호) │
 // │ B-23  │ AppBar 제목 + 작은 공식 로고              │ 어느 분류인지 (HG · 기동전사 건담 · 1세대 …)   │ P03 · P06   │
 // │ B-23a │ ToolRow(GpSearchBar + ListToolIcons)    │ 이 분류 안에서 찾기 · 필터(좋아요 · 구매함 · 발매 예정 · 종류 …) · 격자/목록 — 검색 결과와 같은 줄 │ P04 · P07 │
 // │ B-23b │ UnderlineTab 줄 (가로 스크롤)            │ 세부 시리즈: 전체 · HGUC · HGCE … · PB 한정 (상품 2개 이상인 것만) │ P06 · P07 │
-// │ B-23c │ SectionListView (O-3 · O-4 재사용)       │ 상품 격자/목록 · 정렬 (♡ · 길게 = 구매함)     │ P04 · P08   │
+// │ B-23c │ SectionListView (O-3 · O-4 재사용)       │ 상품 격자/목록 · 정렬 (♡ · 리본 = 내 상태)    │ P04 · P08   │
 // │ B-23d │ TextButton "기체별로 묶기" + GroupedResults │ 건담 작품: 기체별로 묶기 (B-13 과 같은 목록)  │ P01 · P07   │
 // │ B-23e │ AppBar ? (HelpButton)                  │ 이 화면 아이콘 뜻                            │ P10         │
 // └──────────────────────────────────────────────────────────────────────────────────┘
@@ -238,5 +238,5 @@ List<HelpItem> categoryProductsHelp({bool groupByUnit = false}) => [
   if (groupByUnit) HelpItem(Icons.account_tree_outlined, tr('기체별로 묶기')),
   HelpItem.group(tr('상품 사진 위')),
   HelpItem(Icons.favorite_border, tr('좋아요 (사진 왼쪽 아래)'), color: Gp.accent),
-  HelpItem(Icons.touch_app_outlined, tr('상품 카드 길게 = 구매함에 넣기 · 빼기'), color: Gp.own),
+  HelpItem(Icons.bookmark_border, tr('구매함 (사진 왼쪽 위 리본 +)'), color: Gp.own),
 ];

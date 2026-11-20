@@ -639,7 +639,7 @@ List<HelpItem> searchHelp() => [
   HelpItem(Icons.favorite_border, tr('검색창 아래 아이콘: 좋아요 · 구매함 · 발매 예정 · 나라 (누르면 켜기 · 다시 누르면 끄기)')),
   HelpItem(Icons.tune, tr('필터 (종류 · 라인 · 작품 · 기간 · 가격) — 전체 · 종류 · 세대 · 검색 결과 공통')),
   HelpItem(Icons.grid_view_outlined, tr('격자로 보기')),
-  HelpItem(Icons.touch_app_outlined, tr('상품 카드 길게 = 구매함에 넣기 · 빼기')),
+  HelpItem(Icons.bookmark_border, tr('구매함 (사진 왼쪽 위 리본 +)'), color: Gp.own),
   HelpItem(Icons.view_list_outlined, tr('목록으로 보기')),
   HelpItem(Icons.account_tree_outlined, tr('검색 결과를 기체별로 묶기')),
   HelpItem(Icons.manage_search, tr('설명으로 찾기 예')),

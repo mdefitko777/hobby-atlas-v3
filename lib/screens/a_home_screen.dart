@@ -10,7 +10,7 @@
 // │ A-6  │ 가로 ListView + ProductTile         │ 새 상품 · 10월 발매 · 공식 예고(비공식이 섞이면 예고) · 최근 본 (사진 + 이름 두 줄) │ P08 │
 // │ A-7  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 빈 채널           │ P01 · P09     │
 // │ A-8  │ 흰 띠(섹션마다) + 머리카락 줄        │ 줄과 줄 사이 층 구분                   │ P08 · P04     │
-// │ A-9  │ ProductTile 의 QuickMarks (♡) · 길게 누르기 │ ♡ = 좋아요 · 카드 길게 = 구매함 넣기 · 빼기 (진동 + 되돌리기, 앱 전체 한 벌) │ P07 · P04 │
+// │ A-9  │ ProductTile 의 QuickMarks (리본 · ♡)  │ 좋아요 · 구매함 바로 담기 (앱 전체 한 벌)  │ P07 · P04     │
 // │ A-26 │ 위 줄 ? (S-19, homeHelp)            │ 검색창 줄 아이콘 뜻 한 줄씩              │ P10           │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: A-2 → 검색 탭(옆으로). › → 같은 탭 안에서 O 전체 목록(위쪽 머리 · 검색창은 그대로, 뒤로 = 홈). 상품 카드 → D 상품 상세(쌓기). 배너 · 예고 카드 → J 공식 예고 상세(쌓기).
@@ -95,7 +95,7 @@ class _HomeData {
   final List<Announcement> announcements;
 }
 
-/// 가로 줄 한 칸 (사진 + 이름). [kit]이 있으면 상품(상세 · ♡ · 길게 = 구매함), 없으면 공식 예고
+/// 가로 줄 한 칸 (사진 + 이름). [kit]이 있으면 상품(상세 · 리본 + · ♡), 없으면 공식 예고
 class _Item {
   const _Item(this.image, this.title, {this.kit, this.ann});
   final String image;
@@ -197,10 +197,8 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
   @override
   void loadScope(List<String> ids) {
     // STATE: 선택 채널 → 상품 · 공식 예고 → 배너 + 가로 줄
-    _future = Future.wait([
-      widget.loaders.kits(ids),
-      widget.loaders.announcements(ids),
-    ]).then((r) => _HomeData(r[0] as List<Kit>, r[1] as List<Announcement>));
+    _future = Future.wait([widget.loaders.kits(ids), widget.loaders.announcements(ids)])
+        .then((r) => _HomeData(r[0] as List<Kit>, r[1] as List<Announcement>));
   }
 
   @override
@@ -607,7 +605,6 @@ class _HorizontalRow extends StatelessWidget {
             imageWidth: width,
             imageAspect: aspect,
             id: kit?.id ?? item.ann?.id,
-            kit: kit, // 길게 = 구매함 넣기 · 빼기 (공식 예고 카드는 없음)
             onTap: () {
               if (kit != null) {
                 openKitDetail(context, kit, loaders: loaders, list: [for (final it in row.items) ?it.kit]);
@@ -615,7 +612,7 @@ class _HorizontalRow extends StatelessWidget {
                 openAnnouncement(context, ann, loaders: loaders, list: [for (final it in row.items) ?it.ann]);
               }
             },
-            // A-9 P07 상품 = ♡ / 라이브 예고 · 아직 안 열린 예약 = 사진 귀퉁이에 때 / 비공식 소식 = 「비공식」
+            // A-9 P07 상품 = 리본 · ♡ / 라이브 예고 · 아직 안 열린 예약 = 사진 귀퉁이에 때 / 비공식 소식 = 「비공식」
             // (보통 예고는 사진 + 이름만)
             marks: kit != null
                 ? QuickMarks(kit: kit)
@@ -637,7 +634,7 @@ class _HorizontalRow extends StatelessWidget {
 List<HelpItem> get homeHelp => [
   HelpItem(Icons.photo_camera_outlined, tr('찍어서 찾기')),
   HelpItem(Icons.tune, tr('필터')),
-  HelpItem(Icons.touch_app_outlined, tr('상품 카드 길게 = 구매함에 넣기 · 빼기')),
+  HelpItem(Icons.bookmark_border, tr('구매함 (사진 왼쪽 위 리본 +)'), color: Gp.own),
   HelpItem(Icons.newspaper_outlined, tr('전체 소식')),
   HelpItem(Icons.person_outline, tr('My Page (내 것 · ★ 친구)')),
   HelpItem(Icons.ios_share, tr('공유 카드 (My Page 숫자 줄 끝)')),

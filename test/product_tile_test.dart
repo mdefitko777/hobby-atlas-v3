@@ -1,4 +1,4 @@
-// 상품 카드 (lib/widgets/tiles.dart ProductTile) — 이름 두 줄 · 낱말 안에서 안 끊음 · 사진 위 ♡ 만 · 길게 = 구매함
+// 상품 카드 (lib/widgets/tiles.dart ProductTile) — 이름 두 줄 · 낱말 안에서 안 끊음 · 사진 위 리본 + = 구매함 · ♡ = 좋아요
 // 글자 대신 타입 · 아이콘 · 상태로 본다 (중국어 화면에서도 같게)
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -112,7 +112,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('사진 위에는 ♡ 만 — 길게 누르면 구매함 넣기 · 다시 길게 누르면 빼기 · 되돌리기', (tester) async {
+  testWidgets('사진 위 리본 + = 구매함 넣기 · 다시 누르면 빼기 · 되돌리기, 길게 누르기는 아무것도 안 함', (tester) async {
     final kit = _plainKit();
     await _show(
       tester,
@@ -135,15 +135,19 @@ void main() {
       ),
     );
     expect(find.byIcon(Icons.favorite_border), findsOneWidget);
-    expect(find.byIcon(Icons.add), findsNothing); // 리본 + 없음
+    expect(find.byIcon(Icons.add), findsOneWidget); // 리본 +
     bool owned() => tester.widget<Icon>(find.byKey(const ValueKey('owned-state'))).icon == Icons.check_box;
 
     await tester.longPress(find.byType(ProductTile));
     await tester.pump();
+    expect(owned(), isFalse, reason: '길게 누르기로는 구매함이 바뀌지 않는다 (2026-11-20 리본 + 로 되돌림)');
+
+    await tester.tap(find.byIcon(Icons.add));
+    await tester.pump();
     expect(owned(), isTrue);
     expect(find.byType(SnackBarAction), findsOneWidget); // 되돌리기
 
-    await tester.longPress(find.byType(ProductTile));
+    await tester.tap(find.byIcon(Icons.check));
     await tester.pump();
     expect(owned(), isFalse);
     // 앞 토스트가 내려가고 새 토스트(빼기의 되돌리기)가 올라올 때까지
@@ -153,29 +157,5 @@ void main() {
     await tester.tap(find.byType(SnackBarAction));
     await tester.pump();
     expect(owned(), isTrue, reason: '되돌리기 = 빼기 전으로');
-  });
-
-  testWidgets('kit 을 주면 marks 없이도 길게 = 구매함 (My Page 최근 산 것)', (tester) async {
-    final kit = _plainKit();
-    late BuildContext ctx;
-    await _show(
-      tester,
-      Builder(
-        builder: (c) {
-          ctx = c;
-          return ProductTile(image: '', title: kit.name, imageWidth: 86, kit: kit, onTap: () {});
-        },
-      ),
-    );
-    await tester.longPress(find.byType(ProductTile));
-    await tester.pump();
-    expect(Marks.read(ctx).owned(kit), isTrue);
-  });
-
-  testWidgets('공식 예고 카드처럼 상품이 없으면 길게 눌러도 아무것도 안 함', (tester) async {
-    await _show(tester, ProductTile(image: '', title: '예고', imageWidth: 120, onTap: () {}));
-    await tester.longPress(find.byType(ProductTile));
-    await tester.pump();
-    expect(find.byType(SnackBar), findsNothing);
   });
 }

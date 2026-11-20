@@ -234,7 +234,7 @@ class _WorkUnitsState extends State<WorkUnits> {
     showToast(context, on ? trf('「{name}」 칸을 켰어요', {'name': u.name}) : tr('손으로 켠 칸을 껐어요'), onUndo: () => apply(!on));
   }
 
-  /// G-4b 칸 길게 누르기(구매함): 손으로 켠 칸이면 끄기 · 상품이 하나면 그 상품 · 없으면 손으로 켜기 · 여럿이면 시트
+  /// G-4b 칸의 리본(구매함): 손으로 켠 칸이면 끄기 · 상품이 하나면 그 상품 · 없으면 손으로 켜기 · 여럿이면 시트
   void _own(GuideUnit u) {
     final m = Marks.read(context);
     final kits = _kitsOf(u, litOnly: true);
@@ -307,7 +307,7 @@ class _WorkUnitsState extends State<WorkUnits> {
     );
   }
 
-  /// 칸 격자 한 덩이 — 분류 칸과 같은 크기 (정사각 그림 + 이름 두 줄), 그림 위 ♡ · 길게 = 구매함 (민트 테두리 + 리본 ✓)
+  /// 칸 격자 한 덩이 — 분류 칸과 같은 크기 (정사각 그림 + 이름 두 줄), 그림 위 리본 + · ♡ (구매함이면 민트 테두리 + 리본 ✓)
   Widget _grid(SideGrid g, Marks m, List<GuideUnit> units) => g.sliver(units.length, (context, i) {
     final u = units[i];
     return GuideCell(
@@ -320,7 +320,7 @@ class _WorkUnitsState extends State<WorkUnits> {
       liked: _kitsOf(u, litOnly: true).any(m.liked),
       onTap: () => _openUnit(u),
       onLike: () => _like(u), // G-4b
-      onOwn: () => _own(u), // G-4b 길게 누르기 (상품 카드와 같이 진동 + 토스트 · 되돌리기)
+      onOwn: () => _own(u), // G-4b 리본 + (상품 카드와 같이 토스트 · 되돌리기)
       square: false,
       captionHeight: g.nameExtent - 4,
     );
@@ -619,7 +619,7 @@ class _KitLine extends StatelessWidget {
 /// G-2 작품 도감 ? — 칸 표시(늘 컬러) + 묶음 목록 · 머리 줄 · 기체 시트 아이콘
 List<HelpItem> workGuideHelp() => [
   ...tierHelpItems(),
-  HelpItem(Icons.touch_app_outlined, tr('칸 길게 = 구매함에 넣기 · 빼기'), color: Gp.own),
+  HelpItem(Icons.bookmark_border, tr('구매함 (칸 왼쪽 위 리본 +)'), color: Gp.own),
   HelpItem.group(tr('아이콘')),
   guideDirHelp,
   HelpItem(Icons.ios_share, tr('공유 카드 (그림으로 공유 · 저장)')),

@@ -248,7 +248,7 @@ void main() {
     expect(find.byType(DetailPaneView), findsNothing);
   });
 
-  // 좋아요 · 구매함 한 벌: 상품 카드 ♡ 를 누르거나 카드를 길게 누르면(구매함) 다른 화면(여기선 글자)도 같이 바뀐다
+  // 좋아요 · 구매함 한 벌: 상품 카드 ♡ · 리본 + 를 누르면 다른 화면(여기선 글자)도 같이 바뀐다
   testWidgets('좋아요 한 벌 — 한 곳에서 누르면 다른 곳도 바뀜', (tester) async {
     final none = _list<Kit>('kits', Kit.fromJson).firstWhere((k) => k.status == CollectStatus.none);
     await tester.pumpWidget(
@@ -276,7 +276,7 @@ void main() {
     await tester.tap(find.byIcon(Icons.favorite_border));
     await tester.pump();
     expect(find.text('좋아요 켜짐'), findsOneWidget);
-    await tester.longPress(find.byType(ProductTile)); // 길게 = 구매함 (사진 위 리본 + 는 없앴다)
+    await tester.tap(find.byIcon(Icons.add)); // 리본 + = 구매함
     await tester.pump();
     expect(find.text('구매함 켜짐'), findsOneWidget);
   });

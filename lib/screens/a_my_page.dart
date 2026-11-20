@@ -5,7 +5,7 @@
 // │ A-21 │ _Stats (아이콘 4칸 + 공유)           │ 좋아요 · 구매함 · 이번 달 지출 · 총 지출  │ P01 · P07     │
 // │ A-21b│ 숫자 줄 끝 공유 아이콘 → V 공유 카드  │ 내 컬렉션 카드 (그림으로 공유 · 저장)      │ P07 · P10     │
 // │ A-22 │ _LikedSoon                         │ 좋아요 중 날짜가 다가오는 것 (PB 마감 · 발매) │ P01     │
-// │ A-23 │ _OwnedRow                          │ 최근 산 것 (가로 줄 · 이름 두 줄 · 길게 = 구매함에서 빼기) │ P08 · P07 │
+// │ A-23 │ _OwnedRow                          │ 최근 산 것 (가로 줄 · 이름 두 줄)                   │ P08 · P07 │
 // │ A-24 │ _SpecialFeed                       │ 특별 관심 친구가 최근 담은 것            │ P01           │
 // │ A-25 │ FindBar (홈 검색창 자리)             │ 내 것에서 찾기 + 필터 → 숫자 · 목록이 같이 좁혀짐 │ P04 · P07 │
 // └──────────────────────────────────────────────────────────────────────────────────┘
@@ -185,7 +185,7 @@ class _LikedSoon extends StatelessWidget {
   }
 }
 
-/// A-23 최근 산 것 (가로 줄 — 홈 줄과 같은 카드, 길게 누르면 구매함에서 빼기 · 되돌리기)
+/// A-23 최근 산 것 (가로 줄 — 홈 줄과 같은 카드)
 class _OwnedRow extends StatelessWidget {
   const _OwnedRow({required this.kits, required this.loaders});
   final List<Kit> kits;
@@ -208,7 +208,6 @@ class _OwnedRow extends StatelessWidget {
             imageWidth: 86,
             imageAspect: 1,
             id: k.id,
-            kit: k,
             onTap: () => openKitDetail(context, k, loaders: loaders, list: kits),
           );
         },

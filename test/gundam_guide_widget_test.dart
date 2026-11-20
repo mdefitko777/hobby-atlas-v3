@@ -130,23 +130,23 @@ void main() {
     await t.pump(const Duration(seconds: 3)); // 토스트 · 저장 타이머
   });
 
-  testWidgets('칸 길게 누르기(구매함): 그림 위에는 ♡ 만 (리본 + 없음) · 상품 없는 gget 기체는 손으로 켜기 · 되돌리기', (t) async {
+  testWidgets('칸의 리본 +(구매함): 상품 없는 gget 기체는 손으로 켜기 · 다시 누르면 끄기', (t) async {
     await _pumpGuide(t);
     await t.tap(_dir('SEED'));
     await _settle(t);
     final cells = find.byType(GuideCell);
-    expect(find.descendant(of: cells, matching: find.byIcon(Icons.add)), findsNothing);
+    expect(find.descendant(of: cells, matching: find.byIcon(Icons.add)), findsWidgets);
     expect(find.descendant(of: cells, matching: find.byIcon(Icons.favorite_border)), findsWidgets);
-    // 프리덤 = 카탈로그 상품 없음 → 길게 = 손으로 켜기 (칸 순서: 스트라이크 · 듀얼 · 프리덤)
-    await t.longPress(cells.at(2));
+    // 프리덤 = 카탈로그 상품 없음 → 리본 + = 손으로 켜기 (칸 순서: 스트라이크 · 듀얼 · 프리덤)
+    await t.tap(find.descendant(of: cells.at(2), matching: find.byIcon(Icons.add)));
     await _settle(t, 2);
     expect(me.guideManualLit, contains(1300004200));
     expect(t.widget<GuideCell>(cells.at(2)).tier, CellTier.owned);
-    // 구매함이면 리본 ✓ (누르는 단추가 아니라 표시) · 토스트에 되돌리기
+    // 구매함이면 리본 ✓ · 토스트에 되돌리기
     expect(find.descendant(of: cells.at(2), matching: find.byIcon(Icons.check)), findsOneWidget);
     expect(find.byType(SnackBar), findsOneWidget);
-    // 다시 길게 = 끄기
-    await t.longPress(cells.at(2));
+    // 다시 누르면 끄기
+    await t.tap(find.descendant(of: cells.at(2), matching: find.byIcon(Icons.check)));
     await _settle(t, 2);
     expect(me.guideManualLit, isNot(contains(1300004200)));
     expect(t.widget<GuideCell>(cells.at(2)).tier, isNot(CellTier.owned));

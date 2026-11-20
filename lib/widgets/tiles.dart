@@ -6,16 +6,15 @@ import 'package:flutter/material.dart';
 import '../detail_pane.dart';
 import '../l10n/l10n.dart';
 import '../logic/kit_rules.dart' show kitPriceParts;
-import '../marks.dart';
 import '../models.dart';
 import '../theme.dart';
 import 'images.dart';
 import 'mark_overlay.dart';
 import 'tags.dart';
 
-/// 상품 카드: 사진(왼쪽 아래 ♡) · 이름 두 줄 · 보조 한 줄. 카드를 길게 누르면 구매함 넣기 · 빼기 (진동 + 되돌리기 토스트)
+/// 상품 카드: 사진(왼쪽 위 구매함 리본 + · 왼쪽 아래 ♡) · 이름 두 줄 · 보조 한 줄.
 /// 홈 가로 줄 · 검색 결과가 같이 쓴다. [imageWidth]가 있으면 고정 너비(가로 줄), 없으면 칸 너비.
-/// 구매함 리본 +는 사진에 두지 않는다 (2026-11-20 주인: 사진 위에는 ♡ 만) — 길게 누르기로 옮겼다
+/// 구매함은 리본 + 를 누른다 — 길게 누르기로 옮겼다가 주인이 되돌림 (2026-11-20 「长按那个改回原来的加号」)
 class ProductTile extends StatelessWidget {
   const ProductTile({
     super.key,
@@ -25,7 +24,6 @@ class ProductTile extends StatelessWidget {
     this.subtitle = '',
     this.note = '',
     this.marks,
-    this.kit,
     this.id,
     this.imageWidth,
     this.imageAspect = 1,
@@ -40,11 +38,8 @@ class ProductTile extends StatelessWidget {
   final String note;
   final VoidCallback onTap;
 
-  /// 주면 사진 위에 겹친다 — 보통 [QuickMarks] (♡)
+  /// 주면 사진 위에 겹친다 — 보통 [QuickMarks] (리본 + · ♡)
   final Widget? marks;
-
-  /// 길게 눌러 구매함에 넣고 뺄 상품. 없으면 [marks] 가 [QuickMarks] 일 때 그 상품 (공식 예고 카드는 둘 다 없음)
-  final Kit? kit;
 
   /// 반반 화면에서 이 카드가 오른쪽 칸에 열려 있으면 사진에 파란 테두리
   final String? id;
@@ -55,13 +50,6 @@ class ProductTile extends StatelessWidget {
 
   /// 이름 줄 수 — 칸 높이가 모자라면(옛 높이의 가로 줄) 들어가는 만큼만
   final int titleLines;
-
-  Kit? get _ownKit =>
-      kit ??
-      switch (marks) {
-        QuickMarks(:final kit) => kit,
-        _ => null,
-      };
 
   @override
   Widget build(BuildContext context) {
@@ -137,16 +125,8 @@ class ProductTile extends StatelessWidget {
         return card((rest / lineH).floor().clamp(1, titleLines), bounded: true);
       },
     );
-    final own = _ownKit;
     return GestureDetector(
       onTap: onTap,
-      // 길게 = 구매함 넣기 · 빼기 (Marks.toggleOwn 이 토스트 + 되돌리기)
-      onLongPress: own == null
-          ? null
-          : () {
-              Feedback.forLongPress(context);
-              Marks.read(context).toggleOwn(context, own);
-            },
       child: imageWidth == null ? body : SizedBox(width: imageWidth, child: body),
     );
   }

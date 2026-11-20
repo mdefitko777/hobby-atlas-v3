@@ -119,7 +119,7 @@ void main() {
       expect(t.takeException(), isNull);
     });
 
-    testWidgets('누르는 칸은 상품 카드처럼 그림 위 ♡ 만 · 길게 = 구매함 (리본 + 없음, 구매함이면 ✓)', (t) async {
+    testWidgets('누르는 칸은 상품 카드처럼 그림 위 리본 + · ♡ (구매함이면 ✓), 길게 누르기 없음', (t) async {
       var owns = 0;
       Widget cell(CellTier tier) => SizedBox(
         width: 100,
@@ -136,19 +136,21 @@ void main() {
       );
       await _pump(t, cell(CellTier.owned));
       final o = t.widget<MarkOverlay>(find.byType(MarkOverlay));
-      expect([o.liked, o.owned, o.onOwn], [isTrue, isTrue, isNull]);
+      expect([o.liked, o.owned, o.onOwn], [isTrue, isTrue, isNotNull]);
       expect(find.byType(StatusMarks), findsNothing);
       expect(_icon(find.byType(GuideCell), Icons.check), findsOneWidget);
       expect(_icon(find.byType(GuideCell), Icons.add), findsNothing);
       _expectFullColour(t, find.byType(GuideCell));
-      await t.longPress(find.byType(GuideCell));
+      await t.tap(_icon(find.byType(GuideCell), Icons.check));
       expect(owns, 1);
-      // 아직 칸: 리본 자리는 비고(+ 없음) ♡ 만
+      await t.longPress(find.byType(GuideCell));
+      expect(owns, 1, reason: '길게 누르기는 구매함을 바꾸지 않는다');
+      // 아직 칸: 리본 + · ♡
       await _pump(t, cell(CellTier.none));
-      expect(_icon(find.byType(GuideCell), Icons.add), findsNothing);
+      expect(_icon(find.byType(GuideCell), Icons.add), findsOneWidget);
       expect(_icon(find.byType(GuideCell), Icons.check), findsNothing);
       expect(_icon(find.byType(GuideCell), Icons.favorite), findsOneWidget);
-      await t.longPress(find.byType(GuideCell));
+      await t.tap(_icon(find.byType(GuideCell), Icons.add));
       expect(owns, 2);
     });
 
