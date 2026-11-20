@@ -8,7 +8,7 @@
 // │ B-20b │ 검색 탭 필터(KitFilter) → 칸 거르기       │ 필터를 고르면 맞는 상품이 있는 칸만 · 연 상품 화면도 그 필터로 │ P07 · P01 │
 // │ B-20c │ SideDirectory 펴기 · 접기 (밀기 + 손잡이) │ 펴면 한 줄 3칸, 접으면 화면 가득 4칸 · 펴 둔 상태는 기기에 기억 (도감과 같은 틀) │ P06 · P03 │
 // │ B-21  │ 왼쪽 묶음 목록 + CategoryTile 격자       │ 세대: 건담 = 시대별 작품(공식 작품 로고) · 포켓몬 세대 · Fate 작품 · AC 작품 · 베이 라인 · 레고 테마 │ P06 · P04 │
-// │ B-22  │ 칸 머리 ? (HelpButton)                  │ 종류 · 세대 보기 읽는 법                      │ P10         │
+// │ B-22  │ 서랍 › 사용법 (categoryBrowseHelp)       │ 종류 · 세대 보기 읽는 법 (칸 머리 ? 는 서랍으로 옮김) │ P10    │
 // │ B-24  │ LoadingView / ErrorView / EmptyView     │ 불러오는 중 · 오류 · 내 채널 없음 · 조건에 맞는 상품 없음 │ P01 · P09 │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 칸 → B-23 분류 상품(쌓기) → D 상품 상세. 묶음 목록의 채널 머리 → 검색 탭 채널 바꾸기.
@@ -370,22 +370,13 @@ class _CategoryBrowseState extends State<_CategoryBrowse> {
     ],
   ];
 
-  /// 고른 묶음의 칸 — 머리(손잡이 · 묶음 이름 · ?) + 격자. 펴면 3칸, 접으면 4칸 (폰)
+  /// 고른 묶음의 칸 — 머리(손잡이 · 묶음 이름) + 격자. 펴면 3칸, 접으면 4칸 (폰)
   Widget _cells(SidePane pane, (String, String, List<_Cat>) cur, KitFilter? f) {
     final (ch, title, cats) = cur;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        pane.head(
-          _all ? '${tr(channelOf(ch).label)} · ${tr(title)}' : tr(title),
-          // B-22
-          actions: [
-            HelpButton(
-              title: widget.era ? tr('세대') : tr('종류'),
-              items: categoryBrowseHelp(era: widget.era),
-            ),
-          ],
-        ),
+        pane.head(_all ? '${tr(channelOf(ch).label)} · ${tr(title)}' : tr(title)),
         Expanded(
           child: LayoutBuilder(
             builder: (context, box) {
@@ -419,7 +410,7 @@ class _CategoryBrowseState extends State<_CategoryBrowse> {
   }
 }
 
-/// B-22 종류 · 세대 ? — 묶음 목록 · 칸 · 필터
+/// B-22 사용법의 종류 · 세대 묶음 — 묶음 목록 · 칸 · 필터
 List<HelpItem> categoryBrowseHelp({required bool era}) => [
   HelpItem(Icons.menu_open, tr('왼쪽 묶음을 누르면 그 묶음의 칸만 · 밀어서 펴고 접기')),
   if (era) ...[

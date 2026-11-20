@@ -1,5 +1,6 @@
 // ? 도움말 — 아이콘만 있는 화면에서 아이콘 뜻을 한 줄씩 (P10).
-// 자리는 모든 화면이 같다: 머리 줄(아바타 줄 · AppBar · 서랍 머리)의 오른쪽 끝. 크기는 ToolIcon 한 칸.
+// 쌓아 연 화면은 AppBar 오른쪽 끝 ? (크기는 ToolIcon 한 칸). 네 탭 · 서랍 · 내 정보는 ? 를 두지 않고
+// 서랍 › 사용법 한 쪽([HelpPage])에 모은다 (2026-11-21 주인: 위 줄 · 탭 안의 ? 를 서랍으로).
 import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
@@ -74,6 +75,40 @@ class HelpButton extends StatelessWidget {
   }
 }
 
+/// 도움말 한 줄 (시트 · 사용법 쪽 같이)
+Widget _helpRow(HelpItem i) {
+  if (i.group) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 12, bottom: 2),
+      child: Text(
+        i.text,
+        style: const TextStyle(fontSize: Gp.t12, color: Gp.muted, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+  final lead = switch (i) {
+    HelpItem(dot: true) => Container(
+      width: 8,
+      height: 8,
+      decoration: BoxDecoration(shape: BoxShape.circle, color: i.color),
+    ),
+    HelpItem(:final IconData icon) => Icon(icon, size: Gp.iL, color: i.color ?? Gp.ink),
+    _ => i.leading ?? const SizedBox.shrink(),
+  };
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 5),
+    child: Row(
+      children: [
+        SizedBox(width: 40, height: 32, child: Center(child: lead)),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(i.text, style: const TextStyle(fontSize: Gp.t14)),
+        ),
+      ],
+    ),
+  );
+}
+
 /// 도움말 시트 내용 (길면 스크롤)
 class HelpSheet extends StatelessWidget {
   const HelpSheet({super.key, required this.title, required this.items});
@@ -82,35 +117,6 @@ class HelpSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget lead(HelpItem i) => switch (i) {
-      HelpItem(dot: true) => Container(
-        width: 8,
-        height: 8,
-        decoration: BoxDecoration(shape: BoxShape.circle, color: i.color),
-      ),
-      HelpItem(:final IconData icon) => Icon(icon, size: Gp.iL, color: i.color ?? Gp.ink),
-      _ => i.leading ?? const SizedBox.shrink(),
-    };
-    Widget row(HelpItem i) => i.group
-        ? Padding(
-            padding: const EdgeInsets.only(top: 12, bottom: 2),
-            child: Text(
-              i.text,
-              style: const TextStyle(fontSize: Gp.t12, color: Gp.muted, fontWeight: FontWeight.w600),
-            ),
-          )
-        : Padding(
-            padding: const EdgeInsets.symmetric(vertical: 5),
-            child: Row(
-              children: [
-                SizedBox(width: 40, height: 32, child: Center(child: lead(i))),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(i.text, style: const TextStyle(fontSize: Gp.t14)),
-                ),
-              ],
-            ),
-          );
     return SafeArea(
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.8),
@@ -121,10 +127,41 @@ class HelpSheet extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               SectionHeader(title, padding: const EdgeInsets.only(bottom: 6)), // 다른 시트와 같은 머리
-              for (final i in items) row(i),
+              for (final i in items) _helpRow(i),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// 사용법 — 여러 화면의 도움말을 한 쪽에 (화면 이름 = 묶음 머리, 줄 모양은 ? 시트와 같다)
+class HelpPage extends StatelessWidget {
+  const HelpPage({super.key, required this.sections});
+
+  /// (화면 이름, 그 화면의 줄들)
+  final List<(String, List<HelpItem>)> sections;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(tr('사용법'))),
+      body: ListView(
+        padding: const EdgeInsets.only(bottom: 24),
+        children: [
+          for (final (title, items) in sections)
+            SectionPanel(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SectionHeader(title, padding: const EdgeInsets.only(bottom: 4)),
+                  for (final i in items) _helpRow(i),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }

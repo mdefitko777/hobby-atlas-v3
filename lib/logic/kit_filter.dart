@@ -297,9 +297,8 @@ class KitFilter {
     workNames: {...workNames},
   )..statusOf = statusOf;
 
-  /// 모든 조건 비우기 (필터 시트 초기화). [keepToggles] = 아이콘 줄(좋아요 · 구매함 · 발매 예정 · 나라) 조건은 둔다 —
-  /// 검색 탭은 그 줄이 시트 밖에 있어, 시트의 초기화가 보이지 않는 줄까지 끄면 안 된다 (2026-11-19 리뷰)
-  void clear({bool keepToggles = false}) {
+  /// 모든 조건 비우기 (필터 시트 초기화 — 아이콘 줄도 시트 안이라 같이)
+  void clear() {
     works.clear();
     types.clear();
     lines.clear();
@@ -309,18 +308,10 @@ class KitFilter {
     currency = null;
     from = '';
     to = '';
-    if (keepToggles) return;
     mine = MineState.any;
     release = ReleaseState.any;
     region = SaleRegion.any;
   }
-
-  /// 검색 탭 위 아이콘 줄(좋아요 · 구매함 · 발매 예정 · 나라)이 맡는 조건 수
-  int get toggleCount =>
-      (mine == MineState.any ? 0 : 1) + (release == ReleaseState.any ? 0 : 1) + (region == SaleRegion.any ? 0 : 1);
-
-  /// 시트에서 고른 조건 수 — 아이콘 줄을 밖에 둔 화면(검색 탭)의 필터 버튼 숫자
-  int get sheetCount => count - toggleCount;
 
   /// 화면에서 뺀 칸(아직 없음 · 이번 달 · 발매됨 · 판매 줄)이 걸려 있으면 푼다 — 보이지 않는 조건에 갇히지 않게
   /// (2026-11-19: 이번 달은 기간이, 판매 줄은 실데이터에서 거의 비어 뺐다). 굿즈 종류도 굿즈를 고를 때만 보이니

@@ -9,7 +9,7 @@
 //   rings         AccentRing · RingAvatar
 //   sections      SectionHeader · SectionPanel · UnderlineTab · PageDots · AccentBar · ListSummary(목록 맨 끝 합계)
 //   toolbar       GpSearchBar · ToolRow · ToolIcon · FilterButton · ViewIconToggle · FindBar
-//   header_collapse  HeaderCollapse · CollapsingHeader (아래로 스크롤하면 탭 위 머리 접기, 앱 셸 하나가 정한다)
+//   header_collapse  HeaderCollapse · CollapsingHeader (한참 내려 읽으면 채널 바만 접기, 앱 셸 하나가 정한다)
 //   sheets        showPickSheet · SquareSegments · CheckGrid · ExpandRow
 //   side_directory  SideDirectory · SideGrid · SideDirItem · SideDirHead (왼쪽 묶음 목록 + 오른쪽 칸 격자 — 검색 종류 · 세대 · 도감 한 벌)
 //   kit_filter_sheet · guide_filter_sheet  상품 · 도감 필터 시트 (같은 틀 · 같은 상태 줄 MineStateLabel, 규칙은 lib/logic/)
@@ -17,8 +17,7 @@
 //   feedback      showToast · errorText · navClearance
 //   kit_progress  예약(PreorderRow · showPreorderSheet · 도착 → 구매함) · 바코드 겹침 경고 (조립 상태는 화면에 두지 않는다)
 //   share_card    공유 카드 그림 (CollectionShareCard · GuideShareCard · captureCard)
-//   stats         StatGroups · CollectionStats (My Page · 내 정보 숫자 줄)
-//   help          HelpButton · HelpItem · HelpSheet (? = 이 화면 아이콘 뜻, 머리 줄 오른쪽 끝)
+//   help          HelpButton · HelpItem · HelpSheet · HelpPage (? = 이 화면 아이콘 뜻 · 서랍 › 사용법 = 모든 화면 한 쪽)
 // 숫자 · 날짜 글자(lib/format.dart)도 같이 내보낸다.
 export 'format.dart';
 export 'widgets/buttons.dart';
@@ -37,7 +36,6 @@ export 'widgets/share_card.dart';
 export 'widgets/sheets.dart';
 export 'widgets/side_directory.dart';
 export 'widgets/states.dart';
-export 'widgets/stats.dart';
 export 'widgets/tags.dart';
 export 'widgets/tier_cell.dart';
 export 'widgets/tiles.dart';

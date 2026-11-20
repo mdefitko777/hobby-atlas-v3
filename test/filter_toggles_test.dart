@@ -104,18 +104,15 @@ void main() {
       expect((keep.mine, keep.release, keep.region), (MineState.liked, ReleaseState.upcoming, SaleRegion.kr));
     });
 
-    test('시트 초기화: 아이콘 줄이 시트 밖이면(검색 탭) 그 줄 조건은 둔다', () {
-      KitFilter make() => KitFilter(
+    test('시트 초기화: 아이콘 줄(좋아요 · 발매 예정 · 나라)도 시트 안이라 같이 푼다', () {
+      final f = KitFilter(
         mine: MineState.liked,
         release: ReleaseState.upcoming,
         region: SaleRegion.kr,
         lines: {'HG'},
         price: PriceBand.values.last,
-      );
-      final keep = make()..clear(keepToggles: true);
-      expect((keep.mine, keep.release, keep.region), (MineState.liked, ReleaseState.upcoming, SaleRegion.kr));
-      expect((keep.price, keep.sheetCount), (PriceBand.any, 0));
-      expect(make()..clear(), predicate<KitFilter>((f) => f.count == 0));
+      )..clear();
+      expect(f.count, 0);
     });
 
     test('굿즈를 풀면 숨는 굿즈 종류도 푼다 (보이지 않는 조건이 종류 칸을 굿즈 하나로 줄이지 않게)', () {
@@ -127,11 +124,9 @@ void main() {
       expect(goods.goodsKinds, {'의류'});
     });
 
-    test('필터 버튼 숫자: 아이콘 줄을 밖에 둔 화면은 시트 조건만 센다', () {
+    test('필터 버튼 숫자: 아이콘 줄 조건도 센다', () {
       final f = KitFilter(mine: MineState.owned, release: ReleaseState.upcoming, region: SaleRegion.jp, lines: {'HG'});
       expect(f.count, 4);
-      expect(f.toggleCount, 3);
-      expect(f.sheetCount, 1);
     });
 
     test('체크 칸 값: 다른 조건과 겹쳐 0 이 되는 값은 빼고, 이미 고른 값은 남긴다', () {
@@ -179,10 +174,6 @@ void main() {
       expect(_key('filter-works'), findsNothing);
       expect(_key('filter-price'), findsOneWidget);
       expect(t.takeException(), isNull);
-
-      // 검색 탭처럼 아이콘 줄을 밖에 두면 시트에는 없다
-      await _show(t, FilterSheet(kits: _gundam, initial: KitFilter(), toggles: false));
-      expect(_key('filter-toggles'), findsNothing);
     });
 
     testWidgets('아이콘 줄을 켜면 0 개가 된 종류 칸 · 값 하나가 된 라인 줄은 숨는다', (t) async {
@@ -212,16 +203,14 @@ void main() {
       expect(_key('filter-price'), findsOneWidget);
     });
 
-    testWidgets('검색 탭 시트(아이콘 줄 밖)의 초기화는 그 줄의 발매 예정을 끄지 않는다', (t) async {
+    testWidgets('시트 초기화는 맨 위 아이콘 줄(발매 예정)까지 끈다 — 줄이 시트 안에 있다', (t) async {
       KitFilter? picked;
-      // 발매 예정은 hg2 하나 — MG 와 겹쳐 0 개였다가 초기화하면 1 개
       final initial = KitFilter(release: ReleaseState.upcoming, lines: {'MG'});
       await _show(
         t,
         Builder(
           builder: (context) => TextButton(
-            onPressed: () async =>
-                picked = await showFilterSheet(context, kits: _gundam, initial: initial, toggles: false),
+            onPressed: () async => picked = await showFilterSheet(context, kits: _gundam, initial: initial),
             child: const Text('open'),
           ),
         ),
@@ -233,7 +222,7 @@ void main() {
       await t.pump();
       await t.tap(find.descendant(of: find.byType(GpPickSheet), matching: find.byType(GradientButton)));
       await t.pumpAndSettle();
-      expect((picked?.release, picked?.sheetCount), (ReleaseState.upcoming, 0));
+      expect((picked?.release, picked?.count), (ReleaseState.any, 0));
     });
 
     testWidgets('굿즈 → 의류 → 굿즈 풀기: 굿즈 종류도 풀려 종류 칸이 다 보인다', (t) async {
@@ -258,7 +247,7 @@ void main() {
     });
   });
 
-  group('검색 탭 아이콘 줄', () {
+  group('검색 탭: ♡ · 구매함 · 발매 예정 · 나라는 필터 시트 맨 위 (2026-11-21 검색창 아래 줄을 시트로 되돌림)', () {
     Widget search(List<Kit> kits, List<String> channels) => SearchScreen(
       myChannels: channels,
       onMyChannelsChanged: (_) {},
@@ -271,41 +260,38 @@ void main() {
       ),
     );
 
-    testWidgets('검색창 줄 아래 한 줄 · 나라는 두 나라가 섞였을 때만 · 누르면 목록이 거른다', (t) async {
-      final store = UserStore.memory()..setStatus('hg1', CollectStatus.wanted);
-      await _show(t, search(_gundam, const ['gundam']), store: store);
-      final toggles = _key('filter-toggles');
-      expect(toggles, findsOneWidget);
-      expect(t.getTopLeft(toggles).dy, greaterThan(t.getTopLeft(find.byType(GpSearchBar)).dy));
-      expect(_key('toggle-region'), findsNothing);
-      expect(find.byType(ProductTile), findsNWidgets(4));
-
-      await t.tap(_key('toggle-liked'));
-      await t.pump(const Duration(milliseconds: 300));
-      expect(find.byType(ProductTile), findsOneWidget);
-      // 필터 버튼 숫자는 시트 조건만 (아이콘 줄은 밖에 보인다)
-      expect(t.widget<FilterButton>(find.byType(FilterButton)).count, 0);
-      // 시트에는 아이콘 줄이 없다
+    /// 필터 시트를 열고 [then] 을 누른 뒤 "n개 보기"
+    Future<void> pick(WidgetTester t, List<Finder> then) async {
       await t.tap(find.byType(FilterButton));
       await t.pumpAndSettle();
-      expect(find.descendant(of: find.byType(GpPickSheet), matching: _key('filter-toggles')), findsNothing);
+      expect(find.descendant(of: find.byType(GpPickSheet), matching: _key('filter-toggles')), findsOneWidget);
+      for (final f in then) {
+        await t.tap(f);
+        await t.pump(const Duration(milliseconds: 300));
+      }
+      await t.tap(find.textContaining(RegExp(r'^\d+개 보기$')));
+      await t.pumpAndSettle();
+    }
+
+    testWidgets('탭에는 검색창 · 아이콘 줄이 없고, 시트의 ♡ 를 고르면 목록이 거른다 · 필터 숫자에도 센다', (t) async {
+      final store = UserStore.memory()..setStatus('hg1', CollectStatus.wanted);
+      await _show(t, search(_gundam, const ['gundam']), store: store);
+      expect(find.byType(GpSearchBar), findsNothing);
+      expect(_key('filter-toggles'), findsNothing); // 시트 밖에는 없다
+      expect(find.byType(ProductTile), findsNWidgets(4));
+      await pick(t, [_key('toggle-liked')]);
+      expect(find.byType(ProductTile), findsOneWidget);
+      expect(t.widget<FilterButton>(find.byType(FilterButton)).count, 1);
       expect(t.takeException(), isNull);
     });
 
-    testWidgets('포켓몬(한국 · 일본): 나라 아이콘 전체 → 한국 → 일본 → 전체', (t) async {
+    testWidgets('포켓몬(한국 · 일본): 시트의 나라 아이콘 전체 → 한국 → 일본', (t) async {
       await _show(t, search(_pokemon, const ['pokemon']));
-      final region = _key('toggle-region');
-      expect(region, findsOneWidget);
       expect(find.byType(ProductTile), findsNWidgets(2));
-      await t.tap(region);
-      await t.pump(const Duration(milliseconds: 300));
+      await pick(t, [_key('toggle-region')]);
       expect(t.widget<ProductTile>(find.byType(ProductTile)).id, 'kr1');
-      await t.tap(region);
-      await t.pump(const Duration(milliseconds: 300));
+      await pick(t, [_key('toggle-region')]);
       expect(t.widget<ProductTile>(find.byType(ProductTile)).id, 'jp1');
-      await t.tap(region);
-      await t.pump(const Duration(milliseconds: 300));
-      expect(find.byType(ProductTile), findsNWidgets(2));
       expect(t.takeException(), isNull);
     });
   });

@@ -237,7 +237,7 @@ void main() {
     expect((po.seriesLabel, trData('한정')), ('포켓몬', '한정'));
   });
 
-  testWidgets('앱 셸: 홈 · 검색 · 캘린더 · 컬렉션 · 친구 서랍', (t) async {
+  testWidgets('앱 셸: 홈 · 검색 · 캘린더 · 컬렉션 · 검색 덮개 · 서랍 · 사용법', (t) async {
     await show(t, '홈', AppShell(loaders: fakeLoaders, notify: NotifyStore.memory()));
     for (final (name, icon) in [
       ('검색', Icons.search),
@@ -247,7 +247,10 @@ void main() {
       await tap(t, name, find.byIcon(icon).last);
     }
     await show(t, '홈', AppShell(loaders: fakeLoaders, notify: NotifyStore.memory()));
-    await tap(t, '친구 서랍', find.byTooltip(tr('친구 · 내 정보')));
+    await tap(t, '검색 덮개', find.byKey(const ValueKey('top-search')));
+    await show(t, '홈', AppShell(loaders: fakeLoaders, notify: NotifyStore.memory()));
+    await tap(t, '서랍', find.byTooltip(tr('내 정보')));
+    await tap(t, '사용법', find.byKey(const ValueKey('drawer-help')));
     await show(t, '홈', AppShell(loaders: fakeLoaders, notify: NotifyStore.memory()));
     await tap(t, '추가 시트', find.byIcon(Icons.photo_camera_outlined));
   });
@@ -256,8 +259,14 @@ void main() {
     await explore(t, '홈', () => AppShell(loaders: fakeLoaders, notify: NotifyStore.memory()));
   });
 
-  Widget search() => Scaffold(
-    body: SearchScreen(myChannels: mine, onMyChannelsChanged: (_) {}, onCamera: () {}, loaders: fakeLoaders),
+  Widget search({bool overlay = false}) => Scaffold(
+    body: SearchScreen(
+      myChannels: mine,
+      onMyChannelsChanged: (_) {},
+      onCamera: () {},
+      overlay: overlay,
+      loaders: fakeLoaders,
+    ),
   );
 
   testWidgets('검색: 탭 · 검색어 · 기체별 묶기 · 결과 없음', (t) async {
@@ -265,7 +274,8 @@ void main() {
     for (final v in ['view-1', 'view-2']) {
       await tap(t, '검색 $v', find.byKey(ValueKey(v)));
     }
-    await show(t, '검색', search());
+    await explore(t, '검색 덮개', () => search(overlay: true));
+    await show(t, '검색 덮개', search(overlay: true));
     await t.enterText(find.byType(TextField), '스트라이크');
     await settle(t);
     snap(t, '검색어');
@@ -359,12 +369,13 @@ void main() {
     await explore(t, '공고', () => AnnouncementScreen(item: announcement, loaders: fakeLoaders));
   });
 
-  testWidgets('친구 서랍 (계정)', (t) async {
+  testWidgets('서랍 · 친구 화면 (계정)', (t) async {
+    await explore(t, '친구', () => FriendsPage(loaders: fakeLoaders));
     await show(
       t,
       '친구 서랍',
       Scaffold(
-        drawer: FriendsDrawer(loaders: fakeLoaders, onOpenProfile: () {}, onOpenFriend: (_) {}),
+        drawer: FriendsDrawer(loaders: fakeLoaders, onOpenProfile: () {}),
         body: Builder(
           builder: (c) => TextButton(onPressed: () => Scaffold.of(c).openDrawer(), child: const Text('open')),
         ),

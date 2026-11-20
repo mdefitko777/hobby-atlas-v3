@@ -352,7 +352,6 @@ class _WorkUnitsState extends State<WorkUnits> {
                 tip: tr('공유 카드'),
                 onTap: _shareGuide,
               ),
-              HelpButton(title: tr('작품 도감'), items: workGuideHelp()), // G-2
             ],
           ),
           Expanded(child: _body(snap, m)),
@@ -616,7 +615,7 @@ class _KitLine extends StatelessWidget {
   }
 }
 
-/// G-2 작품 도감 ? — 칸 표시(늘 컬러) + 묶음 목록 · 머리 줄 · 기체 시트 아이콘
+/// G-2 사용법의 작품 도감 묶음 — 칸 표시(늘 컬러) + 묶음 목록 · 머리 줄 · 기체 시트 아이콘
 List<HelpItem> workGuideHelp() => [
   ...tierHelpItems(),
   HelpItem(Icons.bookmark_border, tr('구매함 (칸 왼쪽 위 리본 +)'), color: Gp.own),

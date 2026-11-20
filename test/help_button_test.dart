@@ -1,4 +1,4 @@
-// ? 도움말 (lib/widgets/help.dart) — 버튼 하나 · 시트 줄 · 화면마다 같은 자리에 있는지
+// ? 도움말 (lib/widgets/help.dart) — 버튼 하나 · 시트 줄 · 쌓아 연 화면의 자리 · 서랍 › 사용법 한 쪽
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hobby_atlas/clock.dart';
@@ -9,7 +9,9 @@ import 'package:hobby_atlas/models.dart';
 import 'package:hobby_atlas/screens/d_kit_detail_screen.dart';
 import 'package:hobby_atlas/screens/b_search_screen.dart' show searchHelp;
 import 'package:hobby_atlas/screens/f_collection_screen.dart';
+import 'package:hobby_atlas/screens/g_guide_view.dart' show guideHelpSections;
 import 'package:hobby_atlas/screens/s_app_shell.dart';
+import 'package:hobby_atlas/screens/u_social.dart' show MyAvatar;
 import 'package:hobby_atlas/theme.dart';
 import 'package:hobby_atlas/widgets.dart';
 
@@ -91,30 +93,30 @@ void main() {
     expect(find.text('줄 0'), findsOneWidget);
   });
 
-  testWidgets('앱 셸 위 줄 ? — 탭마다 그 탭 아이콘 뜻 (캘린더 = 점 색까지)', (tester) async {
+  testWidgets('위 줄 ? 는 없고 서랍 › 사용법 한 쪽에 위 줄 · 네 탭 · 도감 · 친구 · 내 정보 (캘린더 = 점 색까지)', (tester) async {
     await _show(tester, AppShell(loaders: fakeLoaders));
-    await tester.tap(find.byTooltip('도움말'));
+    expect(find.byTooltip('도움말'), findsNothing); // 2026-11-21 주인: 위 줄 · 탭 안의 ? 를 서랍으로
+    await tester.tap(find.byType(MyAvatar).first);
     await _frames(tester, 3);
-    expect(find.text('설정'), findsWidgets); // 위 줄
-    expect(find.text('전체 소식'), findsWidgets); // 홈 묶음
-    Navigator.of(tester.element(find.text('수집 레벨'))).pop();
-    await _frames(tester, 3);
-
-    await tester.tap(find.byIcon(Icons.calendar_today_outlined).last);
+    await tester.tap(find.byKey(const ValueKey('drawer-help')));
     await _frames(tester);
-    await tester.tap(find.byTooltip('도움말'));
-    await _frames(tester, 3);
+    expect(find.byType(HelpPage), findsOneWidget);
+    expect(find.text('수집 레벨'), findsOneWidget); // 위 줄
+    expect(find.text('격자 · 목록 (전체 보기 안)'), findsOneWidget); // 홈 묶음
+    final list = find.descendant(of: find.byType(HelpPage), matching: find.byType(Scrollable)).first;
+    await tester.scrollUntilVisible(find.text('그 밖의 일정'), 300, scrollable: list);
     expect(find.text('좋아요 · 예약한 상품'), findsOneWidget); // 점 색은 둘뿐 (파랑 · 회색)
-    expect(find.text('그 밖의 일정'), findsOneWidget);
-    expect(find.byTooltip('점 색'), findsNothing); // 달력 위 ? 는 합쳤다
+    await tester.scrollUntilVisible(find.text('아이디로 친구 추가'), 300, scrollable: list);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('검색 ? 에 기체별 묶기 · 컬렉션 ? 에 휴지통 · 편집 · 도감 칸 (늘 컬러)', (tester) async {
+  testWidgets('사용법: 검색에 기체별 묶기 · 컬렉션에 휴지통 · 편집 · 도감 묶음에 칸 (늘 컬러)', (tester) async {
     expect(searchHelp().map((i) => i.text), contains('검색 결과를 기체별로 묶기'));
     final c = collectionHelp().map((i) => i.text);
-    expect(c, containsAll(['휴지통 (30일 동안 복원)', '편집 (골라서 지우기)', '리본 = 구매함 · +10']));
-    expect(c.join(), isNot(contains('흑백'))); // 도감 칸은 늘 컬러
+    expect(c, containsAll(['휴지통 (30일 동안 복원)', '편집 (골라서 지우기)']));
+    final guide = [for (final (_, items) in guideHelpSections()) ...items.map((i) => i.text)];
+    expect(guide, contains('리본 = 구매함 · +10'));
+    expect(guide.join(), isNot(contains('흑백'))); // 도감 칸은 늘 컬러
   });
 
   testWidgets('상품 상세 — 오른쪽 위 ? (뒤로 맞은편)', (tester) async {

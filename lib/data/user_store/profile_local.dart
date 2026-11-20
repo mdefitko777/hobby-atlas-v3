@@ -5,7 +5,7 @@ part of '../user_store.dart';
 mixin _ProfileLocal on ChangeNotifier {
   void _changed();
 
-  /// 특별 관심 친구 (@아이디) — My Page ★ 에 이 사람들 소식만. 기기에만
+  /// 특별 관심 친구 (@아이디) — 친구 화면 아래 ★ 에 이 사람들 소식만. 기기에만
   final Set<String> specialFriends = {};
 
   /// 내 사진 (사진 벽 · 도감 칸 · 상품 상세). 지운 것도 서버에서 내릴 때까지 [MyPhoto.deleted] 로 남는다

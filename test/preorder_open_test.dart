@@ -812,8 +812,6 @@ void main() {
           body: HomeScreen(
             myChannels: const ['gundam'],
             onMyChannelsChanged: (_) {},
-            onOpenSearch: () {},
-            onCamera: () {},
             loaders: Loaders(kits: fakeLoaders.kits, announcements: (_) async => anns()),
           ),
         ),

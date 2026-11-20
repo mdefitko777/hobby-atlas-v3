@@ -712,13 +712,7 @@ void main() {
           tester,
           Scaffold(
             key: ValueKey(lang),
-            body: HomeScreen(
-              myChannels: const ['gundam'],
-              onMyChannelsChanged: (_) {},
-              onOpenSearch: () {},
-              onCamera: () {},
-              loaders: fakeLoaders,
-            ),
+            body: HomeScreen(myChannels: const ['gundam'], onMyChannelsChanged: (_) {}, loaders: fakeLoaders),
           ),
         );
         await tester.scrollUntilVisible(find.byType(TagPill), 300, scrollable: find.byType(Scrollable).first);

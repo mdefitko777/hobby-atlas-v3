@@ -18,7 +18,6 @@ void main() {
     expect(yen(null), '价格未定');
     expect(yen(3850), '¥3,850');
     expect(won(41000), '41,000 韩元');
-    expect(wonShort(184000), '18.4万');
     final now = DateTime(2026, 11, 11, 12);
     expect(timeAgo(now.subtract(const Duration(minutes: 3)), now: now), '3 分钟前');
     expect(timeAgo(now.subtract(const Duration(days: 1)), now: now), '昨天');

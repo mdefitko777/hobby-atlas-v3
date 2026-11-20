@@ -121,11 +121,15 @@ void main() {
     expect(find.byKey(const ValueKey('kit-photo-k2')), findsNothing);
     expect(find.byType(MyPhotoTile), findsNothing);
     expect(find.byIcon(Icons.photo_outlined), findsOneWidget); // 빈 벽
-    // My Page 와 같은 아이콘 숫자 (♡ 1 · 리본 2)
-    expect(find.byTooltip('좋아요'), findsOneWidget);
-    expect(find.byTooltip('구매함'), findsOneWidget);
-    expect(find.byTooltip('이번 달 지출'), findsOneWidget);
-    expect(find.byTooltip('총 지출'), findsOneWidget);
+    // 목록 줄: 좋아요 1 · 구매함 2 · 예약 금액 · 구매 금액 (2026-11-21 숫자 칸 → 줄)
+    String value(String key) => tester
+        .widgetList<Text>(find.descendant(of: find.byKey(ValueKey(key)), matching: find.byType(Text)))
+        .map((t) => t.data)
+        .join('|');
+    expect(value('profile-liked'), contains('|1'));
+    expect(value('profile-owned'), contains('|2'));
+    expect(find.byKey(const ValueKey('profile-preorder')), findsOneWidget);
+    expect(find.byKey(const ValueKey('profile-spend')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -190,9 +194,9 @@ void main() {
     await show(tester, ProfileScreen(friend: friend, loaders: _loaders));
     expect(find.byKey(const ValueKey('friend-photo-f1')), findsOneWidget);
     expect(find.byKey(const ValueKey('kit-photo-b')), findsNothing); // 사진을 붙인 상품은 한 번만
-    expect(find.text('건담'), findsOneWidget);
+    expect(find.text('건담 · HG'), findsOneWidget); // 한 줄 소개 = 취향 태그
     expect(find.text('@gomdol'), findsOneWidget);
-    expect(find.byTooltip('좋아요'), findsOneWidget);
+    expect(find.byKey(const ValueKey('profile-liked')), findsOneWidget);
     expect(server.count('gunpula_v3_get_friend_wall'), 1);
     await tester.tap(find.byKey(const ValueKey('friend-photo-f1')));
     await settle(tester);
@@ -226,9 +230,9 @@ void main() {
   testWidgets('취향 태그: 고치면 기기 + v3 preferences.tags', (tester) async {
     await loadMe(tester);
     await show(tester, ProfileScreen(loaders: _loaders, onJump: (_) {}));
-    await tester.tap(find.byTooltip('프로필 편집'));
+    await tester.tap(find.byKey(const ValueKey('profile-edit')));
     await settle(tester);
-    await tester.tap(find.text('취향 태그'));
+    await tester.tap(find.text('취향 태그').last); // 시트 줄 (카드의 빈 소개 줄과 같은 글)
     await settle(tester);
     await tester.enterText(find.byType(TextField), '건담');
     await tester.tap(find.byTooltip('태그 추가'));

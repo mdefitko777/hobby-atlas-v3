@@ -1,7 +1,7 @@
 // 상품 필터 시트 — 검색 결과 · 전체 목록 · 홈 · 캘린더 · 컬렉션이 같이 쓰는 한 벌.
 // 아래에서 올라오는 시트(화면의 60%). 캡슐 대신 아이콘 줄 · 체크 2열 · 펼치는 줄. 도감 필터도 같은 틀 · 같은 상태 줄.
-//   맨 위 아이콘 줄(좋아요 · 구매함 · 발매 예정, 나라가 섞인 목록이면 + 나라)은 [KitFilterToggles] — 검색 탭은 이 줄을
-//   시트 밖 검색창 아래에 두고(2026-11-19 주인 결정) 시트에는 종류 · 라인 · 작품 · 기간 · 가격만.
+//   맨 위 아이콘 줄(좋아요 · 구매함 · 발매 예정, 나라가 섞인 목록이면 + 나라)은 [KitFilterToggles] — 검색 탭도 이제 시트 안
+//   (2026-11-21 탭에서 검색창을 빼며 되돌림).
 //   맞는 상품이 없는 칸 · 값이 하나뿐인 줄 · 정가가 없는 목록의 가격 줄은 숨긴다 (회색 칸을 두지 않기).
 //   가격은 원 · 엔이 섞인 목록이면 돈을 먼저 고른다 (환산하지 않음).
 // 거르는 규칙(KitFilter.matches)은 lib/logic/kit_filter.dart
@@ -21,61 +21,37 @@ import 'sheets.dart';
 
 export '../logic/kit_filter.dart';
 
-/// 필터 시트 열기 — 고르면 새 조건, 닫으면 null. [toggles] = 시트 맨 위 아이콘 줄 (밖에 둔 화면은 false)
-Future<KitFilter?> showFilterSheet(
-  BuildContext context, {
-  required List<Kit> kits,
-  required KitFilter initial,
-  bool toggles = true,
-}) => showGpSheet<KitFilter>(
-  context,
-  heightFactor: gpSheetHeight,
-  builder: (_) => FilterSheet(kits: kits, initial: initial, toggles: toggles),
-);
+/// 필터 시트 열기 — 고르면 새 조건, 닫으면 null
+Future<KitFilter?> showFilterSheet(BuildContext context, {required List<Kit> kits, required KitFilter initial}) =>
+    showGpSheet<KitFilter>(
+      context,
+      heightFactor: gpSheetHeight,
+      builder: (_) => FilterSheet(kits: kits, initial: initial),
+    );
 
 /// 필터 시트를 열어 고른 조건을 돌려준다 (닫으면 null). 내 상태(좋아요 · 구매함)는 앱 전체 Marks 로 센다
-Future<KitFilter?> pickKitFilter(
-  BuildContext context, {
-  required List<Kit> pool,
-  required KitFilter current,
-  bool toggles = true,
-}) {
+Future<KitFilter?> pickKitFilter(BuildContext context, {required List<Kit> pool, required KitFilter current}) {
   current.statusOf = Marks.read(context).statusOf;
-  return showFilterSheet(context, kits: pool, initial: current, toggles: toggles);
+  return showFilterSheet(context, kits: pool, initial: current);
 }
 
-/// 목록 안 찾기 글자 + 상품 필터 한 벌 (컬렉션 · 캘린더 · My Page). 값만 들고, 다시 그리기는 화면의 setState
+/// 목록 안 상품 필터 한 벌 (컬렉션 · 캘린더). 값만 들고, 다시 그리기는 화면의 setState.
+/// 찾기 글자는 없다 — 탭 안 찾기 칸을 빼고 위 줄 🔍 검색 덮개 하나로 (2026-11-21)
 class KitFind {
-  String query = '';
   KitFilter filter = KitFilter();
 
-  /// 찾기나 필터가 걸려 있다
-  bool get active => query.isNotEmpty || filter.count > 0;
+  /// 필터가 걸려 있다
+  bool get active => filter.count > 0;
 
-  void clear() {
-    query = '';
-    filter = KitFilter();
-  }
-
-  /// 찾기 글자에 맞나
-  bool hitText(Kit k) => kitMatches(k, query);
-
-  /// 찾기 + 필터에 맞나. 먼저 [watch] 로 내 상태를 이어 둔다
-  bool hit(Kit k) => kitMatches(k, query) && filter.matches(k);
+  /// 필터에 맞나. 먼저 [watch] 로 내 상태를 이어 둔다
+  bool hit(Kit k) => filter.matches(k);
 
   /// build 안에서: 필터의 내 상태 = 지금 Marks (좋아요 · 구매함이 바뀌면 다시 그린다)
   void watch(BuildContext context) => filter.statusOf = Marks.of(context).statusOf;
 
-  /// 찾기 글자에 맞는 [kits] 로 필터 시트를 연다. 골랐으면 true (화면이 setState)
+  /// [kits] 로 필터 시트를 연다. 골랐으면 true (화면이 setState)
   Future<bool> openFilter(BuildContext context, Iterable<Kit> kits) async {
-    final f = await pickKitFilter(
-      context,
-      pool: [
-        for (final k in kits)
-          if (hitText(k)) k,
-      ],
-      current: filter,
-    );
+    final f = await pickKitFilter(context, pool: kits.toList(), current: filter);
     if (f == null) return false;
     filter = f;
     return true;
@@ -212,12 +188,9 @@ class _Toggle extends StatelessWidget {
 }
 
 class FilterSheet extends StatefulWidget {
-  const FilterSheet({super.key, required this.kits, required this.initial, this.toggles = true});
+  const FilterSheet({super.key, required this.kits, required this.initial});
   final List<Kit> kits;
   final KitFilter initial;
-
-  /// 맨 위 아이콘 줄 (검색 탭은 시트 밖에 있어 false)
-  final bool toggles;
 
   @override
   State<FilterSheet> createState() => _FilterSheetState();
@@ -281,21 +254,19 @@ class _FilterSheetState extends State<FilterSheet> {
       noHitLabel: tr('맞는 상품 없음'),
       onApply: () => Navigator.pop(context, _draft..workNames.addAll(_workNames)),
       onReset: () => setState(() {
-        _draft.clear(keepToggles: !widget.toggles); // 시트 밖 아이콘 줄은 시트가 끄지 않는다
+        _draft.clear();
         _open = '';
       }),
       children: [
-        if (widget.toggles) ...[
-          Align(
-            alignment: Alignment.centerLeft,
-            child: KitFilterToggles(
-              filter: _draft,
-              regions: _regions,
-              onChanged: (f) => setState(() => _draft = f), // STATE: 아이콘 줄 → 맞는 상품 수 · 보일 칸
-            ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: KitFilterToggles(
+            filter: _draft,
+            regions: _regions,
+            onChanged: (f) => setState(() => _draft = f), // STATE: 아이콘 줄 → 맞는 상품 수 · 보일 칸
           ),
-          const SizedBox(height: 8),
-        ],
+        ),
+        const SizedBox(height: 8),
         CheckGrid(
           key: const ValueKey('filter-types'),
           values: _live((k) => k.type, (f) => f.types),

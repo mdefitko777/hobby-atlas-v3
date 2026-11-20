@@ -575,6 +575,7 @@ void main() {
             myChannels: const ['gundam', 'pokemon'],
             onMyChannelsChanged: (_) {},
             onCamera: () {},
+            overlay: true,
             loaders: fakeLoaders,
           ),
         ),

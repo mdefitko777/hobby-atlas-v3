@@ -16,6 +16,7 @@ import 'package:hobby_atlas/screens/f_collection_screen.dart';
 import 'package:hobby_atlas/screens/h_calendar_screen.dart';
 import 'package:hobby_atlas/screens/k_settings_screen.dart';
 import 'package:hobby_atlas/screens/s_app_shell.dart';
+import 'package:hobby_atlas/screens/u_social.dart' show MyAvatar;
 import 'package:hobby_atlas/theme.dart';
 
 import 'layout_test.dart' show fakeLoaders;
@@ -112,22 +113,28 @@ void main() {
     expect(_selected(tester).values.toSet(), {allChannelId});
   });
 
-  testWidgets('내 정보 숫자로 컬렉션에 가면 전체 — 맞춰 보기면 네 탭, 끄면 컬렉션만', (tester) async {
+  testWidgets('서랍 좋아요 · 구매함 · 예약으로 컬렉션에 가면 전체 — 맞춰 보기면 네 탭, 끄면 컬렉션만', (tester) async {
     final store = await _pumpShell(tester);
-    HomeScreen home() => tester.widget<HomeScreen>(find.byType(HomeScreen, skipOffstage: false));
+    // 아바타 → 서랍 → 그 줄 (서랍은 열 때만 그려진다)
+    Future<void> jump(String row) async {
+      await tester.tap(find.byType(MyAvatar).first);
+      await _settle(tester);
+      await tester.tap(find.byKey(ValueKey('drawer-$row')));
+      await _settle(tester);
+    }
+
     _bar(tester, HomeScreen).onSelect('gundam');
     await _settle(tester);
-    home().onJump!(CollectionJump.owned);
-    await _settle(tester);
+    await jump('owned');
     expect(_selected(tester).values.toSet(), {allChannelId});
+    expect(find.byType(CollectionScreen), findsOneWidget); // 컬렉션 탭으로
 
     store.setChannelSync(false);
     await _settle(tester);
     _bar(tester, HomeScreen).onSelect('gundam');
     _bar(tester, CollectionScreen).onSelect('pokemon');
     await _settle(tester);
-    home().onJump!(CollectionJump.liked);
-    await _settle(tester);
+    await jump('liked');
     expect(_bar(tester, CollectionScreen).selected, allChannelId);
     expect(_bar(tester, HomeScreen).selected, 'gundam', reason: '끈 때는 홈은 그대로');
     expect(tester.takeException(), isNull);

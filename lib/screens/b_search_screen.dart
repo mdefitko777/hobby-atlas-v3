@@ -1,29 +1,33 @@
-// 화면 B: 검색 — 검색어가 없으면 상품 둘러보기(전체 · 종류 · 세대), 있으면 이름 · 번호 · 작품 · 기체, 또는 "말로 설명해서" 찾기.
+// 화면 B: 검색 — 아래 탭 "검색" = 상품 둘러보기(전체 · 종류 · 세대, 검색창 없음).
+// 찾기는 위 줄 🔍 가 여는 검색 덮개(앱 전체를 덮는 쌓기 화면): 이름 · 번호 · 작품 · 기체, 또는 "말로 설명해서" 찾기.
 // 상품 화면과 같은 모양 · 같은 필터 하나. 내 수집 진행(도감)은 컬렉션 탭 "도감" 에 있다.
 //
 // ┌──────── 디자인 가이드 대응표: B 검색 ──────────────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
 // │ B-1  │ ChannelHeader                      │ 검색 범위 = 내 채널 (C-0 공용)          │ P04 · P06     │
-// │ B-2  │ GpSearchBar (지우기 + 카메라)       │ 검색창(홈과 같은 모양)                 │ P07 · P04     │
-// │ B-3  │ Wrap(InputChip ×) — 검색창을 누르면   │ 최근 검색어 (기기 저장 · 20개 · 되돌리기) │ P06 · P03     │
+// │ B-0  │ openSearch → 쌓기 화면(앱 전체 덮기)  │ 검색 덮개: ← · 검색창(바로 커서) · 필터 · 격자 · 목록 │ P07 · P03 │
+// │ B-2  │ GpSearchBar (지우기 + 카메라)       │ 검색창 (덮개에만) · 카메라 = 사진으로 찾기 │ P07 · P04     │
+// │ B-3  │ Wrap(InputChip ×) — 검색어가 없을 때 │ 최근 검색어 (기기 저장 · 20개 · 되돌리기) │ P06 · P03     │
 // │ B-4  │ 2열 목록 (×횟수) · 새 상품 줄         │ 자주 찾은 검색어 (내 검색 횟수) · 새 상품 │ P06 · P01     │
 // │ B-5  │ 예시 문장 칩                        │ 설명으로 찾기 (낱말 표 · AI 아님)        │ P10 · P07     │
 // │ B-6  │ ThumbRow + 일치도 %                 │ 설명에 맞는 상품 (맞은 단어 = 이유)      │ P01 · P09     │
 // │ B-7  │ SectionListView (O 전체 목록 재사용) │ 검색 결과 · 필터 · 정렬 · 격자/목록      │ P08 · 적응형 │
 // │ B-9  │ 탭 "전체" (처음) → SectionListView │ 내 채널 상품 전부                        │ P07 · P06     │
-// │ B-17 │ KitFilterToggles (검색창 줄 아래 한 줄) │ ♡ 좋아요 · 구매함 · 발매 예정 · 나라(두 나라가 섞였을 때) — 필터 시트 위 줄을 밖으로 │ P07 · P04 │
-// │ B-14 │ UnderlineTab 전체 · 종류 · 세대      │ 둘러보기 세 가지 (검색창 줄 아래, 컬렉션 탭 줄과 같은 자리) │ P06 · P04 │
+// │ B-17 │ ToolRow (상자 없는 아이콘 줄)        │ 필터 · 격자 · 목록 — ♡ · 구매함 · 발매 예정 · 나라는 필터 시트 맨 위 │ P07 · P04 │
+// │ B-14 │ UnderlineTab 전체 · 종류 · 세대      │ 둘러보기 세 가지 (아이콘 줄 아래, 컬렉션 탭 줄과 같은 자리) │ P06 · P04 │
 // │ B-15 │ 탭 "종류" · "세대" → TypeBrowse · EraBrowse (B-20 · B-21) │ 공식 그림 + 이름만 → 그 분류 상품 (같은 필터) │ P06 · P08 │
-// │ B-16 │ B-14 줄 오른쪽 글자 단추 → 아래 시트   │ 레고 채널만: 레고 범위 (최근 정식 세트 · 전부) — 검색창 줄 아이콘은 세 칸 그대로 │ P06 · P10 │
+// │ B-16 │ B-14 줄 오른쪽 글자 단추 → 아래 시트   │ 레고 채널만: 레고 범위 (최근 정식 세트 · 전부) — 아이콘 줄은 세 칸 그대로 │ P06 · P10 │
 // │ B-12 │ GuideHits (guide/guide_search.dart) │ 검색어에 맞는 작품 · 기체 → 도감(그 기체 시트) │ P07 · P06 │
-// │ B-13 │ 결과 위 "기체별로 묶기" + GroupedResults │ 결과를 기체별로 묶기 (상품 n · 가짐 m) — 검색창 폭은 그대로 │ P01 · P07 │
+// │ B-18 │ ThumbRow 몇 줄 (제목에 검색어)       │ 예고 · 라이브 · 예약 찾기 → 예고 상세 (넘기면 맞은 것 전부) │ P07 · P06 │
+// │ B-13 │ 결과 위 "기체별로 묶기" + GroupedResults │ 결과를 기체별로 묶기 (상품 n · 가짐 m) — 검색창 줄 아이콘은 그대로 │ P01 · P07 │
 // │ B-8  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 결과 없음          │ P01 · P09     │
 // │ B-10 │ TagSearchSection (R 화면 파일)        │ 메자스타 · 프렌다 태그 · 게임 이름 찾기   │ P07 · P06     │
-// │ B-11 │ 위 줄 ? (S-19, searchHelp)          │ 검색창 줄 아이콘 뜻 한 줄씩              │ P10           │
+// │ B-11 │ 서랍 › 사용법 (S-19, searchHelp)     │ 아이콘 뜻 한 줄씩                      │ P10           │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 검색은 기기 안: 받아 둔 Gunpula 목록에서 거른다. 설명으로 찾기 = lib/logic/sentence_search.dart (낱말 맞추기, 서버 · AI 없음).
 // 서버가 없어 "인기 검색어" 순위는 만들지 않는다 → 내 검색 횟수(자주 찾은 검색어)와 이번 주 새 상품으로.
-// 왜 이렇게: 정확한 이름을 몰라도 찾게 — 필터 입구를 여럿 두지 않고 검색창 하나 + 말로 찾기.
+// 왜 이렇게: 정확한 이름을 몰라도 찾게 — 필터 입구를 여럿 두지 않고 검색창 하나(위 줄 🔍) + 말로 찾기.
+// 탭마다 있던 검색창은 뺐다 (2026-11-21 주인): 화면이 좁아 보여서 — 찾기는 어느 탭에서나 위 줄 🔍 한 곳.
 import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
@@ -33,6 +37,7 @@ import '../channels.dart';
 import '../logic/data_labels.dart';
 import '../logic/kit_rules.dart';
 import '../logic/lego_scope.dart';
+import '../logic/preorder_open.dart' show annShownDay;
 import '../marks.dart';
 import '../models.dart';
 import '../logic/sentence_search.dart';
@@ -42,6 +47,7 @@ import 'b_category_browse.dart';
 import 'c_channel_screen.dart';
 import 'd_kit_detail_screen.dart';
 import 'guide/guide_search.dart';
+import 'j_announcement_screen.dart' show openAnnouncement;
 import 'o_see_all_screen.dart';
 import 'r_mezastar_screen.dart' show TagSearchSection;
 
@@ -51,6 +57,43 @@ const sentenceExamples = ['샤아 전용 자쿠 HG', '수성의 마녀 에어리
 /// 중국어 화면의 예시 — 위와 같은 순서 · 같은 뜻 (설명으로 찾기가 중국어도 읽어 같은 낱말이 잡힌다, test/sentence_search_zh_test.dart)
 const sentenceExamplesZh = ['夏亚专用 扎古 HG', '水星的魔女 风灵 HG', '伊布 玩偶', '龙 战刃 陀螺'];
 
+/// B-0 검색 덮개 열기 — 아래 탭 · 카메라 단추 · 반반 화면까지 덮는 쌓기 화면 (위 줄 🔍 · 컬렉션 빈 화면 · 카메라 결과
+/// 「이름으로 검색」 · 공유로 찾기). 내 채널은 기기 기록에서 읽어 덮개 안에서 채널을 고치면 바로 따라간다
+Future<void> openSearch(
+  BuildContext context, {
+  String? channel,
+  ValueChanged<String>? onChannelChanged,
+  required ValueChanged<List<String>> onMyChannelsChanged,
+  required VoidCallback onCamera,
+  Loaders loaders = const Loaders(),
+}) {
+  final store = Marks.read(context).store;
+  var picked = channel; // 덮개 안에서 고른 채널 — 다시 그려도(최근 검색 저장 등) 처음 채널로 돌아가지 않게
+  return Navigator.of(context, rootNavigator: true).push(
+    MaterialPageRoute<void>(
+      builder: (_) => Scaffold(
+        body: SafeArea(
+          child: ListenableBuilder(
+            listenable: store,
+            builder: (context, _) => SearchScreen(
+              overlay: true,
+              myChannels: store.myChannels,
+              onMyChannelsChanged: onMyChannelsChanged,
+              channel: picked,
+              onChannelChanged: (id) {
+                picked = id;
+                onChannelChanged?.call(id);
+              },
+              onCamera: onCamera,
+              loaders: loaders,
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 class SearchScreen extends StatefulWidget {
   const SearchScreen({
     super.key,
@@ -59,7 +102,7 @@ class SearchScreen extends StatefulWidget {
     this.channel,
     this.onChannelChanged,
     required this.onCamera,
-    this.focusTick = 0,
+    this.overlay = false,
     this.leading,
     this.loaders = const Loaders(),
   });
@@ -71,11 +114,11 @@ class SearchScreen extends StatefulWidget {
   final String? channel;
   final ValueChanged<String>? onChannelChanged;
 
-  /// 검색창 카메라 → 앱 셸의 찍어서 찾기 시트
+  /// 검색창 카메라 → 앱 셸의 찍어서 찾기 시트 (사진으로 찾기 입구)
   final VoidCallback onCamera;
 
-  /// 값이 바뀌면 검색창에 커서를 둔다 (홈 검색 알약에서 넘어올 때)
-  final int focusTick;
+  /// true = 검색 덮개(검색창 · 최근 검색 · 결과), false = 아래 탭(둘러보기만, 검색창 없음)
+  final bool overlay;
   final Widget? leading;
   final Loaders loaders;
 
@@ -112,13 +155,15 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
   @override
   void loadScope(List<String> ids) {
     _future = widget.loaders.kits(ids); // STATE: 검색 범위(채널) → 상품
+    _scopeIds = ids;
+    _anns = null;
     _all = null;
     _future.then((k) {
       if (mounted) setState(() => _all = k); // 필터 시트가 셀 상품
     }, onError: (Object _) {});
   }
 
-  /// 결과의 필터 · 격자/목록 (검색창 줄 아이콘)
+  /// 결과의 필터 · 격자/목록 (아이콘 줄)
   final _tools = ListTools();
   List<Kit>? _all;
 
@@ -133,19 +178,23 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
   Future<GuideIndex> get _guideIndex =>
       _index ??= widget.loaders.guideIndex().catchError((Object _) => GuideIndex.empty);
 
+  /// B-18 예고 · 라이브 · 예약 제목 찾기 — 캘린더 · 예고 목록의 찾기 칸을 빼며 여기로 (2026-11-21).
+  /// 처음 쓸 때 한 번, 채널을 바꾸면 다시
+  List<String> _scopeIds = const [];
+  Future<List<Announcement>>? _anns;
+  Future<List<Announcement>> get _announcements =>
+      _anns ??= widget.loaders.announcements(_scopeIds).catchError((Object _) => <Announcement>[]);
+
   @override
   void initState() {
     super.initState();
     initScope();
-    // 검색창을 누르면(포커스) 최근 · 자주 찾은 · 설명으로 찾기 판, 벗어나면 다시 전체 상품
-    _focus.addListener(() => setState(() {})); // STATE: 포커스 → 보여 줄 판
   }
 
   @override
   void didUpdateWidget(SearchScreen old) {
     super.didUpdateWidget(old);
     syncScope();
-    if (widget.focusTick != old.focusTick) _focus.requestFocus();
   }
 
   @override
@@ -154,9 +203,6 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
     _focus.dispose();
     super.dispose();
   }
-
-  /// 검색어도 포커스도 없으면 = 둘러보기 (전체 · 종류 · 세대)
-  bool get _browsing => _query.isEmpty && !_focus.hasFocus;
 
   void _setQuery(String q) {
     _controller.text = q;
@@ -190,89 +236,86 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: _browsing,
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) return;
-        if (_query.isNotEmpty) _setQuery('');
-        _focus.unfocus(); // 뒤로 = 판 닫고 둘러보기
-      },
-      child: _page(),
+    // B-17 필터 · 격자 · 목록 — 검색어가 거른 상품 = 필터 시트가 셀 상품
+    final tools = ListToolIcons(
+      tools: _tools,
+      pool: _all == null
+          ? null
+          : [
+              for (final k in _all!)
+                if (kitMatches(k, _query)) k,
+            ],
     );
-  }
-
-  Widget _page() {
+    final body = Expanded(
+      child: FutureBuilder<List<Kit>>(
+        future: _future,
+        builder: (context, snap) {
+          if (snap.connectionState != ConnectionState.done) {
+            return const LoadingView(); // B-8 P01
+          }
+          if (snap.hasError) {
+            return ErrorView(message: '${snap.error}', onRetry: () => setState(reloadScope)); // B-8 P09
+          }
+          // 탭 = 둘러보기(B-14). 덮개 = 검색어가 없으면 최근 · 자주 찾은 · 설명으로 찾기(자판을 내려도 그대로), 있으면 결과
+          if (!widget.overlay) return _browse(snap.data!);
+          return _query.isEmpty ? _idle(snap.data!) : _results(snap.data!);
+        },
+      ),
+    );
+    final header = ChannelHeader(
+      // B-1 P04
+      leading: widget.leading,
+      myChannels: widget.myChannels,
+      selected: channel,
+      onSelect: selectChannel,
+      onMyChannelsChanged: widget.onMyChannelsChanged,
+    );
+    if (!widget.overlay) {
+      // 아래 탭: 채널 바 · 아이콘 줄 · 전체 · 종류 · 세대 — 검색창은 위 줄 🔍 의 덮개에만
+      return Column(
+        children: [
+          header,
+          ToolRow(tools: [tools]),
+          _viewTabs(), // B-14
+          body,
+        ],
+      );
+    }
     return Column(
       children: [
-        ChannelHeader(
-          // B-1 P04
-          leading: widget.leading,
-          myChannels: widget.myChannels,
-          selected: channel,
-          onSelect: selectChannel,
-          onMyChannelsChanged: widget.onMyChannelsChanged,
-        ),
-        ToolRow(
-          // B-2 P04 모든 탭과 같은 줄: [검색창][필터][격자 · 목록]
-          field: GpSearchBar(
-            controller: _controller,
-            focusNode: _focus,
-            onChanged: (q) => setState(() => _query = q.trim()),
-            onSubmitted: _submit,
-            onCamera: widget.onCamera,
-          ),
-          tools: [
-            ListToolIcons(
-              tools: _tools,
-              togglesOutside: true, // B-17 이 검색창 아래에 있다
-              pool: _all == null
-                  ? null
-                  : [
-                      for (final k in _all!)
-                        if (kitMatches(k, _query)) k,
-                    ],
-            ),
-          ],
-        ),
-        // B-17 검색창을 눌러 최근 · 자주 찾은 판을 보는 동안은 거를 목록이 없어 숨긴다
-        if (_all != null && !(_query.isEmpty && _focus.hasFocus)) _toggleRow(_all!),
-        if (_browsing) _viewTabs(), // B-14
-        Expanded(
-          child: FutureBuilder<List<Kit>>(
-            future: _future,
-            builder: (context, snap) {
-              if (snap.connectionState != ConnectionState.done) {
-                return const LoadingView(); // B-8 P01
-              }
-              if (snap.hasError) {
-                return ErrorView(message: '${snap.error}', onRetry: () => setState(reloadScope)); // B-8 P09
-              }
-              // 검색어가 없으면: 검색창을 누른 동안 = 최근 · 자주 찾은 · 설명으로 찾기, 아니면 = 둘러보기(B-14)
-              if (_browsing) return _browse(snap.data!);
-              return _query.isEmpty && _focus.hasFocus ? _idle(snap.data!) : _results(snap.data!);
-            },
+        Padding(
+          // B-0 · B-2 ← · 검색창 · 아이콘 (아이콘 오른쪽 끝은 탭의 아이콘 줄과 같은 자리)
+          padding: const EdgeInsets.fromLTRB(4, 6, 8, 4),
+          child: Row(
+            children: [
+              IconButton(
+                key: const ValueKey('search-close'),
+                // 아이콘 칸(40)과 같은 너비 — 320dp 폰에서 글자를 넣으면(ⓧ 가 붙어) 줄이 넘쳤다
+                visualDensity: VisualDensity.compact,
+                tooltip: tr('뒤로'),
+                onPressed: () => Navigator.maybePop(context),
+                icon: const Icon(Icons.arrow_back, color: Gp.ink),
+              ),
+              Expanded(
+                child: GpSearchBar(
+                  controller: _controller,
+                  focusNode: _focus,
+                  autofocus: true,
+                  onChanged: (q) => setState(() => _query = q.trim()), // STATE: 검색어 → 결과 · 설명 후보
+                  onSubmitted: _submit,
+                  onCamera: widget.onCamera,
+                ),
+              ),
+              const SizedBox(width: 4),
+              tools,
+            ],
           ),
         ),
+        header,
+        body,
       ],
     );
   }
-
-  /// B-17 아이콘 줄 — 필터 시트 맨 위에 있던 내 상태 · 발매 예정 · 나라를 검색창 아래로 (2026-11-19 주인 결정).
-  /// 같은 KitFilter 를 바꿔 전체 · 종류 · 세대 · 검색 결과가 같이 거른다. 나라는 지금 목록에 두 나라가 섞였을 때만
-  Widget _toggleRow(List<Kit> all) => ListenableBuilder(
-    listenable: _tools,
-    builder: (context, _) => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: Gp.gutter - 8),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: KitFilterToggles(
-          filter: _tools.filter,
-          regions: hasBothRegions(all.where((k) => kitMatches(k, _query))),
-          onChanged: _tools.setFilter, // STATE: 아이콘 줄 → 목록 · 분류 칸
-        ),
-      ),
-    ),
-  );
 
   /// B-14 전체 · 종류 · 세대 (컬렉션의 좋아요 · 예약 · 구매함과 같은 밑줄 탭) + 레고 채널이면 B-16 범위
   Widget _viewTabs() => Padding(
@@ -293,7 +336,7 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
     ),
   );
 
-  /// B-16 레고 범위 — 설정에 있던 것을 레고 채널 안으로 (2026-11-12). 검색창 줄은 모든 탭이 아이콘 세 칸이라
+  /// B-16 레고 범위 — 설정에 있던 것을 레고 채널 안으로 (2026-11-12). 아이콘 줄은 모든 탭이 세 칸까지라
   /// (test/find_filter_test.dart) 넷째 아이콘 대신 둘러보기 줄 오른쪽 글자 단추
   Widget _legoScopeButton() => Tooltip(
     message: tr('레고 범위'),
@@ -348,7 +391,7 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
 
   Widget _browseView(List<Kit> kits) => switch (_view) {
     1 => ListenableBuilder(
-      // B-15 종류 (B-20 · 검색창 줄 필터가 칸을 거른다)
+      // B-15 종류 (B-20 · 아이콘 줄 필터가 칸을 거른다)
       listenable: _tools,
       builder: (context, _) => TypeBrowse(
         channel: channel,
@@ -382,7 +425,7 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
 
   /// 검색어가 없을 때: 최근 검색 · 자주 찾은 · 새로 들어온 · 설명으로 찾기
   Widget _idle(List<Kit> kits) {
-    // 이 판을 눌러도 "검색창 밖을 누름"으로 치지 않게 — 아니면 포커스가 먼저 풀려 판이 사라지고 누른 칩이 안 먹는다
+    // 이 판을 눌러도 "검색창 밖을 누름"으로 치지 않게 — 칩을 누를 때 자판이 내려갔다 다시 올라오지 않는다
     return TextFieldTapRegion(child: _idleList(kits));
   }
 
@@ -497,11 +540,16 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
                 ? const SizedBox.shrink()
                 : GuideHits(index: s.data!, query: _query, loaders: widget.loaders),
           );
+    final anns = FutureBuilder<List<Announcement>>(
+      future: _announcements,
+      builder: (context, s) => _annHits(s.data ?? const []),
+    );
     if (results.isEmpty && candidates.isEmpty) {
       return ListView(
         children: [
           tags,
           guide,
+          anns,
           EmptyView(
             // B-8 P09
             icon: Icons.search_off,
@@ -522,9 +570,10 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
       children: [
         tags,
         guide,
+        anns,
         if (gundam)
           Align(
-            // B-13 검색창 줄이 아니라 결과 위 (검색창 폭을 다른 탭과 같게)
+            // B-13 검색창 줄이 아니라 결과 위 (아이콘 줄은 세 칸 그대로)
             alignment: Alignment.centerRight,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 6, 8, 0),
@@ -574,10 +623,36 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
       kits: results,
       header: header,
       onBack: () {
-        _setQuery(''); // STATE: 돌아가기 → 둘러보기
-        _focus.unfocus();
+        _setQuery(''); // STATE: 돌아가기 → 최근 검색 판
+        _focus.requestFocus();
       },
       loaders: widget.loaders,
+    );
+  }
+
+  /// B-18 제목에 검색어가 든 예고 (옛 캘린더 「일정에서 찾기」와 같은 맞추기) — 결과 위에 몇 줄만, 넘기면 다 본다
+  Widget _annHits(List<Announcement> all) {
+    final q = _query.toLowerCase();
+    final hits = [
+      for (final a in all)
+        if (a.title.toLowerCase().contains(q)) a,
+    ];
+    if (q.isEmpty || hits.isEmpty) return const SizedBox.shrink();
+    return Column(
+      key: const ValueKey('search-anns'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SectionHeader(tr('예고'), padding: const EdgeInsets.fromLTRB(16, 14, 12, 4)),
+        for (final a in hits.take(5))
+          ThumbRow(
+            image: a.image,
+            title: a.title,
+            size: 44,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+            subtitle: joinDot([tr(channelOf(a.franchiseId).label), dateDot(annShownDay(a)), sourceLabel(a.source)]),
+            onTap: () => openAnnouncement(context, a, loaders: widget.loaders, list: hits),
+          ),
+      ],
     );
   }
 }
@@ -633,11 +708,11 @@ class SentenceCandidates extends StatelessWidget {
   }
 }
 
-/// B-11 ? 도움말 (위 줄 ? 의 "검색" 묶음 — s_app_shell.dart)
+/// B-11 사용법의 "검색" 묶음 (서랍 › 사용법 — s_app_shell.dart)
 List<HelpItem> searchHelp() => [
+  HelpItem(Icons.search, tr('검색 (위 줄 · 어느 탭에서나)')),
   HelpItem(Icons.photo_camera_outlined, tr('찍어서 찾기 (사진 · 바코드)')),
-  HelpItem(Icons.favorite_border, tr('검색창 아래 아이콘: 좋아요 · 구매함 · 발매 예정 · 나라 (누르면 켜기 · 다시 누르면 끄기)')),
-  HelpItem(Icons.tune, tr('필터 (종류 · 라인 · 작품 · 기간 · 가격) — 전체 · 종류 · 세대 · 검색 결과 공통')),
+  HelpItem(Icons.tune, tr('필터 (좋아요 · 구매함 · 발매 예정 · 나라 · 종류 · 라인 · 작품 · 기간 · 가격) — 전체 · 종류 · 세대 · 검색 결과 공통')),
   HelpItem(Icons.grid_view_outlined, tr('격자로 보기')),
   HelpItem(Icons.bookmark_border, tr('구매함 (사진 왼쪽 위 리본 +)'), color: Gp.own),
   HelpItem(Icons.view_list_outlined, tr('목록으로 보기')),

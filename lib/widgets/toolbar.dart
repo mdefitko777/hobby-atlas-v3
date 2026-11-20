@@ -1,13 +1,13 @@
-// 검색창 줄 (홈 · 검색 · 캘린더 · 컬렉션 · My Page 공용) — [검색창][필터][보기 A][보기 B]
-// 모든 탭이 같은 줄: 검색창 높이 · 길이, 아이콘 크기 · 자리가 같다
+// 도구 줄 — 네 탭은 검색창 없이 오른쪽에 아이콘만 [필터][보기 A][보기 B] (2026-11-21 주인: 찾기는 위 줄 🔍 하나),
+// 검색 덮개 · 쌓아 연 화면(분류 상품 · 작품 도감)은 [검색창][아이콘들]. 아이콘 크기 · 오른쪽 끝 자리는 어디서나 같다
 import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
 import '../theme.dart';
 
-/// 검색창 — 홈과 검색 화면이 같은 것을 쓴다 (크기 · 글자 · 아이콘 통일, P04).
-/// [onTap]을 주면 입력하지 않는 "입구"(홈): 누르면 검색 화면으로 간다.
-/// 아니면 [controller]로 바로 입력하는 검색창(검색 화면).
+/// 검색창 — 검색 덮개 · 쌓아 연 화면 · 친구 검색이 같은 것을 쓴다 (크기 · 글자 · 아이콘 통일, P04).
+/// [onTap]을 주면 입력하지 않는 "입구": 누르면 검색 화면으로 간다.
+/// 아니면 [controller]로 바로 입력하는 검색창.
 class GpSearchBar extends StatelessWidget {
   const GpSearchBar({
     super.key,
@@ -18,7 +18,11 @@ class GpSearchBar extends StatelessWidget {
     this.focusNode,
     this.onChanged,
     this.onSubmitted,
+    this.autofocus = false,
   });
+
+  /// 열자마자 커서 (검색 덮개)
+  final bool autofocus;
 
   /// 오른쪽 카메라 → 찍어서 찾기 (하단 카메라 버튼과 같은 동작). 없으면 카메라를 숨긴다(친구 검색)
   final VoidCallback? onCamera;
@@ -41,6 +45,7 @@ class GpSearchBar extends StatelessWidget {
     final Widget field = TextField(
       controller: c,
       focusNode: focusNode,
+      autofocus: autofocus,
       readOnly: onTap != null,
       showCursor: onTap == null,
       enableInteractiveSelection: onTap == null,
@@ -79,6 +84,8 @@ class GpSearchBar extends StatelessWidget {
                   builder: (context, v, _) => v.text.isEmpty
                       ? const SizedBox.shrink()
                       : IconButton(
+                          // 40 칸 — 검색 덮개 줄(← · 아이콘 세 칸)과 함께 320dp 폰에 들어가게
+                          visualDensity: VisualDensity.compact,
                           tooltip: tr('지우기'), // P03
                           icon: const Icon(Icons.cancel, size: Gp.iM, color: Gp.faint),
                           onPressed: () {
@@ -89,6 +96,7 @@ class GpSearchBar extends StatelessWidget {
                 ),
               if (onCamera != null)
                 IconButton(
+                  visualDensity: VisualDensity.compact,
                   tooltip: tr('찍어서 찾기'),
                   icon: const Icon(Icons.photo_camera_outlined, size: Gp.iM, color: Gp.ink),
                   onPressed: onCamera,
@@ -122,7 +130,7 @@ class ToolIcon extends StatelessWidget {
   final Color? color;
   final int badge;
 
-  /// 한 칸 너비 (검색창 길이가 탭마다 같도록 늘 3칸)
+  /// 한 칸 너비 (탭마다 오른쪽 끝 자리가 같게)
   static const width = 40.0;
 
   @override
@@ -143,33 +151,31 @@ class ToolIcon extends StatelessWidget {
   );
 }
 
-/// 보기 바꾸기 아이콘 두 칸 (전체 ↔ 내 것 · 목록 ↔ 도감 · 격자 ↔ 목록) — 검색창 옆 오른쪽 끝, 모든 탭 같은 자리
+/// 보기 바꾸기 아이콘 두 칸 (전체 ↔ 내 것) — 도구 줄 오른쪽 끝, 모든 탭 같은 자리
 class ViewIconToggle extends StatelessWidget {
   const ViewIconToggle({
     super.key,
     required this.mine,
     required this.onChanged,
-    this.allIcon = Icons.newspaper_outlined,
+    required this.allIcon,
+    required this.allTip,
+    required this.mineTip,
     this.mineIcon = Icons.person_outline,
-    this.allTip,
-    this.mineTip,
   });
 
   final bool mine;
   final ValueChanged<bool> onChanged;
   final IconData allIcon;
   final IconData mineIcon;
-
-  /// 없으면 '전체 소식' · 'My Page'
-  final String? allTip;
-  final String? mineTip;
+  final String allTip;
+  final String mineTip;
 
   @override
   Widget build(BuildContext context) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      ToolIcon(icon: allIcon, tip: allTip ?? tr('전체 소식'), on: !mine, onTap: () => onChanged(false)),
-      ToolIcon(icon: mineIcon, tip: mineTip ?? 'My Page', on: mine, onTap: () => onChanged(true)),
+      ToolIcon(icon: allIcon, tip: allTip, on: !mine, onTap: () => onChanged(false)),
+      ToolIcon(icon: mineIcon, tip: mineTip, on: mine, onTap: () => onChanged(true)),
     ],
   );
 }
@@ -191,19 +197,19 @@ class FilterButton extends StatelessWidget {
   );
 }
 
-/// 검색창 + 오른쪽 아이콘들 — 바깥 여백 · 간격을 한 곳에서
+/// 도구 줄 — 오른쪽 아이콘들 (+ [field] 를 주면 왼쪽에 검색창). 바깥 여백 · 간격을 한 곳에서.
+/// 네 탭은 [field] 없이: 상자 없는 아이콘만 오른쪽에 붙고 높이도 낮다
 class ToolRow extends StatelessWidget {
-  const ToolRow({super.key, required this.field, this.tools = const []});
-  final Widget field;
+  const ToolRow({super.key, this.field, this.tools = const []});
+  final Widget? field;
   final List<Widget> tools;
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 4, 8, 8),
+    padding: field == null ? const EdgeInsets.fromLTRB(16, 0, 8, 0) : const EdgeInsets.fromLTRB(16, 4, 8, 8),
     child: Row(
       children: [
-        Expanded(child: field),
-        const SizedBox(width: 4),
+        if (field case final f?) ...[Expanded(child: f), const SizedBox(width: 4)] else const Spacer(),
         ...tools,
       ],
     ),

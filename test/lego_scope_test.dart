@@ -78,7 +78,7 @@ void main() {
     expect(local['lego_scope'], 'recent');
   });
 
-  testWidgets('검색 탭 레고 채널: 둘러보기 줄 오른쪽에서 범위를 고른다 (검색창 줄 아이콘은 세 칸 그대로)', (tester) async {
+  testWidgets('검색 탭 레고 채널: 둘러보기 줄 오른쪽에서 범위를 고른다 (아이콘 줄은 세 칸 그대로)', (tester) async {
     fixedNow = DateTime(2026, 10, 25, 21);
     UserStore.instance.setLegoScope(LegoScope.recent);
     addTearDown(() => UserStore.instance.setLegoScope(LegoScope.recent));

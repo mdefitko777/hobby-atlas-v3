@@ -1,26 +1,28 @@
-// 화면 S: 앱 셸 — 위: 아바타 줄 → 채널 바 / 아래: 바닥에 붙은 반투명 탭 바 (홈 · 검색 · (카메라) · 캘린더 · 컬렉션)
+// 화면 S: 앱 셸 — 위: 아바타 줄(아바타 · Lv · 🔍 · 🔔) → 채널 바 / 아래: 바닥에 붙은 반투명 탭 바 (홈 · 검색 · (카메라) · 캘린더 · 컬렉션)
 //
 // ┌──────── 디자인 가이드 대응표: S 앱 셸 ───────────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                  │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
-// │ S-1  │ MyAvatar (색 고리 + 사진, 채널 바 위)  │ 친구 서랍 열기 → 서랍 머리에서 내 정보    │ P04 · P06     │
+// │ S-1  │ MyAvatar (색 고리 + 사진, 채널 바 위)  │ 서랍(M) 열기 → 머리에서 내 정보 · 좋아요 · 구매함 · 예약 · 친구 · 공유 카드 · 사용법 · 설정 │ P04 · P06 │
 // │ S-2  │ BackdropFilter 바닥 탭 바       │ 반투명 하단 탭 바 (양옆 여백 없음)      │ P08           │
 // │ S-3  │ 하단 탭 4개 (폰 · 반반 화면 왼쪽)      │ 홈 · 검색 · 캘린더 · 컬렉션(+도감)        │ P06 · P04     │
 // │ S-4  │ 가운데 카메라 버튼              │ 찍어서 찾기 (사진 · 바코드 · 갤러리)   │ P07           │
-// │ S-5  │ NavigationRail (가로 폰: 높이 <520)    │ 측면 탭 (아바타 / 탭 4개 / 🔔 ⚙)          │ 적응형 · P04  │
+// │ S-5  │ NavigationRail (가로 폰: 높이 <520)    │ 측면 탭 (아바타 · 🔍 / 탭 4개 / 🔔)        │ 적응형 · P04  │
 // │ S-6  │ IndexedStack                    │ 탭 상태 유지                           │ P03           │
 // │ S-7  │ 내 채널 목록(UserStore 에 저장)    │ 네 화면이 같이 쓰는 내 IP 채널         │ P04           │
 // │ S-7b │ 고른 채널 (채널 맞춰 보기)          │ 한 탭에서 고른 채널을 네 탭이 같이 (설정에서 끄면 탭마다) │ P04 │
 // │ S-9  │ 오른쪽 위 🔔 (안 읽은 수)          │ 알림 열기 · 휴대폰 알림 누르면 이동     │ P01           │
-// │ S-10 │ 오른쪽 위 ⚙                     │ 설정 열기 (K)                          │ P04 · P06     │
-// │ S-19 │ 오른쪽 위 ? (HelpButton)          │ 위 줄 + 이 탭 아이콘 뜻 한 줄씩           │ P10           │
-// │ S-11 │ Drawer (아바타 · 홈 가장자리 밀기)     │ 친구 서랍 (M)                          │ P07           │
-// │ S-13 │ HeaderCollapse · CollapsingHeader │ 아래로 스크롤하면 위 줄 · 채널 바가 위로 접힘, 살짝 올리면 다시 (200ms, 검색창 줄은 남음) │ P08 │
+// │ S-10 │ 오른쪽 위 🔍 → 검색 덮개(B-0)       │ 어느 탭에서나 찾기 (앱 전체를 덮는 쌓기 화면) │ P04 · P07 │
+// │ S-19 │ 서랍 › 사용법 (HelpPage)           │ 위 줄 · 네 탭 · 도감 · 친구 · 내 정보 아이콘 뜻을 한 쪽에 │ P10   │
+// │ S-11 │ Drawer (아바타 · 홈 가장자리 밀기)     │ 서랍 (M)                               │ P07           │
+// │ S-13 │ HeaderCollapse · CollapsingHeader │ 한참(400 쯤) 내려 읽으면 채널 바만 위로 접힘, 조금이라도 올리면 · 탭을 바꾸면 다시 (200ms) │ P08 │
 // │ S-12 │ Row(왼쪽 폰 화면 | 오른쪽 Navigator)│ 반반 화면 (폴드 · 태블릿 · 넓은 창 ≥700dp) │ 적응형      │
 // │ S-8  │ AnimatedSlide · AnimatedPositioned │ 아래로 스크롤하면 탭 바 숨김, 카메라만 오른쪽 아래 │ P08 · P07 │
 // └────────────────────────────────────────────────────────────────────────────────┘
-// 전환: S-3 옆으로(탭) · S-4 덮기(bottom sheet) · S-1 덮기(Drawer → M) · S-9 · S-10 쌓기(push, 넓은 화면은 오른쪽 칸).
+// 전환: S-3 옆으로(탭) · S-4 덮기(bottom sheet) · S-1 덮기(Drawer → M) · S-9 쌓기(push, 넓은 화면은 오른쪽 칸) ·
+//       S-10 쌓기(앱 전체를 덮는 검색 덮개, 반반 화면도 덮는다).
 // S-8: X · Threads처럼 내용을 내려 읽는 동안 탭 바를 숨겨 화면을 넓히고, 카메라 버튼만 남긴다.
-// S-13: 네 탭 모두 같은 하나(HeaderCollapse)가 스크롤을 보고 머리를 접는다 — 탭 화면은 머리를 CollapsingHeader 로 감싸기만.
+// S-13: 아바타 줄은 늘 고정. 손가락을 따라 접히던 머리는 어지럽다고 해서(2026-11-21 주인) 천천히 읽는 동안은 그대로 두고,
+//       한참 내려 읽을 때만 채널 바를 200ms 에 한 번에 접는다.
 // 왜 이렇게: 위 IP 줄 + 아래 화면 줄 + 도감 안 탭처럼 길을 여럿 두지 않고, 아래 탭 하나 + 화면 안 채널 바 하나.
 import 'dart:async' show Timer;
 import 'dart:ui' show DisplayFeatureType, ImageFilter;
@@ -46,15 +48,16 @@ import '../update/update_ui.dart';
 import '../widgets.dart';
 import 'a_home_screen.dart';
 import 'b_search_screen.dart';
+import 'b_category_browse.dart' show categoryBrowseHelp;
 import 'c_channel_screen.dart' show allChannelId;
 import 'd_kit_detail_screen.dart';
 import 'e_camera_screen.dart';
 import 'e_photo_find_screen.dart' show openShared;
 import 'f_collection_screen.dart';
+import 'g_guide_view.dart' show guideHelpSections;
 import 'h_calendar_screen.dart';
 import 'i_profile_screen.dart';
 import 'j_announcement_screen.dart';
-import 'k_settings_screen.dart';
 import 'm_friends_drawer.dart';
 import 'n_notifications_screen.dart';
 import 'u_social.dart' show MyAvatar;
@@ -85,12 +88,11 @@ const _tabs = <(IconData, IconData, String)>[
 
 /// S-19 위 줄 아이콘 뜻 (네 탭 공통)
 List<HelpItem> get _topRowHelp => [
-  HelpItem.group(tr('위 줄')),
-  HelpItem(Icons.account_circle_outlined, tr('친구 · 내 정보')),
+  HelpItem(Icons.account_circle_outlined, tr('내 정보 · 친구 · 공유 카드 · 사용법 · 설정')),
   HelpItem.widget(const LevelChip(level: 1, small: true), tr('수집 레벨')),
   HelpItem(Icons.system_update_alt, tr('새 버전 (있을 때만)')),
+  HelpItem(Icons.search, tr('검색')),
   HelpItem(Icons.notifications_none, tr('알림 · 친구 요청')),
-  HelpItem(Icons.settings_outlined, tr('설정')),
 ];
 
 class _AppShellState extends State<AppShell> {
@@ -105,11 +107,8 @@ class _AppShellState extends State<AppShell> {
   /// 하단 탭 바가 보이는지 (아래로 스크롤하면 숨김)
   bool _barShown = true;
 
-  /// S-13 탭 위 머리(위 줄 · 채널 바)를 접었나 — 네 탭이 한 벌. 탭을 바꾸거나 다른 탭으로 보내면 편다
+  /// S-13 채널 바를 접었나 — 네 탭이 한 벌. 탭을 바꾸거나 다른 탭으로 보내면 편다
   final _header = HeaderCollapseController();
-
-  /// 홈 검색 알약 → 검색 탭 검색창에 커서
-  int _searchFocusTick = 0;
 
   List<String> _myChannels = [...defaultMyChannels]; // S-7 P04 — 실제 값은 UserStore(기기 저장)에서
 
@@ -208,7 +207,7 @@ class _AppShellState extends State<AppShell> {
   void _setTab(int i) {
     if (i != _tab) {
       _pageGen[_tab] = _dataVersion;
-      _header.show(); // 옮겨 간 탭은 어디까지 내려 있었는지 모른다 → 머리부터 보인다
+      _header.show(); // 옮겨 간 탭은 어디까지 내려 있었는지 모른다 → 채널 바부터 보인다
     }
     _tab = i;
   }
@@ -283,13 +282,37 @@ class _AppShellState extends State<AppShell> {
   /// 처음 실행 때 한 번: 알림 권한(안드로이드 13+)
   Future<void> _askNotifyOnce() => _notify.askPermissionOnce();
 
-  /// 검색 탭으로 + 검색창 커서 (홈 검색창 · 카메라 결과의 "이름으로 검색")
-  void _goSearch() => setState(() {
-    _setTab(1); // STATE: 검색으로 → 검색 탭 + 커서
-    _searchFocusTick++;
-    _barShown = true;
-    _header.show();
-  });
+  /// S-10 검색 덮개 (위 줄 🔍 · 컬렉션 빈 화면 · 카메라 결과의 "이름으로 검색" · 공유) — 지금 탭의 채널에서 찾는다
+  void _goSearch() {
+    final tab = _tab;
+    openSearch(
+      context,
+      channel: _tabChannels[tab],
+      onChannelChanged: (id) => _pickChannel(tab, id),
+      onMyChannelsChanged: _setChannels,
+      onCamera: _openAdd,
+      loaders: widget.loaders,
+    );
+  }
+
+  /// S-19 사용법 — 위 줄 · 네 탭 · 도감 · 친구 · 내 정보의 도움말을 한 쪽에 (탭 · 서랍 · 내 정보의 ? 를 모았다)
+  void _openHelp() => openPage(
+    context,
+    HelpPage(
+      sections: [
+        (tr('위 줄'), _topRowHelp),
+        (tr('홈'), homeHelp),
+        (tr('검색'), searchHelp()),
+        (tr('종류'), categoryBrowseHelp(era: false)),
+        (tr('세대'), categoryBrowseHelp(era: true)),
+        (tr('캘린더'), calendarHelp),
+        (tr('컬렉션'), collectionHelp()),
+        ...guideHelpSections(),
+        (tr('친구'), [...friendsHelp(), ...friendProfileHelp()]),
+        (tr('내 정보'), profileHelp()),
+      ],
+    ),
+  );
 
   void _openAdd() {
     // 지금 탭의 채널 = 사진으로 찾기의 생김새 후보 기본 칩 (전체면 칩도 전체)
@@ -347,14 +370,21 @@ class _AppShellState extends State<AppShell> {
     // 폴드 펼침 · 태블릿 · 넓은 창 → 반반 화면 (QQ 처럼, S-12)
     final twoPane = !shortLandscape && size.width >= twoPaneBreakpoint;
     final account = AccountScope.of(context); // 이름 첫 글자 · 친구 요청 수
-    // S-1 P04 아바타 → 친구 서랍(M). 서랍 머리의 아바타를 한 번 더 누르면 내 정보(I)
+    // S-1 P04 아바타 → 서랍(M). 서랍 머리를 한 번 더 누르면 내 정보(I)
     final avatar = MyAvatar(
       // 아바타 사진(I-3)이 있으면 사진, 없으면 첫 글자
       fallback: 'A',
       size: 34,
       ringWidth: 2,
-      tooltip: tr('친구 · 내 정보'),
+      tooltip: tr('내 정보'),
       onTap: () => _scaffold.currentState?.openDrawer(),
+    );
+    final search = IconButton(
+      // S-10 검색 덮개 (어느 탭에서나)
+      key: const ValueKey('top-search'),
+      tooltip: tr('검색'),
+      onPressed: _goSearch,
+      icon: const Icon(Icons.search, color: Gp.ink),
     );
     final bell = IconButton(
       // S-9 알림 (N)
@@ -376,14 +406,7 @@ class _AppShellState extends State<AppShell> {
         },
       ),
     );
-    final gear = IconButton(
-      // S-10 설정
-      tooltip: tr('설정'),
-      onPressed: () => openSettings(context),
-      icon: const Icon(Icons.settings_outlined, color: Gp.ink),
-    );
-    // S-13 위 줄은 채널 바와 같이 접힌다 (HeaderCollapse) — 손가락을 따라 조금씩이 아니라 200ms 에 한 번에 접고 펴서
-    // 목록 높이가 바뀌는 것은 그때 한 번뿐이다
+    // 위 줄 (늘 고정 — 채널 바만 S-13 으로 접힌다). ⚙ · ? 는 서랍(설정 · 사용법)으로
     final topRow = Row(
       children: [
         avatar,
@@ -391,22 +414,8 @@ class _AppShellState extends State<AppShell> {
         LevelButton(key: ValueKey(_dataVersion), loaders: widget.loaders), // 새 데이터면 다시 센다
         const Spacer(),
         const UpdateButton(), // 새 빌드가 있을 때만 ⬇
+        search,
         bell,
-        gear,
-        HelpButton(
-          // S-19 ? 위 줄 + 이 탭 아이콘 뜻 (탭마다 내용만 바뀌고 자리는 같다)
-          title: tr(_tabs[_tab].$3),
-          items: [
-            ..._topRowHelp,
-            HelpItem.group(tr(_tabs[_tab].$3)),
-            ...switch (_tab) {
-              0 => homeHelp,
-              1 => searchHelp(),
-              2 => calendarHelp,
-              _ => collectionHelp(),
-            },
-          ],
-        ),
       ],
     );
     Widget page(int i) => i == 0
@@ -418,9 +427,6 @@ class _AppShellState extends State<AppShell> {
             onMyChannelsChanged: _setChannels,
             channel: _tabChannels[0],
             onChannelChanged: (id) => _pickChannel(0, id),
-            onCamera: _openAdd,
-            onOpenSearch: _goSearch,
-            onJump: _jumpTo,
             loaders: widget.loaders,
           )
         : i == 1
@@ -433,7 +439,6 @@ class _AppShellState extends State<AppShell> {
             channel: _tabChannels[1],
             onChannelChanged: (id) => _pickChannel(1, id),
             onCamera: _openAdd,
-            focusTick: _searchFocusTick,
             loaders: widget.loaders,
           )
         : i == 2
@@ -464,15 +469,15 @@ class _AppShellState extends State<AppShell> {
     final body = KeyedSubtree(
       key: _bodyKey,
       child: HeaderCollapse(
-        // S-13 네 탭 머리 접기 한 벌 (화면 모양이 바뀌어도 접힌 상태가 그대로 가게 _bodyKey 안)
+        // S-13 네 탭 채널 바 접기 한 벌 (화면 모양이 바뀌어도 접힌 상태가 그대로 가게 _bodyKey 안)
         controller: _header,
         child: IndexedStack(
           // S-6 P03
           index: _tab,
           children: [
             for (var i = 0; i < _tabs.length; i++)
-              // 뒤에 살아 있는 탭의 스크롤 알림은 막는다 — 위 줄이 접히면 그 탭들도 크기가 바뀌어
-              // "스크롤할 게 없음" 알림을 보내 탭 바 · 머리를 도로 꺼내 버린다
+              // 뒤에 살아 있는 탭의 스크롤 알림은 막는다 — 채널 바가 접히면 그 탭들도 크기가 바뀌어
+              // "스크롤할 게 없음" 알림을 보내 탭 바 · 채널 바를 도로 꺼내 버린다
               NotificationListener<Notification>(
                 onNotification: (n) => i != _tab && (n is ScrollNotification || n is ScrollMetricsNotification),
                 child: page(i),
@@ -489,7 +494,7 @@ class _AppShellState extends State<AppShell> {
         onSelect: (i) => setState(() {
           _setTab(i); // STATE: 탭 번호 → IndexedStack
           _barShown = true;
-          _header.show();
+          _header.show(); // 같은 탭을 다시 눌러도 채널 바부터
         }),
       ),
       camera: _CameraButton(onTap: _openAdd),
@@ -500,12 +505,8 @@ class _AppShellState extends State<AppShell> {
     return Scaffold(
       key: _scaffold,
       extendBody: true, // 탭 바 뒤로 내용이 비쳐 보이게
-      // S-11 친구 서랍 (M): 아바타 · 홈에서 왼쪽 가장자리를 오른쪽으로 밀기
-      drawer: FriendsDrawer(
-        loaders: widget.loaders,
-        onOpenProfile: _openProfile,
-        onOpenFriend: (m) => openFriend(context, m, loaders: widget.loaders),
-      ),
+      // S-11 서랍 (M): 아바타 · 홈에서 왼쪽 가장자리를 오른쪽으로 밀기
+      drawer: FriendsDrawer(loaders: widget.loaders, onOpenProfile: _openProfile, onJump: _jumpTo, onHelp: _openHelp),
       drawerEdgeDragWidth: _tab == 0 ? 56 : 0,
       drawerScrimColor: Gp.shadow,
       body: SafeArea(
@@ -523,16 +524,20 @@ class _AppShellState extends State<AppShell> {
                             selectedIndex: _tab,
                             labelType: shortLandscape ? NavigationRailLabelType.none : NavigationRailLabelType.all,
                             onDestinationSelected: (i) => setState(() => _setTab(i)),
-                            // 가로 폰: 탭이 먼저 보이게 — 아바타 / 탭 4개 / 🔔 ⚙ 한 줄 (카메라는 검색창 카메라로)
+                            // 가로 폰: 탭이 먼저 보이게 — 아바타 · 🔍 / 탭 4개 / 🔔 (카메라는 검색 덮개의 카메라로)
+                            // 찾기는 아바타 아래 (아래 탭 "검색" 둘러보기와 헷갈리지 않게 탭 줄 위에)
                             leading: shortLandscape
-                                ? Padding(padding: const EdgeInsets.only(top: 4), child: avatar)
+                                ? Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Column(mainAxisSize: MainAxisSize.min, children: [avatar, search]),
+                                  )
                                 : Column(
                                     children: [
                                       const SizedBox(height: 8),
                                       avatar,
                                       const SizedBox(height: 8),
+                                      search,
                                       bell,
-                                      gear,
                                       const SizedBox(height: 10),
                                       _CameraButton(onTap: _openAdd),
                                       const SizedBox(height: 8),
@@ -543,7 +548,7 @@ class _AppShellState extends State<AppShell> {
                                     data: const IconButtonThemeData(
                                       style: ButtonStyle(visualDensity: VisualDensity.compact),
                                     ),
-                                    child: Row(mainAxisSize: MainAxisSize.min, children: [bell, gear]),
+                                    child: bell,
                                   )
                                 : null,
                             destinations: [

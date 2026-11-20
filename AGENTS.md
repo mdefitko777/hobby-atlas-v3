@@ -45,9 +45,9 @@
 - `lib/data/` 데이터 — 받기 · 캐시 · 파싱 · 저장만. `catalog`(Gunpula Pages) · `gunpula` · `gundam_atlas` · `tag_atlas` · `blob_store` · `photo_files` · `social_local` · `net_image_files`(인터넷 그림 받기 · 기기 캐시: 2000장 · 안 본 지 60일이면 지움 · 30일 동안 다시 묻지 않음 · 동시 16개 · 두 번 멈춘 서버 1분 쉬기 · 작은 칸은 Gunpula `thumbs.json` 의 작은 그림 · 새 소식 사진은 뒤 확인 뒤에 작은 그림만 미리 받기 `lib/background/image_prefetch.dart`: 하루 15 MB · 설정 › 미리 받기).
   - `user_store.dart` = 내 기록 핵심(기록 · 저장 · 동기화) + part `user_store/` (atlas_local · history · trash · profile_local · import). 저장 파일 모양은 `test/user_store_golden_test.dart` 골든이 지킨다.
   - `derive.dart` = 카탈로그 + 내 기록 → 화면 모델, part `derive/` (guide · bbx · worlds · announcements · notifications · profile).
-- `lib/logic/` 규칙 — 순수 Dart (위젯 없음): kit_filter · guide_filter · kit_rules(찾기 · 바코드 · 다가오는 날짜) · collection_rules · spend · level_math · friends · announcement_match · live_stream(공식 라이브: 기기 시계로 본 단계 · 꼬리표 글) · sentence_search · bbx_builder · market. 엔진은 `lib/bbx/` · 알림 규칙은 `lib/notifications/` 그대로.
+- `lib/logic/` 규칙 — 순수 Dart (위젯 없음): kit_filter · guide_filter · kit_rules(찾기 · 바코드 · 새 상품) · collection_rules · spend · level_math · friends · announcement_match · live_stream(공식 라이브: 기기 시계로 본 단계 · 꼬리표 글) · sentence_search · bbx_builder · market. 엔진은 `lib/bbx/` · 알림 규칙은 `lib/notifications/` 그대로.
 - `lib/api.dart` `Loaders` = 화면이 데이터를 받는 입구 (테스트는 가짜 함수). 앱 전체 상태는 `MarksHost`/`UserStore` · `AccountScope` · `NotifyScope`.
-- `lib/widgets/` 공용 조각 — 화면은 묶음 `lib/widgets.dart` 하나만 import. 아래 시트는 `showGpSheet` 로 열고, 고르는 시트는 `GpPickSheet`(제목 · 초기화 · "n개 보기"), 도감 칸은 `TierCell`, 찾기 + 필터 짝은 `KitFind`, 왼쪽 묶음 목록 + 칸 격자(검색 종류 · 세대 · 도감)는 `SideDirectory` · `SideGrid`, 탭 위 머리 접기는 `HeaderCollapse` · `CollapsingHeader`(앱 셸 하나), 목록 맨 끝 합계는 `ListSummary`. 그림 경로(인터넷 · 앱 안 · `local:` 내 사진)는 `images.dart` 한 곳.
+- `lib/widgets/` 공용 조각 — 화면은 묶음 `lib/widgets.dart` 하나만 import. 아래 시트는 `showGpSheet` 로 열고, 고르는 시트는 `GpPickSheet`(제목 · 초기화 · "n개 보기"), 도감 칸은 `TierCell`, 찾기 + 필터 짝은 `KitFind`, 왼쪽 묶음 목록 + 칸 격자(검색 종류 · 세대 · 도감)는 `SideDirectory` · `SideGrid`, 채널 바 접기는 `HeaderCollapse` · `CollapsingHeader`(앱 셸 하나 — 400 쯤 내려 읽어야 접고, 올리면 바로 편다. 아바타 줄은 늘 고정), 네 탭의 아이콘 줄은 검색창 없는 `ToolRow(tools:)`, 찾기는 위 줄 🔍 의 검색 덮개(`openSearch`) 하나, 목록 맨 끝 합계는 `ListSummary`. 그림 경로(인터넷 · 앱 안 · `local:` 내 사진)는 `images.dart` 한 곳.
 - `lib/screens/` 화면 — 맨 위 화면은 글자 머리(a_ … u_) + 파일 맨 위 디자인 가이드 대응표(`tool/make_guide.py` 가 읽는다). 큰 화면은 하위 폴더로: `guide/`(G 도감, 대응표는 `g_guide_view.dart`) · `bbx_builder/`(T 의 part 파일). 화면 안에 JSON 파싱 · HTTP · BlobStore 를 두지 않는다.
 - 크기 · 색은 `lib/theme.dart` `Gp` 토큰만: 글자 t11–t24, 아이콘 iXS 12 · iS 16 · iM 20 · iL 24 · iXL 40, 모서리 rSmall · radius · rLarge, 옆 여백 gutter. 따로 둔 값: 상세 빈 칸 그림 · 첫 받기 앱 아이콘 72 · 진행 막대 캡슐 99 · 색 막대 2 · 견본 색 3.
 
@@ -72,7 +72,7 @@
 - 서버 SQL 순서 (Supabase SQL Editor): Gunpula `supabase-setup-v3.sql` · `supabase-v3-fix-grants.sql` → 이 저장소 `docs/supabase-v3-photos.sql` → `docs/supabase-v3-social.sql` → `docs/supabase-v3-sync.sql`(기기 기록 · 내 사진 목록). photos SQL 을 다시 돌렸으면 social SQL 도 다시 (Storage 읽기 정책을 social 이 바꿔 쓴다). 안 돌린 것이 있어도 앱은 기기에만 두고 ⚠ / 칸 숨김으로 버틴다.
 - 친구 쪽 도감 비교(L-3)는 산 상품 기준 + 친구 사진 수. "손으로 켜기"는 내 기기 기록 행에만 있어(친구가 못 읽음) 친구 쪽엔 안 들어간다.
 - 처음 설치(캐시 없음)면 앱 셸 대신 W 화면(`lib/screens/w_first_run_screen.dart`, main.dart `FirstRunGate`): 앱 아이콘 · 데이터 받는 중 · 받은 파일 n/m · MB(`Catalog.filesDone` · `bytesReceived`) · 실패면 다시 시도. 두 번째부터는 캐시로 바로 열고 뒤에서 새로 받는다.
-- 아이콘만 있는 화면은 머리 줄 오른쪽 끝에 `HelpButton`(lib/widgets/help.dart, ToolIcon 한 칸) — 누르면 아이콘 + 한 줄씩. 새 아이콘을 넣으면 그 화면 도움말 목록에도 한 줄.
+- 아이콘 뜻 도움말: 쌓아 연 화면은 AppBar 오른쪽 끝 `HelpButton`(lib/widgets/help.dart, ToolIcon 한 칸). 네 탭 · 서랍 · 친구 화면 · 내 정보는 ? 를 두지 않고 서랍 › 사용법(`HelpPage`, 묶음 목록은 `s_app_shell.dart` `_openHelp`) 한 쪽에 모은다. 새 아이콘을 넣으면 그 화면 도움말 목록(`homeHelp` · `searchHelp` …)에도 한 줄.
 - 무거운 JSON(kits-gundam 9 MB)은 `Isolate.run` 으로 푼다.
 - 확인: 경로에 한글이 있어 `flutter analyze` 가 멈춘다 → `dart analyze lib test tool` 0 issues + `flutter test`.
 - 커밋은 `v3: …` 로 시작하고, 단계마다 commit + push (origin = hobby-atlas-v3).

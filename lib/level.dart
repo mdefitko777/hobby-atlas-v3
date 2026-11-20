@@ -13,7 +13,7 @@ import 'widgets.dart';
 /// 레벨 색 — 10레벨마다 바뀐다: 회색 · 초록 · 파랑 · 보라 · 금색 · 빨강(50+)
 Color levelColor(int level) => Gp.levelTiers[(level ~/ 10).clamp(0, Gp.levelTiers.length - 1)];
 
-/// Lv 표 (레벨 색) — My Page · 레벨 시트 · 친구 서랍
+/// Lv 표 (레벨 색) — 위 줄 · 레벨 시트 · 서랍 머리 · 내 정보
 class LevelChip extends StatelessWidget {
   const LevelChip({super.key, required this.level, this.small = false});
   final int level;

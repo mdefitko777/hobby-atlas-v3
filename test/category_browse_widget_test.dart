@@ -210,10 +210,9 @@ void main() {
     expect(find.byType(LinearProgressIndicator), findsNothing);
     expect(t.takeException(), isNull);
 
-    // B-22 ?
-    await t.tap(find.byTooltip(HelpButton.tip));
-    await t.pumpAndSettle();
-    expect(find.textContaining('공식 라인'), findsOneWidget);
+    // B-22 칸 머리 ? 는 서랍 › 사용법으로 (그 줄들은 categoryBrowseHelp)
+    expect(find.byType(HelpButton), findsNothing);
+    expect(categoryBrowseHelp(era: false).any((i) => i.text.contains('공식 라인')), isTrue);
   });
 
   testWidgets('칸 그림: 공식 로고(lineCovers, 바탕색 lineCoverStyles) → 가장 새 상품 사진 → 종류 아이콘 (line_icons → 칸 키 → 상품 유형)', (

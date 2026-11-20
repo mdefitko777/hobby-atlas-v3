@@ -97,10 +97,7 @@ class _WorldGuideState extends State<WorldGuide> {
           pane: (context, pane) => Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              pane.head(
-                tr(cur),
-                actions: [HelpButton(title: tr('도감'), items: worldGuideHelp())], // G-2
-              ),
+              pane.head(tr(cur)),
               Expanded(
                 child: LayoutBuilder(
                   builder: (context, box) {
@@ -148,7 +145,7 @@ class _WorldGuideState extends State<WorldGuide> {
 /// 포켓몬 묶음 목록 맨 위 '태그' 줄 (MEZASTAR · Frienda 입구)
 const _tagGroup = '태그';
 
-/// G-2 세계관 도감 ? — 묶음 목록 · 칸
+/// G-2 사용법의 세계관 도감 묶음 — 묶음 목록 · 칸
 List<HelpItem> worldGuideHelp() => [guideDirHelp, HelpItem(Icons.chevron_right, tr('칸을 누르면 그 상품 전부'))];
 
 /// G-7a 세계관 묶음 → 그 묶음 상품 (전체 목록과 같은 찾기 · 필터 · 격자/목록)

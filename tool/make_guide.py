@@ -23,7 +23,7 @@ SCREENS = [
     ('F', '컬렉션', ['lib/screens/f_collection_screen.dart']),
     ('G', '도감 (컬렉션의 다른 보기)', ['lib/screens/g_guide_view.dart']),
     ('J', '공식 예고 상세', ['lib/screens/j_announcement_screen.dart']),
-    ('M', '친구 서랍', ['lib/screens/m_friends_drawer.dart']),
+    ('M', '서랍 · 친구 화면', ['lib/screens/m_friends_drawer.dart']),
     ('I', '내 정보 (친구 보기 · 사진 보기 포함)', ['lib/screens/i_profile_screen.dart']),
     ('L', '친구 컬렉션', ['lib/screens/l_friend_collection_screen.dart']),
     ('N', '알림', ['lib/screens/n_notifications_screen.dart']),
@@ -115,7 +115,7 @@ LIST = [
     ('S', '앱 셸', 's_app_shell.dart · main.dart', '첫 화면', '없음'),
     ('C', '채널 바 · 채널 관리', 'c_channel_screen.dart', '네 탭 위 공용 / 채널 관리 = 쌓기', '없음 (화면 안 상수)'),
     ('A', '홈', 'a_home_screen.dart', '옆으로(탭 1)', '`/kits?franchiseId=` · `/announcements?franchiseId=`'),
-    ('B', '검색', 'b_search_screen.dart · b_category_browse.dart · b_category_products.dart', '옆으로(탭 2) · 홈 검색창 · 종류 · 세대 칸 → 분류 상품 = 쌓기', '`/kits?franchiseId=` · `/guideWorks` · `/guideUnits?workId=` · `/worlds?franchiseId=`'),
+    ('B', '검색', 'b_search_screen.dart · b_category_browse.dart · b_category_products.dart', '옆으로(탭 2, 둘러보기) · 위 줄 🔍 = 검색 덮개(쌓기, 앱 전체 덮기) · 종류 · 세대 칸 → 분류 상품 = 쌓기', '`/kits?franchiseId=` · `/guideWorks` · `/guideUnits?workId=` · `/worlds?franchiseId=`'),
     ('O', '전체 목록', 'o_see_all_screen.dart', '홈 › · 검색 결과 — 탭 안 보기(setState), 필터 = 덮기(dialog), 정렬 = 덮기(bottom sheet)', '없음 (부모 화면의 GET 결과)'),
     ('D', '상품 상세', 'd_kit_detail_screen.dart', '쌓기 / 넓은 화면은 오른쪽 칸 안에서 쌓기', '`/kits?franchiseId=` (같은 작품)'),
     ('E', '찍어서 찾기', 'e_camera_screen.dart', '쌓기(전체 화면) · 갤러리 = 덮기(bottom sheet)', '`/kits?id=`'),
@@ -123,33 +123,35 @@ LIST = [
     ('F', '컬렉션', 'f_collection_screen.dart', '옆으로(탭 4) · 휴지통 = 덮기(bottom sheet)', '`/kits?franchiseId=`'),
     ('G', '도감', 'g_guide_view.dart', '컬렉션 안의 보기(setState) · 작품 도감 = 쌓기 · 기체 = 덮기', '`/guideWorks` · `/guideUnits?workId=` · `/bbxTops` · `/worlds?franchiseId=` · `/kits?id=` · `/kits?franchiseId=`'),
     ('J', '공식 예고 상세', 'j_announcement_screen.dart', '쌓기', '`/kits?franchiseId=`'),
-    ('M', '친구 서랍', 'm_friends_drawer.dart', '덮기(Drawer — 아바타 · 홈 가장자리 밀기)', '`/profile` · `/guideWorks`'),
-    ('I', '내 정보', 'i_profile_screen.dart', '쌓기 (서랍 머리 아바타 · 친구 줄)', '`/profile` · `/kits?franchiseId=` · `/guideWorks`'),
+    ('M', '서랍 · 친구 화면', 'm_friends_drawer.dart', '덮기(Drawer — 아바타 · 홈 가장자리 밀기) · 친구 화면 = 쌓기 (서랍 · 내 정보의 친구 줄)', '`/profile` · `/guideWorks`'),
+    ('I', '내 정보', 'i_profile_screen.dart', '쌓기 (서랍 머리 › · 친구 줄)', '`/profile` · `/kits?franchiseId=` · `/guideWorks`'),
     ('L', '친구 컬렉션', 'l_friend_collection_screen.dart', '쌓기 (친구 프로필 숫자)', '`/kits?id=` · `/guideWorks`'),
     ('N', '알림', 'n_notifications_screen.dart', '쌓기 (🔔) · 친구 요청 = 덮기', '`/notifications` (+ 누를 때 `/kits?id=` · `/announcements` · `/profile`)'),
-    ('K', '설정', 'k_settings_screen.dart', '쌓기 (⚙ · 알림의 ⚙)', '없음'),
+    ('K', '설정', 'k_settings_screen.dart', '쌓기 (서랍 › 설정 · 알림의 ⚙)', '없음'),
     ('X', '조립 설명서', 'x_manual_screen.dart', '쌓기 (상품 상세 D-17)', ''),
 ]
 for r in LIST:
     w(f'| {r[0]} | {r[1]} | `lib/screens/{r[2].split(" · ")[0]}`{" · `lib/main.dart`" if r[0] == "S" else ""} | {esc(r[3])} |')
 w('')
 w('```')
-w('S 앱 셸  [옆으로(하단 탭): A 홈 | B 검색 | H 캘린더 | F 컬렉션]   위: 아바타 · 🔔 · ⚙ / C 채널 바')
-w('  아바타 ──덮기(Drawer)──▶ M 친구 서랍 ──쌓기──▶ I 내 정보 ──쌓기──▶ L 친구 컬렉션')
-w('                                    └─쌓기──▶ I 친구 보기(같은 화면) ──쌓기──▶ L')
-w('  🔔 ──쌓기──▶ N 알림 ──쌓기──▶ D · J · I(친구)      ⚙ ──쌓기──▶ K 설정')
+w('S 앱 셸  [옆으로(하단 탭): A 홈 | B 검색 | H 캘린더 | F 컬렉션]   위: 아바타 · Lv · 🔍 · 🔔 / C 채널 바')
+w('  아바타 ──덮기(Drawer)──▶ M 서랍 ──쌓기──▶ I 내 정보 ──쌓기──▶ L 친구 컬렉션')
+w('                         ├─ 좋아요 · 구매함 · 예약 ──옆으로──▶ F 컬렉션 그 목록')
+w('                         ├─ 친구 ──쌓기──▶ M 친구 화면 ──쌓기──▶ I 친구 보기(같은 화면) ──쌓기──▶ L')
+w('                         └─ 공유 카드 · 사용법 · 설정 ──쌓기──▶ V · 사용법 · K 설정')
+w('  🔍 ──쌓기(앱 전체 덮기)──▶ B 검색 덮개 ──쌓기──▶ D      🔔 ──쌓기──▶ N 알림 ──쌓기──▶ D · J · I(친구)')
 w('  카메라 ──덮기(시트)──▶ 사진 · 바코드 · 갤러리 ──쌓기──▶ E 인식 결과 ──쌓기──▶ D')
 w('A 홈 ── › ──▶ O 전체 목록(홈 안, 위 머리 그대로) ──쌓기──▶ D 상품 상세 · J 공식 예고')
-w('B 검색 ── 처음 = O 전체 상품 / 검색창 누름 = 최근 · 인기 · AI ── 결과 = O ──쌓기──▶ D')
+w('B 검색 탭 ── 둘러보기 전체(O 전체 상품) · 종류 · 세대 / 검색 덮개 ── 검색어 없음 = 최근 · 자주 찾은 · 설명으로 찾기 ── 결과 = O ──쌓기──▶ D')
 w('H 캘린더 ──쌓기──▶ D · J        F 컬렉션 [목록 | G 도감] ──쌓기──▶ D · 작품 도감 ──덮기──▶ 기체 시트')
 w('D 상품 상세 ──덮기──▶ 시세 · 공식 정보 · 구매가 시트 · 제보 확인(dialog)')
 w('```')
 w('')
-w('- **전환 3방식**: 쌓기(push/pop · CupertinoPageRoute) · 옆으로(하단 탭/측면 탭 + IndexedStack, 밑줄 탭) · 덮기(showModalBottomSheet · showDialog · showGeneralDialog(필터 패널) · Drawer(친구 서랍)).')
+w('- **전환 3방식**: 쌓기(push/pop · CupertinoPageRoute) · 옆으로(하단 탭/측면 탭 + IndexedStack, 밑줄 탭) · 덮기(showModalBottomSheet · showDialog · showGeneralDialog(필터 패널) · Drawer(서랍)).')
 w('  탭 **안에서** 바뀌는 보기(O 전체 목록 · G 도감 · 검색 판)는 새 화면이 아니라 그 화면의 `setState` 표시 변화입니다.')
 w('- **적응형** (창 너비 · 높이 기준, `MediaQuery.sizeOf` · `LayoutBuilder`, 기기 종류 · 방향 고정 없음):')
-w('  - 폰(너비 < 700): 위 아바타 줄 + 채널 바, 바닥 탭 바. 아래로 스크롤하면 탭 바가 숨고 아바타 줄 · 채널 바가 위로 접힘, 살짝 올리면 다시 (검색창 줄은 남음, S-8 · S-13)')
-w('  - 가로로 눕힌 폰(너비 > 높이 · 높이 < 520): 측면 탭(S-5) — 아바타 / 탭 4개 / 🔔 ⚙, 높이가 모자라면 측면 탭만 스크롤')
+w('  - 폰(너비 < 700): 위 아바타 줄 + 채널 바, 바닥 탭 바. 아래로 스크롤하면 탭 바가 숨고 카메라만 남음 (S-8). 아바타 줄 · 아이콘 줄은 늘 고정, 채널 바는 한참(400 쯤) 내려 읽어야 접히고 조금 올리면 다시 (S-13)')
+w('  - 가로로 눕힌 폰(너비 > 높이 · 높이 < 520): 측면 탭(S-5) — 아바타 · 🔍 / 탭 4개 / 🔔, 높이가 모자라면 측면 탭만 스크롤')
 w('  - 폴드 펼침 · 태블릿 · 넓은 창(너비 ≥ 700): **반반 화면**(S-12) — 왼쪽 = 폰 화면 그대로, 오른쪽 = 자세히 칸. 폴드 접힘선(`displayFeatures`)이 있으면 거기서, 없으면 왼쪽 45%(320–460)')
 w('  - D 상품 상세: 칸 너비 ≥ 720이면 사진 왼쪽 · 정보 오른쪽(D-13). H 캘린더: ≥ 720이면 달력 왼쪽 · 목록 오른쪽(H-7)')
 w('  - 격자(O · G · 게시물): 칸 너비로 열 수 계산. A 배너 높이 ≤ 화면 높이의 절반')
@@ -171,7 +173,7 @@ KEY = {
     'P07': '♡ · 리본 바로 누르기 · 카메라 지름길 · 홈 › 전체 목록 · 숫자 누르면 이동',
     'P08': '흑백 + 포인트 두 색 · 글자 6단계 · 홈 줄은 사진 + 이름만 · 접히는 머리/탭 바',
     'P09': 'ErrorView + 다시 시도 · 빈 상태 + 빠져나갈 길 · 사진 판정 실패 안내',
-    'P10': '도감 읽는 법(?) · 출처 · 공식으로 가기 · 화면마다 ? 도움말',
+    'P10': '도감 읽는 법 · 출처 · 공식으로 가기 · 쌓아 연 화면의 ? 도움말 · 서랍 › 사용법(위 줄 · 네 탭 · 도감 · 친구 · 내 정보)',
 }
 w('## 2. 원칙 표 P01–P10 (P번호 = 닐슨 원칙 번호)')
 w('')
@@ -216,7 +218,7 @@ RULES = [
      'P04 · P06'),
     ('도감 칸 표시와 레벨 (G-4)',
      '하나 더 모을 때마다 "올라간다"는 느낌을 준다.',
-     '칸 그림은 늘 컬러(흑백 · 흐림 없음), 상태는 칸 위 표시로만: 아직(그림 그대로) → ♡ 좋아요 → 리본 ✓ + 옅은 민트 테두리(구매함) → 내 사진 + 도는 고리 + 배지(사진 인증). 작품 · 세대 · 채널 고르기는 그림 + 이름만인 분류 칸(CategoryTile, 숫자 없음). 레벨(1 · 2 · 3점, 5점마다 Lv)은 왼쪽 위 아바타 옆 Lv · 레벨 시트에만 — 도감 화면에는 레벨 막대 · 수집 n / m · 칸 위 숫자를 두지 않는다 (2026-11-20). 읽는 법은 긴 범례 대신 ? 버튼(G-2).',
+     '칸 그림은 늘 컬러(흑백 · 흐림 없음), 상태는 칸 위 표시로만: 아직(그림 그대로) → ♡ 좋아요 → 리본 ✓ + 옅은 민트 테두리(구매함) → 내 사진 + 도는 고리 + 배지(사진 인증). 작품 · 세대 · 채널 고르기는 그림 + 이름만인 분류 칸(CategoryTile, 숫자 없음). 레벨(1 · 2 · 3점, 5점마다 Lv)은 왼쪽 위 아바타 옆 Lv · 레벨 시트에만 — 도감 화면에는 레벨 막대 · 수집 n / m · 칸 위 숫자를 두지 않는다 (2026-11-20). 읽는 법은 긴 범례 대신 서랍 › 사용법의 도감 묶음(G-2).',
      'P01 · P10'),
     ('글자 6단계 (S-15)',
      '크기만 보고 정보의 높낮이를 알게 한다.',
@@ -261,10 +263,10 @@ STATES = [
     ('좋아요 · 구매함 (앱 전체)', 'A-9 · O-4 · D-6 · E-7 · F-6 삭제 · F-10 복원', '모든 카드의 ♡ · 리본 · D-6 버튼 · F-2 개수 · F-5 목록 · I-4 숫자 · L-2 겹침', '`lib/marks.dart` (MarksHost)'),
     ('반반 화면 오른쪽에 연 것', 'openPage (D · J · I 친구)', '왼쪽 ProductTile 테두리 · ThumbRow 바탕', '`lib/detail_pane.dart` (PaneHost)'),
     ('내 채널 · 고른 채널', 'C-1 · C-4 · C-5', 'A · B · H · F 목록과 범위, G 도감, N 알림 범위', '`s_app_shell.dart` · `c_channel_screen.dart`'),
-    ('지금 탭 · 탭 바 · 위 줄 보임', 'S-3 · 스크롤 방향', 'S-6 · S-8 · S-13', '`s_app_shell.dart`'),
-    ('홈 전체 목록 · 목록 안 검색어', 'A-5 › · O-7', 'O 목록 · 머리 검색창 문구', '`a_home_screen.dart`'),
+    ('지금 탭 · 탭 바 · 채널 바 접힘', 'S-3 · 스크롤 방향 · 내려 읽은 거리', 'S-6 · S-8 · S-13', '`s_app_shell.dart` · `lib/widgets/header_collapse.dart`'),
+    ('홈 전체 목록', 'A-5 ›', 'O 목록', '`a_home_screen.dart`'),
     ('필터 · 정렬 · 보기 방식', 'O-2 · O-3 · O-1', 'O-4 격자/목록 · 고른 조건 줄', '`o_see_all_screen.dart`'),
-    ('검색어 · 검색창 포커스', 'B-2 · B-3 · B-4 · B-5', 'B 판 ↔ O 전체 상품 · 검색 결과 · B-6 후보', '`b_search_screen.dart`'),
+    ('검색어 (검색 덮개)', 'B-2 · B-3 · B-4 · B-5', 'B 최근 검색 판 ↔ 검색 결과 · B-6 후보', '`b_search_screen.dart`'),
     ('세부 시리즈 · 분류 상품 찾기 · 필터', 'B-23a · B-23b · B-20b', 'B-23c 격자/목록 · B-20 칸 거르기', '`b_category_products.dart` · `b_category_browse.dart`'),
     ('도감 칸 단계 · 내 사진 · 고른 묶음 · 묶음 목록 펴 둠', 'G-4b · G-5b · G-5c · G-3', 'G-4 칸 · 오른쪽 칸 · 3 / 4칸', '`g_guide_view.dart` · `guide/` (펴 둠 = 기기, 검색 탭과 따로)'),
     ('게시물 공개 범위 · 숨긴 사진 · 워터마크', 'I-9 · I-10 · I-7', 'I-6 게시물 칸 · 제목 줄', '`i_profile_screen.dart` (내 정보 화면 안)'),

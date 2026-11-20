@@ -3,7 +3,7 @@
 // ┌──────── 디자인 가이드 대응표: A 홈 ────────────────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
 // │ A-1  │ ChannelHeader                      │ 아바타 줄 + 내 채널 바 (C-0 공용)       │ P04 · P06     │
-// │ A-2  │ GpSearchBar 입구 (탭하면 검색 탭)   │ 검색창(검색 화면과 같은 모양) · 카메라 · 목록 위에 고정(머리가 접혀도 남음) │ P07 · P04 │
+// │ A-2  │ ToolRow (상자 없는 아이콘 줄)        │ 필터 (전체 보기 안: 필터 · 격자 · 목록) — 검색창은 위 줄 🔍, My Page 는 서랍 좋아요 · 구매함 · 예약으로 │ P07 · P04 │
 // │ A-3  │ PageView(화면 끝까지) + 점 표시     │ 예고 배너 (공식 먼저 · 모자라면 비공식, 4초마다 다음 장, 끝없이) │ P08 · P02     │
 // │ A-4  │ 배너 아래 AnnTag · 제목             │ 예고 상태(공식 발표·상품화 확정·예약) · 라이브 · 예약 때 · 비공식 │ P01 │
 // │ A-5  │ SectionHeader (색 막대 + ›)         │ 줄 이름 · 전체 보기 → O 전체 목록(홈 안)  │ P06 · P07     │
@@ -11,14 +11,13 @@
 // │ A-7  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 빈 채널           │ P01 · P09     │
 // │ A-8  │ 흰 띠(섹션마다) + 머리카락 줄        │ 줄과 줄 사이 층 구분                   │ P08 · P04     │
 // │ A-9  │ ProductTile 의 QuickMarks (리본 · ♡)  │ 좋아요 · 구매함 바로 담기 (앱 전체 한 벌)  │ P07 · P04     │
-// │ A-26 │ 위 줄 ? (S-19, homeHelp)            │ 검색창 줄 아이콘 뜻 한 줄씩              │ P10           │
+// │ A-26 │ 서랍 › 사용법 (S-19, homeHelp)       │ 아이콘 뜻 한 줄씩                      │ P10           │
 // └──────────────────────────────────────────────────────────────────────────────────┘
-// 전환: A-2 → 검색 탭(옆으로). › → 같은 탭 안에서 O 전체 목록(위쪽 머리 · 검색창은 그대로, 뒤로 = 홈). 상품 카드 → D 상품 상세(쌓기). 배너 · 예고 카드 → J 공식 예고 상세(쌓기).
+// 전환: › → 같은 탭 안에서 O 전체 목록(위쪽 머리 · 아이콘 줄은 그대로, 뒤로 = 홈). 상품 카드 → D 상품 상세(쌓기). 배너 · 예고 카드 → J 공식 예고 상세(쌓기).
 // 줄 안에는 날짜·가격을 쓰지 않는다 — 궁금하면 눌러서 상세에서 본다 (P08).
 // 왜 이렇게: 홈은 버전 번호 · 총 개수 · IP 입구 카드 대신 "내 채널의 새 소식"만.
 import '../l10n/l10n.dart';
 import '../logic/announcement_match.dart';
-import '../logic/kit_rules.dart';
 import '../logic/preorder_open.dart';
 
 import 'dart:async' show Timer;
@@ -36,8 +35,6 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'c_channel_screen.dart';
 import 'd_kit_detail_screen.dart';
-import 'a_my_page.dart';
-import 'f_collection_screen.dart' show CollectionJump;
 import 'j_announcement_screen.dart';
 import 'o_see_all_screen.dart';
 
@@ -62,15 +59,9 @@ class HomeScreen extends StatefulWidget {
     required this.onMyChannelsChanged,
     this.channel,
     this.onChannelChanged,
-    required this.onOpenSearch,
-    required this.onCamera,
-    this.onJump,
     this.leading,
     this.loaders = const Loaders(),
   });
-
-  /// 내 보드 · 도감 아이콘 → 컬렉션 탭 (앱 셸)
-  final ValueChanged<CollectionJump>? onJump;
 
   final List<String> myChannels;
   final ValueChanged<List<String>> onMyChannelsChanged;
@@ -78,10 +69,6 @@ class HomeScreen extends StatefulWidget {
   /// 앱 셸이 든 이 탭의 채널 · 고르면 셸에 알림 (채널 맞춰 보기, ChannelScope)
   final String? channel;
   final ValueChanged<String>? onChannelChanged;
-  final VoidCallback onOpenSearch;
-
-  /// 검색창 카메라 → 앱 셸의 찍어서 찾기 시트
-  final VoidCallback onCamera;
   final Widget? leading;
   final Loaders loaders;
 
@@ -130,59 +117,22 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
   /// null = 홈, 아니면 홈 안에서 펼친 전체 목록 (O)
   HomeSection? _section;
 
-  /// 전체 소식 / My Page
-  bool _mine = false;
-
-  /// My Page 안에서 찾기 · 필터 (좋아요 · 구매함에서만)
-  final _mineFind = KitFind();
-
-  void _setMine(bool v) => setState(() {
-    _mine = v; // STATE: 전체 소식 ↔ My Page (찾기 · 필터는 비운다)
-    _mineFind.clear();
-  });
-
-  Future<void> _openMineFilter() async {
-    final me = UserStore.instance;
-    final cat = Catalog.instance;
-    final pool = [
-      for (final id in me.idsWith(const {CollectStatus.wanted, CollectStatus.owned})) ?cat.byId[id],
-    ];
-    final picked = await pickKitFilter(context, pool: pool, current: _mineFind.filter);
-    if (picked != null) setState(() => _mineFind.filter = picked); // STATE: 필터 → My Page 목록
-  }
-
-  /// 전체 목록일 때 검색창 = 그 목록 안에서만 찾기 (O-7)
-  final _searchCtrl = TextEditingController();
-  String _query = '';
-
-  /// 전체 목록의 필터 · 격자/목록 (위 검색창 줄 아이콘이 바꾼다)
+  /// 전체 목록의 필터 · 격자/목록 (위 아이콘 줄이 바꾼다)
   var _listTools = ListTools();
 
-  /// 홈 가로 줄(새 상품 · 이번 달 · 최근 본) 필터 — 검색창 줄의 필터 아이콘
+  /// 홈 가로 줄(새 상품 · 이번 달 · 최근 본) 필터 — 아이콘 줄의 필터
   KitFilter _homeFilter = KitFilter();
 
   void _openSection(HomeSection s) => setState(() {
     _section = s; // STATE: › → 홈 아래쪽이 전체 목록으로
-    _searchCtrl.clear();
-    _query = '';
     _listTools = ListTools();
   });
 
-  void _closeSection() => setState(() {
-    _section = null; // STATE: ‹ · 뒤로 → 홈
-    _searchCtrl.clear();
-    _query = '';
-  });
+  void _closeSection() => setState(() => _section = null); // STATE: ‹ · 뒤로 → 홈
 
   Future<void> _openHomeFilter(List<Kit> pool) async {
     final picked = await pickKitFilter(context, pool: pool, current: _homeFilter);
     if (picked != null) setState(() => _homeFilter = picked); // STATE: 필터 → 홈 가로 줄
-  }
-
-  @override
-  void dispose() {
-    _searchCtrl.dispose();
-    super.dispose();
   }
 
   @override
@@ -197,8 +147,10 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
   @override
   void loadScope(List<String> ids) {
     // STATE: 선택 채널 → 상품 · 공식 예고 → 배너 + 가로 줄
-    _future = Future.wait([widget.loaders.kits(ids), widget.loaders.announcements(ids)])
-        .then((r) => _HomeData(r[0] as List<Kit>, r[1] as List<Announcement>));
+    _future = Future.wait([
+      widget.loaders.kits(ids),
+      widget.loaders.announcements(ids),
+    ]).then((r) => _HomeData(r[0] as List<Kit>, r[1] as List<Announcement>));
   }
 
   @override
@@ -278,54 +230,20 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
         if (byId[id] case final k? when home(k)) k,
     ];
     final lists = {HomeSection.recent: recent, HomeSection.month: month, HomeSection.viewed: viewed};
-    // A-2 검색창 줄 — 모든 탭과 같은 줄: [검색창][필터][보기 두 칸]
-    final mineToggle = ViewIconToggle(mine: _mine, onChanged: _setMine); // A-10 전체 소식 · My Page
-    final Widget search;
-    if (_section case final sec?) {
-      search = ToolRow(
-        field: GpSearchBar(
-          // O-7 이 목록 안에서만
-          controller: _searchCtrl,
-          hint: trf('{name}에서 찾기', {'name': _titleOf(sec, data.announcements)}),
-          onChanged: (v) => setState(() => _query = v), // STATE: 검색어 → 목록 거르기
-          onCamera: widget.onCamera,
-        ),
-        tools: [
-          ListToolIcons(
-            tools: _listTools,
-            pool: sec == HomeSection.announcements
-                ? null
-                : [
-                    for (final k in lists[sec] ?? const <Kit>[])
-                      if (kitMatches(k, _query)) k,
-                  ],
-          ),
-        ],
-      );
-    } else if (_mine) {
-      search = FindBar(
-        // A-25 My Page 안에서 찾기 + 필터
-        key: const ValueKey('mine-find'),
-        hint: tr('내 것에서 찾기'),
-        onQuery: (q) => setState(() => _mineFind.query = q),
-        filterCount: _mineFind.filter.count,
-        onFilter: _openMineFilter,
-        tools: [mineToggle],
-      );
-    } else {
-      search = ToolRow(
-        field: GpSearchBar(onTap: widget.onOpenSearch, onCamera: widget.onCamera), // A-2 P04 → 검색 탭
-        tools: [
+    // A-2 아이콘 줄 — 모든 탭과 같은 자리(오른쪽 끝), 검색창 없이
+    final tools = ToolRow(
+      tools: [
+        if (_section case final sec?)
+          ListToolIcons(tools: _listTools, pool: sec == HomeSection.announcements ? null : lists[sec] ?? const [])
+        else
           FilterButton(count: _homeFilter.count, onTap: () => _openHomeFilter(data.kits)), // A-11
-          mineToggle,
-        ],
-      );
-    }
+      ],
+    );
     final ids = scopeIds;
     if (data.kits.isEmpty && data.announcements.isEmpty) {
       final noData = ids.isNotEmpty && ids.every((id) => !channelOf(id).hasData);
       return _pinned(
-        search,
+        tools,
         ListView(
           children: [
             EmptyView(
@@ -351,7 +269,7 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
     // O 전체 목록 (홈 위쪽은 그대로, 아래만 바뀜)
     if (_section case final sec?) {
       return _pinned(
-        search,
+        tools,
         SectionListView(
           key: ValueKey(sec),
           title: _titleOf(sec, data.announcements),
@@ -363,7 +281,6 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
           announcements: sec == HomeSection.announcements ? data.announcements : null,
           history: sec == HomeSection.viewed,
           sort: sec == HomeSection.month ? KitSort.release : KitSort.newest,
-          query: _query,
           tools: _listTools,
           onBack: _closeSection,
           loaders: widget.loaders,
@@ -395,7 +312,7 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
 
     // 당겨서 새로 고침 = Gunpula 새 데이터 확인 (바뀌면 앱 셸이 화면을 다시 불러온다)
     return _pinned(
-      search,
+      tools,
       RefreshIndicator(
         onRefresh: () async {
           final changed = await Catalog.instance.refresh();
@@ -404,50 +321,41 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
         child: ListView(
           padding: EdgeInsets.only(bottom: navClearance(context)),
           children: [
-            if (_mine)
-              MyPageView(
-                // A-20~25
-                loaders: widget.loaders,
-                onJump: widget.onJump,
-                query: _mineFind.query,
-                filter: _mineFind.filter,
-              ),
-            if (!_mine && heroes.isNotEmpty)
+            if (heroes.isNotEmpty)
               _HeroBanner(
                 // A-3 떠 있는 카드
                 items: heroes,
                 onTap: (a) => openAnnouncement(context, a, loaders: widget.loaders, list: heroes),
               ),
-            if (!_mine)
-              for (final row in rows)
-                if (row.items.isNotEmpty)
-                  SectionPanel(
-                    // A-8 흰 띠 + 머리카락 줄 = 층 구분 (상세와 같은 부품)
-                    padding: const EdgeInsets.only(bottom: 18),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SectionHeader(
-                          // A-5 P06
-                          row.title,
-                          subtitle: row.subtitle,
-                          onMore: row.onMore, // → O 전체 목록
-                        ),
-                        _HorizontalRow(row: row, loaders: widget.loaders), // A-6 P08
-                      ],
-                    ),
+            for (final row in rows)
+              if (row.items.isNotEmpty)
+                SectionPanel(
+                  // A-8 흰 띠 + 머리카락 줄 = 층 구분 (상세와 같은 부품)
+                  padding: const EdgeInsets.only(bottom: 18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SectionHeader(
+                        // A-5 P06
+                        row.title,
+                        subtitle: row.subtitle,
+                        onMore: row.onMore, // → O 전체 목록
+                      ),
+                      _HorizontalRow(row: row, loaders: widget.loaders), // A-6 P08
+                    ],
                   ),
+                ),
           ],
         ),
       ),
     );
   }
 
-  /// A-2 검색창 줄은 목록 밖 위에 고정 — 내려 읽으면 위 줄 · 채널 바만 접히고(S-13) 검색창 줄은 남는다 (네 탭 같게)
-  Widget _pinned(Widget search, Widget list) => Column(
+  /// A-2 아이콘 줄은 목록 밖 위에 고정 — 한참 내려 읽으면 채널 바만 접히고(S-13) 아이콘 줄은 남는다 (네 탭 같게)
+  Widget _pinned(Widget tools, Widget list) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      search,
+      tools,
       Expanded(child: list),
     ],
   );
@@ -630,13 +538,10 @@ class _HorizontalRow extends StatelessWidget {
   }
 }
 
-/// A-26 ? 도움말 (위 줄 ? 의 "홈" 묶음 — s_app_shell.dart)
+/// A-26 사용법의 "홈" 묶음 (서랍 › 사용법 — s_app_shell.dart)
 List<HelpItem> get homeHelp => [
   HelpItem(Icons.photo_camera_outlined, tr('찍어서 찾기')),
   HelpItem(Icons.tune, tr('필터')),
   HelpItem(Icons.bookmark_border, tr('구매함 (사진 왼쪽 위 리본 +)'), color: Gp.own),
-  HelpItem(Icons.newspaper_outlined, tr('전체 소식')),
-  HelpItem(Icons.person_outline, tr('My Page (내 것 · ★ 친구)')),
-  HelpItem(Icons.ios_share, tr('공유 카드 (My Page 숫자 줄 끝)')),
   HelpItem(Icons.grid_view_outlined, tr('격자 · 목록 (전체 보기 안)')),
 ];

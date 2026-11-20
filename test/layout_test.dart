@@ -14,6 +14,8 @@ import 'package:hobby_atlas/marks.dart';
 import 'package:hobby_atlas/widgets.dart';
 import 'package:hobby_atlas/models.dart';
 import 'package:hobby_atlas/notifications/notify_store.dart';
+import 'package:hobby_atlas/screens/b_search_screen.dart' show SearchScreen;
+import 'package:hobby_atlas/screens/c_channel_screen.dart' show ChannelHeader;
 import 'package:hobby_atlas/screens/d_kit_detail_screen.dart';
 import 'package:hobby_atlas/screens/f_collection_screen.dart';
 import 'package:hobby_atlas/screens/g_guide_view.dart';
@@ -24,6 +26,7 @@ import 'package:hobby_atlas/screens/k_settings_screen.dart';
 import 'package:hobby_atlas/screens/l_friend_collection_screen.dart';
 import 'package:hobby_atlas/screens/n_notifications_screen.dart';
 import 'package:hobby_atlas/screens/s_app_shell.dart';
+import 'package:hobby_atlas/screens/u_social.dart' show MyAvatar;
 import 'package:hobby_atlas/theme.dart';
 
 final Map<String, Object?> db =
@@ -200,23 +203,64 @@ void main() {
     });
   }
 
-  testWidgets('앱 셸 S-13: 홈을 내려 읽으면 위 줄 · 채널 바가 접히고 검색창 줄은 남는다, 살짝 올리면 다시', (tester) async {
+  testWidgets('앱 셸 S-13: 천천히 조금 내려 읽는 동안은 아바타 줄 · 채널 바 · 아이콘 줄이 그대로 · 탭에 검색창 없음', (tester) async {
     await _show(tester, const Size(390, 844), AppShell(loaders: fakeLoaders));
-    final header = find.byType(CollapsingHeader).first;
-    final open = tester.getSize(header).height;
-    expect(open, greaterThan(60));
-    await tester.drag(find.byType(RefreshIndicator).first, const Offset(0, -400));
-    await tester.pump();
-    await tester.pump(headerSnapDuration);
-    expect(tester.getSize(header).height, 0);
-    expect(find.byType(GpSearchBar).hitTestable(), findsWidgets); // 검색창 줄은 목록 밖에 고정
-    // 살짝 올리면 다시 (아래 탭 바도 같이 나온다)
-    await tester.drag(find.byType(RefreshIndicator).first, const Offset(0, 40));
-    await tester.pump();
-    await tester.pump(headerSnapDuration);
-    expect(tester.getSize(header).height, open);
+    final bar = find.byType(CollapsingHeader).first;
+    final open = tester.getSize(bar).height;
+    expect(open, greaterThan(40));
+    final avatarTop = tester.getTopLeft(find.byType(MyAvatar).first).dy;
+    await tester.drag(find.byType(RefreshIndicator).first, const Offset(0, -200));
+    for (var i = 0; i < 4; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(tester.getSize(bar).height, open); // 400 쯤 내려 읽어야 접는다 (test/header_collapse_test.dart)
+    expect(tester.getTopLeft(find.byType(MyAvatar).first).dy, avatarTop);
+    expect(find.byType(FilterButton).hitTestable(), findsWidgets); // 아이콘 줄은 목록 밖이라 그대로
+    expect(find.byType(GpSearchBar), findsNothing); // 찾기는 위 줄 🔍
+    // 위 줄: 아바타 · Lv · 🔍 · 🔔 — ⚙ · ? 는 서랍으로
+    expect(find.byKey(const ValueKey('top-search')), findsOneWidget);
+    expect(find.byIcon(Icons.settings_outlined), findsNothing);
+    expect(find.byType(HelpButton), findsNothing);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('앱 셸 🔍: 검색 덮개가 아래 탭까지 덮고 바로 커서 · 최근 검색 판 · ← 로 닫기', (tester) async {
+    await _show(tester, const Size(390, 844), AppShell(loaders: fakeLoaders));
+    await tester.tap(find.byKey(const ValueKey('top-search')));
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+    final overlay = find.byWidgetPredicate((w) => w is SearchScreen && w.overlay);
+    expect(overlay, findsOneWidget);
+    final field = tester.widget<TextField>(find.descendant(of: overlay, matching: find.byType(TextField)));
+    expect(field.focusNode?.hasFocus, isTrue);
+    expect(find.text('설명으로 찾기'), findsOneWidget);
+    expect(find.byIcon(Icons.calendar_today_outlined).hitTestable(), findsNothing); // 아래 탭 바도 덮인다
+    await tester.tap(find.byKey(const ValueKey('search-close')));
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+    expect(overlay, findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  // 덮개 줄은 ← · 검색창 · 필터 · 격자 · 목록 — 글자를 넣으면 지우기 ⓧ 가 더 붙는다. 작은 폰에서 넘치지 않게
+  for (final size in const [Size(320, 568), Size(360, 780)]) {
+    testWidgets('검색 덮개 폭 ${size.width.toInt()}: 글자를 넣어도 줄이 넘치지 않는다', (tester) async {
+      await _show(tester, size, AppShell(loaders: fakeLoaders));
+      await tester.tap(find.byKey(const ValueKey('top-search')));
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+      final overlay = find.byWidgetPredicate((w) => w is SearchScreen && w.overlay);
+      await tester.enterText(find.descendant(of: overlay, matching: find.byType(TextField)), 'zaku');
+      for (var i = 0; i < 3; i++) {
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+      expect(tester.takeException(), isNull);
+      expect(find.descendant(of: overlay, matching: find.byIcon(Icons.cancel)), findsOneWidget);
+    });
+  }
 
   // 반반 화면: 왼쪽에서 상품을 누르면 오른쪽 칸에 상세 (왼쪽 앱은 그대로)
   for (final size in const [Size(830, 690), Size(1280, 800)]) {
@@ -237,7 +281,7 @@ void main() {
       }
       expect(find.byType(KitDetailScreen), findsOneWidget);
       expect(find.descendant(of: find.byType(DetailPaneView), matching: find.byType(KitDetailScreen)), findsOneWidget);
-      expect(find.byType(GpSearchBar), findsWidgets); // 왼쪽 홈은 그대로
+      expect(find.byType(ChannelHeader), findsWidgets); // 왼쪽 홈은 그대로
       expect(paneSelectedId(tester.element(find.byType(DetailPaneView))), isNotNull); // 왼쪽에서 그 카드가 칠해짐
       expect(tester.takeException(), isNull);
     });

@@ -1,5 +1,6 @@
 // 친구 쪽 2차 — 아바타 · 배경, 사진 공개 범위, 공유 공간, 알 수도 있는 친구, 새 사진 · 상태 줄, 도감 비교 사진 수.
 // 가짜 서버 · 가짜 Storage · 메모리 사진 파일만 쓴다 (docs/supabase-v3-social.sql 의 규칙을 fake_backend 가 흉내).
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -10,6 +11,7 @@ import 'package:hobby_atlas/data/photo_files.dart';
 import 'package:hobby_atlas/data/social_local.dart';
 import 'package:hobby_atlas/data/user_store.dart';
 import 'package:hobby_atlas/detail_pane.dart';
+import 'package:hobby_atlas/level.dart' show LevelChip;
 import 'package:hobby_atlas/logic/friends.dart';
 import 'package:hobby_atlas/marks.dart';
 import 'package:hobby_atlas/models.dart';
@@ -24,7 +26,7 @@ import 'package:hobby_atlas/sync/photo_share.dart';
 import 'package:hobby_atlas/sync/profile_images.dart';
 import 'package:hobby_atlas/sync/sync_service.dart';
 import 'package:hobby_atlas/theme.dart';
-import 'package:hobby_atlas/widgets.dart' show UnderlineTab;
+import 'package:hobby_atlas/widgets.dart' show HelpButton, UnderlineTab;
 
 import 'support/fake_backend.dart';
 
@@ -112,7 +114,7 @@ void main() {
   }
 
   Widget drawerHost() => Scaffold(
-    drawer: FriendsDrawer(loaders: _loaders, onOpenProfile: () {}, onOpenFriend: (_) {}),
+    drawer: FriendsDrawer(loaders: _loaders, onOpenProfile: () {}),
     body: Builder(
       builder: (c) => TextButton(onPressed: () => Scaffold.of(c).openDrawer(), child: const Text('열기')),
     ),
@@ -125,13 +127,19 @@ void main() {
     await settle(tester);
   }
 
+  /// 친구 화면 (서랍 · 내 정보의 친구 줄) — 열 때마다 새로 (새 사진 기준 시각을 다시 읽는다)
+  Future<void> openFriendsPage(WidgetTester tester) async {
+    await show(tester, FriendsPage(key: UniqueKey(), loaders: _loaders));
+    await settle(tester);
+  }
+
   group('I-3 아바타 · 배경', () {
     testWidgets('갤러리에서 고르면 기기 + Storage <uid>/profile/avatar.jpg + preferences.avatar · 머리에 사진', (tester) async {
       photoPicker = (_) async => _jpeg;
       await loadMe(tester);
       await show(tester, ProfileScreen(loaders: _loaders, onJump: (_) {}));
       expect(find.text('빵'), findsOneWidget); // 사진 전엔 첫 글자
-      await tester.tap(find.byTooltip('프로필 편집'));
+      await tester.tap(find.byKey(const ValueKey('profile-edit')));
       await settle(tester);
       await tester.tap(find.text('프로필 사진'));
       await settle(tester);
@@ -152,7 +160,7 @@ void main() {
 
       // 배경
       photoPicker = (_) async => _jpeg2;
-      await tester.tap(find.byTooltip('프로필 편집'));
+      await tester.tap(find.byKey(const ValueKey('profile-edit')));
       await settle(tester);
       await tester.tap(find.text('배경 사진'));
       await settle(tester);
@@ -170,7 +178,7 @@ void main() {
       photoPicker = (_) async => _jpeg;
       await loadMe(tester);
       await show(tester, ProfileScreen(loaders: _loaders, onJump: (_) {}));
-      await tester.tap(find.byTooltip('프로필 편집'));
+      await tester.tap(find.byKey(const ValueKey('profile-edit')));
       await settle(tester);
       await tester.tap(find.text('프로필 사진'));
       await settle(tester);
@@ -353,11 +361,73 @@ void main() {
     });
   });
 
+  group('M-2 · M-3 서랍 머리 · 메뉴 줄', () {
+    testWidgets('머리에 "친구" 제목 · @아이디 · ? 가 없고, 바탕은 내 정보와 같은 배경 사진 · 메뉴 일곱 줄', (tester) async {
+      files.files['cover.jpg'] = _jpeg2;
+      store.social.setImage(ProfileImageKind.cover, const ProfileImage(file: 'cover.jpg', at: '2026-11-01T00:00:00Z'));
+      await loadMe(tester);
+      await openDrawer(tester);
+      final drawer = find.byType(FriendsDrawer);
+      for (final row in ['liked', 'owned', 'preorder', 'friends', 'share', 'help', 'settings']) {
+        expect(find.byKey(ValueKey('drawer-$row')), findsOneWidget, reason: row);
+      }
+      // "친구" 는 메뉴 줄 하나뿐 (2026-11-21 주인: 머리의 "친구" 두 글자를 뺐다)
+      expect(find.descendant(of: drawer, matching: find.text('친구')), findsOneWidget);
+      expect(find.descendant(of: drawer, matching: find.textContaining('@bbang')), findsNothing);
+      expect(find.descendant(of: drawer, matching: find.byType(HelpButton)), findsNothing);
+      expect(find.descendant(of: drawer, matching: find.byKey(const ValueKey('profile-cover'))), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    // 처음 받는 중 · 오프라인 · 카탈로그 오류에도 설정 · 사용법은 열려야 한다 (위 줄 ⚙ 를 서랍으로 옮겼다)
+    for (final (name, guideWorks) in [
+      ('받는 중', () => Completer<List<GuideWork>>().future),
+      ('받기 실패', () async => throw StateError('offline')),
+    ]) {
+      testWidgets('도감(레벨)이 $name 이어도 메뉴 줄은 바로 보인다 · Lv 자리만 빈다', (tester) async {
+        final loaders = Loaders(profile: () async => _profile, guideWorks: guideWorks);
+        await show(
+          tester,
+          Scaffold(
+            drawer: FriendsDrawer(loaders: loaders, onOpenProfile: () {}),
+            body: Builder(
+              builder: (c) => TextButton(onPressed: () => Scaffold.of(c).openDrawer(), child: const Text('열기')),
+            ),
+          ),
+        );
+        await tester.tap(find.text('열기'));
+        await settle(tester);
+        for (final row in ['liked', 'owned', 'preorder', 'friends', 'share', 'help', 'settings']) {
+          expect(find.byKey(ValueKey('drawer-$row')), findsOneWidget, reason: row);
+        }
+        expect(find.byKey(const ValueKey('drawer-profile')), findsOneWidget);
+        expect(find.descendant(of: find.byType(FriendsDrawer), matching: find.byType(LevelChip)), findsNothing);
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    testWidgets('친구 줄 파란 점: 서랍이 친구 사진을 받아 지난번 친구 화면 뒤 새 사진을 본다 · 친구 화면을 보면 사라진다', (tester) async {
+      fixedNow = DateTime.utc(2026, 11, 2, 12);
+      store.social.setFriendsSeenAt('2026-11-01T00:00:00Z');
+      server.friendPhotos['gomdol'] = [
+        {'id': 'f2', 'path': 'uid-d/f2.jpg', 'kit_id': '', 'created_at': '2026-11-01T12:00:00Z'},
+      ];
+      final dot = find.byKey(const ValueKey('drawer-friends-new'));
+      await loadMe(tester);
+      await openDrawer(tester);
+      expect(dot, findsOneWidget); // 앱을 새로 연 뒤라 사진 벽은 서랍이 받는다
+      await openFriendsPage(tester);
+      await openDrawer(tester);
+      expect(dot, findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
   group('M-5 알 수도 있는 친구', () {
     testWidgets('친구의 친구 · 함께 아는 친구 수 · 요청 보내면 사라짐 · ×는 기기에 남는다', (tester) async {
       server.users['aunt'] = (name: '이모', collection: const {});
       server.friendsOf['gomdol'] = {'bbang', 'cousin', 'aunt'};
-      await openDrawer(tester);
+      await openFriendsPage(tester);
       expect(find.byKey(const ValueKey('suggestions')), findsOneWidget);
       expect(find.text('사촌'), findsOneWidget);
       expect(find.text('함께 아는 친구 1명'), findsNWidgets(2));
@@ -377,7 +447,7 @@ void main() {
     testWidgets('서버에 suggest_friends 가 없으면 칸을 숨긴다', (tester) async {
       server.friendsOf['gomdol'] = {'cousin'};
       server.missing.add('gunpula_v3_suggest_friends');
-      await openDrawer(tester);
+      await openFriendsPage(tester);
       expect(account.friends.suggestionsMissing, isTrue);
       expect(find.byKey(const ValueKey('suggestions')), findsNothing);
       expect(find.text('곰돌'), findsOneWidget); // 나머지는 그대로
@@ -385,33 +455,33 @@ void main() {
     });
   });
 
-  group('M-3 · M-7 새 사진 · 상태 줄', () {
-    testWidgets('지난번 연 뒤 올라온 친구 사진 = 새 사진 n · 친구 줄에 점 · 상태 줄은 가장 최근 일', (tester) async {
+  group('M-3b · M-7 새 사진 · 상태 줄', () {
+    testWidgets('지난번 본 뒤 올라온 친구 사진 = 친구 줄에 점 · 상태 줄은 가장 최근 일 · 다시 보면 점 없음', (tester) async {
       fixedNow = DateTime.utc(2026, 11, 2, 12);
       store.social.setFriendsSeenAt('2026-11-01T00:00:00Z');
       server.friendPhotos['gomdol'] = [
         {'id': 'f2', 'path': 'uid-d/f2.jpg', 'kit_id': '', 'created_at': '2026-11-01T12:00:00Z'},
         {'id': 'f1', 'path': 'uid-d/f1.jpg', 'kit_id': '', 'created_at': '2026-10-30T00:00:00Z'},
       ];
-      await openDrawer(tester);
-      expect(find.text('새 사진 1'), findsOneWidget);
-      expect(tester.widget<Badge>(find.byKey(const ValueKey('friend-new-gomdol'))).isLabelVisible, isTrue);
+      Badge dot() => tester.widget<Badge>(find.byKey(const ValueKey('friend-new-gomdol')));
+      await openFriendsPage(tester);
+      expect(dot().isLabelVisible, isTrue);
       final status = tester.widget<FriendStatusLine>(find.byType(FriendStatusLine));
       expect(status.event?.kind, 'photo'); // 사진(11/1)이 좋아요(2/1)보다 늦다
       expect(store.social.friendsSeenAt, '2026-11-02T12:00:00.000Z'); // 이번에 연 시각
 
       // 다시 열면 그 사진은 새것이 아니다
-      await openDrawer(tester);
-      expect(find.text('새 사진 1'), findsNothing);
+      await openFriendsPage(tester);
+      expect(dot().isLabelVisible, isFalse);
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('처음 여는 서랍엔 새 사진 표시가 없다', (tester) async {
+    testWidgets('처음 여는 친구 화면엔 새 사진 점이 없다', (tester) async {
       server.friendPhotos['gomdol'] = [
         {'id': 'f1', 'path': 'uid-d/f1.jpg', 'created_at': '2026-11-01T12:00:00Z'},
       ];
-      await openDrawer(tester);
-      expect(find.byKey(const ValueKey('chip-new-photos')), findsNothing);
+      await openFriendsPage(tester);
+      expect(tester.widget<Badge>(find.byKey(const ValueKey('friend-new-gomdol'))).isLabelVisible, isFalse);
       expect(tester.takeException(), isNull);
     });
 

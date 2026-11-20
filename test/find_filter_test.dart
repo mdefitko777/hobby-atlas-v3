@@ -1,4 +1,4 @@
-// 찾기 · 필터 줄(FindBar)과 홈 채널 좌우 밀기
+// 네 탭의 아이콘 줄(검색창 없음, 2026-11-21) · 필터와 홈 채널 좌우 밀기
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hobby_atlas/api.dart';
@@ -50,13 +50,7 @@ void main() {
     await _pump(
       tester,
       Scaffold(
-        body: HomeScreen(
-          myChannels: const ['gundam', 'beyblade'],
-          onMyChannelsChanged: (_) {},
-          onOpenSearch: () {},
-          onCamera: () {},
-          loaders: loaders,
-        ),
+        body: HomeScreen(myChannels: const ['gundam', 'beyblade'], onMyChannelsChanged: (_) {}, loaders: loaders),
       ),
     );
     expect(asked.last, 'gundam,beyblade'); // 전체
@@ -76,7 +70,7 @@ void main() {
     expect(asked.last, 'gundam');
   });
 
-  testWidgets('캘린더: 찾기 줄에 쓰면 그 글자가 든 일정만 · 필터 버튼이 있다', (tester) async {
+  testWidgets('캘린더: 아이콘 줄에 필터 · 전체 일정 · 내 일정 (검색창 없음)', (tester) async {
     await _pump(
       tester,
       Scaffold(
@@ -88,11 +82,11 @@ void main() {
       ),
     );
     expect(find.byType(FilterButton), findsOneWidget);
+    expect(find.byType(ViewIconToggle), findsOneWidget);
+    expect(find.byType(GpSearchBar), findsNothing);
+    expect(find.byType(TextField), findsNothing);
     // 한 주 목록은 오늘부터라 앞날 줄은 위로 밀려 있다 (화면 밖이어도 목록에 있으면 된다)
     expect(find.textContaining('카르라 전용 이펙트', skipOffstage: false), findsOneWidget);
-    await tester.enterText(find.descendant(of: find.byType(FindBar), matching: find.byType(TextField)), '포켓프라');
-    await tester.pump(const Duration(milliseconds: 300));
-    expect(find.textContaining('카르라 전용 이펙트', skipOffstage: false), findsNothing);
     expect(find.textContaining('포켓프라 Quick', skipOffstage: false), findsOneWidget);
   });
 
@@ -112,24 +106,21 @@ void main() {
     expect(me.spendKrw, 20500);
   });
 
-  testWidgets('검색창 줄: 홈 · 도감 · 캘린더 · 컬렉션 모두 [검색창][필터][보기 두 칸] — 검색창 폭이 같다', (tester) async {
-    final widths = <double>[];
+  // 2026-11-21 주인: 탭에서 검색창을 빼고 아이콘만 오른쪽에 (찾기는 위 줄 🔍 하나).
+  // 탭마다 세 칸까지 · 오른쪽 끝 자리가 같다 — 넷째 아이콘이 생기면 이 테스트가 막는다
+  testWidgets('아이콘 줄: 홈 · 검색 · 캘린더 · 컬렉션 모두 검색창 없이 오른쪽 끝에 세 칸까지', (tester) async {
+    final counts = <int>[];
+    final rights = <double>{};
     Future<void> measure(Widget screen) async {
       await _pump(tester, Scaffold(body: screen));
+      expect(find.byType(GpSearchBar), findsNothing);
       final row = find.byType(ToolRow).first;
-      expect(find.descendant(of: row, matching: find.byType(ToolIcon)), findsNWidgets(3));
-      widths.add(tester.getSize(find.descendant(of: row, matching: find.byType(GpSearchBar))).width);
+      final icons = find.descendant(of: row, matching: find.byType(ToolIcon));
+      counts.add(icons.evaluate().length);
+      rights.add(tester.getTopRight(icons.last).dx);
     }
 
-    await measure(
-      HomeScreen(
-        myChannels: const ['gundam'],
-        onMyChannelsChanged: (_) {},
-        onOpenSearch: () {},
-        onCamera: () {},
-        loaders: fakeLoaders,
-      ),
-    );
+    await measure(HomeScreen(myChannels: const ['gundam'], onMyChannelsChanged: (_) {}, loaders: fakeLoaders));
     await measure(CalendarScreen(myChannels: const ['gundam'], onMyChannelsChanged: (_) {}, loaders: fakeLoaders));
     await measure(
       CollectionScreen(
@@ -142,7 +133,9 @@ void main() {
     await measure(
       SearchScreen(myChannels: const ['gundam'], onMyChannelsChanged: (_) {}, onCamera: () {}, loaders: fakeLoaders),
     );
-    expect(widths.toSet(), hasLength(1));
+    // 홈 = 필터 · 캘린더 = 필터 · 전체 일정 · 내 일정 · 컬렉션 = 필터 · 휴지통 · 편집 · 검색 = 필터 · 격자 · 목록
+    expect(counts, [1, 3, 3, 3]);
+    expect(rights, hasLength(1));
   });
 
   test('setDetails 는 준 값만 바꾼다 (옛 앱의 보관 장소 · 메모를 지우지 않음)', () {

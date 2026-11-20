@@ -12,6 +12,7 @@ import 'package:hobby_atlas/detail_pane.dart';
 import 'package:hobby_atlas/marks.dart';
 import 'package:hobby_atlas/notifications/local_notifier.dart';
 import 'package:hobby_atlas/notifications/notify_store.dart';
+import 'package:hobby_atlas/screens/b_category_browse.dart' show TypeBrowse;
 import 'package:hobby_atlas/screens/b_search_screen.dart';
 import 'package:hobby_atlas/screens/d_kit_detail_screen.dart';
 import 'package:hobby_atlas/screens/s_app_shell.dart';
@@ -81,7 +82,7 @@ Future<void> _tapTab(WidgetTester tester, String label) async {
 void main() {
   fixedNow = DateTime(2026, 10, 25, 21);
 
-  testWidgets('뒤에서 새 데이터를 받아도 검색 탭 · 검색어는 그대로, 다른 탭은 다시 불러온다', (tester) async {
+  testWidgets('뒤에서 새 데이터를 받아도 검색 탭 · 고른 보기(종류)는 그대로, 다른 탭은 다시 불러온다', (tester) async {
     var kitLoads = 0;
     await _pump(
       tester,
@@ -92,20 +93,21 @@ void main() {
     );
     await _tapTab(tester, '검색');
     expect(find.byType(SearchScreen), findsOneWidget);
-    await tester.enterText(find.byType(TextField), '프리덤');
+    await tester.tap(find.byKey(const ValueKey('view-1')));
     await _settle(tester);
+    expect(find.byType(TypeBrowse), findsOneWidget);
     final before = kitLoads;
 
     Catalog.instance.debugBumpVersion(quiet: true); // 켤 때 뒤에서 받은 새 데이터
     await _settle(tester);
     expect(find.byType(SearchScreen), findsOneWidget, reason: '홈으로 튕기지 않는다');
-    expect(find.text('프리덤'), findsOneWidget, reason: '보고 있는 탭의 검색어는 그대로');
+    expect(find.byType(TypeBrowse), findsOneWidget, reason: '보고 있는 탭의 보기는 그대로');
     expect(kitLoads, greaterThan(before), reason: '보이지 않는 탭(홈 · 캘린더 · 컬렉션)은 새 데이터로');
 
     // 검색 탭을 떠났다 돌아오면 그때 새 데이터로 (옛 목록에 남지 않는다)
     await _tapTab(tester, '홈');
     await _tapTab(tester, '검색');
-    expect(find.text('프리덤'), findsNothing);
+    expect(find.byType(TypeBrowse), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -119,13 +121,13 @@ void main() {
       ),
     );
     await _tapTab(tester, '검색');
-    await tester.enterText(find.byType(TextField), '프리덤');
+    await tester.tap(find.byKey(const ValueKey('view-1')));
     await _settle(tester);
 
     Catalog.instance.debugBumpVersion(quiet: false);
     await _settle(tester);
     expect(find.byType(SearchScreen), findsOneWidget);
-    expect(find.text('프리덤'), findsNothing, reason: '보고 있는 탭도 새 데이터로');
+    expect(find.byType(TypeBrowse), findsNothing, reason: '보고 있는 탭도 새 데이터로');
     expect(tester.takeException(), isNull);
   });
 

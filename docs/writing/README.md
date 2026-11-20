@@ -6,7 +6,7 @@
 ## 문서
 | 문서 | 화면 |
 | --- | --- |
-| [home.md](home.md) | A 홈 · My Page · 위 줄 · 아래 탭 · 채널 바 |
+| [home.md](home.md) | A 홈 · 위 줄 · 아래 탭 · 채널 바 |
 | [search-browse.md](search-browse.md) | B 검색 · 종류 · 세대 · 필터 · 분류 상품 · O 전체 목록 |
 | [detail.md](detail.md) | D 상품 상세 · X 설명서 · V 공유 카드 · 넓은 화면 빈 칸 |
 | [camera-photo.md](camera-photo.md) | E 찍어서 찾기 · 바코드 · 사진으로 찾기 · 생김새로 찾기 · 찾을 부분 고르기 · T 내 사진 |
@@ -80,5 +80,5 @@
 | `collection.dart` | F 컬렉션 · I 내 정보 · Q · M · L · U 친구 · 계정 · 동기화 |
 | `notify.dart` | 알림 글 · 안드로이드 알림 채널 · N · K 알림 페이지 · 조건 시트 · 제보 · 넓은 화면 빈 칸 · H 캘린더 |
 | `bbx.dart` | 베이 부품 · 능력치 · 규칙 · T 조합 만들기 · 덱 · 도감(건담 · 세계관 · 태그) |
-| `widgets.dart` | 검색창 줄 · 시트 · 불러오기 · 오류 · 토스트 · ml · ocr · share 오류 |
+| `widgets.dart` | 검색창 · 아이콘 줄 · 시트 · 불러오기 · 오류 · 토스트 · ml · ocr · share 오류 |
 | `query.dart` | 설명으로 찾기의 뜻 이름 (색 · 생김새 · 작품) |

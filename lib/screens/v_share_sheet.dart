@@ -8,7 +8,7 @@
 // │ V-4  │ 워터마크 "HA · @아이디"              │ 어디서 만든 카드인지 (내 아이디)          │ P10           │
 // │ V-5  │ 아이콘 버튼 두 개: 공유 · 저장        │ 안드로이드 공유 창(share_plus) · 파일로 저장 │ P07 · P03   │
 // └──────────────────────────────────────────────────────────────────────────────────┘
-// 입구: 내 정보(I) 머리 공유 · My Page(A-21) 숫자 줄 공유 · 작품 도감(G-4) 머리 공유. 전환: 덮기(바텀 시트).
+// 입구: 서랍 › 공유 카드 · 내 정보(I) 맨 아래 공유 카드 · 작품 도감(G-4) 머리 공유. 전환: 덮기(바텀 시트).
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
@@ -114,7 +114,7 @@ class _ShareSheetState extends State<_ShareSheet> {
   }
 }
 
-/// V-2 내 컬렉션 카드 — 내 정보 · My Page 에서. [level] 을 모르면 도감에서 센다
+/// V-2 내 컬렉션 카드 — 서랍 · 내 정보에서. [level] 을 모르면 도감에서 센다
 Future<void> openCollectionShare(BuildContext context, {Loaders loaders = const Loaders(), int? level}) async {
   final marks = Marks.read(context);
   final me = marks.store;

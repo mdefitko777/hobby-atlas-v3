@@ -316,13 +316,7 @@ void main() {
           tester,
           Scaffold(
             key: ValueKey(lang),
-            body: HomeScreen(
-              myChannels: const ['gundam'],
-              onMyChannelsChanged: (_) {},
-              onOpenSearch: () {},
-              onCamera: () {},
-              loaders: loaders,
-            ),
+            body: HomeScreen(myChannels: const ['gundam'], onMyChannelsChanged: (_) {}, loaders: loaders),
           ),
         );
         // 배너 (fan-1 만 hero)
@@ -398,8 +392,6 @@ void main() {
             body: HomeScreen(
               myChannels: const ['gundam'],
               onMyChannelsChanged: (_) {},
-              onOpenSearch: () {},
-              onCamera: () {},
               loaders: Loaders(kits: fakeLoaders.kits, announcements: (_) async => official),
             ),
           ),
@@ -486,13 +478,7 @@ void main() {
             tester,
             Scaffold(
               key: ValueKey(lang),
-              body: HomeScreen(
-                myChannels: const ['gundam'],
-                onMyChannelsChanged: (_) {},
-                onOpenSearch: () {},
-                onCamera: () {},
-                loaders: loaders,
-              ),
+              body: HomeScreen(myChannels: const ['gundam'], onMyChannelsChanged: (_) {}, loaders: loaders),
             ),
             size: narrow,
           );

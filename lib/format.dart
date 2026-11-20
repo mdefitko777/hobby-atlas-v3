@@ -42,13 +42,6 @@ String shortDateTime(DateTime d) => '${d.month}.${_two(d.day)} ${_two(d.hour)}:$
 /// 원화: 41,000원
 String won(int v) => trf('{n}원', {'n': _comma(v)});
 
-/// 원화 짧게 (My Page 숫자 칸): 9,800원 · 18.4만 · 243만
-String wonShort(int v) {
-  if (v < 10000) return won(v);
-  final man = v / 10000;
-  return trf('{n}만', {'n': man < 100 ? man.toStringAsFixed(1).replaceAll('.0', '') : man.round()});
-}
-
 /// 지난 시간: 방금 · 3분 전 · 2시간 전 · 어제 · 4일 전 · 10.16 (알림 · 친구 소식 · 동기화 공통)
 String timeAgo(DateTime at, {required DateTime now}) {
   final d = now.difference(at);

@@ -157,7 +157,8 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
               ),
               Expanded(
                 child: switch (_tab) {
-                  CollectionJump.liked => _kits(d.liked, d.mine, liked: true),
+                  // 친구의 예약은 서버에 없어(기기 기록) 좋아요로
+                  CollectionJump.liked || CollectionJump.preorder => _kits(d.liked, d.mine, liked: true),
                   CollectionJump.owned => _kits(d.owned, d.mine, liked: false),
                   CollectionJump.guide => _guide(d.works, d.photosByWork),
                 },

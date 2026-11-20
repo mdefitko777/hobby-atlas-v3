@@ -18,6 +18,6 @@ int collectorXp({int owned = 0, int lit = 0, int verified = 0, int liked = 0}) =
   return (level: level, into: rest, need: need);
 }
 
-/// 수집 레벨 (My Page · 도감 · 내 정보 · 친구 서랍 공통)
+/// 수집 레벨 (위 줄 · 도감 · 내 정보 · 서랍 공통)
 int guideLevel(int lit, int verified, {int owned = 0, int liked = 0}) =>
     levelOf(collectorXp(owned: owned, lit: lit, verified: verified, liked: liked)).level;

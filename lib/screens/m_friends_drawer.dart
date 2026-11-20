@@ -1,27 +1,36 @@
-// 화면 M: 친구 서랍 — 왼쪽 위 아바타를 누르거나, 홈에서 왼쪽 가장자리를 밀면 나온다 (QQ 옆 서랍처럼)
-// 위: 내 프로필 요약(아바타를 한 번 더 누르면 I 내 정보) · 아래: 친구 (검색 · 새 친구 요청 · 목록)
+// 화면 M: 서랍 — 왼쪽 위 아바타를 누르거나, 홈에서 왼쪽 가장자리를 밀면 나온다 (QQ 옆 서랍처럼)
+// 위: 내 프로필 요약(배경 사진 위 아바타 · 이름 · Lv, 누르면 I 내 정보) · 아래: 좋아요 · 구매함 · 예약 · 친구 · 공유 카드 · 사용법 · 설정.
+// 친구(검색 · 친구 요청 · 목록 · ★ 특별 관심 소식)는 "친구" 줄이 여는 쌓기 화면 [FriendsPage].
 // v3: 친구 · 요청은 Gunpula 계정(v3 get_me), 친구 숫자는 get_friend_collection, 친구 사진 · 아바타는 get_friend_wall,
 //     알 수도 있는 친구는 gunpula_v3_suggest_friends(docs/supabase-v3-social.sql — 없으면 칸 숨김),
 //     공용 조각은 u_social.dart. 공유 공간 탭은 뺐다 (2026-11-20 주인) — 친구 하나뿐이라 탭 줄도 없다.
+// 2026-11-21 주인: 서랍 첫 화면을 메뉴 줄로 — 위 줄의 ⚙ · ? 와 탭의 공유 카드 · My Page 가 여기로 왔다.
+//     머리의 "친구" 제목 · @아이디 · ? 는 뺐다 (아이디는 내 정보에서 복사).
 //
-// ┌──────── 디자인 가이드 대응표: M 친구 서랍 ─────────────────────────────────────────┐
+// ┌──────── 디자인 가이드 대응표: M 서랍 ──────────────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
-// │ M-1  │ Drawer (아바타 · 홈 가장자리 밀기)    │ 친구 서랍 열기 · 닫기(밖 누르기 · X)     │ P03 · P07     │
-// │ M-2  │ 색 고리 아바타(사진) · 이름 · Lv      │ 내 프로필 요약 → 내 정보                │ P04           │
-// │ M-3  │ 각진 칩 (있을 때만)                  │ 친구 요청 n건 · 새 사진 n (지난번 연 뒤)  │ P01           │
-// │ M-4  │ GpSearchBar (카메라 없는 모드)        │ 친구 검색 (홈 · 검색과 같은 검색창)       │ P07 · P04     │
+// │ M-1  │ Drawer (아바타 · 홈 가장자리 밀기)    │ 서랍 열기 · 닫기(밖 누르기 · X)          │ P03 · P07     │
+// │ M-2  │ 배경 사진 위 색 고리 아바타 · 이름 · Lv · › │ 내 프로필 요약 → 내 정보 (배경 = 내 정보와 같은 사진, 없으면 옅은 그라데이션) │ P04 │
+// │ M-3  │ 메뉴 줄 (아이콘 + 이름, 숫자 없음)    │ 좋아요 · 구매함 · 예약 → 컬렉션 탭 그 목록 · 친구 · 공유 카드 · 사용법 · 설정 │ P06 · P07 │
+// │ M-3b │ 친구 줄 끝 빨간 숫자 · 파란 점         │ 받은 친구 요청 수 · 지난번에 본 뒤 새 사진 │ P01           │
+// │ M-4  │ GpSearchBar (카메라 없는 모드)        │ 친구 검색 (친구 화면)                    │ P07 · P04     │
 // │ M-5  │ SuggestionsPanel (U-7) · 요청 줄      │ 알 수도 있는 친구(함께 아는 친구 n명) · 친구 요청 │ P07 · P05 │
 // │ M-6  │ 접히는 그룹 (탭 줄 없음)              │ 친구                                   │ P06           │
-// │ M-7  │ 친구 줄 (아바타 · 상태 한 줄 · Lv)    │ 친구 → 친구 프로필(I 친구 보기) · 새 사진 점 │ P07 · P01    │
+// │ M-7  │ 친구 줄 (아바타 · 상태 한 줄 · Lv)    │ 친구 → 친구 프로필(I 친구 보기) · 새 사진 점 · ★ 특별 관심 │ P07 · P01 │
 // │ M-8  │ 안내 + 로그인 버튼                   │ 로그인 전                              │ P09           │
-// │ M-9  │ 머리 줄 ? (HelpButton, ✕ 앞)        │ 서랍 아이콘 뜻 한 줄씩                   │ P10           │
+// │ M-9  │ ★ 묶음 (SpecialFeed)                │ 특별 관심 친구가 최근 담은 것 (옛 My Page ★) │ P01         │
+// │ M-10 │ 머리 오른쪽 + · ✕                   │ 아이디로 친구 추가 · 닫기                 │ P07 · P03     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
-// 전환: 서랍 → 내 정보 · 친구 프로필(쌓기, 서랍은 닫힘). 요청 · 추가 → 덮기(바텀 시트).
+// 전환: 서랍 → 내 정보 · 친구 화면 · 공유 카드 · 사용법 · 설정(쌓기, 서랍은 닫힘) · 좋아요 · 구매함 · 예약(컬렉션 탭, 옆으로).
+//       요청 · 추가 → 덮기(바텀 시트).
 import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../clock.dart';
+import '../data/catalog.dart';
+import '../data/social_local.dart' show ProfileImageKind;
 import '../data/user_store.dart';
+import '../detail_pane.dart';
 import '../l10n/l10n.dart';
 import '../logic/friends.dart';
 import '../logic/level_math.dart';
@@ -29,21 +38,35 @@ import '../models.dart';
 import '../sync/account.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'd_kit_detail_screen.dart';
+import 'f_collection_screen.dart' show CollectionJump;
+import 'i_profile_screen.dart' show openFriend;
+import 'k_settings_screen.dart' show openSettings;
 import 'p_sign_in_screen.dart';
 import 'q_friend_sheets.dart';
 import 'u_social.dart';
+import 'v_share_sheet.dart' show openCollectionShare;
 import '../level.dart';
+
+/// 친구별 지난번에 친구 화면을 본 뒤 새 사진 수
+int _newPhotos(Account a, String handle, String seenBefore) => newPhotoCount(a.photos.walls[handle], seenBefore);
 
 class FriendsDrawer extends StatefulWidget {
   const FriendsDrawer({
     super.key,
     required this.onOpenProfile,
-    required this.onOpenFriend,
+    this.onJump,
+    this.onHelp,
     this.loaders = const Loaders(),
   });
 
   final VoidCallback onOpenProfile;
-  final ValueChanged<Member> onOpenFriend;
+
+  /// 좋아요 · 구매함 · 예약 → 컬렉션 탭의 그 목록 (앱 셸)
+  final ValueChanged<CollectionJump>? onJump;
+
+  /// 사용법 (앱 셸이 모든 화면의 도움말을 모은다)
+  final VoidCallback? onHelp;
   final Loaders loaders;
 
   @override
@@ -51,12 +74,230 @@ class FriendsDrawer extends StatefulWidget {
 }
 
 class _FriendsDrawerState extends State<FriendsDrawer> {
-  late Future<(Profile, int)> _future = _load();
+  late final Future<(Profile, int)> _future = _load();
+
+  @override
+  void initState() {
+    super.initState();
+    final a = AccountScope.read(context);
+    if (!a.signedIn) return;
+    // 친구 줄의 요청 수 · 새 사진 점. 사진 벽은 메모리에만 있어 여기서 받지 않으면 점이 뜰 수 없다
+    // (친구 화면은 열 때 본 시각을 지금으로 바꾸므로, 거기서 받은 벽만으로는 늘 0)
+    a.friends
+        .refresh()
+        .then((_) => a.photos.loadAllWalls([for (final f in a.friends.friends) f.handle]))
+        .catchError((Object _) {});
+  }
+
+  Future<(Profile, int)> _load() async {
+    // STATE: 내 정보 · 도감 → 내 요약 (레벨)
+    final r = await Future.wait([widget.loaders.profile(), widget.loaders.guideWorks()]);
+    final works = r[1] as List<GuideWork>;
+    return (r[0] as Profile, litCount(works));
+  }
+
+  /// 서랍을 닫고 열기
+  void _close(VoidCallback then) {
+    Navigator.pop(context);
+    then();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final account = AccountScope.of(context); // 친구 · 요청이 바뀌면 다시 그림
+    return Drawer(
+      // M-1
+      width: width < 420 ? width * 0.88 : 380,
+      backgroundColor: Gp.bg,
+      shape: const RoundedRectangleBorder(),
+      // 메뉴 줄은 기다리지 않는다 — 카탈로그를 처음 받는 중 · 오프라인 · 받기 실패에도 설정 · 사용법이 열려야 해서.
+      // 내 정보 · 도감(레벨)을 기다리는 것은 머리의 이름 · Lv 뿐
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          FutureBuilder<(Profile, int)>(
+            future: _future,
+            builder: (context, snap) => _header(snap.hasError ? null : snap.data, account),
+          ),
+          const SizedBox(height: 8),
+          ..._menu(account),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
+  /// M-2 내 프로필 요약 — 바탕은 내 정보와 같은 배경 사진 (없으면 옅은 그라데이션).
+  /// [data] 가 없으면(받는 중 · 실패) Lv 자리는 비워 두고 이름은 계정 이름만
+  Widget _header((Profile, int)? data, Account account) {
+    final p = data?.$1;
+    final name = account.signedIn ? account.displayName : p?.name ?? '';
+    const soft = DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFE9F3FB), Color(0xFFE8F8F3), Gp.panel],
+        ),
+      ),
+    );
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: ListenableBuilder(
+            // 내 정보에서 배경을 바꾸면 바로 따라간다
+            listenable: account.store,
+            builder: (context, _) => ProfileCover(
+              file: account.store.social.image(ProfileImageKind.cover)?.file ?? '',
+              height: double.infinity,
+              empty: soft,
+            ),
+          ),
+        ),
+        Positioned.fill(
+          // 사진 위에서도 이름이 읽히게 아래쪽만 옅은 흰 막
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Gp.glass.withValues(alpha: 0), Gp.glass],
+              ),
+            ),
+          ),
+        ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(16, MediaQuery.paddingOf(context).top + 6, 6, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                // M-10 제목 없이 오른쪽에 + · ✕
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  IconButton(
+                    tooltip: tr('아이디로 친구 추가'),
+                    onPressed: () => showAddFriend(context),
+                    icon: const Icon(Icons.person_add_alt_1_outlined, color: Gp.ink),
+                  ),
+                  IconButton(
+                    tooltip: tr('닫기'),
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close, color: Gp.ink),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              InkWell(
+                key: const ValueKey('drawer-profile'),
+                borderRadius: BorderRadius.circular(Gp.radius),
+                onTap: () => _close(widget.onOpenProfile),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      MyAvatar(fallback: p?.avatarText ?? '나'),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w700),
+                            ),
+                            const SizedBox(height: 5),
+                            if (data == null)
+                              const SizedBox(height: 22) // Lv 칩 높이만큼 비워 둬 받은 뒤 줄이 움직이지 않게
+                            else
+                              LevelChip(
+                                level: guideLevel(
+                                  data.$2,
+                                  0,
+                                  owned: UserStore.instance.ownedCount,
+                                  liked: UserStore.instance.wantedCount,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right, color: Gp.muted),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// M-3 메뉴 줄 — 아이콘 + 이름만 (숫자 · 괄호 설명 없음). 친구 줄만 받은 요청 수 · 새 사진 점 (M-3b)
+  List<Widget> _menu(Account account) {
+    final incoming = account.incomingCount;
+    final seen = account.store.social.friendsSeenAt;
+    final freshPhotos = account.signedIn && account.friends.friends.any((f) => _newPhotos(account, f.handle, seen) > 0);
+    Widget row(String key, Widget icon, String label, VoidCallback onTap, {Widget? trailing}) => ListTile(
+      key: ValueKey('drawer-$key'),
+      leading: SizedBox(
+        width: Gp.iL,
+        child: Center(child: icon),
+      ),
+      title: Text(label, style: const TextStyle(fontSize: Gp.t16)),
+      trailing: trailing,
+      onTap: () => _close(onTap),
+    );
+    Icon plain(IconData i) => Icon(i, size: Gp.iL, color: Gp.ink);
+    void jump(CollectionJump j) => widget.onJump?.call(j);
+    // 서랍은 닫히며 사라진다 — 여는 화면 · 시트(공유 카드는 레벨을 센 뒤에 열린다)는 서랍 밖 앱 셸의 Scaffold 기준으로
+    final host = Scaffold.maybeOf(context)?.context ?? context;
+    return [
+      row('liked', const LikedIcon(filled: false, size: Gp.iL), tr('좋아요'), () => jump(CollectionJump.liked)),
+      row('owned', const OwnedIcon(filled: false, size: Gp.iL), tr('구매함'), () => jump(CollectionJump.owned)),
+      row('preorder', plain(preorderIcon), tr('예약'), () => jump(CollectionJump.preorder)),
+      row(
+        'friends',
+        plain(Icons.people_outline),
+        tr('친구'),
+        () => openFriends(host, loaders: widget.loaders),
+        trailing: incoming > 0
+            ? Badge(backgroundColor: Gp.danger, label: Text('$incoming')) // 받은 요청 = 빨간 숫자
+            : freshPhotos
+            // 새 사진 = 파란 점 (친구 줄과 같은 점) — 옛 서랍 머리 「새 사진 n」 대신
+            ? const Badge(key: ValueKey('drawer-friends-new'), backgroundColor: Gp.accent, smallSize: 9)
+            : null,
+      ),
+      row('share', plain(Icons.ios_share), tr('공유 카드'), () => openCollectionShare(host, loaders: widget.loaders)),
+      row('help', plain(Icons.help_outline), tr('사용법'), () => widget.onHelp?.call()),
+      row('settings', plain(Icons.settings_outlined), tr('설정'), () => openSettings(host)),
+    ];
+  }
+}
+
+/// 친구 화면 열기 (서랍 · 내 정보의 친구 줄)
+void openFriends(BuildContext context, {Loaders loaders = const Loaders()}) =>
+    openPage(context, FriendsPage(loaders: loaders), id: 'friends');
+
+/// 친구 화면 — 친구 검색 · 알 수도 있는 사람 · 친구 요청 · 친구 목록 · ★ 특별 관심 소식 (옛 친구 서랍 아래쪽)
+class FriendsPage extends StatefulWidget {
+  const FriendsPage({super.key, this.loaders = const Loaders()});
+  final Loaders loaders;
+
+  @override
+  State<FriendsPage> createState() => _FriendsPageState();
+}
+
+class _FriendsPageState extends State<FriendsPage> {
+  late final Future<Profile> _future = widget.loaders.profile();
 
   String _query = '';
   bool _collapsed = false;
 
-  /// 지난번 서랍을 연 시각 — 그 뒤에 올라온 친구 사진 = 새 사진 (M-3)
+  /// 지난번 친구 화면을 연 시각 — 그 뒤에 올라온 친구 사진 = 새 사진 (M-7 점)
   late final String _seenBefore;
 
   @override
@@ -81,48 +322,33 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
     a.friends.loadSuggestions().ignore(); // M-5
   }
 
-  /// 친구별 새 사진 수
-  int _newPhotos(Account a, String handle) => newPhotoCount(a.photos.walls[handle], _seenBefore);
-
-  Future<(Profile, int)> _load() async {
-    // STATE: 내 정보 · 도감 → 내 요약 (레벨)
-    final r = await Future.wait([widget.loaders.profile(), widget.loaders.guideWorks()]);
-    final works = r[1] as List<GuideWork>;
-    return (r[0] as Profile, litCount(works));
-  }
-
-  /// 서랍을 닫고 열기
-  void _close(VoidCallback then) {
-    Navigator.pop(context);
-    then();
-  }
-
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width;
     final account = AccountScope.of(context); // 친구 · 요청이 바뀌면 다시 그림
-    return Drawer(
-      // M-1
-      width: width < 420 ? width * 0.88 : 380,
-      backgroundColor: Gp.bg,
-      shape: const RoundedRectangleBorder(),
-      child: FutureBuilder<(Profile, int)>(
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(tr('친구')),
+        actions: [
+          IconButton(
+            tooltip: tr('아이디로 친구 추가'),
+            onPressed: () => showAddFriend(context),
+            icon: const Icon(Icons.person_add_alt_1_outlined, color: Gp.ink),
+          ),
+          const SizedBox(width: 6),
+        ],
+      ),
+      body: FutureBuilder<Profile>(
         future: _future,
         builder: (context, snap) {
           if (snap.connectionState != ConnectionState.done) return const LoadingView();
-          if (snap.hasError) {
-            return ErrorView(message: '${snap.error}', onRetry: () => setState(() => _future = _load()));
-          }
-          final (p, lit) = snap.data!;
           final signedIn = account.signedIn;
           // 로그인하면 계정 친구, 아니면 가져온 프로필의 친구 (실제 앱에서는 비어 있음)
           final friends = signedIn
               ? [for (final f in account.friends.friends) friendMemberOf(f, account.friends.collections[f.handle])]
-              : p.friends;
+              : snap.data?.friends ?? const <Member>[];
           return ListView(
-            padding: EdgeInsets.zero,
+            padding: EdgeInsets.only(bottom: 24 + MediaQuery.paddingOf(context).bottom),
             children: [
-              _header(p, lit, account, friends),
               if (!signedIn)
                 _signInHint()
               else ...[
@@ -131,136 +357,22 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
                 _newFriends(account),
               ],
               _lists(friends, signedIn, account),
-              const SizedBox(height: 24),
+              if (signedIn && UserStore.instance.specialFriends.isNotEmpty)
+                const SectionPanel(
+                  // M-9
+                  padding: EdgeInsets.fromLTRB(16, 10, 16, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.star_rounded, size: Gp.iM, color: Gp.star),
+                      SizedBox(height: 6),
+                      SpecialFeed(),
+                    ],
+                  ),
+                ),
             ],
           );
         },
-      ),
-    );
-  }
-
-  /// M-2 내 프로필 요약 (QQ 서랍 머리처럼, 다만 밝은 바탕)
-  Widget _header(Profile p, int lit, Account account, List<Member> friends) {
-    final signedIn = account.signedIn;
-    final name = signedIn ? account.displayName : p.name;
-    final handle = signedIn ? account.handle : p.handle;
-    final incoming = account.incomingCount;
-    // M-3 새 사진: 누르면 가장 많이 올린 친구로
-    final fresh = signedIn
-        ? ([
-            for (final f in friends)
-              if (_newPhotos(account, f.handle) > 0) (f, _newPhotos(account, f.handle)),
-          ]..sort((a, b) => b.$2.compareTo(a.$2)))
-        : const <(Member, int)>[];
-    final newPhotos = fresh.fold(0, (s, e) => s + e.$2);
-    Widget chip(Key key, IconData icon, String label, VoidCallback onTap) => ActionChip(
-      key: key,
-      avatar: Icon(icon, size: Gp.iS, color: Gp.accent),
-      label: Text(label),
-      backgroundColor: Gp.panel,
-      side: const BorderSide(color: Gp.line),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(Gp.rSmall))),
-      onPressed: onTap,
-    );
-    return Container(
-      padding: EdgeInsets.fromLTRB(16, MediaQuery.paddingOf(context).top + 6, 6, 16),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFE9F3FB), Color(0xFFE8F8F3), Gp.panel],
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                tr('친구'),
-                style: const TextStyle(fontSize: Gp.t19, fontWeight: FontWeight.w700),
-              ),
-              const Spacer(),
-              IconButton(
-                tooltip: tr('아이디로 친구 추가'),
-                onPressed: () => showAddFriend(context),
-                icon: const Icon(Icons.person_add_alt_1_outlined, color: Gp.ink),
-              ),
-              HelpButton(title: tr('친구'), items: friendsHelp()), // M-9
-              IconButton(
-                tooltip: tr('닫기'),
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.close, color: Gp.ink),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          InkWell(
-            borderRadius: BorderRadius.circular(Gp.radius),
-            onTap: () => _close(widget.onOpenProfile),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                children: [
-                  MyAvatar(fallback: p.avatarText),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: Gp.t16, fontWeight: FontWeight.w700),
-                        ),
-                        Text(
-                          handle.isNotEmpty ? '@$handle' : tr(signedIn ? '아이디 없음' : '로그인 전'),
-                          style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
-                        ),
-                        const SizedBox(height: 5),
-                        LevelChip(
-                          level: guideLevel(
-                            lit,
-                            0,
-                            owned: UserStore.instance.ownedCount,
-                            liked: UserStore.instance.wantedCount,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Icon(Icons.chevron_right, color: Gp.faint),
-                ],
-              ),
-            ),
-          ),
-          if (incoming > 0 || newPhotos > 0) ...[
-            const SizedBox(height: 10),
-            Center(
-              child: Wrap(
-                // M-3
-                spacing: 8,
-                children: [
-                  if (incoming > 0)
-                    chip(
-                      const ValueKey('chip-requests'),
-                      Icons.notifications_none,
-                      trf('친구 요청 {n}건', {'n': incoming}),
-                      () => showFriendRequests(context),
-                    ),
-                  if (newPhotos > 0)
-                    chip(
-                      const ValueKey('chip-new-photos'),
-                      Icons.photo_library_outlined,
-                      trf('새 사진 {n}', {'n': newPhotos}),
-                      () => _close(() => widget.onOpenFriend(fresh.first.$1)),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ],
       ),
     );
   }
@@ -286,7 +398,7 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       child: GpSearchBar(
-        hint: tr('친구 검색'), // 홈 · 검색과 같은 검색창 (카메라 없음)
+        hint: tr('친구 검색'), // 검색 덮개와 같은 검색창 (카메라 없음)
         onChanged: (v) => setState(() => _query = v.trim()), // STATE: 검색어 → 아래 목록 거르기
       ),
     );
@@ -301,6 +413,7 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
       child: Column(
         children: [
           ListTile(
+            key: const ValueKey('friend-requests'),
             leading: const Icon(Icons.person_add_alt_outlined, color: Gp.ink),
             title: Text(
               waiting == 0
@@ -313,7 +426,7 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (f.incoming.isNotEmpty) Badge(backgroundColor: Gp.accent, label: Text('${f.incoming.length}')),
+                if (f.incoming.isNotEmpty) Badge(backgroundColor: Gp.danger, label: Text('${f.incoming.length}')),
                 const Icon(Icons.chevron_right, color: Gp.faint),
               ],
             ),
@@ -334,7 +447,7 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
       leading: Badge(
         // 새 사진 점
         key: ValueKey('friend-new-${m.handle}'),
-        isLabelVisible: _newPhotos(account, m.handle) > 0,
+        isLabelVisible: _newPhotos(account, m.handle, _seenBefore) > 0,
         backgroundColor: Gp.accent,
         smallSize: 9,
         child: FriendAvatar(handle: m.handle, name: m.name),
@@ -359,7 +472,7 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
               style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
             )
           : FriendStatusLine(
-              // 최근 담은 것 · 올린 사진 (My Page ★ 와 같은 셈)
+              // 최근 담은 것 · 올린 사진 (★ 소식과 같은 셈)
               event: signedIn
                   ? latestFriendEvent(account.friends.collections[m.handle], account.photos.walls[m.handle])
                   : null,
@@ -371,7 +484,7 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
                     })
                   : '@${m.handle}',
             ),
-      // ★ 특별 관심 — My Page ★ 에 이 친구 소식이 뜬다 (기기에만)
+      // ★ 특별 관심 — 이 화면 아래 ★ 묶음에 이 친구 소식이 뜬다 (기기에만)
       trailing: m.handle.isEmpty
           ? null
           : IconButton(
@@ -386,7 +499,7 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
                   ? const Icon(Icons.star_rounded, color: Gp.star)
                   : const Icon(Icons.star_border_rounded, color: Gp.faint),
             ),
-      onTap: () => _close(() => widget.onOpenFriend(m)),
+      onTap: () => openFriend(context, m, loaders: widget.loaders),
     );
     // 특별 관심이 위로
     shown.sort(
@@ -436,11 +549,98 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
   }
 }
 
-/// M-9 ? 도움말
+/// M-9 특별 관심 — 친구 화면에서 ★ 한 친구들이 최근 담은 것 (옛 홈 My Page ★)
+class SpecialFeed extends StatefulWidget {
+  const SpecialFeed({super.key});
+
+  @override
+  State<SpecialFeed> createState() => _SpecialFeedState();
+}
+
+class _SpecialFeedState extends State<SpecialFeed> {
+  bool _asked = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final account = AccountScope.of(context);
+    final special = UserStore.instance.specialFriends;
+    const empty = Padding(
+      padding: EdgeInsets.symmetric(vertical: 10),
+      child: Icon(Icons.star_border_rounded, size: Gp.iL, color: Gp.line),
+    );
+    if (!account.signedIn || special.isEmpty) return empty;
+    final friends = account.friends;
+    if (!_asked) {
+      _asked = true;
+      for (final h in special) {
+        friends.collection(h).then((_) {}, onError: (Object _) {});
+      }
+    }
+    final cat = Catalog.instance;
+    final events = <(String name, String status, Kit kit, DateTime at)>[];
+    for (final h in special) {
+      final c = friends.collections[h];
+      if (c == null) continue;
+      for (final e in c.items.entries) {
+        final kit = cat.byId[e.key];
+        final at = DateTime.tryParse('${e.value['updated_at'] ?? ''}');
+        final st = '${e.value['status'] ?? ''}';
+        if (kit == null || at == null || (st != 'owned' && st != 'wanted')) continue;
+        events.add((c.profile.name, st, kit, at.toLocal()));
+      }
+    }
+    events.sort((a, b) => b.$4.compareTo(a.$4));
+    if (events.isEmpty) return empty;
+    return Column(
+      children: [
+        for (final (name, st, kit, at) in events.take(4))
+          InkWell(
+            onTap: () => openKitDetail(context, kit),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 5),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 13,
+                    backgroundColor: Gp.soft,
+                    child: Text(
+                      name.isEmpty ? '?' : name.substring(0, 1),
+                      style: const TextStyle(fontSize: Gp.t12, color: Gp.ink),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    name,
+                    style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(width: 6),
+                  st == 'owned' ? const OwnedIcon(size: Gp.iS) : const LikedIcon(),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      kit.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: Gp.t14),
+                    ),
+                  ),
+                  Text(
+                    timeAgo(at, now: appNow()),
+                    style: const TextStyle(fontSize: Gp.t11, color: Gp.faint),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// M 사용법의 "친구" 묶음 (서랍 › 사용법)
 List<HelpItem> friendsHelp() => [
   HelpItem(Icons.person_add_alt_1_outlined, tr('아이디로 친구 추가')),
-  HelpItem(Icons.notifications_none, tr('받은 친구 요청')),
-  HelpItem(Icons.photo_library_outlined, tr('지난번에 본 뒤 새 사진')),
-  HelpItem(Icons.star_rounded, tr('특별 관심 (My Page ★에 소식)'), color: Gp.star),
-  HelpItem(Icons.close, tr('닫기')),
+  HelpItem(Icons.person_add_alt_outlined, tr('받은 친구 요청')),
+  HelpItem.dot(Gp.accent, tr('지난번에 본 뒤 새 사진')),
+  HelpItem(Icons.star_rounded, tr('특별 관심 (친구 화면 아래 ★에 소식)'), color: Gp.star),
 ];

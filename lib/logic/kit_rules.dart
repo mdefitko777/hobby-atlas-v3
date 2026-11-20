@@ -1,7 +1,5 @@
 // 상품 규칙 — 글자 찾기 · 바코드 · 작품 묶음 · 워터마크 글자 (순수 Dart)
-import '../clock.dart';
 import '../format.dart';
-import '../l10n/l10n.dart';
 import '../models.dart';
 import 'category_browse.dart' show noWorkChannels;
 
@@ -117,21 +115,4 @@ List<Kit> newThisWeek(List<Kit> kits, {int limit = 8}) {
   if (top == null) return seen.take(limit).toList();
   final since = top.subtract(const Duration(days: 6)).toIso8601String().substring(0, 10);
   return seen.where((k) => k.firstSeen.compareTo(since) >= 0).take(limit).toList();
-}
-
-/// 상품의 다가오는 날짜 (PB 예약 마감 > 발매일) — 없으면 null. My Page · 캘린더 공통
-({String sortKey, String label, bool urgent})? upcomingOf(Kit k, {bool wanted = true}) {
-  final now = appNow();
-  final today = dayKey(now);
-  if (wanted && k.pbCloses.length >= 10 && k.pbCloses.compareTo(today) >= 0) {
-    final d = DateTime.parse(k.pbCloses).difference(DateTime(now.year, now.month, now.day)).inDays;
-    return (sortKey: k.pbCloses, label: d == 0 ? tr('PB 오늘 마감') : 'PB D-$d', urgent: true);
-  }
-  if (k.date.length == 10 && k.date.compareTo(today) >= 0) {
-    return (sortKey: k.date, label: dateDot(k.date.substring(5)), urgent: false);
-  }
-  if (k.date.length == 7 && k.date.compareTo(today.substring(0, 7)) >= 0) {
-    return (sortKey: '${k.date}-99', label: trf('{m}월', {'m': int.parse(k.date.substring(5))}), urgent: false);
-  }
-  return null;
 }

@@ -43,7 +43,7 @@ class _ChannelGlyphPainter extends CustomPainter {
   bool shouldRepaint(_ChannelGlyphPainter old) => old.color != color;
 }
 
-/// 좋아요 표시 (♡, 파랑) — 글자 대신. 상세 · 필터 · My Page · 친구 소식 공통
+/// 좋아요 표시 (♡, 파랑) — 글자 대신. 상세 · 필터 · 서랍 · 내 정보 · 친구 소식 공통
 class LikedIcon extends StatelessWidget {
   const LikedIcon({super.key, this.filled = true, this.size = Gp.iS, this.color = Gp.accent});
   final bool filled;

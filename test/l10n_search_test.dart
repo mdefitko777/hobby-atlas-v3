@@ -40,7 +40,7 @@ void main() {
   });
 
   test('홈 · 검색 도움말과 이번 달 줄 제목이 언어를 따라간다', () {
-    expect(homeHelp.map((i) => i.text), contains('全部动态'));
+    expect(homeHelp.map((i) => i.text), contains('网格 · 列表（查看全部里）'));
     expect(searchHelp().map((i) => i.text), contains('搜索结果按机体分组'));
     expect(currentMonthTitle, endsWith('月发售'));
     L10n.debugSet(AppLang.ko);

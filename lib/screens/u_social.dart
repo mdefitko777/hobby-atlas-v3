@@ -126,12 +126,16 @@ class FriendAvatar extends StatelessWidget {
   }
 }
 
-/// U-3 배경 사진 — 내 것 [file](기기) 또는 친구 것 [path](Storage), 둘 다 없으면 회백색 띠
+/// U-3 배경 사진 — 내 것 [file](기기) 또는 친구 것 [path](Storage), 둘 다 없으면 [empty](없으면 회백색 띠).
+/// 내 정보 머리 · 서랍 머리가 같은 사진을 쓴다 (2026-11-21 주인: 서랍 머리 바탕도 배경 사진으로)
 class ProfileCover extends StatefulWidget {
-  const ProfileCover({super.key, this.file = '', this.path = '', this.height = 70});
+  const ProfileCover({super.key, this.file = '', this.path = '', this.height = 70, this.empty});
   final String file;
   final String path;
+
+  /// double.infinity = 놓인 칸을 가득 (서랍 머리 · 내 정보 머리)
   final double height;
+  final Widget? empty;
 
   @override
   State<ProfileCover> createState() => _ProfileCoverState();
@@ -174,9 +178,9 @@ class _ProfileCoverState extends State<ProfileCover> {
           image: img,
           fit: BoxFit.cover,
           gaplessPlayback: true,
-          errorBuilder: (_, _, _) => const ColoredBox(color: Gp.soft),
+          errorBuilder: (_, _, _) => widget.empty ?? const ColoredBox(color: Gp.soft),
         ),
-        _ => const ColoredBox(color: Gp.soft),
+        _ => widget.empty ?? const ColoredBox(color: Gp.soft),
       },
     ),
   );

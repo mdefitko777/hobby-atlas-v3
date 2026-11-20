@@ -1,4 +1,4 @@
-// 계정 화면 — 로그인 · 설정 · 친구 서랍 · 친구 요청(알림) · 아이디로 추가 · 내 정보.
+// 계정 화면 — 로그인 · 설정 · 서랍 · 친구 화면 · 친구 요청(알림) · 아이디로 추가 · 내 정보.
 // 가짜 서버 + 가짜 로그인만 쓴다 (진짜 Supabase · 진짜 계정 없음).
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -15,6 +15,7 @@ import 'package:hobby_atlas/screens/p_sign_in_screen.dart';
 import 'package:hobby_atlas/screens/u_social.dart';
 import 'package:hobby_atlas/sync/account.dart';
 import 'package:hobby_atlas/theme.dart';
+import 'package:hobby_atlas/widgets.dart' show HelpButton;
 
 import 'support/fake_backend.dart';
 
@@ -121,11 +122,11 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('친구 서랍: 계정 친구 · 받은 요청 수 · 친구 숫자', (tester) async {
+  testWidgets('서랍: 이름 · 친구 줄 받은 요청 수 → 친구 화면: 계정 친구 · 친구 숫자 · 수락', (tester) async {
     await show(
       tester,
       Scaffold(
-        drawer: FriendsDrawer(loaders: _loaders, onOpenProfile: () {}, onOpenFriend: (_) {}),
+        drawer: FriendsDrawer(loaders: _loaders, onOpenProfile: () {}),
         body: Builder(
           builder: (c) => TextButton(onPressed: () => Scaffold.of(c).openDrawer(), child: const Text('열기')),
         ),
@@ -134,8 +135,12 @@ void main() {
     await tester.tap(find.text('열기'));
     await settle(tester);
     expect(find.text('빵빵한빵디'), findsOneWidget);
-    expect(find.text('@bbang'), findsOneWidget);
-    expect(find.text('친구 요청 1건'), findsOneWidget);
+    expect(find.text('@bbang'), findsNothing); // 머리에 아이디는 두지 않는다 (내 정보에서 복사)
+    final friendsRow = find.byKey(const ValueKey('drawer-friends'));
+    expect(find.descendant(of: friendsRow, matching: find.text('1')), findsOneWidget); // 받은 요청 1 = 빨간 숫자
+    await tester.tap(friendsRow);
+    await settle(tester);
+    expect(find.byType(FriendsPage), findsOneWidget);
     expect(find.text('곰돌'), findsOneWidget);
     // 상태 한 줄 = 가장 최근 일 (구매함 b, 2/2) — get_friend_collection
     final status = tester.widget<FriendStatusLine>(find.byType(FriendStatusLine));
@@ -143,7 +148,7 @@ void main() {
     expect(status.fallback, '@gomdol · 좋아요 1 · 구매함 1');
     expect(server.count('gunpula_v3_get_friend_collection'), 1);
     // 받은 요청 시트 → 수락
-    await tester.tap(find.text('친구 요청 1건'));
+    await tester.tap(find.byKey(const ValueKey('friend-requests')));
     await settle(tester);
     expect(find.text('친구B'), findsOneWidget);
     await tester.tap(find.widgetWithText(FilledButton, '수락'));
@@ -182,6 +187,32 @@ void main() {
     await settle(tester);
     expect(server.outgoing, contains('new_one'));
     expect(find.text('요청 취소'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('내 정보: 배경 사진을 당기면 늘어났다 놓으면 돌아온다 · 카드 · 목록 줄 · 맨 아래 공유 카드 | 프로필 편집', (tester) async {
+    await loadMe(tester);
+    await show(tester, ProfileScreen(loaders: _loaders, onJump: (_) {}));
+    final cover = find.byType(FlexibleSpaceBar);
+    final h = tester.getSize(cover).height;
+    final g = await tester.startGesture(tester.getCenter(find.byKey(const ValueKey('profile-liked'))));
+    for (var i = 0; i < 8; i++) {
+      // 손가락을 조금씩 끌어내린다 (안드로이드도 끝에서 늘어난다 — BouncingScrollPhysics)
+      await g.moveBy(const Offset(0, 20));
+      await tester.pump();
+    }
+    expect(tester.getSize(cover).height, greaterThan(h + 40)); // 당긴 만큼 사진이 늘어난다
+    await g.up();
+    await settle(tester);
+    expect(tester.getSize(cover).height, h); // 놓으면 제자리
+    expect(find.text('@bbang'), findsOneWidget); // 카드 (복사 단추와 함께)
+    expect(find.byTooltip('아이디 복사'), findsOneWidget);
+    for (final k in ['liked', 'owned', 'preorder', 'spend', 'photos', 'friends']) {
+      expect(find.byKey(ValueKey('profile-$k')), findsOneWidget, reason: k);
+    }
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('profile-edit')), 200);
+    expect(find.byKey(const ValueKey('profile-share')), findsOneWidget);
+    expect(find.byType(HelpButton), findsNothing); // ? 는 서랍 › 사용법
     expect(tester.takeException(), isNull);
   });
 

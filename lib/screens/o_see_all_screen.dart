@@ -47,7 +47,7 @@ extension on KitSort {
   };
 }
 
-/// 목록의 필터 · 격자/목록 — 위 검색창 줄의 아이콘(ListToolIcons)이 바꾼다 (홈 전체 목록 · 검색 결과)
+/// 목록의 필터 · 격자/목록 — 위 도구 줄의 아이콘(ListToolIcons)이 바꾼다 (홈 전체 목록 · 검색 결과)
 class ListTools extends ChangeNotifier {
   KitFilter filter = KitFilter();
   bool grid = true;
@@ -63,14 +63,12 @@ class ListTools extends ChangeNotifier {
   }
 }
 
-/// 검색창 줄 오른쪽 세 칸: 필터 · 격자 · 목록. [pool] = 필터 시트가 개수를 세는 상품 (null 이면 필터 없음 = 옅게)
+/// 도구 줄 오른쪽 세 칸: 필터 · 격자 · 목록. [pool] = 필터 시트가 개수를 세는 상품 (null 이면 필터 없음 = 옅게).
+/// 좋아요 · 구매함 · 발매 예정 · 나라 아이콘 줄은 필터 시트 맨 위에 (2026-11-21 검색창 아래 줄을 시트로 되돌림)
 class ListToolIcons extends StatelessWidget {
-  const ListToolIcons({super.key, required this.tools, required this.pool, this.togglesOutside = false});
+  const ListToolIcons({super.key, required this.tools, required this.pool});
   final ListTools tools;
   final List<Kit>? pool;
-
-  /// 좋아요 · 구매함 · 발매 예정 · 나라 아이콘 줄이 검색창 아래에 따로 있다 (검색 탭) — 시트에서 빼고 숫자에도 안 센다
-  final bool togglesOutside;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -79,16 +77,11 @@ class ListToolIcons extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         FilterButton(
-          count: togglesOutside ? tools.filter.sheetCount : tools.filter.count,
+          count: tools.filter.count,
           onTap: pool == null
               ? null
               : () async {
-                  final picked = await pickKitFilter(
-                    context,
-                    pool: pool!,
-                    current: tools.filter,
-                    toggles: !togglesOutside,
-                  );
+                  final picked = await pickKitFilter(context, pool: pool!, current: tools.filter);
                   if (picked != null) tools.setFilter(picked); // STATE: 필터 → 목록
                 },
         ),

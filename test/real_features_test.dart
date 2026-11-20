@@ -366,7 +366,7 @@ void main() {
     });
   });
 
-  testWidgets('검색: 최근 검색어는 기기 기록 · × 로 지우기', (tester) async {
+  testWidgets('검색 덮개: 최근 검색어는 기기 기록 · × 로 지우기 · 자판을 내려도 판은 그대로', (tester) async {
     final me = UserStore.memory()
       ..addRecentSearch('엑시아')
       ..addRecentSearch('엑시아')
@@ -378,13 +378,13 @@ void main() {
           myChannels: const ['gundam'],
           onMyChannelsChanged: (_) {},
           onCamera: () {},
+          overlay: true,
           loaders: fakeLoaders,
         ),
       ),
       me,
     );
-    await tester.tap(find.byType(TextField).first);
-    await tester.pump(const Duration(milliseconds: 300));
+    // 열자마자 검색어 없음 = 최근 · 자주 찾은 · 설명으로 찾기 (누르지 않아도)
     expect(find.text('사자비'), findsOneWidget);
     expect(find.text('자주 찾은 검색어'), findsOneWidget);
     expect(find.text('×2'), findsOneWidget);

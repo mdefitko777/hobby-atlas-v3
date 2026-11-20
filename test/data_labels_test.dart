@@ -1,12 +1,9 @@
-// 데이터 값 → 화면 이름 (lib/logic/data_labels.dart) · 그 이름을 쓰는 필터 · 날짜 꼬리표 (kit_filter · kit_rules)
+// 데이터 값 → 화면 이름 (lib/logic/data_labels.dart) · 그 이름을 쓰는 필터 (kit_filter)
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hobby_atlas/clock.dart';
 import 'package:hobby_atlas/l10n/l10n.dart';
 import 'package:hobby_atlas/l10n/zh_text.dart';
 import 'package:hobby_atlas/logic/data_labels.dart';
 import 'package:hobby_atlas/logic/kit_filter.dart';
-import 'package:hobby_atlas/logic/kit_rules.dart';
-import 'package:hobby_atlas/models.dart';
 import 'package:hobby_atlas/notifications/notify_models.dart' show NoticePart;
 
 final _hangul = RegExp(r'[가-힣]');
@@ -66,12 +63,5 @@ void main() {
     L10n.debugSet(AppLang.zh);
     expect(f.labels, ['一番赏', '无等级', '3千日元以下']);
     expect((periodLabel('2023-01', ''), periodLabel('', '2024-06')), ('2023.01 起', '截至 2024.06'));
-  });
-
-  test('PB 예약 마감이 오늘이면 「PB 오늘 마감」', () {
-    fixedNow = DateTime(2026, 11, 20, 9);
-    addTearDown(() => fixedNow = null);
-    final k = Kit.fromSlim({'id': 'pb', 'name': 'HG', 'pbCloses': '2026-11-20'}, recentSince: '', monthPrefix: '');
-    expect(upcomingOf(k)?.label, 'PB 오늘 마감');
   });
 }

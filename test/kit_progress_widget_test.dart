@@ -12,10 +12,10 @@ import 'package:hobby_atlas/logic/preorder.dart';
 import 'package:hobby_atlas/logic/restock.dart';
 import 'package:hobby_atlas/marks.dart';
 import 'package:hobby_atlas/models.dart';
-import 'package:hobby_atlas/screens/a_my_page.dart';
 import 'package:hobby_atlas/screens/d_kit_detail_screen.dart';
 import 'package:hobby_atlas/screens/f_collection_screen.dart';
 import 'package:hobby_atlas/screens/h_calendar_screen.dart';
+import 'package:hobby_atlas/screens/i_profile_screen.dart';
 import 'package:hobby_atlas/theme.dart';
 import 'package:hobby_atlas/widgets.dart';
 
@@ -251,7 +251,7 @@ void main() {
     expect(result, isTrue);
   });
 
-  testWidgets('작은 폰(320): 구매함 탭 · 예약 탭 · My Page 숫자 줄이 넘치지 않는다', (tester) async {
+  testWidgets('작은 폰(320): 구매함 탭 · 예약 탭 · 내 정보 금액 줄이 넘치지 않는다', (tester) async {
     final store = UserStore.memory()..putPreorder('gu03', const Preorder(shop: '아주 긴 가게 이름 프리미엄 반다이', price: 123456));
     const small = Size(320, 568);
     await _pump(
@@ -275,12 +275,14 @@ void main() {
     await _pump(
       tester,
       store,
-      Scaffold(
-        body: SingleChildScrollView(child: MyPageView(loaders: _loaders())),
-      ),
+      ProfileScreen(loaders: _loaders(), onJump: (_) {}),
       size: small,
     );
-    expect(find.byKey(const ValueKey('mypage-share')), findsOneWidget);
+    // 예약 금액 = 기다리는 예약의 결제 예정 합 (컬렉션 예약 목록 끝과 같은 셈)
+    expect(
+      find.descendant(of: find.byKey(const ValueKey('profile-preorder')), matching: find.text('123,456원')),
+      findsOneWidget,
+    );
     expect(find.byTooltip('미조립'), findsNothing); // 미조립 칸은 뺐다 (2026-11-20)
     expect(tester.takeException(), isNull);
   });

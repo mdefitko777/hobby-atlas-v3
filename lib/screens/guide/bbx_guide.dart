@@ -134,7 +134,6 @@ class _BbxGuideState extends State<BbxGuide> {
               context,
             ).push(MaterialPageRoute<void>(builder: (_) => BbxBuilderScreen(loaders: widget.loaders))),
           ),
-          HelpButton(title: tr('베이'), items: bbxGuideHelp()), // G-2
         ],
       ),
       Expanded(
@@ -168,7 +167,7 @@ class _BbxGuideState extends State<BbxGuide> {
   );
 }
 
-/// G-2 베이 도감 ? — 칸 표시 + 묶음 목록 · 조합 만들기
+/// G-2 사용법의 베이 도감 묶음 — 칸 표시 + 묶음 목록 · 조합 만들기
 List<HelpItem> bbxGuideHelp() => [
   ...tierHelpItems(),
   HelpItem.group(tr('아이콘')),

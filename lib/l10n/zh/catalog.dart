@@ -108,13 +108,11 @@ const Map<String, String> zhCatalog = {
   // ── 숫자 · 날짜 (lib/format.dart · lib/logic/kit_rules.dart) ──
   '가격 미정': '价格未定',
   '{n}원': '{n} 韩元',
-  '{n}만': '{n}万',
   '방금': '刚刚',
   '{n}분 전': '{n} 分钟前',
   '{n}시간 전': '{n} 小时前',
   '어제': '昨天',
   '{n}일 전': '{n} 天前',
-  'PB 오늘 마감': 'PB 今天截止',
 
   // ── 주소로 찾기 (lib/logic/url_lookup.dart) ──
   '주소': '链接',

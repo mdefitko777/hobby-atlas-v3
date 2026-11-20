@@ -4,7 +4,7 @@
 // ┌──────── 디자인 가이드 대응표: G 도감 ──────────────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
 // │ G-1  │ SideGrid · CategoryTile              │ '전체' · 내 채널 여럿일 때: 도감을 볼 채널 고르기 (검색 탭 칸과 같은 정사각 칸 · 공식 그림 칸 가득, 숫자 없음) · 하나면 바로 그 도감 │ P06 │
-// │ G-2  │ 머리 줄 ? (HelpButton) → 바텀 시트   │ 도감 읽는 법 (칸 표시 · 묶음 목록 · 아이콘 뜻) │ P10 · P08 │
+// │ G-2  │ 서랍 › 사용법 (도감 묶음)             │ 도감 읽는 법 (칸 표시 · 묶음 목록 · 아이콘 뜻) — 머리 줄 ? 는 서랍으로 │ P10 · P08 │
 // │ G-3  │ SideDirectory (시대 머리 · 작품 줄)   │ 건담 도감: 왼쪽 시대별 작품 목록 → 오른쪽 그 작품 기체 칸 · 밀기 + ≡ 로 펴고 접기 (기억은 검색 탭과 따로) │ P06 · P08 │
 // │ G-4  │ 기체 칸 격자 (GuideCell = TierCell, 늘 컬러) │ 아직 = 그림 그대로 · ♡ = 좋아요 · 리본 ✓ + 옅은 민트 테두리 = 구매함 · 내 사진 + 도는 고리 │ P01 · P04 │
 // │ G-4b │ 칸 위 MarkOverlay (리본 · ♡)          │ 상품 하나면 그 상품 · 없으면 손으로 켜기 · 여럿이면 시트 │ P07 · P04 │
@@ -44,6 +44,8 @@ import 'guide/bbx_guide.dart';
 import 'guide/guide_parts.dart';
 import 'guide/gundam_guide.dart';
 import 'guide/world_guide.dart';
+
+import 'guide/work_guide_screen.dart' show workGuideHelp;
 
 export 'guide/work_guide_screen.dart' show WorkGuideScreen;
 
@@ -137,3 +139,10 @@ class _ChannelPicker extends StatelessWidget {
     );
   }
 }
+
+/// G-2 사용법의 도감 묶음들 (서랍 › 사용법 — s_app_shell.dart): (제목, 줄). 칸 머리의 ? 를 여기로 모았다
+List<(String, List<HelpItem>)> guideHelpSections() => [
+  (tr('작품 도감'), workGuideHelp()),
+  (tr('베이'), bbxGuideHelp()),
+  (tr('도감'), worldGuideHelp()),
+];

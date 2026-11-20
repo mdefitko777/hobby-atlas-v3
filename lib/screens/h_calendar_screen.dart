@@ -9,7 +9,7 @@
 // │ H-9  │ ViewIconToggle 전체 · 내 일정        │ 좋아요 · 구매함 상품의 날짜만            │ P06           │
 // │ H-9b │ 내 일정: 예약 도착 · 재판매 · PB 마감 · 구매 │ 예약한 상품 도착 예정 · 좋아요 상품 재판매 (둘째 줄 상태) │ P01 · P06 │
 // │ H-9c │ ListSummary (내 일정 목록 맨 끝)      │ 이번 달 결제 예정: 이 달 도착 예정인 미결제 예약 합 │ P01      │
-// │ H-11 │ FindBar (달력 위)                   │ 일정에서 찾기 + 상품 필터 (점 · 목록이 같이 좁혀짐) │ P04 · P07 │
+// │ H-11 │ ToolRow (달력 위, 상자 없는 아이콘 줄) │ 상품 필터 + 전체 일정 · 내 일정 (점 · 목록이 같이 좁혀짐) │ P04 · P07 │
 // │ H-3b │ 전체 · 발매 · 예고 밑줄 탭            │ 일정 종류 거르기                        │ P06 · P07     │
 // │ H-4  │ 날짜 누르기 (다시 누르면 해제)        │ 한 주: 목록을 그날로 옮기기 · 한 달: 그날만 보기 / 한 달 전체 보기 │ P03 │
 // │ H-5  │ 날짜별 묶음 ThumbRow: 점(titleLead) · 제목 2줄 + "상태 · 출처/라인" + D-n │ 발매 · 예고 단계 (알약 없이 둘째 줄 옅은 글자) │ P01 · P02 │
@@ -18,7 +18,7 @@
 // │ H-6  │ "날짜 미정 · n월 중" 묶음            │ 날짜가 정해지지 않은 발매               │ P01 · P10     │
 // │ H-7  │ LayoutBuilder ≥720dp                │ 넓은 화면: 달력 왼쪽 · 목록 오른쪽       │ 적응형        │
 // │ H-8  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 이 달 일정 없음     │ P01 · P09     │
-// │ H-12 │ 위 줄 ? (S-19, calendarHelp)        │ 아이콘 뜻 + 점 색 (달력 위 ? 를 합침)      │ P10 · P01     │
+// │ H-12 │ 서랍 › 사용법 (S-19, calendarHelp)   │ 아이콘 뜻 + 점 색                        │ P10 · P01     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 발매 줄 → D 상품 상세(쌓기). 예고 · 라이브 줄 → J 공식 예고 상세(쌓기).
 // 왜 이렇게: 발매 정보를 목록 한구석이 아니라 날짜로 보게. 처음엔 한 주만 (목록이 위로 — 2026-11-20 주인), 달 격자는 손잡이로.
@@ -157,7 +157,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope, Sing
   /// 전체 / 내 일정 (좋아요 · 구매함 상품의 날짜만)
   bool _mine = false;
 
-  /// H-11 찾기 · 상품 필터. 필터를 고르면 상품 일정만 (예고에는 종류 · 가격 같은 값이 없다)
+  /// H-11 상품 필터. 필터를 고르면 상품 일정만 (예고에는 종류 · 가격 같은 값이 없다)
   final _find = KitFind();
 
   /// H-4 한 주일 때 따로 밀리는 목록 · 그 목록의 기준 날 머리 · 마지막으로 맞춘 기준 (같으면 다시 옮기지 않는다 —
@@ -180,8 +180,8 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope, Sing
     return math.max(1, _row * 7 - DateTime(_month.year, _month.month).weekday % 7 + 1);
   }
 
-  bool _hitAnn(Announcement a) =>
-      _find.filter.count == 0 && (_find.query.isEmpty || a.title.toLowerCase().contains(_find.query.toLowerCase()));
+  /// 예고는 필터 값(종류 · 가격 …)이 없다 — 필터를 고르면 상품 일정만
+  bool get _showAnns => _find.filter.count == 0;
 
   Future<void> _openFilter(_CalData d) async {
     if (await _find.openFilter(context, d.kits)) setState(() {}); // STATE: 필터 → 달력 점 · 목록
@@ -393,7 +393,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope, Sing
           ),
       for (final a in d.announcements)
         // H-5b 라이브는 방송하는 날에 (시간 미정이면 announcementDay 가 비어 캘린더에 없다), 예약은 열리는 날에
-        if (announcementDay(a) case final date when date.startsWith(ym) && _hitAnn(a))
+        if (announcementDay(a) case final date when date.startsWith(ym) && _showAnns)
           if (annLiveStage(a, appNow()) case final stage?)
             _Event(
               title: a.title,
@@ -483,16 +483,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope, Sing
                     // H-4 한 주: 목록을 기준 날로 (주 · 날 · 거르기가 바뀔 때만)
                     final week = '${monthKey(_month)}/$_row/$wide';
                     _keepAnchor(
-                      [
-                        week,
-                        _day,
-                        _kind,
-                        _mine,
-                        _find.query,
-                        _find.filter.count,
-                        channel,
-                        identityHashCode(snap.data),
-                      ].join('|'),
+                      [week, _day, _kind, _mine, _find.filter.count, channel, identityHashCode(snap.data)].join('|'),
                       week,
                     );
                   }
@@ -513,7 +504,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope, Sing
                     );
                   }
                   if (!_monthOpen) {
-                    // H-4 한 주: 찾기 줄 · 달력 · 종류 탭은 위에 남고 목록만 밀린다 (작은 화면에서 펴는 중이면 위쪽도 밀린다)
+                    // H-4 한 주: 아이콘 줄 · 달력 · 종류 탭은 위에 남고 목록만 밀린다 (작은 화면에서 펴는 중이면 위쪽도 밀린다)
                     return Column(
                       children: [
                         ConstrainedBox(
@@ -546,16 +537,13 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope, Sing
     );
   }
 
-  /// H-11 찾기 + 필터 + 전체 / 내 일정 (홈의 검색창 · 전체 소식 / My Page 와 같은 줄)
-  Widget _tabs(_CalData d) => FindBar(
-    hint: tr('일정에서 찾기'),
-    onQuery: (q) => setState(() => _find.query = q), // STATE: 찾기 → 달력 점 · 목록
-    filterCount: _find.filter.count,
-    onFilter: () => _openFilter(d),
+  /// H-11 필터 + 전체 / 내 일정 (다른 탭의 아이콘 줄과 같은 자리, 검색창 없이)
+  Widget _tabs(_CalData d) => ToolRow(
     tools: [
+      FilterButton(count: _find.filter.count, onTap: () => _openFilter(d)),
       ViewIconToggle(
         mine: _mine,
-        onChanged: (v) => setState(() => _mine = v),
+        onChanged: (v) => setState(() => _mine = v), // STATE: 전체 일정 ↔ 내 일정
         allIcon: Icons.calendar_month_outlined,
         allTip: tr('전체 일정'),
         mineTip: tr('내 일정'),

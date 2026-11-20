@@ -12,6 +12,7 @@ import 'package:hobby_atlas/screens/d_kit_detail_screen.dart';
 import 'package:hobby_atlas/screens/f_collection_screen.dart';
 import 'package:hobby_atlas/screens/g_guide_view.dart';
 import 'package:hobby_atlas/screens/guide/guide_search.dart';
+import 'package:hobby_atlas/screens/j_announcement_screen.dart' show AnnouncementPager;
 import 'package:hobby_atlas/theme.dart';
 import 'package:hobby_atlas/widgets.dart';
 
@@ -40,8 +41,14 @@ Future<void> _settle(WidgetTester tester) async {
   }
 }
 
-Widget _screen() => Scaffold(
-  body: SearchScreen(myChannels: const ['gundam'], onMyChannelsChanged: (_) {}, onCamera: () {}, loaders: fakeLoaders),
+Widget _screen({bool overlay = false}) => Scaffold(
+  body: SearchScreen(
+    myChannels: const ['gundam'],
+    onMyChannelsChanged: (_) {},
+    onCamera: () {},
+    overlay: overlay,
+    loaders: fakeLoaders,
+  ),
 );
 
 Widget _collection({CollectionJump jump = CollectionJump.liked, int tick = 0}) => Scaffold(
@@ -67,9 +74,10 @@ void main() {
     expect(guideUnitHits(index, ''), isEmpty);
   });
 
-  testWidgets('검색 탭 처음 = 전체 상품 · 탭 줄 전체 · 종류 · 세대 · 검색창 줄은 늘 [필터][격자][목록]', (tester) async {
+  testWidgets('검색 탭 처음 = 전체 상품 · 탭 줄 전체 · 종류 · 세대 · 아이콘 줄은 늘 [필터][격자][목록] · 검색창 없음', (tester) async {
     await _pump(tester, _screen());
     expect(find.text('전체 상품'), findsOneWidget);
+    expect(find.byType(GpSearchBar), findsNothing); // 찾기는 위 줄 🔍 의 덮개
     final row = find.byType(ToolRow).first;
     expect(find.descendant(of: row, matching: find.byType(ToolIcon)), findsNWidgets(3));
     await tester.tap(find.byKey(const ValueKey('view-1')));
@@ -82,13 +90,15 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('컬렉션 탭 줄 끝 "도감" → 도감(내 진행) · 편집 자리에 공유 카드', (tester) async {
+  testWidgets('컬렉션 탭 줄 끝 "도감" → 도감(내 진행) · 편집은 숨김 (공유 카드 · ? 는 서랍으로)', (tester) async {
     await _pump(tester, _collection());
     expect(find.byType(GuideView), findsNothing);
     await tester.tap(find.byKey(const ValueKey('tab-guide')));
     await _settle(tester);
     expect(find.byType(GuideView), findsOneWidget);
-    expect(find.byTooltip('내 컬렉션 공유 카드'), findsOneWidget); // 작품 칸 머리의 공유 카드(그 작품)와 따로
+    final row = find.byType(ToolRow).first;
+    expect(find.descendant(of: row, matching: find.byIcon(Icons.ios_share)), findsNothing); // 서랍 › 공유 카드
+    expect(find.byType(HelpButton), findsNothing); // 서랍 › 사용법
     expect(find.byTooltip('편집'), findsNothing);
     await tester.tap(find.byKey(const ValueKey('tab-liked')));
     await _settle(tester);
@@ -104,8 +114,8 @@ void main() {
     expect(find.byType(GuideView), findsOneWidget);
   });
 
-  testWidgets('검색: 맞는 기체 줄 → 도감 기체 시트 · 기체별로 묶기', (tester) async {
-    await _pump(tester, _screen());
+  testWidgets('검색 덮개: 맞는 기체 줄 → 도감 기체 시트 · 기체별로 묶기', (tester) async {
+    await _pump(tester, _screen(overlay: true));
     await tester.enterText(find.byType(TextField), '스트라이크');
     await _settle(tester);
     expect(find.byKey(const ValueKey('guide-hits')), findsOneWidget);
@@ -121,6 +131,19 @@ void main() {
     await _settle(tester);
     expect(find.byType(WorkGuideScreen), findsOneWidget);
     expect(find.text('스트라이크 건담'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('검색 덮개: 예고 제목도 찾는다 (B-18, 옛 캘린더 · 예고 목록 찾기 칸) → 예고 상세', (tester) async {
+    await _pump(tester, _screen(overlay: true));
+    await tester.enterText(find.byType(TextField), '재판 회의');
+    await _settle(tester);
+    final hits = find.byKey(const ValueKey('search-anns'));
+    expect(hits, findsOneWidget);
+    expect(find.descendant(of: hits, matching: find.byType(ThumbRow)), findsNWidgets(2)); // ann01 · ann08
+    await tester.tap(find.descendant(of: hits, matching: find.byType(ThumbRow)).first);
+    await _settle(tester);
+    expect(find.byType(AnnouncementPager), findsOneWidget); // 맞은 둘 사이를 넘긴다
     expect(tester.takeException(), isNull);
   });
 
