@@ -464,15 +464,19 @@ const categoryNameGap = 4.0;
 TextStyle categoryNameStyle(double cellW) =>
     TextStyle(fontSize: cellW >= 74 ? Gp.t14 : Gp.t12, fontWeight: FontWeight.w700, height: 1.25);
 
-/// [categoryNameStyle] 인데, 가장 긴 낱말 하나가 칸보다 넓으면 그 낱말이 한 줄에 들 때까지 글자를 줄인다 (t11 까지).
-/// 'Hi-Resolution Model' 이 'Hi-Resolutio / n Model' 로 낱말 안에서 끊기던 것
+/// [categoryNameStyle] 인데, 가장 긴 낱말 하나가 칸보다 넓으면 그 낱말이 한 줄에 들 때까지 글자를 줄인다 (10 까지 — t11 로는 'Hi-Resolution' 이 80dp 칸에 1px 모자랐다).
+/// 'Hi-Resolution Model' 이 'Hi-Resolutio / n Model' · 'Hi- / Resolution …' 으로 끊기던 것 → 'Hi-Resolution / Model'
+const _nameFloor = 10.0;
+
 TextStyle fitCategoryName(BuildContext context, String name, double cellW) {
   final style = categoryNameStyle(cellW);
-  final words = name.split(RegExp(r'[ ]+|(?<=-)')).where((w) => w.isNotEmpty);
+  // 붙임표 낱말도 통째로 ('Hi-Resolution') — 'Hi-' 혼자 한 줄이 되지 않게. 그래도 넘치면 붙임표 뒤에서 끊긴다
+  final words = name.split(' ').where((w) => w.isNotEmpty);
   var widest = 0.0;
   for (final w in words) {
     final p = TextPainter(
-      text: TextSpan(text: w, style: DefaultTextStyle.of(context).style.merge(style)),
+      // 그려지는 글과 똑같이 (이음표 포함 — 웹은 이음표가 폭을 조금 먹는다)
+      text: TextSpan(text: keepWords(w), style: DefaultTextStyle.of(context).style.merge(style)),
       textDirection: TextDirection.ltr,
       textScaler: MediaQuery.textScalerOf(context),
       maxLines: 1,
@@ -480,8 +484,9 @@ TextStyle fitCategoryName(BuildContext context, String name, double cellW) {
     widest = math.max(widest, p.width);
     p.dispose();
   }
-  if (widest <= cellW) return style;
-  final size = math.max(Gp.t11, (style.fontSize! * cellW / widest * 10).floorToDouble() / 10);
+  final room = cellW - 2; // 반올림 · 글꼴 차이 여유
+  if (widest <= room) return style;
+  final size = math.max(_nameFloor, (style.fontSize! * room / widest * 10).floorToDouble() / 10);
   return style.copyWith(fontSize: size);
 }
 

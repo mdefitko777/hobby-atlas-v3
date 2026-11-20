@@ -55,7 +55,7 @@ void main() {
     );
     expect(short.fontSize, categoryNameStyle(60).fontSize);
     expect(fit.fontSize!, lessThan(categoryNameStyle(60).fontSize!));
-    expect(fit.fontSize!, greaterThanOrEqualTo(Gp.t11));
+    expect(fit.fontSize!, greaterThanOrEqualTo(10));
   });
 
   testWidgets('이름은 두 줄까지 · find.text 는 원래 이름 그대로', (tester) async {

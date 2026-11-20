@@ -332,9 +332,9 @@ void main() {
       final icon = find.descendant(of: tile, matching: find.byType(Icon));
       expect(t.getSize(icon).height, lessThan(w));
       expect(t.getSize(find.descendant(of: tile, matching: find.byType(Text))).width, lessThanOrEqualTo(w));
-      // t12 — 칸보다 긴 낱말이 있으면 그 낱말이 한 줄에 들도록 t11 까지 줄인다 (fitCategoryName)
+      // t12 — 칸보다 긴 낱말이 있으면 그 낱말이 한 줄에 들도록 10 까지 줄인다 (fitCategoryName)
       final size = t.widget<KeepWordsText>(find.descendant(of: tile, matching: find.byType(KeepWordsText))).style!;
-      expect(size.fontSize!, inInclusiveRange(Gp.t11, Gp.t12));
+      expect(size.fontSize!, inInclusiveRange(10, Gp.t12));
     }
     // 접으면(4칸, 칸 약 76dp) 이름이 조금 크게 (t14)
     await t.tap(_handle);
@@ -344,7 +344,7 @@ void main() {
       if (find.ancestor(of: find.byWidget(e.widget), matching: find.byType(CategoryTile)).evaluate().isEmpty) continue;
       sizes.add((e.widget as KeepWordsText).style!.fontSize!);
     }
-    expect(sizes, everyElement(inInclusiveRange(Gp.t11, Gp.t14)));
+    expect(sizes, everyElement(inInclusiveRange(10, Gp.t14)));
     expect(sizes, contains(Gp.t14), reason: '짧은 이름(HG)은 줄이지 않는다');
     expect(t.takeException(), isNull);
   });
@@ -574,7 +574,13 @@ void main() {
 
   testWidgets('320 · 360 · 390 · 768dp: 두 줄 이름이 펴고 접은 칸 안에 든다 (정사각 그림 아래)', (t) async {
     final kits = [
-      for (final l in ['넨도로이드 · 이치방쿠지 피규어', 'GUNDAM FIX FIGURATION METAL COMPOSITE', 'ROBOT魂', '프라모델 옵션 파츠'])
+      for (final l in [
+        '넨도로이드 · 이치방쿠지 피규어',
+        'GUNDAM FIX FIGURATION METAL COMPOSITE',
+        'ROBOT魂',
+        'METAL ROBOT魂',
+        '프라모델 옵션 파츠',
+      ])
         lineKit(l, line: l, type: '피규어'),
     ];
     for (final width in const [320.0, 360.0, 390.0, 768.0]) {
@@ -593,10 +599,13 @@ void main() {
         for (final e in find.byType(CategoryTile).evaluate()) {
           final tile = find.byWidget(e.widget);
           final box = t.getRect(tile);
-          final name = t.getRect(find.descendant(of: tile, matching: find.byType(KeepWordsText)));
+          final text = find.descendant(of: tile, matching: find.byType(KeepWordsText));
+          final name = t.getRect(text);
           expect(name.bottom, lessThanOrEqualTo(box.bottom + 0.5), reason: at);
           expect(name.width, lessThanOrEqualTo(box.width + 0.5), reason: at);
-          if (name.height > Gp.t14 * 1.6) twoLines = true;
+          // 글자 크기는 칸 · 긴 낱말에 따라 줄어든다 (fitCategoryName) — 그 크기의 한 줄 높이로 견준다
+          final size = t.widget<KeepWordsText>(text).style!.fontSize!;
+          if (name.height > size * 1.6) twoLines = true;
         }
         expect(twoLines, isTrue, reason: '$at 두 줄 이름이 있어야 시험이 된다');
         if (open) {
