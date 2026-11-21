@@ -270,21 +270,6 @@ class NotifyStore extends ChangeNotifier {
     return trf('{time} 확인', {'time': shortDateTime(at)});
   }
 
-  /// "마지막 확인 11.01 13:20 · 피드 2026-10-23 · 새 알림 2" (+ 요약 피드만 읽었으면 그렇다고)
-  String get statusLine {
-    final at = DateTime.tryParse(state.lastCheckAt)?.toLocal();
-    if (at == null) return tr('아직 확인하지 않았어요');
-    final t = shortDateTime(at);
-    if (state.lastError.isNotEmpty) return trf('마지막 확인 {time} · {error}', {'time': t, 'error': tr(state.lastError)});
-    final src = switch (state.lastSource) {
-      'lite' => ' · ${tr('요약 피드(날짜마다 20개까지)')}',
-      'atlas+lite' => ' · ${tr('새 소식 파일 기다리는 중')}',
-      _ => '',
-    };
-    final feed = state.lastSeen.isEmpty ? '-' : state.lastSeen;
-    return trf('마지막 확인 {time} · 피드 {feed} · 새 알림 {n}', {'time': t, 'feed': feed, 'n': state.lastNew}) + src;
-  }
-
   // ── 설정 ──
   /// 켜기: 안드로이드 13+ 은 권한 창. 허용하지 않으면 false (꺼진 채로 둔다)
   Future<bool> setEnabled(bool on) async {

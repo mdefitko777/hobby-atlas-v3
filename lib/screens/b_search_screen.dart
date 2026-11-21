@@ -13,10 +13,10 @@
 // │ B-6  │ ThumbRow + 일치도 %                 │ 설명에 맞는 상품 (맞은 단어 = 이유)      │ P01 · P09     │
 // │ B-7  │ SectionListView (O 전체 목록 재사용) │ 검색 결과 · 필터 · 정렬 · 격자/목록      │ P08 · 적응형 │
 // │ B-9  │ 탭 "전체" (처음) → SectionListView │ 내 채널 상품 전부                        │ P07 · P06     │
-// │ B-17 │ ToolRow (상자 없는 아이콘 줄)        │ 필터 · 격자 · 목록 — ♡ · 구매함 · 발매 예정 · 나라는 필터 시트 맨 위 │ P07 · P04 │
-// │ B-14 │ UnderlineTab 전체 · 종류 · 세대      │ 둘러보기 세 가지 (아이콘 줄 아래, 컬렉션 탭 줄과 같은 자리) │ P06 · P04 │
+// │ B-17 │ ToolRow(leading: 탭 줄 · tools: 아이콘) │ 둘러보기 탭과 한 줄: 필터 · 격자 · 목록 — ♡ · 구매함 · 발매 예정 · 나라는 필터 시트 맨 위 │ P07 · P04 │
+// │ B-14 │ UnderlineTab 전체 · 종류 · 세대 (밑줄 없이) │ 둘러보기 세 가지 (아이콘 줄 왼쪽 · 채널 바보다 작은 글씨 · 더 내려 읽으면 접힘) │ P06 · P04 │
 // │ B-15 │ 탭 "종류" · "세대" → TypeBrowse · EraBrowse (B-20 · B-21) │ 공식 그림 + 이름만 → 그 분류 상품 (같은 필터) │ P06 · P08 │
-// │ B-16 │ B-14 줄 오른쪽 글자 단추 → 아래 시트   │ 레고 채널만: 레고 범위 (최근 정식 세트 · 전부) — 아이콘 줄은 세 칸 그대로 │ P06 · P10 │
+// │ B-16 │ B-14 줄 아이콘 앞 글자 단추 → 아래 시트 │ 레고 채널만: 레고 범위 (최근 정식 세트 · 전부) — 아이콘 줄은 세 칸 그대로 │ P06 · P10 │
 // │ B-12 │ GuideHits (guide/guide_search.dart) │ 검색어에 맞는 작품 · 기체 → 도감(그 기체 시트) │ P07 · P06 │
 // │ B-18 │ ThumbRow 몇 줄 (제목에 검색어)       │ 예고 · 라이브 · 예약 찾기 → 예고 상세 (넘기면 맞은 것 전부) │ P07 · P06 │
 // │ B-13 │ 결과 위 "기체별로 묶기" + GroupedResults │ 결과를 기체별로 묶기 (상품 n · 가짐 m) — 검색창 줄 아이콘은 그대로 │ P01 · P07 │
@@ -271,12 +271,19 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
       onMyChannelsChanged: widget.onMyChannelsChanged,
     );
     if (!widget.overlay) {
-      // 아래 탭: 채널 바 · 아이콘 줄 · 전체 · 종류 · 세대 — 검색창은 위 줄 🔍 의 덮개에만
+      // 아래 탭: 채널 바 · [전체 · 종류 · 세대 + 아이콘] 한 줄 — 검색창은 위 줄 🔍 의 덮개에만.
+      // 탭 줄은 채널 바가 접힌 뒤에도 더 내려 읽으면 함께 접힌다 (CollapsingHeader step 2)
       return Column(
         children: [
           header,
-          ToolRow(tools: [tools]),
-          _viewTabs(), // B-14
+          CollapsingHeader(
+            step: 2,
+            child: ToolRow(
+              // B-14 · B-17 (레고 채널이면 아이콘 앞에 B-16 범위)
+              leading: _viewTabs(),
+              tools: [if (channel == 'lego') _legoScopeButton(), tools],
+            ),
+          ),
           body,
         ],
       );
@@ -317,27 +324,31 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
     );
   }
 
-  /// B-14 전체 · 종류 · 세대 (컬렉션의 좋아요 · 예약 · 구매함과 같은 밑줄 탭) + 레고 채널이면 B-16 범위
-  Widget _viewTabs() => Padding(
-    padding: const EdgeInsets.fromLTRB(6, 2, 6, 2),
+  /// B-14 전체 · 종류 · 세대 — 아이콘 줄 왼쪽 (컬렉션 탭 줄과 같은 자리). 채널 바보다 작은 글씨 · 밑줄 없이:
+  /// 고른 것은 굵기 · 색으로 (한 화면에 밑줄은 채널 바에만 — 2026-11-21 주인).
+  /// 작은 폰 · 큰 글씨에서 넘치면 옆으로 밀어 본다 (컬렉션 탭 줄과 같게)
+  Widget _viewTabs() => SingleChildScrollView(
+    scrollDirection: Axis.horizontal,
+    physics: const ClampingScrollPhysics(),
     child: Row(
       children: [
         for (final (i, label) in const ['전체', '종류', '세대'].indexed)
           UnderlineTab(
             key: ValueKey('view-$i'),
             label: tr(label),
-            fontSize: Gp.t16,
+            fontSize: 13, // 채널 바(Gp.t16)보다 작게 — 두 줄이 똑같아 보이지 않게
+            underline: false,
             selected: _view == i,
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            // 첫 탭 글자는 채널 바 글자와 같은 자리 (ToolRow 가 왼쪽 16 을 준다)
+            padding: EdgeInsets.fromLTRB(i == 0 ? 0 : 8, 8, 8, 8),
             onTap: () => setState(() => _view = i), // STATE: 둘러보기 → 전체 · 종류 · 세대
           ),
-        if (channel == 'lego') ...[const Spacer(), _legoScopeButton()],
       ],
     ),
   );
 
   /// B-16 레고 범위 — 설정에 있던 것을 레고 채널 안으로 (2026-11-12). 아이콘 줄은 모든 탭이 세 칸까지라
-  /// (test/find_filter_test.dart) 넷째 아이콘 대신 둘러보기 줄 오른쪽 글자 단추
+  /// (test/find_filter_test.dart) 넷째 아이콘 대신 같은 줄 아이콘 앞의 글자 단추
   Widget _legoScopeButton() => Tooltip(
     message: tr('레고 범위'),
     child: TextButton.icon(
@@ -712,7 +723,7 @@ class SentenceCandidates extends StatelessWidget {
 List<HelpItem> searchHelp() => [
   HelpItem(Icons.search, tr('검색 (위 줄 · 어느 탭에서나)')),
   HelpItem(Icons.photo_camera_outlined, tr('찍어서 찾기 (사진 · 바코드)')),
-  HelpItem(Icons.tune, tr('필터 (좋아요 · 구매함 · 발매 예정 · 나라 · 종류 · 라인 · 작품 · 기간 · 가격) — 전체 · 종류 · 세대 · 검색 결과 공통')),
+  HelpItem(Icons.tune, tr('필터 (좋아요 · 구매함 · 발매 예정 · 나라 · 종류 · 작품 · 라인 · 기간 · 가격) — 전체 · 종류 · 세대 · 검색 결과 공통')),
   HelpItem(Icons.grid_view_outlined, tr('격자로 보기')),
   HelpItem(Icons.bookmark_border, tr('구매함 (사진 왼쪽 위 리본 +)'), color: Gp.own),
   HelpItem(Icons.view_list_outlined, tr('목록으로 보기')),

@@ -2,8 +2,8 @@
 //
 // ┌──────── 디자인 가이드 대응표: C 채널 ──────────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                    │ 비즈니스 명칭(한글)              │ 원칙(P번호)   │
-// │ C-0  │ ChannelHeader (CollapsingHeader)  │ 아바타 줄(늘 고정) + 채널 바 (네 탭 공용) · 한참 내려 읽으면 채널 바만 접힘 (S-13) │ P04 · P08 │
-// │ C-1  │ ChannelBar (가로 스크롤 텍스트 탭) │ 내 채널 바 (전체 + 내 IP) · 홈 내용을 좌우로 밀어도 바뀜 │ P06 · P04 │
+// │ C-0  │ ChannelHeader (CollapsingHeader)  │ 아바타 줄(늘 고정) + 채널 바 (네 탭 공용) · 채널 바가 먼저 접히는 첫 겹 (step 1, S-13) │ P04 · P08 │
+// │ C-1  │ ChannelBar (가로 스크롤 텍스트 탭) │ 내 채널 바 (전체 + 내 IP) · 큰 글씨(t16) + 밑줄 = 위의 큰 줄 (아래 탭 줄은 작고 밑줄 없음) · 홈 내용을 좌우로 밀어도 바뀜 │ P06 · P04 │
 // │ C-2  │ IconButton(ChannelGlyph 세 줄)     │ 채널 관리 열기                   │ P07 · P03     │
 // │ C-3  │ CupertinoPageRoute                │ 오른쪽에서 밀려 들어오는 관리 화면 │ P03           │
 // │ C-4  │ LongPressDraggable + DragTarget   │ 내 채널 (길게 눌러 순서 변경)     │ P03 · P07     │
@@ -166,6 +166,8 @@ class ChannelBar extends StatelessWidget {
                     UnderlineTab(
                       label: id == allChannelId ? tr('전체') : tr(channelOf(id).label),
                       selected: id == selected,
+                      // 아래 탭 줄과 둘 다 '전체' 로 시작해 똑같아 보였다 (2026-11-21 주인)
+                      fontSize: Gp.t16,
                       onTap: () => onSelect(id), // STATE: 선택 채널 → 아래 목록 다시 거름
                     ),
                 ],

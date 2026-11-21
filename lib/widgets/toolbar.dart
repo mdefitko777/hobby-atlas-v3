@@ -200,20 +200,34 @@ class FilterButton extends StatelessWidget {
 /// 도구 줄 — 오른쪽 아이콘들 (+ [field] 를 주면 왼쪽에 검색창). 바깥 여백 · 간격을 한 곳에서.
 /// 네 탭은 [field] 없이: 상자 없는 아이콘만 오른쪽에 붙고 높이도 낮다
 class ToolRow extends StatelessWidget {
-  const ToolRow({super.key, this.field, this.tools = const []});
+  const ToolRow({super.key, this.field, this.tools = const [], this.leading});
+
+  /// 검색창 (검색 덮개 · 쌓아 연 화면에만)
   final Widget? field;
+
+  /// 왼쪽에 놓을 것 — 탭 줄(전체 · 종류 · 세대 …). 네 탭은 이것과 [tools] 가 한 줄에 같이 선다.
+  /// 2026-11-21 탭에서 검색창을 뺀 뒤로 [field] 도 [leading] 도 없으면 아이콘 몇 개만 뜬 빈 띠가
+  /// 남았다 — 주인이 "흰 박스" 라고 한 그 줄. 이제 그 경우에는 줄 자체를 그리지 않는다.
+  final Widget? leading;
+
   final List<Widget> tools;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: field == null ? const EdgeInsets.fromLTRB(16, 0, 8, 0) : const EdgeInsets.fromLTRB(16, 4, 8, 8),
-    child: Row(
-      children: [
-        if (field case final f?) ...[Expanded(child: f), const SizedBox(width: 4)] else const Spacer(),
-        ...tools,
-      ],
-    ),
-  );
+  Widget build(BuildContext context) {
+    if (field == null && leading == null && tools.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: field == null ? const EdgeInsets.fromLTRB(16, 0, 8, 0) : const EdgeInsets.fromLTRB(16, 4, 8, 8),
+      child: Row(
+        children: [
+          if (field case final f?) ...[Expanded(child: f), const SizedBox(width: 4)],
+          // leading 은 남는 자리를 전부 받는다 — Flexible + Spacer 로 반씩 나누면 탭 줄이
+          // 320dp 에서 17px 까지 눌려 "전체 · 종류 · 세대" 가 보이지 않았다
+          if (leading case final l?) Expanded(child: l) else const Spacer(),
+          ...tools,
+        ],
+      ),
+    );
+  }
 }
 
 /// 이 목록 안에서 찾기(카메라 없는 검색창) + 필터 + [tools] — 글자칸을 스스로 가진다

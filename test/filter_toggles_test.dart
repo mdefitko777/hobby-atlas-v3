@@ -63,6 +63,9 @@ final _pokemon = [
   _k('jp1', channel: 'pokemon', line: '봉제인형', type: '인형', region: 'jp', jpy: 1650),
 ];
 
+/// 작품이 둘인 목록 (작품 줄 · 라인 줄이 같이 보인다)
+final _twoWorks = [..._gundam, _k('hg3', work: '00'), _k('mg2', line: 'MG', work: '00')];
+
 Future<UserStore> _show(WidgetTester t, Widget body, {UserStore? store}) async {
   t.view.physicalSize = const Size(390, 844);
   t.view.devicePixelRatio = 1;
@@ -145,8 +148,50 @@ void main() {
       );
     });
 
+    test('제외: 뺀 값은 고른 값을 보기 전에 떨어뜨린다 · 한 값은 고르기 · 빼기 중 한쪽만', () {
+      final f = KitFilter(linesOut: {'MG'});
+      expect(_gundam.where(f.matches).map((k) => k.id), ['hg1', 'hg2', 'rb1']);
+      expect(f.count, 1);
+      // 같은 줄에 고른 값 · 뺀 값이 겹치면 빼기가 이긴다 (화면에서는 겹치지 않지만 규칙을 정해 둔다)
+      expect(KitFilter(lines: {'HG', 'MG'}, linesOut: {'MG'}).matches(_gundam[2]), isFalse);
+      // 고르기 → 빼기 → 풀기
+      final g = KitFilter();
+      togglePick(g.lines, g.linesOut, 'HG');
+      expect(g.lines, {'HG'});
+      expect(g.linesOut, isEmpty);
+      togglePick(g.linesOut, g.lines, 'HG');
+      expect(g.lines, isEmpty);
+      expect(g.linesOut, {'HG'});
+      togglePick(g.linesOut, g.lines, 'HG');
+      expect(g.count, 0);
+    });
+
+    test('제외도 복사 · 초기화 · 고른 조건 한 줄 · 굿즈를 풀 때 같이 풀린다', () {
+      final f = KitFilter(worksOut: {'SEED'}, typesOut: {'피규어'}, linesOut: {'MG'}, goodsKindsOut: {'의류'});
+      expect(f.labels, contains('MG 제외'));
+      // 한 줄에서 뺀 값이 여럿이면 접은 줄 요약과 같은 한 덩이로 (줄마다 「… 제외」 를 따로 쓰지 않는다)
+      expect(KitFilter(linesOut: {'MG', 'HG'}).labels, ['MG · HG 제외']);
+      expect(KitFilter(linesOut: {'MG', 'HG', 'RG'}).labels, ['MG 외 2 제외']);
+      final c = f.copy();
+      expect(c.count, 4);
+      c.linesOut.add('RG');
+      expect(f.linesOut, {'MG'}); // 깊은 복사 (초안을 고쳐도 원래 조건은 그대로)
+      expect(c.dropHidden(), isTrue); // 굿즈를 고르지 않았으면 굿즈 종류 제외도 푼다
+      expect(c.goodsKindsOut, isEmpty);
+      f.clear();
+      expect(f.count, 0);
+    });
+
+    test('체크 칸 값: 뺀 값도 풀 수 있게 남는다', () {
+      expect(
+        liveValues(_gundam, KitFilter(linesOut: {'MG'}), (k) => k.line, (f) => f.lines, outField: (f) => f.linesOut),
+        unorderedEquals(['HG', 'MG', 'ROBOT魂']),
+      );
+    });
+
     test('값 하나뿐인 줄 숨김 · 정가가 없는 목록', () {
       expect(showChoices(['SEED'], {}), isFalse);
+      expect(showChoices(['HG'], {}, {'MG'}), isTrue); // 뺀 것이 있으면 풀 수 있게 둔다
       expect(showChoices(['SEED'], {'SEED'}), isTrue);
       expect(showChoices(['HG', 'MG'], {}), isTrue);
       expect(showChoices([], {}), isFalse);
@@ -238,6 +283,53 @@ void main() {
       await t.tap(find.descendant(of: _key('filter-types'), matching: find.text(goodsType)));
       await t.pump();
       expect(_typeValues(t), unorderedEquals(['프라모델', '피규어', '굿즈']));
+    });
+
+    testWidgets('작품 줄이 라인 줄 위 · 작품 하나를 고르면 제목이 「필터 · SEED」', (t) async {
+      await _show(
+        t,
+        FilterSheet(
+          kits: _twoWorks,
+          initial: KitFilter(works: {'SEED'}),
+        ),
+      );
+      expect(t.getTopLeft(_key('filter-works')).dy, lessThan(t.getTopLeft(_key('filter-lines')).dy));
+      expect(t.widget<GpPickSheet>(find.byType(GpPickSheet)).title, '필터 · SEED');
+
+      await _show(
+        t,
+        FilterSheet(
+          kits: _twoWorks,
+          initial: KitFilter(works: {'SEED', '00'}),
+        ),
+      );
+      expect(t.widget<GpPickSheet>(find.byType(GpPickSheet)).title, '필터'); // 둘 이상이면 그냥 필터
+    });
+
+    testWidgets('종류 칸의 × 는 그 종류를 빼고, 이름을 누르면 빼기가 풀려 고르기로 바뀐다', (t) async {
+      await _show(t, FilterSheet(kits: _gundam, initial: KitFilter()));
+      expect(find.text('4개 보기'), findsOneWidget);
+      t.widget<CheckGrid>(_key('filter-types')).onExclude!('피규어');
+      await t.pump();
+      expect(t.widget<CheckGrid>(_key('filter-types')).excluded, {'피규어'});
+      expect(find.text('3개 보기'), findsOneWidget); // ROBOT魂 피규어가 빠진다
+      t.widget<CheckGrid>(_key('filter-types')).onToggle('피규어');
+      await t.pump();
+      final grid = t.widget<CheckGrid>(_key('filter-types'));
+      expect(grid.excluded, isEmpty);
+      expect(grid.selected, {'피규어'});
+      expect(find.text('1개 보기'), findsOneWidget);
+    });
+
+    testWidgets('접은 라인 줄 요약에 뺀 값이 보인다 (MG · HG 제외)', (t) async {
+      await _show(
+        t,
+        FilterSheet(
+          kits: _gundam,
+          initial: KitFilter(linesOut: {'MG', 'HG'}),
+        ),
+      );
+      expect(t.widget<ExpandRow>(_key('filter-lines')).summary, 'MG · HG 제외');
     });
 
     testWidgets('뺀 칸이 걸린 조건으로 열면 풀린다 (보이지 않는 조건에 갇히지 않게)', (t) async {

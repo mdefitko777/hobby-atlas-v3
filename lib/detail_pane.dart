@@ -8,7 +8,6 @@
 import 'package:flutter/cupertino.dart' show CupertinoPageRoute;
 import 'package:flutter/material.dart';
 
-import 'l10n/l10n.dart';
 import 'theme.dart';
 
 /// 오른쪽 자세히 칸의 Navigator — 앱에 칸은 하나뿐. 넓은 화면에서만 붙어 있다(아니면 currentState == null)
@@ -131,7 +130,7 @@ class _EmptyWatcher extends NavigatorObserver {
   }
 }
 
-/// 빈 칸: 옅은 로고 + 한 줄 안내 (QQ 의 펭귄 자리)
+/// 빈 칸: 옅은 로고만 (QQ 의 펭귄 자리)
 class _EmptyPane extends StatelessWidget {
   const _EmptyPane();
 
@@ -140,19 +139,14 @@ class _EmptyPane extends StatelessWidget {
     return ColoredBox(
       color: Gp.bg,
       child: Center(
-        child: Column(
+        child: const Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.view_in_ar_outlined, size: 72, color: Gp.ghost),
-            const SizedBox(height: 10),
-            const Text(
+            Icon(Icons.view_in_ar_outlined, size: 72, color: Gp.ghost),
+            SizedBox(height: 10),
+            Text(
               'Hobby Atlas',
               style: TextStyle(fontSize: Gp.t24, fontWeight: FontWeight.w800, letterSpacing: 1.5, color: Gp.ghost),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              tr('상품 · 예고 · 친구를 고르면 여기에 보여요'),
-              style: const TextStyle(fontSize: Gp.t12, color: Gp.faint),
             ),
           ],
         ),

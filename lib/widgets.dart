@@ -32,6 +32,7 @@ export 'widgets/kit_progress.dart';
 export 'widgets/mark_overlay.dart';
 export 'widgets/rings.dart';
 export 'widgets/sections.dart';
+export 'widgets/stats.dart';
 export 'widgets/share_card.dart';
 export 'widgets/sheets.dart';
 export 'widgets/side_directory.dart';

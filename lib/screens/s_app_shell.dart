@@ -506,7 +506,13 @@ class _AppShellState extends State<AppShell> {
       key: _scaffold,
       extendBody: true, // 탭 바 뒤로 내용이 비쳐 보이게
       // S-11 서랍 (M): 아바타 · 홈에서 왼쪽 가장자리를 오른쪽으로 밀기
-      drawer: FriendsDrawer(loaders: widget.loaders, onOpenProfile: _openProfile, onJump: _jumpTo, onHelp: _openHelp),
+      drawer: FriendsDrawer(
+        loaders: widget.loaders,
+        onOpenProfile: _openProfile,
+        onJump: _jumpTo,
+        onHelp: _openHelp,
+        myChannels: _myChannels, // 줄 끝 수를 내 정보 · 컬렉션 탭과 같은 범위에서 센다
+      ),
       drawerEdgeDragWidth: _tab == 0 ? 56 : 0,
       drawerScrimColor: Gp.shadow,
       body: SafeArea(

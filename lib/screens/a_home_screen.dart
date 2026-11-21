@@ -3,7 +3,7 @@
 // ┌──────── 디자인 가이드 대응표: A 홈 ────────────────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
 // │ A-1  │ ChannelHeader                      │ 아바타 줄 + 내 채널 바 (C-0 공용)       │ P04 · P06     │
-// │ A-2  │ ToolRow (상자 없는 아이콘 줄)        │ 필터 (전체 보기 안: 필터 · 격자 · 목록) — 검색창은 위 줄 🔍, My Page 는 서랍 좋아요 · 구매함 · 예약으로 │ P07 · P04 │
+// │ A-2  │ ToolRow (탭 줄 + 상자 없는 아이콘)   │ 새 소식 · My Page 탭 + 필터 (전체 보기 안: 필터 · 격자 · 목록) — 검색창은 위 줄 🔍 │ P07 · P04 │
 // │ A-3  │ PageView(화면 끝까지) + 점 표시     │ 예고 배너 (공식 먼저 · 모자라면 비공식, 4초마다 다음 장, 끝없이) │ P08 · P02     │
 // │ A-4  │ 배너 아래 AnnTag · 제목             │ 예고 상태(공식 발표·상품화 확정·예약) · 라이브 · 예약 때 · 비공식 │ P01 │
 // │ A-5  │ SectionHeader (색 막대 + ›)         │ 줄 이름 · 전체 보기 → O 전체 목록(홈 안)  │ P06 · P07     │
@@ -11,9 +11,12 @@
 // │ A-7  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 빈 채널           │ P01 · P09     │
 // │ A-8  │ 흰 띠(섹션마다) + 머리카락 줄        │ 줄과 줄 사이 층 구분                   │ P08 · P04     │
 // │ A-9  │ ProductTile 의 QuickMarks (리본 · ♡)  │ 좋아요 · 구매함 바로 담기 (앱 전체 한 벌)  │ P07 · P04     │
+// │ A-10 │ UnderlineTab 두 칸 (밑줄 없음)       │ 새 소식 · My Page 바꾸기 (A-2 줄 왼쪽)   │ P07 · P02     │
+// │ A-21 │ MyPageView (a_my_page.dart)        │ 내 숫자 줄 · 좋아요 · 구매함 · 특별 관심 · 내 것 거르기 (A-21~25 는 그 파일 대응표에) │ P01 · P07 │
 // │ A-26 │ 서랍 › 사용법 (S-19, homeHelp)       │ 아이콘 뜻 한 줄씩                      │ P10           │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: › → 같은 탭 안에서 O 전체 목록(위쪽 머리 · 아이콘 줄은 그대로, 뒤로 = 홈). 상품 카드 → D 상품 상세(쌓기). 배너 · 예고 카드 → J 공식 예고 상세(쌓기).
+// 새 소식 ↔ My Page = 같은 자리에서 아래쪽만 바뀐다(쌓지 않음). My Page 의 숫자 · › → 컬렉션 탭 (CollectionJump, 앱 셸).
 // 줄 안에는 날짜·가격을 쓰지 않는다 — 궁금하면 눌러서 상세에서 본다 (P08).
 // 왜 이렇게: 홈은 버전 번호 · 총 개수 · IP 입구 카드 대신 "내 채널의 새 소식"만.
 import '../l10n/l10n.dart';
@@ -33,8 +36,10 @@ import '../marks.dart';
 import '../models.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'a_my_page.dart';
 import 'c_channel_screen.dart';
 import 'd_kit_detail_screen.dart';
+import 'f_collection_screen.dart' show CollectionJump;
 import 'j_announcement_screen.dart';
 import 'o_see_all_screen.dart';
 
@@ -60,11 +65,15 @@ class HomeScreen extends StatefulWidget {
     this.channel,
     this.onChannelChanged,
     this.leading,
+    this.onJump,
     this.loaders = const Loaders(),
   });
 
   final List<String> myChannels;
   final ValueChanged<List<String>> onMyChannelsChanged;
+
+  /// My Page 의 숫자 · › → 컬렉션 탭 (앱 셸이 든다)
+  final ValueChanged<CollectionJump>? onJump;
 
   /// 앱 셸이 든 이 탭의 채널 · 고르면 셸에 알림 (채널 맞춰 보기, ChannelScope)
   final String? channel;
@@ -116,6 +125,29 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
 
   /// null = 홈, 아니면 홈 안에서 펼친 전체 목록 (O)
   HomeSection? _section;
+
+  /// A-10 false = 새 소식 · true = My Page
+  bool _mine = false;
+
+  /// My Page 안에서 거르기 (좋아요 · 구매함 풀) — 찾기는 위 줄 🔍
+  KitFilter _mineFilter = KitFilter();
+
+  void _setMine(bool v) {
+    if (_mine == v) return; // 보고 있는 탭을 또 눌러도 골라 둔 거르기는 그대로
+    setState(() {
+      _mine = v; // STATE: 새 소식 ↔ My Page (거르기는 비운다)
+      _mineFilter = KitFilter();
+    });
+  }
+
+  Future<void> _openMineFilter() async {
+    final cat = Catalog.instance;
+    final pool = [
+      for (final id in UserStore.instance.idsWith(const {CollectStatus.wanted, CollectStatus.owned})) ?cat.byId[id],
+    ];
+    final picked = await pickKitFilter(context, pool: pool, current: _mineFilter);
+    if (picked != null) setState(() => _mineFilter = picked); // STATE: 필터 → My Page 목록
+  }
 
   /// 전체 목록의 필터 · 격자/목록 (위 아이콘 줄이 바꾼다)
   var _listTools = ListTools();
@@ -230,17 +262,37 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
         if (byId[id] case final k? when home(k)) k,
     ];
     final lists = {HomeSection.recent: recent, HomeSection.month: month, HomeSection.viewed: viewed};
-    // A-2 아이콘 줄 — 모든 탭과 같은 자리(오른쪽 끝), 검색창 없이
+    // A-10 탭 줄 — 채널 바보다 작은 글씨 · 밑줄 없음 (한 화면에 밑줄은 채널 바 한 군데만)
+    Widget tab(String label, bool mine) => UnderlineTab(
+      label: label,
+      selected: _mine == mine,
+      fontSize: 13,
+      underline: false,
+      // 첫 탭 글자는 채널 바 글자와 같은 자리 (ToolRow 가 왼쪽 16 을 준다) — 검색 탭 줄과 같게
+      padding: EdgeInsets.fromLTRB(mine ? 8 : 0, 8, 8, 8),
+      onTap: () => _setMine(mine), // STATE: 탭 → 아래쪽 (새 소식 · My Page)
+    );
+    // A-2 탭 줄 + 아이콘 — 모든 탭과 같은 자리(아이콘은 오른쪽 끝), 검색창 없이
     final tools = ToolRow(
+      leading: _section == null
+          // 아이콘 줄과 한 줄에 서니 좁은 화면 · 큰 글자에서는 옆으로 밀려 보인다 (채널 바와 같게)
+          ? SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const ClampingScrollPhysics(),
+              child: Row(children: [tab(tr('새 소식'), false), tab(tr('My Page'), true)]),
+            )
+          : null,
       tools: [
         if (_section case final sec?)
           ListToolIcons(tools: _listTools, pool: sec == HomeSection.announcements ? null : lists[sec] ?? const [])
+        else if (_mine)
+          FilterButton(count: _mineFilter.count, onTap: _openMineFilter) // A-25
         else
           FilterButton(count: _homeFilter.count, onTap: () => _openHomeFilter(data.kits)), // A-11
       ],
     );
     final ids = scopeIds;
-    if (data.kits.isEmpty && data.announcements.isEmpty) {
+    if (!_mine && data.kits.isEmpty && data.announcements.isEmpty) {
       final noData = ids.isNotEmpty && ids.every((id) => !channelOf(id).hasData);
       return _pinned(
         tools,
@@ -321,41 +373,49 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
         child: ListView(
           padding: EdgeInsets.only(bottom: navClearance(context)),
           children: [
-            if (heroes.isNotEmpty)
+            if (_mine)
+              MyPageView(
+                // A-21~25
+                loaders: widget.loaders,
+                onJump: widget.onJump,
+                filter: _mineFilter,
+              ),
+            if (!_mine && heroes.isNotEmpty)
               _HeroBanner(
                 // A-3 떠 있는 카드
                 items: heroes,
                 onTap: (a) => openAnnouncement(context, a, loaders: widget.loaders, list: heroes),
               ),
-            for (final row in rows)
-              if (row.items.isNotEmpty)
-                SectionPanel(
-                  // A-8 흰 띠 + 머리카락 줄 = 층 구분 (상세와 같은 부품)
-                  padding: const EdgeInsets.only(bottom: 18),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SectionHeader(
-                        // A-5 P06
-                        row.title,
-                        subtitle: row.subtitle,
-                        onMore: row.onMore, // → O 전체 목록
-                      ),
-                      _HorizontalRow(row: row, loaders: widget.loaders), // A-6 P08
-                    ],
+            if (!_mine)
+              for (final row in rows)
+                if (row.items.isNotEmpty)
+                  SectionPanel(
+                    // A-8 흰 띠 + 머리카락 줄 = 층 구분 (상세와 같은 부품)
+                    padding: const EdgeInsets.only(bottom: 18),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SectionHeader(
+                          // A-5 P06
+                          row.title,
+                          subtitle: row.subtitle,
+                          onMore: row.onMore, // → O 전체 목록
+                        ),
+                        _HorizontalRow(row: row, loaders: widget.loaders), // A-6 P08
+                      ],
+                    ),
                   ),
-                ),
           ],
         ),
       ),
     );
   }
 
-  /// A-2 아이콘 줄은 목록 밖 위에 고정 — 한참 내려 읽으면 채널 바만 접히고(S-13) 아이콘 줄은 남는다 (네 탭 같게)
+  /// A-2 줄은 목록 밖 위에 — 한참 내려 읽으면 채널 바가 먼저 접히고(S-13 첫 겹) 더 읽으면 이 줄도 접힌다 (둘째 겹, 네 탭 같게)
   Widget _pinned(Widget tools, Widget list) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      tools,
+      CollapsingHeader(step: 2, child: tools),
       Expanded(child: list),
     ],
   );

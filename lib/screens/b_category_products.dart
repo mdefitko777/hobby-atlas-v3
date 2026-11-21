@@ -230,7 +230,7 @@ class _CategoryProductsScreenState extends State<CategoryProductsScreen> {
 
 /// B-23e 분류 상품 ? — 검색 결과와 같은 아이콘
 List<HelpItem> categoryProductsHelp({bool groupByUnit = false}) => [
-  HelpItem(Icons.tune, tr('필터 (좋아요 · 구매함 · 발매 예정 · 종류 · 라인 · 작품 · 기간 · 가격)')),
+  HelpItem(Icons.tune, tr('필터 (좋아요 · 구매함 · 발매 예정 · 종류 · 작품 · 라인 · 기간 · 가격)')),
   HelpItem(Icons.grid_view_outlined, tr('격자로 보기')),
   HelpItem(Icons.view_list_outlined, tr('목록으로 보기')),
   HelpItem(Icons.swap_vert, tr('정렬: 최신 · 발매일 · 가격')),

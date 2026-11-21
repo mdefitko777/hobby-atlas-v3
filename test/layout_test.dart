@@ -267,7 +267,7 @@ void main() {
     testWidgets('반반 화면 ${size.width.toInt()}×${size.height.toInt()} · 상품 → 오른쪽 칸', (tester) async {
       await _show(tester, size, AppShell(loaders: fakeLoaders));
       expect(find.byType(DetailPaneView), findsOneWidget);
-      expect(find.text('상품 · 예고 · 친구를 고르면 여기에 보여요'), findsOneWidget);
+      expect(find.byIcon(Icons.view_in_ar_outlined), findsOneWidget); // 아무것도 안 고른 빈 칸
       // 홈 위쪽(내 보드 · 아이콘 칸 · 배너) 아래에 있는 상품 줄까지 내린다
       final vertical = find.byWidgetPredicate((w) => w is Scrollable && w.axisDirection == AxisDirection.down);
       for (var i = 0; i < 6 && find.byType(ProductTile).evaluate().isEmpty; i++) {

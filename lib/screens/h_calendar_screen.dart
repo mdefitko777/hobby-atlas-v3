@@ -6,10 +6,10 @@
 // │ H-2  │ ‹ 2026년 10월 › + 오늘              │ 한 주 · 한 달 넘기기 · 오늘              │ P03 · P07     │
 // │ H-3  │ 7열 달력 한 주 줄 + 날짜 아래 점 (뜻은 H-12) │ 파랑 = 내 좋아요 · 예약 상품 · 회색 = 그 밖의 일정 │ P01 · P06 │
 // │ H-3c │ "한 달 보기" 손잡이 (누르기 · 밀기)    │ 한 주 ↔ 한 달 격자 펴고 접기 (애니메이션, 기억) │ P03 · P07 │
-// │ H-9  │ ViewIconToggle 전체 · 내 일정        │ 좋아요 · 구매함 상품의 날짜만            │ P06           │
+// │ H-9  │ UnderlineTab 전체 일정 · 내 일정 (H-11 줄) │ 좋아요 · 구매함 상품의 날짜만         │ P06           │
 // │ H-9b │ 내 일정: 예약 도착 · 재판매 · PB 마감 · 구매 │ 예약한 상품 도착 예정 · 좋아요 상품 재판매 (둘째 줄 상태) │ P01 · P06 │
 // │ H-9c │ ListSummary (내 일정 목록 맨 끝)      │ 이번 달 결제 예정: 이 달 도착 예정인 미결제 예약 합 │ P01      │
-// │ H-11 │ ToolRow (달력 위, 상자 없는 아이콘 줄) │ 상품 필터 + 전체 일정 · 내 일정 (점 · 목록이 같이 좁혀짐) │ P04 · P07 │
+// │ H-11 │ ToolRow (CollapsingHeader step 2, 늘 위에) │ 전체 일정 · 내 일정 탭 + 상품 필터 (점 · 목록이 같이 좁혀짐) │ P04 · P07 │
 // │ H-3b │ 전체 · 발매 · 예고 밑줄 탭            │ 일정 종류 거르기                        │ P06 · P07     │
 // │ H-4  │ 날짜 누르기 (다시 누르면 해제)        │ 한 주: 목록을 그날로 옮기기 · 한 달: 그날만 보기 / 한 달 전체 보기 │ P03 │
 // │ H-5  │ 날짜별 묶음 ThumbRow: 점(titleLead) · 제목 2줄 + "상태 · 출처/라인" + D-n │ 발매 · 예고 단계 (알약 없이 둘째 줄 옅은 글자) │ P01 · P02 │
@@ -476,59 +476,73 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope, Sing
                   onSettle: _settleOpen,
                 ),
               );
-              return LayoutBuilder(
-                builder: (context, box) {
-                  final wide = box.maxWidth >= 720;
-                  if (!_monthOpen) {
-                    // H-4 한 주: 목록을 기준 날로 (주 · 날 · 거르기가 바뀔 때만)
-                    final week = '${monthKey(_month)}/$_row/$wide';
-                    _keepAnchor(
-                      [week, _day, _kind, _mine, _find.filter.count, channel, identityHashCode(snap.data)].join('|'),
-                      week,
-                    );
-                  }
-                  if (wide) {
-                    // H-7 넓은 화면
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(
-                          width: 380,
-                          child: SingleChildScrollView(child: Column(children: [_tabs(snap.data!), calendar])),
-                        ),
-                        const VerticalDivider(width: 1),
-                        Expanded(
-                          child: ListView(controller: _listCtrl, children: [if (!_mine) _kinds(), ..._list(events)]),
-                        ),
-                      ],
-                    );
-                  }
-                  if (!_monthOpen) {
-                    // H-4 한 주: 아이콘 줄 · 달력 · 종류 탭은 위에 남고 목록만 밀린다 (작은 화면에서 펴는 중이면 위쪽도 밀린다)
-                    return Column(
-                      children: [
-                        ConstrainedBox(
-                          constraints: BoxConstraints(maxHeight: box.maxHeight * 0.75),
-                          child: SingleChildScrollView(
-                            child: Column(children: [_tabs(snap.data!), calendar, if (!_mine) _kinds()]),
-                          ),
-                        ),
-                        Expanded(
-                          child: ListView(
-                            key: const ValueKey('calendar-week-list'),
-                            controller: _listCtrl,
-                            padding: EdgeInsets.only(bottom: navClearance(context)),
-                            children: _list(events),
-                          ),
-                        ),
-                      ],
-                    );
-                  }
-                  return ListView(
-                    padding: EdgeInsets.only(bottom: navClearance(context)),
-                    children: [_tabs(snap.data!), calendar, if (!_mine) _kinds(), ..._list(events)],
-                  );
-                },
+              // H-11 아이콘 · 탭 줄은 다른 탭과 같이 늘 위에 (내용과 함께 밀리지 않고, 더 내려 읽으면 두 번째 겹으로 접힌다)
+              return Column(
+                children: [
+                  CollapsingHeader(step: 2, child: _tabs(snap.data!)),
+                  Expanded(
+                    child: LayoutBuilder(
+                      builder: (context, box) {
+                        final wide = box.maxWidth >= 720;
+                        if (!_monthOpen) {
+                          // H-4 한 주: 목록을 기준 날로 (주 · 날 · 거르기가 바뀔 때만)
+                          final week = '${monthKey(_month)}/$_row/$wide';
+                          _keepAnchor(
+                            [
+                              week,
+                              _day,
+                              _kind,
+                              _mine,
+                              _find.filter.count,
+                              channel,
+                              identityHashCode(snap.data),
+                            ].join('|'),
+                            week,
+                          );
+                        }
+                        if (wide) {
+                          // H-7 넓은 화면
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SizedBox(width: 380, child: SingleChildScrollView(child: calendar)),
+                              const VerticalDivider(width: 1),
+                              Expanded(
+                                child: ListView(
+                                  controller: _listCtrl,
+                                  children: [if (!_mine) _kinds(), ..._list(events)],
+                                ),
+                              ),
+                            ],
+                          );
+                        }
+                        if (!_monthOpen) {
+                          // H-4 한 주: 달력 · 종류 탭은 위에 남고 목록만 밀린다 (작은 화면에서 펴는 중이면 위쪽도 밀린다)
+                          return Column(
+                            children: [
+                              ConstrainedBox(
+                                constraints: BoxConstraints(maxHeight: box.maxHeight * 0.75),
+                                child: SingleChildScrollView(child: Column(children: [calendar, if (!_mine) _kinds()])),
+                              ),
+                              Expanded(
+                                child: ListView(
+                                  key: const ValueKey('calendar-week-list'),
+                                  controller: _listCtrl,
+                                  padding: EdgeInsets.only(bottom: navClearance(context)),
+                                  children: _list(events),
+                                ),
+                              ),
+                            ],
+                          );
+                        }
+                        return ListView(
+                          padding: EdgeInsets.only(bottom: navClearance(context)),
+                          children: [calendar, if (!_mine) _kinds(), ..._list(events)],
+                        );
+                      },
+                    ),
+                  ),
+                ],
               );
             },
           ),
@@ -537,18 +551,28 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope, Sing
     );
   }
 
-  /// H-11 필터 + 전체 / 내 일정 (다른 탭의 아이콘 줄과 같은 자리, 검색창 없이)
+  /// H-11 전체 일정 · 내 일정 탭 + 상품 필터 (다른 탭과 같은 자리 · 같은 모양, 검색창 없이).
+  /// 밑줄은 위 채널 바에만 — 두 줄이 똑같아 보이지 않게 (2026-11-21 주인)
   Widget _tabs(_CalData d) => ToolRow(
-    tools: [
-      FilterButton(count: _find.filter.count, onTap: () => _openFilter(d)),
-      ViewIconToggle(
-        mine: _mine,
-        onChanged: (v) => setState(() => _mine = v), // STATE: 전체 일정 ↔ 내 일정
-        allIcon: Icons.calendar_month_outlined,
-        allTip: tr('전체 일정'),
-        mineTip: tr('내 일정'),
+    leading: SingleChildScrollView(
+      // 360dp 폰에서 두 탭이 ToolRow 가 준 폭보다 2.8 넘쳤다 — 넘치면 옆으로 밀어 본다 (검색 · 컬렉션 탭 줄과 같게)
+      scrollDirection: Axis.horizontal,
+      physics: const ClampingScrollPhysics(),
+      child: Row(
+        children: [
+          for (final (i, label) in const ['전체 일정', '내 일정'].indexed)
+            UnderlineTab(
+              label: tr(label),
+              selected: _mine == (i == 1),
+              onTap: () => setState(() => _mine = i == 1), // STATE: 전체 일정 ↔ 내 일정
+              fontSize: 13,
+              underline: false,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            ),
+        ],
       ),
-    ],
+    ),
+    tools: [FilterButton(count: _find.filter.count, onTap: () => _openFilter(d))],
   );
 
   /// H-9c 이번 달 결제 예정 — 이 달에 도착 예정인 미결제 예약 (내 일정에서만, 날짜를 골라도 한 달 전체). 목록 맨 끝에
@@ -608,14 +632,6 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope, Sing
     final anchorUndated = !_monthOpen && anchor == null && undated.isNotEmpty;
     _anchorPlaced = anchor != null || anchorUndated;
     return [
-      if (day != null)
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          child: Text(
-            trf('{m}월 {d}일만 보는 중 · 날짜를 다시 누르면 한 달 전체', {'m': _month.month, 'd': day}),
-            style: const TextStyle(color: Gp.muted, fontSize: Gp.t12),
-          ),
-        ),
       for (final d in days) ...[
         _DayHeader(key: d == anchor ? _anchorKey : null, date: DateTime(_month.year, _month.month, d)), // H-5
         for (final e in shown.where((e) => e.day == d))
@@ -973,8 +989,6 @@ class _EventRow extends StatelessWidget {
 
 List<HelpItem> get calendarHelp => [
   HelpItem(Icons.tune, tr('필터')),
-  HelpItem(Icons.calendar_month_outlined, tr('전체 일정')),
-  HelpItem(Icons.person_outline, tr('내 일정 (좋아요 · 구매함)')),
   HelpItem(Icons.keyboard_arrow_down, tr('한 달 보기 (누르거나 아래로 밀기)')),
   HelpItem.dot(Gp.accent, tr('좋아요 · 예약한 상품')),
   HelpItem.dot(Gp.muted, tr('그 밖의 일정')), // 발매 · 예고 · 라이브 · 비공식 소식 · 구매한 날

@@ -78,6 +78,7 @@ class UnderlineTab extends StatelessWidget {
     this.count,
     this.fontSize = 15,
     this.padding = const EdgeInsets.symmetric(horizontal: 8),
+    this.underline = true,
   });
 
   final String label;
@@ -88,6 +89,10 @@ class UnderlineTab extends StatelessWidget {
   final int? count;
   final double fontSize;
   final EdgeInsets padding;
+
+  /// 밑줄을 그을까 — 채널 바만 true. 탭 줄은 false 라서 한 화면에 밑줄이 한 군데만 남는다
+  /// (둘 다 밑줄이면 "전체" 로 시작하는 두 줄이 똑같아 보였다 — 2026-11-21 주인)
+  final bool underline;
 
   @override
   Widget build(BuildContext context) {
@@ -121,13 +126,15 @@ class UnderlineTab extends StatelessWidget {
                   color: selected ? Gp.ink : Gp.faint,
                 ),
               ),
-              const SizedBox(height: 4),
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                height: 2,
-                width: selected ? 14 : 0,
-                color: Gp.accent, // 브랜드 포인트 색
-              ),
+              if (underline) ...[
+                const SizedBox(height: 4),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  height: 2,
+                  width: selected ? 14 : 0,
+                  color: Gp.accent, // 브랜드 포인트 색
+                ),
+              ],
             ],
           ),
         ),

@@ -111,11 +111,10 @@ class _NotifySettingsScreenState extends State<NotifySettingsScreen> {
     );
   }
 
-  Widget _ruleSwitch(String key, IconData icon, String hint) => SwitchListTile(
+  Widget _ruleSwitch(String key, IconData icon) => SwitchListTile(
     key: Key('rule-$key'),
     secondary: Icon(icon),
     title: Text(notifyRuleLabel(key)),
-    subtitle: Text(hint),
     value: _n.config.rule(key),
     activeThumbColor: Gp.accent,
     onChanged: (v) => _n.setRule(key, v), // STATE: 규칙 → 다음 확인부터 (저장)
@@ -185,22 +184,14 @@ class _NotifySettingsScreenState extends State<NotifySettingsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SectionHeader(tr('내 상품')),
-              _ruleSwitch('wanted', Icons.favorite_border, tr('좋아요한 상품의 가격 · 발매일 · 판매처가 바뀌면')),
-              _ruleSwitch('release_soon', Icons.today_outlined, tr('발매 D-7 · D-1 · 당일 (발매일이 정해진 것만)')),
-              _ruleSwitch('restock', Icons.replay, tr('좋아요 · 구매함 상품의 재판매 소식')),
-              _ruleSwitch('preorder_arrival', Icons.local_shipping_outlined, tr('예약한 상품의 도착 달 · 도착 날 (내가 적은 도착 예정)')),
+              _ruleSwitch('wanted', Icons.favorite_border),
+              _ruleSwitch('release_soon', Icons.today_outlined),
+              _ruleSwitch('restock', Icons.replay),
+              _ruleSwitch('preorder_arrival', Icons.local_shipping_outlined),
               // 라이브와 같은 까닭으로 당일에 올라온 예약은 놓칠 수 있다 (GUNDAM.INFO 「本日11時」는 15분 전에 올라온다)
-              _ruleSwitch(
-                'preorder_soon',
-                Icons.alarm,
-                tr('알림 받는 예고 · 좋아요한 상품의 예약 시작 30분쯤 전 (시각이 정해진 것만 · 당일에 올라온 것은 놓칠 수 있어요)'),
-              ),
+              _ruleSwitch('preorder_soon', Icons.alarm),
               // 뒤 확인은 3시간마다(대기 모드면 더 늦다)라 시작 몇 시간 전에 올라온 라이브는 놓칠 수 있다 — 그대로 적어 둔다
-              _ruleSwitch(
-                'live_soon',
-                Icons.live_tv_outlined,
-                tr('내 채널 공식 라이브 시작 30분쯤 전 · 새로 올라온 라이브 (당일에 올라온 것은 앱을 열지 않으면 놓칠 수 있어요)'),
-              ),
+              _ruleSwitch('live_soon', Icons.live_tv_outlined),
             ],
           ),
         ),

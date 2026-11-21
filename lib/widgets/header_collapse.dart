@@ -27,6 +27,9 @@ const headerSnapDuration = Duration(milliseconds: 200);
 /// 위로 올리지 않고 이만큼 내려 읽어야 접는다 — 천천히 읽는 동안은 그대로 (2026-11-21 주인: 12 는 너무 빨랐다)
 const headerHideAfter = 400.0;
 
+/// 채널 바를 접은 뒤 이만큼 더 내려 읽어야 탭 줄까지 접는다 (2026-11-21 주인: 한 겹씩 접히고 맨 윗줄만 남게)
+const headerHideAfter2 = 320.0;
+
 /// 이만큼 올리면 편다 (조금만 올려도)
 const _showAfter = 6.0;
 
@@ -41,7 +44,7 @@ class HeaderCollapse extends StatefulWidget {
   State<HeaderCollapse> createState() => _HeaderCollapseState();
 }
 
-class _HeaderCollapseState extends State<HeaderCollapse> with SingleTickerProviderStateMixin {
+class _HeaderCollapseState extends State<HeaderCollapse> with TickerProviderStateMixin {
   late final _anim = AnimationController(
     vsync: this,
     duration: headerSnapDuration,
@@ -50,6 +53,10 @@ class _HeaderCollapseState extends State<HeaderCollapse> with SingleTickerProvid
 
   // 접을 때 · 펼 때 모두 처음이 빠르고 끝이 느리게 (거꾸로 갈 때는 곡선도 거꾸로)
   late final _collapse = CurvedAnimation(parent: _anim, curve: Curves.easeOutCubic, reverseCurve: Curves.easeInCubic);
+
+  /// 두 번째 겹 — 탭 줄 (전체 · 종류 · 세대 …). 채널 바가 접힌 뒤에도 계속 내려 읽으면 이것도 접힌다
+  late final _anim2 = AnimationController(vsync: this, duration: headerSnapDuration);
+  late final _collapse2 = CurvedAnimation(parent: _anim2, curve: Curves.easeOutCubic, reverseCurve: Curves.easeInCubic);
 
   /// 마지막으로 올린 뒤 내려 읽은 거리 (손으로 민 것 + 그 뒤 미끄러진 것)
   double _down = 0;
@@ -83,14 +90,27 @@ class _HeaderCollapseState extends State<HeaderCollapse> with SingleTickerProvid
   void dispose() {
     widget.controller.removeListener(_follow);
     _collapse.dispose();
+    _collapse2.dispose();
     _anim.dispose();
+    _anim2.dispose();
     super.dispose();
   }
 
   void _follow() {
     _down = 0;
     _up = 0;
-    widget.controller.hidden ? _anim.forward() : _anim.reverse();
+    if (widget.controller.hidden) {
+      _anim.forward();
+    } else {
+      _anim.reverse();
+      _set2(false); // 탭을 바꾸거나 맨 위로 가면 두 겹 다 펴진다
+    }
+  }
+
+  /// 두 번째 겹 접기 · 펴기
+  void _set2(bool hidden) {
+    if (hidden == (_anim2.status == AnimationStatus.forward || _anim2.value == 1)) return;
+    hidden ? _anim2.forward() : _anim2.reverse();
   }
 
   void _set(bool hidden) {
@@ -129,6 +149,7 @@ class _HeaderCollapseState extends State<HeaderCollapse> with SingleTickerProvid
     }
     if (n is! ScrollUpdateNotification) return false;
     if (m.pixels <= m.minScrollExtent) {
+      _set2(false);
       _set(false); // 맨 위로 돌아왔다
       _down = 0;
       return false;
@@ -142,6 +163,7 @@ class _HeaderCollapseState extends State<HeaderCollapse> with SingleTickerProvid
       _up -= d;
       if (_up > _showAfter) {
         _down = 0;
+        _set2(false); // 조금만 올려도 두 겹 다 돌아온다
         _set(false);
       }
       return false;
@@ -150,41 +172,50 @@ class _HeaderCollapseState extends State<HeaderCollapse> with SingleTickerProvid
     _down += d;
     // 채널 바를 접어 목록이 길어져도 아직 스크롤이 남을 때만 접는다 — 짧은 목록에서 접혔다 펴졌다 흔들리지 않게
     if (_down > headerHideAfter && m.maxScrollExtent > _extent) _set(true);
+    // 채널 바가 접힌 뒤에도 더 내려 읽으면 탭 줄까지 — 맨 윗줄(프로필 · Lv · 검색 · 알림)만 남는다
+    if (_down > headerHideAfter + headerHideAfter2 && widget.controller.hidden) _set2(true);
     return false;
   }
 
   @override
   Widget build(BuildContext context) => NotificationListener<Notification>(
     onNotification: _onNotification,
-    child: _HeaderScope(collapse: _collapse, onExtent: (h) => _extent = h, child: widget.child),
+    child: _HeaderScope(collapse: _collapse, collapse2: _collapse2, onExtent: (h) => _extent = h, child: widget.child),
   );
 }
 
 class _HeaderScope extends InheritedWidget {
-  const _HeaderScope({required this.collapse, required this.onExtent, required super.child});
+  const _HeaderScope({required this.collapse, required this.collapse2, required this.onExtent, required super.child});
 
-  /// 0 = 펼침 · 1 = 접힘
+  /// 0 = 펼침 · 1 = 접힘 (첫 겹 = 채널 바)
   final Animation<double> collapse;
+
+  /// 두 번째 겹 = 탭 줄
+  final Animation<double> collapse2;
   final ValueChanged<double> onExtent;
 
   @override
-  bool updateShouldNotify(_HeaderScope old) => collapse != old.collapse;
+  bool updateShouldNotify(_HeaderScope old) => collapse != old.collapse || collapse2 != old.collapse2;
 }
 
 /// 접히는 채널 바 — [HeaderCollapse] 안이면 위로 밀려 접히고, 밖(셸 없이 띄운 화면 · 검색 덮개 · 테스트)이면 늘 펼침
 class CollapsingHeader extends StatelessWidget {
-  const CollapsingHeader({super.key, required this.child});
+  const CollapsingHeader({super.key, required this.child, this.step = 1});
   final Widget child;
+
+  /// 1 = 채널 바 (먼저 접힘) · 2 = 탭 줄 (더 내려 읽으면 접힘)
+  final int step;
 
   @override
   Widget build(BuildContext context) {
     final scope = context.dependOnInheritedWidgetOfExactType<_HeaderScope>();
     if (scope == null) return child;
+    final anim = step == 2 ? scope.collapse2 : scope.collapse;
     return AnimatedBuilder(
-      animation: scope.collapse,
-      child: _ReportHeight(onHeight: scope.onExtent, child: child),
+      animation: anim,
+      child: step == 2 ? child : _ReportHeight(onHeight: scope.onExtent, child: child),
       builder: (context, child) {
-        final t = scope.collapse.value;
+        final t = anim.value;
         return ExcludeSemantics(
           excluding: t >= 1, // 접힌 채널 바의 버튼은 읽지 않는다 (높이 0 이라 눌리지도 않음)
           child: ClipRect(

@@ -3,7 +3,7 @@
 // ┌──────── 디자인 가이드 대응표: F 컬렉션 ────────────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
 // │ F-1  │ ChannelHeader                      │ 아바타 줄 + 내 채널 바 (C-0 공용)       │ P04 · P06     │
-// │ F-2  │ 밑줄 탭 3–4개 (수 없이)              │ 좋아요 · 예약(있을 때만) · 구매함 · 도감  │ P06           │
+// │ F-2  │ 밑줄 없는 탭 3–4개 (수 없이)          │ 좋아요 · 예약(있을 때만) · 구매함 · 도감 — 아이콘과 한 줄, 글자는 채널 바보다 작게 │ P06 │
 // │ F-8  │ 탭 "도감" → GuideView (g_guide_view) │ 내 수집 진행: 작품 · 세대 → 기체 칸 (전부 컬러, ♡ · 리본 표시) │ P01 · P06 │
 // │ F-4  │ ListSummary (목록 맨 끝)             │ 상품 수 · 정가 합계(₩ · ¥ 따로) · 구매함 지출 합계 · 예약 결제 예정 (× 수량) │ P01 · P08 │
 // │ F-5  │ ListView 줄 (사진 · 이름 · 가격)      │ 컬렉션 목록 → 상품 상세 · 부제 라인 · 작품 (같은 말 한 번) │ P08     │
@@ -13,7 +13,7 @@
 // │ F-9  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 빈 컬렉션           │ P01 · P09     │
 // │ F-10 │ 🗑 아이콘(개수 배지) → 바텀 시트      │ 휴지통: 지운 상품 복원 (기기 저장 · 30일)  │ P03 · P05     │
 // │ F-11 │ jumpTick (서랍 · 내 정보 숫자에서)    │ 좋아요 · 예약 · 구매함 · 도감으로 바로 이동 │ P07           │
-// │ F-12 │ ToolRow (채널 바 바로 아래, 탭 위)   │ [필터][휴지통][편집] 상자 없는 아이콘 줄 — 다른 탭과 같은 자리 (공유 카드 · ? 는 서랍으로) │ P04 · P07 │
+// │ F-12 │ ToolRow(leading: 탭 줄, tools:) · CollapsingHeader(step 2) │ 탭 줄 왼쪽 · [필터][휴지통][편집] 오른쪽 한 줄 — 다른 탭과 같은 자리 (공유 카드 · ? 는 서랍으로) │ P04 · P07 │
 // │ F-13 │ 서랍 › 사용법 (S-19, collectionHelp) │ 필터 · 휴지통 · 편집 · 예약 아이콘 뜻     │ P10 · P01     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 줄 → D 상품 상세(쌓기). 빈 상태 "검색하러 가기" → 검색 덮개(쌓기).
@@ -335,51 +335,52 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
               final all = snap.data!;
               return Column(
                 children: [
-                  ToolRow(
-                    // F-12 모든 탭과 같은 자리(채널 바 바로 아래, 오른쪽 끝): [필터][휴지통][편집]
-                    tools: [
-                      FilterButton(
-                        count: _guide ? _guideFilter.filter.count : _find.filter.count,
-                        // 도감 '전체' = 채널 고르기 칸이라 필터가 없다 — 내 채널이 하나면 그 도감이 바로 열려 필터도 된다 (G-1)
-                        onTap: _guide && channel == allChannelId && myChannels.length != 1
-                            ? null
-                            : () => _openFilter(all),
+                  CollapsingHeader(
+                    // 채널 바가 접힌 뒤에도 더 내려 읽으면 이 줄까지 접힌다 (S-13 둘째 겹)
+                    step: 2,
+                    child: ToolRow(
+                      // F-12 탭 줄과 아이콘이 한 줄 — 따로 두면 아이콘만 뜬 빈 띠가 생겼다 (2026-11-21 주인)
+                      leading: _TopRow(
+                        // F-2
+                        hasPreorder: _inTab(all, _Tab.preorder).isNotEmpty,
+                        tab: _guide ? null : _tab,
+                        onTab: (t) => setState(() {
+                          _tab = t; // STATE: 탭 → 목록 내용
+                          _guide = false;
+                          _selected.clear();
+                          _editing = false;
+                        }),
+                        onGuide: () => setState(() {
+                          _guide = true; // STATE: 도감 탭
+                          _editing = false;
+                        }),
                       ),
-                      ToolIcon(
-                        // F-10 휴지통 (지운 수 배지)
-                        icon: Icons.delete_outline,
-                        tip: tr('휴지통'),
-                        badge: _removed.length,
-                        onTap: () => _openTrash(all),
-                      ),
-                      if (!_guide)
-                        ToolIcon(
-                          // F-6 편집 → 체크박스 · 지우기 바 (도감에는 지울 줄이 없다)
-                          icon: _editing ? Icons.done : Icons.checklist,
-                          tip: tr(_editing ? '완료' : '편집'),
-                          onTap: () => setState(() {
-                            _editing = !_editing; // STATE: 편집 → 체크박스 · 지우기 바
-                            _selected.clear();
-                          }),
+                      tools: [
+                        FilterButton(
+                          count: _guide ? _guideFilter.filter.count : _find.filter.count,
+                          // 도감 '전체' = 채널 고르기 칸이라 필터가 없다 — 내 채널이 하나면 그 도감이 바로 열려 필터도 된다 (G-1)
+                          onTap: _guide && channel == allChannelId && myChannels.length != 1
+                              ? null
+                              : () => _openFilter(all),
                         ),
-                    ],
-                  ),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: _TopRow(
-                      // F-2 탭은 아이콘 줄 아래 (달력의 전체 · 발매 · 예고와 같은 자리)
-                      hasPreorder: _inTab(all, _Tab.preorder).isNotEmpty,
-                      tab: _guide ? null : _tab,
-                      onTab: (t) => setState(() {
-                        _tab = t; // STATE: 탭 → 목록 내용
-                        _guide = false;
-                        _selected.clear();
-                        _editing = false;
-                      }),
-                      onGuide: () => setState(() {
-                        _guide = true; // STATE: 도감 탭
-                        _editing = false;
-                      }),
+                        ToolIcon(
+                          // F-10 휴지통 (지운 수 배지)
+                          icon: Icons.delete_outline,
+                          tip: tr('휴지통'),
+                          badge: _removed.length,
+                          onTap: () => _openTrash(all),
+                        ),
+                        if (!_guide)
+                          ToolIcon(
+                            // F-6 편집 → 체크박스 · 지우기 바 (도감에는 지울 줄이 없다)
+                            icon: _editing ? Icons.done : Icons.checklist,
+                            tip: tr(_editing ? '완료' : '편집'),
+                            onTap: () => setState(() {
+                              _editing = !_editing; // STATE: 편집 → 체크박스 · 지우기 바
+                              _selected.clear();
+                            }),
+                          ),
+                      ],
                     ),
                   ),
                   Expanded(
@@ -677,7 +678,8 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
   }
 }
 
-/// F-2 좋아요 | 예약 | 구매함 | 도감 탭 (수 없이 — 합계는 목록 맨 끝). 예약 탭은 예약이 있거나 고른 때만. [tab] null = 도감
+/// F-2 좋아요 | 예약 | 구매함 | 도감 탭 (수 없이 — 합계는 목록 맨 끝). 예약 탭은 예약이 있거나 고른 때만. [tab] null = 도감.
+/// 채널 바보다 작은 글자 · 밑줄 없이 — 한 화면에 밑줄은 채널 바에만 (2026-11-21 주인)
 class _TopRow extends StatelessWidget {
   const _TopRow({required this.hasPreorder, required this.tab, required this.onTab, required this.onGuide});
 
@@ -688,33 +690,36 @@ class _TopRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget one(String label, _Tab t) => UnderlineTab(
-      // 채널 바와 같은 밑줄 탭
+    // 첫 탭 글자는 채널 바 글자와 같은 자리 (ToolRow 가 왼쪽 16 을 준다 — 둘러보기 탭 줄과 같게)
+    Widget one(String label, _Tab t, {bool first = false}) => UnderlineTab(
       key: ValueKey('tab-${t.name}'),
       label: label,
-      fontSize: Gp.t16,
+      fontSize: 13,
+      underline: false,
       selected: tab == t,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: EdgeInsets.fromLTRB(first ? 0 : 8, 8, 8, 8),
       onTap: () => onTab(t),
     );
 
-    // 작은 폰(320) · 큰 글씨에서 탭 네 개가 넘치면 옆으로 밀어 본다 (왼쪽 정렬 그대로)
+    // 작은 폰(320) · 큰 글씨에서 탭 네 개가 넘치면 옆으로 밀어 본다 (왼쪽 정렬 그대로).
+    // 옆 여백은 ToolRow 가 가지므로 여기서는 위아래만
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       physics: const ClampingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(6, 2, 6, 2),
+      padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         children: [
-          one(tr('좋아요'), _Tab.liked), // F-2 P06
+          one(tr('좋아요'), _Tab.liked, first: true), // F-2 P06
           if (hasPreorder || tab == _Tab.preorder) one(tr('예약'), _Tab.preorder),
           one(tr('구매함'), _Tab.owned),
           UnderlineTab(
             // F-8 도감 (내 진행은 칸으로)
             key: const ValueKey('tab-guide'),
             label: tr('도감'),
-            fontSize: Gp.t16,
+            fontSize: 13,
+            underline: false,
             selected: tab == null,
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
             onTap: onGuide,
           ),
         ],

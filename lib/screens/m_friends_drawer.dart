@@ -1,17 +1,20 @@
 // 화면 M: 서랍 — 왼쪽 위 아바타를 누르거나, 홈에서 왼쪽 가장자리를 밀면 나온다 (QQ 옆 서랍처럼)
-// 위: 내 프로필 요약(배경 사진 위 아바타 · 이름 · Lv, 누르면 I 내 정보) · 아래: 좋아요 · 구매함 · 예약 · 친구 · 공유 카드 · 사용법 · 설정.
+// 세 띠 (2026-11-22 주인 시안): 위 고정 = 내 프로필 요약(배경 사진 위 아바타 · 이름 · Lv, 누르면 I 내 정보),
+//     가운데 = 줄 목록만 혼자 움직인다(좋아요 · 구매함 · 예약 / 친구 · 공유 카드, 스크롤바 없음), 아래 고정 = 아이콘 줄(사용법 · 설정).
 // 친구(검색 · 친구 요청 · 목록 · ★ 특별 관심 소식)는 "친구" 줄이 여는 쌓기 화면 [FriendsPage].
 // v3: 친구 · 요청은 Gunpula 계정(v3 get_me), 친구 숫자는 get_friend_collection, 친구 사진 · 아바타는 get_friend_wall,
 //     알 수도 있는 친구는 gunpula_v3_suggest_friends(docs/supabase-v3-social.sql — 없으면 칸 숨김),
 //     공용 조각은 u_social.dart. 공유 공간 탭은 뺐다 (2026-11-20 주인) — 친구 하나뿐이라 탭 줄도 없다.
 // 2026-11-21 주인: 서랍 첫 화면을 메뉴 줄로 — 위 줄의 ⚙ · ? 와 탭의 공유 카드 · My Page 가 여기로 왔다.
 //     머리의 "친구" 제목 · @아이디 · ? 는 뺐다 (아이디는 내 정보에서 복사).
+// 2026-11-22 주인: 사용법 · 설정은 줄에서 빼 아래 고정 아이콘 줄로, 좋아요 · 구매함 · 예약 줄 끝에 내 것의 수
+//     (내 정보 I-4 숫자 줄 · 그 줄이 여는 컬렉션 탭 목록과 같은 셈 — 내 채널 상품에서 Marks 로 센다).
 //
 // ┌──────── 디자인 가이드 대응표: M 서랍 ──────────────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
 // │ M-1  │ Drawer (아바타 · 홈 가장자리 밀기)    │ 서랍 열기 · 닫기(밖 누르기 · X)          │ P03 · P07     │
-// │ M-2  │ 배경 사진 위 색 고리 아바타 · 이름 · Lv · › │ 내 프로필 요약 → 내 정보 (배경 = 내 정보와 같은 사진, 없으면 옅은 그라데이션) │ P04 │
-// │ M-3  │ 메뉴 줄 (아이콘 + 이름, 숫자 없음)    │ 좋아요 · 구매함 · 예약 → 컬렉션 탭 그 목록 · 친구 · 공유 카드 · 사용법 · 설정 │ P06 · P07 │
+// │ M-2  │ 위 고정 띠: 배경 사진 위 색 고리 아바타 · 이름 · Lv · › │ 내 프로필 요약 → 내 정보 (배경 = 내 정보와 같은 사진, 없으면 옅은 그라데이션) │ P04 │
+// │ M-3  │ 가운데 띠: 줄 목록 (아이콘 + 이름, 좋아요 · 구매함 · 예약은 줄 끝에 수) │ 좋아요 · 구매함 · 예약 → 컬렉션 탭 그 목록(수 = 그 목록의 내 것의 수) / 친구 · 공유 카드 (줄 목록만 움직인다) │ P06 · P07 │
 // │ M-3b │ 친구 줄 끝 빨간 숫자 · 파란 점         │ 받은 친구 요청 수 · 지난번에 본 뒤 새 사진 │ P01           │
 // │ M-4  │ GpSearchBar (카메라 없는 모드)        │ 친구 검색 (친구 화면)                    │ P07 · P04     │
 // │ M-5  │ SuggestionsPanel (U-7) · 요청 줄      │ 알 수도 있는 친구(함께 아는 친구 n명) · 친구 요청 │ P07 · P05 │
@@ -20,12 +23,14 @@
 // │ M-8  │ 안내 + 로그인 버튼                   │ 로그인 전                              │ P09           │
 // │ M-9  │ ★ 묶음 (SpecialFeed)                │ 특별 관심 친구가 최근 담은 것 (옛 My Page ★) │ P01         │
 // │ M-10 │ 머리 오른쪽 + · ✕                   │ 아이디로 친구 추가 · 닫기                 │ P07 · P03     │
+// │ M-11 │ 아래 고정 띠: 아이콘 줄               │ 사용법 · 설정 (밤 모드는 어두운 테마가 들어오면 맨 앞 자리) │ P07 · P08 │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 서랍 → 내 정보 · 친구 화면 · 공유 카드 · 사용법 · 설정(쌓기, 서랍은 닫힘) · 좋아요 · 구매함 · 예약(컬렉션 탭, 옆으로).
 //       요청 · 추가 → 덮기(바텀 시트).
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../channels.dart';
 import '../clock.dart';
 import '../data/catalog.dart';
 import '../data/social_local.dart' show ProfileImageKind;
@@ -34,6 +39,7 @@ import '../detail_pane.dart';
 import '../l10n/l10n.dart';
 import '../logic/friends.dart';
 import '../logic/level_math.dart';
+import '../marks.dart';
 import '../models.dart';
 import '../sync/account.dart';
 import '../theme.dart';
@@ -57,6 +63,7 @@ class FriendsDrawer extends StatefulWidget {
     required this.onOpenProfile,
     this.onJump,
     this.onHelp,
+    this.myChannels,
     this.loaders = const Loaders(),
   });
 
@@ -64,6 +71,9 @@ class FriendsDrawer extends StatefulWidget {
 
   /// 좋아요 · 구매함 · 예약 → 컬렉션 탭의 그 목록 (앱 셸)
   final ValueChanged<CollectionJump>? onJump;
+
+  /// 줄 끝 수를 세는 범위 — 내 정보(I-4) · 컬렉션 탭 목록과 같게. 없으면 모든 채널
+  final List<String>? myChannels;
 
   /// 사용법 (앱 셸이 모든 화면의 도움말을 모은다)
   final VoidCallback? onHelp;
@@ -75,6 +85,12 @@ class FriendsDrawer extends StatefulWidget {
 
 class _FriendsDrawerState extends State<FriendsDrawer> {
   late final Future<(Profile, int)> _future = _load();
+
+  /// 줄 끝 수를 세는 상품 — 내 채널 상품 전부 (내 정보 I-4 와 같은 셈, 거기서 Marks 로 거른다).
+  /// 메뉴 줄은 이것을 기다리지 않는다 — 받는 중 · 오프라인 · 실패면 수 자리만 빈다
+  late final Future<List<Kit>> _kits = widget.loaders
+      .kits(widget.myChannels ?? [for (final c in allChannels) c.id])
+      .catchError((Object _) => const <Kit>[]);
 
   @override
   void initState() {
@@ -108,21 +124,21 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
     final account = AccountScope.of(context); // 친구 · 요청이 바뀌면 다시 그림
     return Drawer(
       // M-1
-      width: width < 420 ? width * 0.88 : 380,
+      // 화면의 절반 (2026-11-21 주인: 접는 화면이라 절반이면 충분하다).
+      // 접은 상태처럼 좁은 화면에서는 절반이 너무 좁아 못 읽으므로 300 을 밑바닥으로 둔다
+      width: (width * 0.5).clamp(300.0, width * 0.88),
       backgroundColor: Gp.bg,
       shape: const RoundedRectangleBorder(),
       // 메뉴 줄은 기다리지 않는다 — 카탈로그를 처음 받는 중 · 오프라인 · 받기 실패에도 설정 · 사용법이 열려야 해서.
       // 내 정보 · 도감(레벨)을 기다리는 것은 머리의 이름 · Lv 뿐
-      child: ListView(
-        padding: EdgeInsets.zero,
+      child: Column(
         children: [
           FutureBuilder<(Profile, int)>(
             future: _future,
             builder: (context, snap) => _header(snap.hasError ? null : snap.data, account),
           ),
-          const SizedBox(height: 8),
-          ..._menu(account),
-          const SizedBox(height: 24),
+          Expanded(child: _rows(account)),
+          _bottomBar(),
         ],
       ),
     );
@@ -236,45 +252,148 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
     );
   }
 
-  /// M-3 메뉴 줄 — 아이콘 + 이름만 (숫자 · 괄호 설명 없음). 친구 줄만 받은 요청 수 · 새 사진 점 (M-3b)
-  List<Widget> _menu(Account account) {
+  /// M-3 가운데 띠 — 줄 목록만 혼자 움직인다 (머리 · 아래 아이콘 줄은 그대로 있다). 스크롤바는 두지 않는다.
+  /// 줄 끝 수 = 내 것의 수, 친구 줄만 받은 요청 수 · 새 사진 점 (M-3b)
+  Widget _rows(Account account) {
+    final marks = Marks.of(context); // 좋아요 · 구매함을 적으면 수가 따라간다
     final incoming = account.incomingCount;
     final seen = account.store.social.friendsSeenAt;
     final freshPhotos = account.signedIn && account.friends.friends.any((f) => _newPhotos(account, f.handle, seen) > 0);
-    Widget row(String key, Widget icon, String label, VoidCallback onTap, {Widget? trailing}) => ListTile(
-      key: ValueKey('drawer-$key'),
-      leading: SizedBox(
-        width: Gp.iL,
-        child: Center(child: icon),
-      ),
-      title: Text(label, style: const TextStyle(fontSize: Gp.t16)),
-      trailing: trailing,
-      onTap: () => _close(onTap),
-    );
     Icon plain(IconData i) => Icon(i, size: Gp.iL, color: Gp.ink);
     void jump(CollectionJump j) => widget.onJump?.call(j);
     // 서랍은 닫히며 사라진다 — 여는 화면 · 시트(공유 카드는 레벨을 센 뒤에 열린다)는 서랍 밖 앱 셸의 Scaffold 기준으로
     final host = Scaffold.maybeOf(context)?.context ?? context;
-    return [
-      row('liked', const LikedIcon(filled: false, size: Gp.iL), tr('좋아요'), () => jump(CollectionJump.liked)),
-      row('owned', const OwnedIcon(filled: false, size: Gp.iL), tr('구매함'), () => jump(CollectionJump.owned)),
-      row('preorder', plain(preorderIcon), tr('예약'), () => jump(CollectionJump.preorder)),
-      row(
-        'friends',
-        plain(Icons.people_outline),
-        tr('친구'),
-        () => openFriends(host, loaders: widget.loaders),
-        trailing: incoming > 0
-            ? Badge(backgroundColor: Gp.danger, label: Text('$incoming')) // 받은 요청 = 빨간 숫자
-            : freshPhotos
-            // 새 사진 = 파란 점 (친구 줄과 같은 점) — 옛 서랍 머리 「새 사진 n」 대신
-            ? const Badge(key: ValueKey('drawer-friends-new'), backgroundColor: Gp.accent, smallSize: 9)
-            : null,
+    return ScrollConfiguration(
+      // 스크롤바 없이 (2026-11-22 주인)
+      behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+      child: FutureBuilder<List<Kit>>(
+        future: _kits,
+        builder: (context, snap) {
+          final counts = _counts(marks, snap.data);
+          return ListView(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            children: [
+              _row(
+                'liked',
+                const LikedIcon(filled: false, size: Gp.iL),
+                tr('좋아요'),
+                () => jump(CollectionJump.liked),
+                count: counts?.liked,
+              ),
+              _row(
+                'owned',
+                const OwnedIcon(filled: false, size: Gp.iL),
+                tr('구매함'),
+                () => jump(CollectionJump.owned),
+                count: counts?.owned,
+              ),
+              _row(
+                'preorder',
+                plain(preorderIcon),
+                tr('예약'),
+                () => jump(CollectionJump.preorder),
+                count: counts?.preorder,
+              ),
+              const Divider(height: 11, thickness: 0.5, color: Gp.line),
+              _row(
+                'friends',
+                plain(Icons.people_outline),
+                tr('친구'),
+                () => openFriends(host, loaders: widget.loaders),
+                trailing: incoming > 0
+                    ? Badge(backgroundColor: Gp.danger, label: Text('$incoming')) // 받은 요청 = 빨간 숫자
+                    : freshPhotos
+                    // 새 사진 = 파란 점 (친구 줄과 같은 점) — 옛 서랍 머리 「새 사진 n」 대신
+                    ? const Badge(key: ValueKey('drawer-friends-new'), backgroundColor: Gp.accent, smallSize: 9)
+                    : null,
+              ),
+              _row(
+                'share',
+                plain(Icons.ios_share),
+                tr('공유 카드'),
+                () => openCollectionShare(host, loaders: widget.loaders),
+              ),
+            ],
+          );
+        },
       ),
-      row('share', plain(Icons.ios_share), tr('공유 카드'), () => openCollectionShare(host, loaders: widget.loaders)),
-      row('help', plain(Icons.help_outline), tr('사용법'), () => widget.onHelp?.call()),
-      row('settings', plain(Icons.settings_outlined), tr('설정'), () => openSettings(host)),
+    );
+  }
+
+  /// 좋아요 · 구매함 · 예약 줄 끝의 내 것의 수 — 내 정보(I-4)와 컬렉션 탭 목록(F `_inTab`)과 똑같은 셈:
+  /// 내 채널 상품에서 Marks 로 거른다 (짝 상품은 한 줄, 내 채널이 아닌 상품은 세지 않는다).
+  /// 상품을 아직 못 받았으면 null — 줄은 그대로 보이고 수 자리만 빈다
+  ({int liked, int owned, int preorder})? _counts(Marks marks, List<Kit>? kits) {
+    if (kits == null) return null;
+    final scope = widget.myChannels;
+    final mine = [
+      for (final k in kits)
+        if (scope == null || scope.contains(k.franchiseId)) k,
     ];
+    return (
+      liked: mine.where(marks.liked).length,
+      owned: mine.where(marks.owned).length,
+      // 예약 = 컬렉션 탭 예약 목록과 같은 셈 (좋아요이면서 기다리는 예약)
+      preorder: mine.where((k) => marks.liked(k) && (marks.store.preorderOf(k.id)?.active ?? false)).length,
+    );
+  }
+
+  /// M-3 줄 하나 — 아이콘 · 이름 · 오른쪽 끝 수(또는 요청 수 · 새 사진 점). 줄 사이 틈이 줄보다 커 보이지 않게 낮게
+  Widget _row(String key, Widget icon, String label, VoidCallback onTap, {int? count, Widget? trailing}) => InkWell(
+    key: ValueKey('drawer-$key'),
+    onTap: () => _close(onTap),
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(Gp.gutter, 1, 12, 1),
+      child: SizedBox(
+        height: 42,
+        child: Row(
+          children: [
+            SizedBox(
+              width: Gp.iL,
+              child: Center(child: icon),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(label, style: const TextStyle(fontSize: Gp.t16)),
+            ),
+            if (count != null)
+              Text(
+                '$count',
+                style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+              ),
+            ?trailing,
+          ],
+        ),
+      ),
+    ),
+  );
+
+  /// M-11 아래 고정 띠 — 아이콘만 (이름은 툴팁).
+  /// 밤 모드가 이 줄 맨 앞 자리: 어두운 테마가 아직 없어 지금은 그리지 않는다 (죽은 단추를 두지 않는다)
+  Widget _bottomBar() {
+    final host = Scaffold.maybeOf(context)?.context ?? context;
+    return DecoratedBox(
+      decoration: const BoxDecoration(border: Border(top: Gp.bandLine)),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(8, 0, 8, MediaQuery.paddingOf(context).bottom),
+        child: Row(
+          children: [
+            ToolIcon(
+              key: const ValueKey('drawer-help'),
+              icon: Icons.help_outline,
+              tip: tr('사용법'),
+              onTap: () => _close(() => widget.onHelp?.call()),
+            ),
+            ToolIcon(
+              key: const ValueKey('drawer-settings'),
+              icon: Icons.settings_outlined,
+              tip: tr('설정'),
+              onTap: () => _close(() => openSettings(host)),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

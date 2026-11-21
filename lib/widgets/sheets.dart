@@ -196,7 +196,8 @@ class SquareSegments<T> extends StatelessWidget {
   }
 }
 
-/// 체크 칸 2열 (네모 체크 · 이름, 맞는 상품이 없는 칸은 옅게)
+/// 체크 칸 2열 (네모 체크 · 이름, 맞는 상품이 없는 칸은 옅게).
+/// 이름을 누르면 고르고, 오른쪽 × 를 누르면 뺀다 ([excluded] · [onExclude] 를 줄 때만) — 칸 하나에 아무것도 아님 · 고름 · 뺌
 class CheckGrid extends StatelessWidget {
   const CheckGrid({
     super.key,
@@ -204,6 +205,8 @@ class CheckGrid extends StatelessWidget {
     required this.selected,
     required this.countOf,
     required this.onToggle,
+    this.excluded,
+    this.onExclude,
     this.columns = 2,
     this.label = tr,
   });
@@ -213,6 +216,11 @@ class CheckGrid extends StatelessWidget {
   final Set<String> selected;
   final int Function(String) countOf;
   final ValueChanged<String> onToggle;
+
+  /// 뺀 값 · 빼기 바꾸기 — 둘을 같이 넘기면 칸마다 × 가 붙는다 (상품 필터).
+  /// 없으면 고르기만 하는 칸 (도감 · 태그 필터)
+  final Set<String>? excluded;
+  final ValueChanged<String>? onExclude;
   final int columns;
 
   /// 값 → 보이는 이름 (기본 tr — 작품처럼 따로 이름이 있으면 넘긴다)
@@ -220,57 +228,88 @@ class CheckGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final out = excluded ?? const <String>{};
     return LayoutBuilder(
       builder: (context, box) => Wrap(
         children: [
           // 칸마다 개수는 쓰지 않는다 (둘러보는 화면에 숫자를 늘어놓지 않기, 2026-11-14). 맞는 상품이 없는 칸은 옅게 두지 않고
-          // 숨긴다 (2026-11-20 주인: 회색 칸 싫음 — liveValues 와 같은 규칙). 고른 칸은 0 이어도 보여야 풀 수 있다
+          // 숨긴다 (2026-11-20 주인: 회색 칸 싫음 — liveValues 와 같은 규칙). 고른 · 뺀 칸은 0 이어도 보여야 풀 수 있다
           for (final v in values)
-            if (selected.contains(v) || countOf(v) > 0)
+            if (selected.contains(v) || out.contains(v) || countOf(v) > 0)
               SizedBox(
                 width: box.maxWidth / columns,
-                child: () {
-                  final on = selected.contains(v);
-                  return InkWell(
-                    onTap: () => onToggle(v),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 2),
-                      child: Row(
-                        children: [
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 120),
-                            width: 18,
-                            height: 18,
-                            decoration: BoxDecoration(
-                              color: on ? Gp.accent : Gp.panel,
-                              borderRadius: BorderRadius.circular(Gp.rSmall),
-                              border: Border.all(color: on ? Gp.accent : Gp.line),
-                            ),
-                            child: on ? const Icon(Icons.check, size: Gp.iS, color: Colors.white) : null,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              label(v),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: Gp.t14),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                        ],
-                      ),
-                    ),
-                  );
-                }(),
+                child: _cell(v, on: selected.contains(v), off: out.contains(v)),
               ),
         ],
       ),
     );
   }
+
+  Widget _cell(String v, {required bool on, required bool off}) {
+    final pick = InkWell(
+      onTap: () => onToggle(v),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 2),
+        child: Row(
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 120),
+              width: 18,
+              height: 18,
+              decoration: BoxDecoration(
+                color: on ? Gp.accent : Gp.panel,
+                borderRadius: BorderRadius.circular(Gp.rSmall),
+                border: Border.all(color: on ? Gp.accent : (off ? Gp.ghost : Gp.line)),
+              ),
+              child: on ? const Icon(Icons.check, size: Gp.iS, color: Gp.bg) : null,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                label(v),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: Gp.t14,
+                  color: off ? Gp.faint : Gp.ink,
+                  decoration: off ? TextDecoration.lineThrough : null,
+                  decorationColor: off ? Gp.faint : null,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+          ],
+        ),
+      ),
+    );
+    final exclude = onExclude;
+    if (exclude == null) return pick;
+    return Row(
+      children: [
+        Expanded(child: pick),
+        Semantics(
+          button: true,
+          toggled: off,
+          label: tr('제외'),
+          excludeSemantics: true,
+          child: Tooltip(
+            message: tr('제외'),
+            child: InkWell(
+              onTap: () => exclude(v),
+              borderRadius: BorderRadius.circular(Gp.rSmall),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(4, 7, 2, 7),
+                child: Icon(off ? Icons.cancel : Icons.cancel_outlined, size: Gp.iS, color: off ? Gp.danger : Gp.ghost),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
-/// 한 줄 눌러 펼치기 (라인 · 작품 · 가격)
+/// 한 줄 눌러 펼치기 (작품 · 라인 · 기간 · 가격)
 class ExpandRow extends StatelessWidget {
   const ExpandRow({super.key, required this.title, required this.summary, required this.open, required this.onTap});
   final String title;

@@ -93,7 +93,6 @@ void main() {
     expect(find.text('全部已读'), findsOneWidget);
     expect(find.text('今天'), findsOneWidget);
     expect(find.text('모두 읽음'), findsNothing);
-    expect(find.text('还没检查过'), findsOneWidget); // 확인 상태 줄
   });
 
   group('알림함 줄은 보일 때 화면 언어로 (만들 때 언어에 묶이지 않는다)', () {

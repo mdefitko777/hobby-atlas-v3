@@ -2,6 +2,7 @@
 // 아래에서 올라오는 시트(화면의 60%). 캡슐 대신 아이콘 줄 · 체크 2열 · 펼치는 줄. 도감 필터도 같은 틀 · 같은 상태 줄.
 //   맨 위 아이콘 줄(좋아요 · 구매함 · 발매 예정, 나라가 섞인 목록이면 + 나라)은 [KitFilterToggles] — 검색 탭도 이제 시트 안
 //   (2026-11-21 탭에서 검색창을 빼며 되돌림).
+//   체크 칸은 이름을 누르면 고르고 오른쪽 × 를 누르면 뺀다 (「MG · HG 제외」 — 접은 줄 요약에도 보인다).
 //   맞는 상품이 없는 칸 · 값이 하나뿐인 줄 · 정가가 없는 목록의 가격 줄은 숨긴다 (회색 칸을 두지 않기).
 //   가격은 원 · 엔이 섞인 목록이면 돈을 먼저 고른다 (환산하지 않음).
 // 거르는 규칙(KitFilter.matches)은 lib/logic/kit_filter.dart
@@ -200,7 +201,7 @@ class _FilterSheetState extends State<FilterSheet> {
   // 화면에서 뺀 칸(아직 없음 · 이번 달 · 판매)이 걸려 있던 조건은 열 때 푼다
   late KitFilter _draft = widget.initial.copy()..dropHidden();
 
-  /// 펼친 줄 (라인 · 작품 · 가격)
+  /// 펼친 줄 (작품 · 라인 · 기간 · 가격)
   String _open = '';
 
   /// 기간 달 고르기의 가장 이른 해 — 이 목록에서 가장 오래된 발매일 (레고 전부면 1949)
@@ -212,9 +213,13 @@ class _FilterSheetState extends State<FilterSheet> {
     for (final k in widget.kits) kitWork(k): kitWorkLabel(k),
   };
 
-  /// 고른 값들 한 줄 요약 — 라인 · 종류는 번역 표로, 작품은 [_workNames] 로
-  String _summary(Set<String> picked, {bool works = false}) =>
-      pickSummary(picked, label: works ? _workName : dataLabel);
+  /// 고른 값 · 뺀 값 한 줄 요약 — 라인 · 종류는 번역 표로, 작품은 [_workNames] 로.
+  /// 뺀 값의 모양은 고른 조건 한 줄과 같은 [outSummary]
+  String _summary(Set<String> picked, Set<String> out, {bool works = false}) {
+    final name = works ? _workName : dataLabel;
+    if (out.isEmpty) return pickSummary(picked, label: name);
+    return joinDot([if (picked.isNotEmpty) pickSummary(picked, label: name), outSummary(out, label: name)]);
+  }
 
   String _workName(String work) => _workNames[work] ?? work;
 
@@ -226,11 +231,23 @@ class _FilterSheetState extends State<FilterSheet> {
     return _hits(f);
   }
 
-  void _toggle(Set<String> set, String v) => setState(() => set.contains(v) ? set.remove(v) : set.add(v));
+  /// 이 값 하나만 골랐을 때의 수 — 같은 줄에서 뺀 값은 풀고 센다 (뺀 칸도 수가 있으면 보인다)
+  int _only(String v, Set<String> Function(KitFilter) pick, Set<String> Function(KitFilter) out) => _with((f) {
+    out(f).clear();
+    pick(f)
+      ..clear()
+      ..add(v);
+  });
+
+  /// 체크 칸 하나 켜고 끄기 — 고르기와 빼기는 한 값에 한쪽만 ([togglePick])
+  void _toggle(Set<String> set, Set<String> other, String v) => setState(() => togglePick(set, other, v));
 
   /// 체크 칸에 보일 값 — 맞는 상품이 없는 값은 숨긴다 ([liveValues])
-  List<String> _live(String Function(Kit) valueOf, Set<String> Function(KitFilter) field) =>
-      liveValues(widget.kits, _draft, valueOf, field);
+  List<String> _live(
+    String Function(Kit) valueOf,
+    Set<String> Function(KitFilter) field,
+    Set<String> Function(KitFilter) outField,
+  ) => liveValues(widget.kits, _draft, valueOf, field, outField: outField);
 
   /// 한국 · 일본 상품이 섞인 목록 (나라 칸을 보인다)
   late final bool _regions = hasBothRegions(widget.kits);
@@ -246,10 +263,11 @@ class _FilterSheetState extends State<FilterSheet> {
     final kits = widget.kits;
     final hits = _hits(_draft);
     final currency = currencyFor(kits, _draft.preferredCurrency);
-    final lines = _live((k) => k.line, (f) => f.lines);
-    final works = _live(kitWork, (f) => f.works);
+    final lines = _live((k) => k.line, (f) => f.lines, (f) => f.linesOut);
+    final works = _live(kitWork, (f) => f.works, (f) => f.worksOut);
     return GpPickSheet(
-      title: tr('필터'),
+      // 작품 하나만 고른 채로 열면 어느 작품을 보는지 제목에 ("필터 · SEED")
+      title: _draft.works.length == 1 ? joinDot([tr('필터'), _workName(_draft.works.first)]) : tr('필터'),
       hits: hits,
       noHitLabel: tr('맞는 상품 없음'),
       onApply: () => Navigator.pop(context, _draft..workNames.addAll(_workNames)),
@@ -269,17 +287,18 @@ class _FilterSheetState extends State<FilterSheet> {
         const SizedBox(height: 8),
         CheckGrid(
           key: const ValueKey('filter-types'),
-          values: _live((k) => k.type, (f) => f.types),
+          values: _live((k) => k.type, (f) => f.types, (f) => f.typesOut),
           selected: _draft.types,
+          excluded: _draft.typesOut,
           label: dataLabel,
-          countOf: (v) => _with(
-            (f) => f.types
-              ..clear()
-              ..add(v),
-          ),
+          countOf: (v) => _only(v, (f) => f.types, (f) => f.typesOut),
           onToggle: (v) {
-            _toggle(_draft.types, v);
+            _toggle(_draft.types, _draft.typesOut, v);
             _draft.dropHidden(); // 굿즈를 풀면 숨는 굿즈 종류도 푼다
+          },
+          onExclude: (v) {
+            _toggle(_draft.typesOut, _draft.types, v);
+            _draft.dropHidden(); // 굿즈를 빼면 굿즈 종류 줄이 숨으니 같이 푼다
           },
         ),
         // 굿즈를 고르면 세부 종류 (티켓 · 의류 · 블루레이 …)
@@ -292,46 +311,24 @@ class _FilterSheetState extends State<FilterSheet> {
             ),
           ),
           CheckGrid(
-            values: _live((k) => k.goodsKind, (f) => f.goodsKinds),
+            values: _live((k) => k.goodsKind, (f) => f.goodsKinds, (f) => f.goodsKindsOut),
             selected: _draft.goodsKinds,
+            excluded: _draft.goodsKindsOut,
             label: dataLabel,
-            countOf: (v) => _with(
-              (f) => f.goodsKinds
-                ..clear()
-                ..add(v),
-            ),
-            onToggle: (v) => _toggle(_draft.goodsKinds, v),
+            countOf: (v) => _only(v, (f) => f.goodsKinds, (f) => f.goodsKindsOut),
+            onToggle: (v) => _toggle(_draft.goodsKinds, _draft.goodsKindsOut, v),
+            onExclude: (v) => _toggle(_draft.goodsKindsOut, _draft.goodsKinds, v),
           ),
         ],
         const Divider(height: 20),
+        // 작품이 라인보다 먼저 — 무엇을 보려는지(작품)를 고르고 나서 라인을 좁힌다 (2026-11-22).
         // 값이 하나뿐인 줄은 고를 것이 없어 숨긴다 (포켓몬 · 베이 · AC 작품, 레고 라인 — 2026-11-19 감사)
-        if (showChoices(lines, _draft.lines)) ...[
-          ExpandRow(
-            key: const ValueKey('filter-lines'),
-            title: tr('라인'),
-            summary: _summary(_draft.lines),
-            open: _open == '라인',
-            onTap: () => setState(() => _open = _open == '라인' ? '' : '라인'),
-          ),
-          if (_open == '라인')
-            CheckGrid(
-              values: lines,
-              selected: _draft.lines,
-              label: dataLabel,
-              countOf: (v) => _with(
-                (f) => f.lines
-                  ..clear()
-                  ..add(v),
-              ),
-              onToggle: (v) => _toggle(_draft.lines, v),
-            ),
-        ],
         // 이펙트뿐이면 이 줄은 이펙트 갈래 (이펙트 종류)
-        if (showChoices(works, _draft.works)) ...[
+        if (showChoices(works, _draft.works, _draft.worksOut)) ...[
           ExpandRow(
             key: const ValueKey('filter-works'),
             title: tr(kitWorkTitle(kits)),
-            summary: _summary(_draft.works, works: true),
+            summary: _summary(_draft.works, _draft.worksOut, works: true),
             open: _open == '작품',
             onTap: () => setState(() => _open = _open == '작품' ? '' : '작품'),
           ),
@@ -341,12 +338,29 @@ class _FilterSheetState extends State<FilterSheet> {
               values: works,
               label: _workName, // 작품 이름은 번역 표가 아니라 상품의 중국어 작품 이름
               selected: _draft.works,
-              countOf: (v) => _with(
-                (f) => f.works
-                  ..clear()
-                  ..add(v),
-              ),
-              onToggle: (v) => _toggle(_draft.works, v),
+              excluded: _draft.worksOut,
+              countOf: (v) => _only(v, (f) => f.works, (f) => f.worksOut),
+              onToggle: (v) => _toggle(_draft.works, _draft.worksOut, v),
+              onExclude: (v) => _toggle(_draft.worksOut, _draft.works, v),
+            ),
+        ],
+        if (showChoices(lines, _draft.lines, _draft.linesOut)) ...[
+          ExpandRow(
+            key: const ValueKey('filter-lines'),
+            title: tr('라인'),
+            summary: _summary(_draft.lines, _draft.linesOut),
+            open: _open == '라인',
+            onTap: () => setState(() => _open = _open == '라인' ? '' : '라인'),
+          ),
+          if (_open == '라인')
+            CheckGrid(
+              values: lines,
+              selected: _draft.lines,
+              excluded: _draft.linesOut,
+              label: dataLabel,
+              countOf: (v) => _only(v, (f) => f.lines, (f) => f.linesOut),
+              onToggle: (v) => _toggle(_draft.lines, _draft.linesOut, v),
+              onExclude: (v) => _toggle(_draft.linesOut, _draft.lines, v),
             ),
         ],
         ExpandRow(

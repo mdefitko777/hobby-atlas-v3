@@ -423,7 +423,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               // N-11 P09
               icon: Icons.notifications_none,
               message: tr('새 알림이 없어요'),
-              detail: '${tr('내 채널 새 상품 · 좋아요한 상품 변경 · PB 예약이 여기에 모여요')}\n${_store.statusLine}',
+              detail: tr('내 채널 새 상품 · 좋아요한 상품 변경 · PB 예약이 여기에 모여요'),
             ),
           ),
         ),
@@ -434,9 +434,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       (groups[n.id.startsWith('req-') ? '친구 요청' : _groupOf(n.at)] ??= []).add(n);
     }
     // 한 줄씩 펼쳐 보이는 줄만 만든다 — 알림함은 300줄까지라, 친구 컬렉션을 받을 때마다 300줄을 다시 만들면
-    // 여는 동안 끊겼다 (점검 2026-11-14). 묶음 머리 = String, 알림 = AppNotice, 맨 위 확인 시각 = null
-    final rows = <Object?>[
-      null,
+    // 여는 동안 끊겼다 (점검 2026-11-14). 묶음 머리 = String, 알림 = AppNotice
+    final rows = <Object>[
       for (final e in groups.entries) ...[e.key, ...e.value],
     ];
     // 위에 새 알림이 들어오거나 하나를 밀어 지워도 각 줄(밀던 중인 줄 포함)이 제 상태를 지키게 열쇠로 자리를 찾는다
@@ -450,36 +449,30 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       padding: const EdgeInsets.only(bottom: 32),
       itemCount: rows.length,
       findChildIndexCallback: (key) => at[key],
-      itemBuilder: (context, i) => switch (rows[i]) {
-        final AppNotice n => Dismissible(
-          // N-5
-          key: ValueKey(n.id),
-          direction: DismissDirection.endToStart,
-          onDismissed: (_) => _remove(n),
-          background: Container(
-            alignment: Alignment.centerRight,
-            padding: const EdgeInsets.only(right: 24),
-            color: Gp.soft,
-            child: const Icon(Icons.delete_outline, color: Gp.danger),
-          ),
-          child: _NoticeRow(
-            notice: n,
-            read: _isRead(n),
-            time: n.id.startsWith('req-') ? tr('누르면 수락 · 거절') : noticeTime(n.at),
-            onTap: () => _open(n),
-          ),
-        ),
-        final String group => SectionHeader(
-          tr(group),
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
-        ), // N-2 (묶음 열쇠는 한국어)
-        _ => Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-          child: Text(
-            _store.statusLine, // 언제 확인했는지만 — 범위 · 밀기는 ? 에
-            style: const TextStyle(fontSize: Gp.t12, color: Gp.faint),
-          ),
-        ),
+      itemBuilder: (context, i) {
+        final row = rows[i];
+        if (row is AppNotice) {
+          return Dismissible(
+            // N-5
+            key: ValueKey(row.id),
+            direction: DismissDirection.endToStart,
+            onDismissed: (_) => _remove(row),
+            background: Container(
+              alignment: Alignment.centerRight,
+              padding: const EdgeInsets.only(right: 24),
+              color: Gp.soft,
+              child: const Icon(Icons.delete_outline, color: Gp.danger),
+            ),
+            child: _NoticeRow(
+              notice: row,
+              read: _isRead(row),
+              time: row.id.startsWith('req-') ? tr('누르면 수락 · 거절') : noticeTime(row.at),
+              onTap: () => _open(row),
+            ),
+          );
+        }
+        // N-2 묶음 머리 (묶음 열쇠는 한국어)
+        return SectionHeader(tr(row as String), padding: const EdgeInsets.fromLTRB(16, 16, 16, 6));
       },
     );
   }

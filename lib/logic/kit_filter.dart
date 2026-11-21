@@ -1,4 +1,5 @@
-// 상품 필터 규칙 — 내 상태 · 발매 · 판매 · 나라 · 가격 · 종류 · 라인 · 작품 (화면 없이 테스트할 수 있는 순수 Dart)
+// 상품 필터 규칙 — 내 상태 · 발매 · 판매 · 나라 · 가격 · 종류 · 작품 · 라인 (화면 없이 테스트할 수 있는 순수 Dart).
+// 종류 · 작품 · 라인 · 굿즈 종류는 고르기와 빼기(「… 제외」) 두 묶음이고, 뺀 값이 고른 값보다 먼저 떨어뜨린다
 import '../clock.dart';
 import '../format.dart';
 import '../l10n/l10n.dart';
@@ -230,6 +231,10 @@ class KitFilter {
     Set<String>? types,
     Set<String>? lines,
     Set<String>? goodsKinds,
+    Set<String>? worksOut,
+    Set<String>? typesOut,
+    Set<String>? linesOut,
+    Set<String>? goodsKindsOut,
     this.mine = MineState.any,
     this.release = ReleaseState.any,
     this.sale = SaleState.any,
@@ -243,7 +248,11 @@ class KitFilter {
        works = works ?? {},
        types = types ?? {},
        lines = lines ?? {},
-       goodsKinds = goodsKinds ?? {};
+       goodsKinds = goodsKinds ?? {},
+       worksOut = worksOut ?? {},
+       typesOut = typesOut ?? {},
+       linesOut = linesOut ?? {},
+       goodsKindsOut = goodsKindsOut ?? {};
 
   final Set<String> works;
   final Set<String> types;
@@ -251,6 +260,13 @@ class KitFilter {
 
   /// 굿즈 세부 종류 (굿즈를 고르면 보인다)
   final Set<String> goodsKinds;
+
+  /// 뺀 값 — 위 네 묶음과 짝. 한 값은 한쪽에만 들어가고([togglePick]), 뺀 값이면 고른 값을 보기 전에 떨어진다.
+  /// 저장한 필터 · 알림 조건 · 기기 동기화가 위 네 묶음을 그대로 읽어서, 한 묶음(Map)으로 합치지 않고 따로 뒀다
+  final Set<String> worksOut;
+  final Set<String> typesOut;
+  final Set<String> linesOut;
+  final Set<String> goodsKindsOut;
 
   /// 작품 묶음 이름 → 화면에 보일 이름 (중국어 화면의 작품 이름 — 필터 시트가 채운다, 거르기에는 안 쓴다)
   final Map<String, String> workNames;
@@ -286,6 +302,10 @@ class KitFilter {
     types: {...types},
     lines: {...lines},
     goodsKinds: {...goodsKinds},
+    worksOut: {...worksOut},
+    typesOut: {...typesOut},
+    linesOut: {...linesOut},
+    goodsKindsOut: {...goodsKindsOut},
     mine: mine,
     release: release,
     sale: sale,
@@ -303,6 +323,10 @@ class KitFilter {
     types.clear();
     lines.clear();
     goodsKinds.clear();
+    worksOut.clear();
+    typesOut.clear();
+    linesOut.clear();
+    goodsKindsOut.clear();
     sale = SaleState.any;
     price = PriceBand.any;
     currency = null;
@@ -317,8 +341,11 @@ class KitFilter {
   /// (2026-11-19: 이번 달은 기간이, 판매 줄은 실데이터에서 거의 비어 뺐다). 굿즈 종류도 굿즈를 고를 때만 보이니
   /// 굿즈를 풀면 같이 푼다 (안 풀면 종류 칸이 굿즈 하나만 남았다). 바꿨으면 true
   bool dropHidden() {
-    final strayGoods = goodsKinds.isNotEmpty && !types.contains(goodsType);
-    if (strayGoods) goodsKinds.clear();
+    final strayGoods = (goodsKinds.isNotEmpty || goodsKindsOut.isNotEmpty) && !types.contains(goodsType);
+    if (strayGoods) {
+      goodsKinds.clear();
+      goodsKindsOut.clear();
+    }
     final hidden =
         mine == MineState.none ||
         release == ReleaseState.thisMonth ||
@@ -336,6 +363,10 @@ class KitFilter {
       types.length +
       lines.length +
       goodsKinds.length +
+      worksOut.length +
+      typesOut.length +
+      linesOut.length +
+      goodsKindsOut.length +
       (mine == MineState.any ? 0 : 1) +
       (release == ReleaseState.any ? 0 : 1) +
       (sale == SaleState.any ? 0 : 1) +
@@ -344,9 +375,15 @@ class KitFilter {
       (from.isEmpty && to.isEmpty ? 0 : 1);
 
   bool matches(Kit k) {
-    if (works.isNotEmpty && !works.contains(kitWork(k))) return false;
+    // 뺀 값이 먼저 — 「굿즈 빼고」 처럼 고른 값과 같은 줄에 걸려도 빼기가 이긴다
+    final work = kitWork(k);
+    if (worksOut.contains(work)) return false;
+    if (works.isNotEmpty && !works.contains(work)) return false;
+    if (typesOut.contains(k.type)) return false;
     if (types.isNotEmpty && !types.contains(k.type)) return false;
+    if (linesOut.contains(k.line)) return false;
     if (lines.isNotEmpty && !lines.contains(k.line)) return false;
+    if (goodsKindsOut.contains(k.goodsKind)) return false;
     if (goodsKinds.isNotEmpty && !goodsKinds.contains(k.goodsKind)) return false;
     if (!price.hit(k, currency)) return false;
     if (!region.hit(k)) return false;
@@ -376,7 +413,7 @@ class KitFilter {
         };
   }
 
-  /// 고른 조건 한 줄 ("SEED · HG · PB")
+  /// 고른 조건 한 줄 ("SEED · HG · PB · MG 제외")
   List<String> get labels => [
     if (mine != MineState.any)
       switch (mine) {
@@ -392,31 +429,58 @@ class KitFilter {
     ...types.map(dataLabel),
     ...lines.map(dataLabel),
     ...goodsKinds.map(dataLabel),
+    // 뺀 값은 줄마다 한 덩이로 ("MG · HG 제외") — 접은 줄 요약과 같은 모양
+    if (worksOut.isNotEmpty) outSummary(worksOut, label: (w) => workNames[w] ?? w),
+    if (typesOut.isNotEmpty) outSummary(typesOut),
+    if (linesOut.isNotEmpty) outSummary(linesOut),
+    if (goodsKindsOut.isNotEmpty) outSummary(goodsKindsOut),
     if (price != PriceBand.any) price.labelIn(currency),
   ];
 }
 
-/// 체크 칸에 보일 값 — 그 칸 하나만 골라도 맞는 상품이 있는 값(많은 순) + 이미 고른 값.
+/// 체크 칸 하나 켜고 끄기 — 한 값은 고르기([set])와 빼기([other]) 중 한쪽에만 들어간다.
+/// 켜져 있으면 풀고, 아니면 반대쪽에서 빼고 넣는다
+void togglePick(Set<String> set, Set<String> other, String v) {
+  if (set.remove(v)) return;
+  other.remove(v);
+  set.add(v);
+}
+
+/// 뺀 값 한 줄 — "MG 제외" · "MG · HG 제외", 셋 이상이면 "MG 외 2 제외" (빈 묶음이면 빈 글자).
+/// 접은 줄 요약과 고른 조건 한 줄이 같은 모양을 쓴다 — 셋 이상에서 접은 줄이 넘치지 않게 줄인다.
+/// [label] 은 값 → 보이는 이름 (작품은 상품의 작품 이름 표로 넘긴다)
+String outSummary(Set<String> out, {String Function(String) label = dataLabel}) => out.isEmpty
+    ? ''
+    : trf('{names} 제외', {
+        'names': out.length <= 2
+            ? joinDot([for (final v in out) label(v)])
+            : trf('{first} 외 {n}', {'first': label(out.first), 'n': out.length - 1}),
+      });
+
+/// 체크 칸에 보일 값 — 그 칸 하나만 골라도 맞는 상품이 있는 값(많은 순) + 이미 고른 값 · 뺀 값.
 /// 맞는 상품이 없는 칸은 옅게 두지 않고 숨긴다 (2026-11-19 실데이터 감사: 위 조건과 겹쳐 0 이 된 회색 칸).
-/// [field] 를 비운 조건으로 한 번만 거른다 — 값 하나만 고른 조건과 같은 결과이고 값마다 다시 세지 않는다
+/// [field] · [outField] 를 비운 조건으로 한 번만 거른다 — 값 하나만 고른 조건과 같은 결과이고 값마다 다시 세지 않는다
 List<String> liveValues(
   Iterable<Kit> pool,
   KitFilter f,
   String Function(Kit) valueOf,
-  Set<String> Function(KitFilter) field,
-) {
+  Set<String> Function(KitFilter) field, {
+  Set<String> Function(KitFilter)? outField,
+}) {
   final g = f.copy();
   field(g).clear();
+  outField?.call(g).clear();
   final shown = [for (final (v, _) in valueCounts(pool.where(g.matches).map(valueOf))) v];
   return [
     ...shown,
-    for (final v in field(f))
+    for (final v in [...field(f), ...?outField?.call(f)])
       if (!shown.contains(v)) v,
   ];
 }
 
-/// 고를 값이 하나뿐인 줄(라인 · 작품)은 숨긴다 — 이미 고른 것이 있으면 풀 수 있게 둔다
-bool showChoices(List<String> values, Set<String> picked) => values.length > 1 || picked.isNotEmpty;
+/// 고를 값이 하나뿐인 줄(작품 · 라인)은 숨긴다 — 이미 고르거나 뺀 것이 있으면 풀 수 있게 둔다
+bool showChoices(List<String> values, Set<String> picked, [Set<String> out = const {}]) =>
+    values.length > 1 || picked.isNotEmpty || out.isNotEmpty;
 
 /// 정가가 하나라도 있는 목록인가 (없으면 가격 줄을 숨긴다 — 레고 · 정가 없는 채널)
 bool hasAnyPrice(Iterable<Kit> pool) => pool.any((k) => k.priceKrw != null || k.priceJpy != null);

@@ -13,6 +13,7 @@ import 'package:hobby_atlas/data/user_store.dart';
 import 'package:hobby_atlas/detail_pane.dart';
 import 'package:hobby_atlas/level.dart' show LevelChip;
 import 'package:hobby_atlas/logic/friends.dart';
+import 'package:hobby_atlas/logic/preorder.dart';
 import 'package:hobby_atlas/marks.dart';
 import 'package:hobby_atlas/models.dart';
 import 'package:hobby_atlas/screens/f_collection_screen.dart' show CollectionJump;
@@ -385,7 +386,7 @@ void main() {
       ('받기 실패', () async => throw StateError('offline')),
     ]) {
       testWidgets('도감(레벨)이 $name 이어도 메뉴 줄은 바로 보인다 · Lv 자리만 빈다', (tester) async {
-        final loaders = Loaders(profile: () async => _profile, guideWorks: guideWorks);
+        final loaders = Loaders(kits: (_) async => const [], profile: () async => _profile, guideWorks: guideWorks);
         await show(
           tester,
           Scaffold(
@@ -405,6 +406,47 @@ void main() {
         expect(tester.takeException(), isNull);
       });
     }
+
+    // 줄 끝 수 = 내 정보(I-4) · 그 줄이 여는 컬렉션 탭 목록과 똑같은 셈 — 내 채널 상품에서 Marks 로 센다.
+    // 기기 기록을 그대로 세면 내 채널이 아닌 상품까지 들어가 내 정보와 숫자가 달라졌다
+    testWidgets('좋아요 · 구매함 · 예약 줄 끝 수는 내 채널 상품만 센다', (tester) async {
+      Kit kit(String id, String ch) =>
+          Kit.fromSlim({'id': id, 'franchiseId': ch, 'name': id}, recentSince: '', monthPrefix: '');
+      store
+        ..setStatus('gu1', CollectStatus.wanted)
+        ..setStatus('gu2', CollectStatus.owned)
+        ..setStatus('po1', CollectStatus.wanted) // 내 채널이 아닌 채널 — 세지 않는다
+        ..putPreorder('gu1', const Preorder(shop: '샵', arrival: '2099-12'))
+        ..putPreorder('po1', const Preorder(shop: '샵', arrival: '2099-12'));
+      final all = [kit('gu1', 'gundam'), kit('gu2', 'gundam'), kit('po1', 'pokemon')];
+      final loaders = Loaders(
+        kits: (ids) async => [
+          for (final k in all)
+            if (ids.contains(k.franchiseId)) k,
+        ],
+        profile: () async => _profile,
+        guideWorks: () async => const [_work],
+      );
+      await show(
+        tester,
+        Scaffold(
+          drawer: FriendsDrawer(loaders: loaders, onOpenProfile: () {}, myChannels: const ['gundam']),
+          body: Builder(
+            builder: (c) => TextButton(onPressed: () => Scaffold.of(c).openDrawer(), child: const Text('열기')),
+          ),
+        ),
+      );
+      await tester.tap(find.text('열기'));
+      await settle(tester);
+      for (final (row, n) in [('liked', '1'), ('owned', '1'), ('preorder', '1')]) {
+        expect(
+          find.descendant(of: find.byKey(ValueKey('drawer-$row')), matching: find.text(n)),
+          findsOneWidget,
+          reason: row,
+        );
+      }
+      expect(tester.takeException(), isNull);
+    });
 
     testWidgets('친구 줄 파란 점: 서랍이 친구 사진을 받아 지난번 친구 화면 뒤 새 사진을 본다 · 친구 화면을 보면 사라진다', (tester) async {
       fixedNow = DateTime.utc(2026, 11, 2, 12);
