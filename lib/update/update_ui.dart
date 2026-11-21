@@ -269,25 +269,17 @@ class _VersionTileState extends State<VersionTile> {
       builder: (context, _) => ListTile(
         leading: const Icon(Icons.info_outline),
         title: Text(tr('버전')),
-        subtitle: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              u.available == null
-                  ? 'Hobby Atlas · ${p.versionLabel}'
-                  : trf('Hobby Atlas {version} · 새 버전 {next}', {
-                      'version': p.versionLabel,
-                      'next': u.available!.versionLabel,
-                    }),
-            ),
-            // STATE: 패치를 받아 둠 → 앱을 새로 열면 적용
-            if (p.waiting) Text(joinDot([tr('새 버전을 받았어요'), tr('앱을 다시 열면 적용돼요')]), key: const Key('patch-waiting')),
-          ],
-        ),
+        // 작은 글씨는 이름과 번호만 (2026-11-22 주인). 새 버전이 있다 · 받아 뒀다는 소식은
+        // 설명 줄이 아니라 오른쪽 끝 글자로 옮겼다 — 지워 버리면 앱을 다시 열어야 하는 걸 모른다
+        subtitle: Text('Hobby Atlas · ${p.versionLabel}'),
         trailing: _checking
             ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
-            : Text(tr('업데이트 확인 ›'), style: TextStyle(color: u.available == null ? Gp.muted : Gp.accent)),
+            // STATE: 새 APK 있음 → 그 번호 / 패치를 받아 둠 → 다시 열면 적용 / 그 밖엔 확인하기
+            : u.available != null
+                ? Text(trf('새 버전 {next} ›', {'next': u.available!.versionLabel}), style: const TextStyle(color: Gp.accent))
+                : p.waiting
+                    ? Text(tr('다시 열면 적용 ›'), key: const Key('patch-waiting'), style: const TextStyle(color: Gp.accent))
+                    : Text(tr('업데이트 확인 ›'), style: const TextStyle(color: Gp.muted)),
         onTap: _checking ? null : _check,
       ),
     );

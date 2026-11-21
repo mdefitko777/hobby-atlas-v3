@@ -13,7 +13,7 @@
 // │ F-9  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 빈 컬렉션           │ P01 · P09     │
 // │ F-10 │ 🗑 아이콘(개수 배지) → 바텀 시트      │ 휴지통: 지운 상품 복원 (기기 저장 · 30일)  │ P03 · P05     │
 // │ F-11 │ jumpTick (서랍 · 내 정보 숫자에서)    │ 좋아요 · 예약 · 구매함 · 도감으로 바로 이동 │ P07           │
-// │ F-12 │ ToolRow(leading: 탭 줄, tools:) · CollapsingHeader(step 2) │ 탭 줄 왼쪽 · [필터][휴지통][편집] 오른쪽 한 줄 — 다른 탭과 같은 자리 (공유 카드 · ? 는 서랍으로) │ P04 · P07 │
+// │ F-12 │ ToolRow(leading: 탭 줄, tools:) · CollapsingHeader(step 2) │ 탭 줄 왼쪽 · 「이어 씀 n ×」(CarryNote) · [필터][휴지통][편집] 오른쪽 한 줄 — 다른 탭과 같은 자리 (공유 카드 · ? 는 서랍으로) │ P04 · P07 │
 // │ F-13 │ 서랍 › 사용법 (S-19, collectionHelp) │ 필터 · 휴지통 · 편집 · 예약 아이콘 뜻     │ P10 · P01     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 줄 → D 상품 상세(쌓기). 빈 상태 "검색하러 가기" → 검색 덮개(쌓기).
@@ -356,6 +356,12 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                         }),
                       ),
                       tools: [
+                        // 작품을 바꿔 이어 쓴 조건이 있으면 필터 아이콘 왼쪽에 글자 + × (상품 필터만 — 도감 필터는 따로)
+                        if (!_guide)
+                          CarryNote(
+                            carry: _find.carry,
+                            onChanged: (c) => setState(() => _find.apply(c)), // STATE: 이어 쓴 조건 지우기 → 목록
+                          ),
                         FilterButton(
                           count: _guide ? _guideFilter.filter.count : _find.filter.count,
                           // 도감 '전체' = 채널 고르기 칸이라 필터가 없다 — 내 채널이 하나면 그 도감이 바로 열려 필터도 된다 (G-1)

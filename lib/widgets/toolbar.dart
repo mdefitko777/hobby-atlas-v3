@@ -1,9 +1,13 @@
 // 도구 줄 — 네 탭은 검색창 없이 오른쪽에 아이콘만 [필터][보기 A][보기 B] (2026-11-21 주인: 찾기는 위 줄 🔍 하나),
-// 검색 덮개 · 쌓아 연 화면(분류 상품 · 작품 도감)은 [검색창][아이콘들]. 아이콘 크기 · 오른쪽 끝 자리는 어디서나 같다
+// 검색 덮개 · 쌓아 연 화면(분류 상품 · 작품 도감)은 [검색창][아이콘들]. 아이콘 크기 · 오른쪽 끝 자리는 어디서나 같다.
+// 아이콘 바로 왼쪽에는 작품을 바꿀 때 이어 쓴 조건 알림([CarryNote], 규칙은 lib/logic/filter_carryover.dart)
 import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
+import '../logic/filter_carryover.dart';
 import '../theme.dart';
+import 'sections.dart';
+import 'sheets.dart';
 
 /// 검색창 — 검색 덮개 · 쌓아 연 화면 · 친구 검색이 같은 것을 쓴다 (크기 · 글자 · 아이콘 통일, P04).
 /// [onTap]을 주면 입력하지 않는 "입구": 누르면 검색 화면으로 간다.
@@ -228,6 +232,157 @@ class ToolRow extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 아이콘 바로 왼쪽 「이어 씀 2 ×」 — 작품을 바꿀 때 이어 쓴 조건 (줄을 새로 만들지 않고 탭 줄 안에).
+/// 캡슐 · 칩 · 바탕 없이 브랜드 색 작은 글자 + × 뿐 (2026-11-22 주인: 캡슐 안 됨).
+/// 글자를 누르면 「이어 쓴 필터」 시트, × 는 이어 쓴 조건을 한 번에 지운다. 이어 쓴 것이 없으면 아무것도 그리지 않는다
+class CarryNote extends StatelessWidget {
+  const CarryNote({super.key, required this.carry, required this.onChanged});
+
+  /// 필터 시트가 돌려준 이어 쓴 결과 (null · 이어 쓴 것이 0 이면 줄이 오늘과 똑같다)
+  final FilterCarry? carry;
+
+  /// 지운 뒤의 조건 — 화면이 필터를 갈아 끼우고 다시 그린다
+  final ValueChanged<FilterCarry> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = carry;
+    if (c == null || c.count == 0) return const SizedBox.shrink();
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        InkWell(
+          key: const ValueKey('carry-note'),
+          onTap: () => showCarrySheet(context, c, onChanged),
+          borderRadius: BorderRadius.circular(Gp.rSmall),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+            child: Text(
+              trf('이어 씀 {n}', {'n': c.count}),
+              style: const TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w600, color: Gp.accent),
+            ),
+          ),
+        ),
+        Semantics(
+          button: true,
+          label: tr('지우기'),
+          excludeSemantics: true,
+          child: Tooltip(
+            message: tr('지우기'),
+            child: InkWell(
+              key: const ValueKey('carry-clear'),
+              onTap: () => onChanged(c.cleared()),
+              borderRadius: BorderRadius.circular(Gp.rSmall),
+              child: const Padding(
+                padding: EdgeInsets.fromLTRB(2, 8, 4, 8),
+                child: Icon(Icons.close, size: Gp.iS, color: Gp.accent),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// 「이어 쓴 필터」 시트 — 이어 쓴 조건마다 × (그 조건만 지운다), 못 이어 쓴 조건은 까닭과 함께 옅게 (× 없음).
+/// 지울 때마다 [onChanged] 로 바로 알린다 — 시트를 밀어 닫아도 지운 것이 남는다
+Future<void> showCarrySheet(BuildContext context, FilterCarry carry, ValueChanged<FilterCarry> onChanged) =>
+    showGpSheet<void>(
+      context,
+      tall: true,
+      builder: (_) => _CarrySheet(carry: carry, onChanged: onChanged),
+    );
+
+class _CarrySheet extends StatefulWidget {
+  const _CarrySheet({required this.carry, required this.onChanged});
+  final FilterCarry carry;
+  final ValueChanged<FilterCarry> onChanged;
+
+  @override
+  State<_CarrySheet> createState() => _CarrySheetState();
+}
+
+class _CarrySheetState extends State<_CarrySheet> {
+  late FilterCarry _carry = widget.carry;
+
+  void _remove(CarriedFilter one) {
+    final next = _carry.without(one);
+    widget.onChanged(next);
+    // 이어 쓴 줄이 다 없어지면 알림도 사라지니 시트도 닫는다
+    if (next.count == 0) {
+      Navigator.pop(context);
+      return;
+    }
+    setState(() => _carry = next); // STATE: × → 남은 줄
+  }
+
+  void _clear() {
+    widget.onChanged(_carry.cleared());
+    Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) => SafeArea(
+    top: false,
+    child: SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SectionHeader(tr('이어 쓴 필터'), padding: const EdgeInsets.fromLTRB(20, 0, 20, 4)),
+          for (final c in _carry.carried)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 8, 0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      c.label,
+                      style: const TextStyle(fontSize: Gp.t14, color: Gp.ink),
+                    ),
+                  ),
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    tooltip: tr('지우기'),
+                    icon: const Icon(Icons.close, size: Gp.iM, color: Gp.muted),
+                    onPressed: () => _remove(c),
+                  ),
+                ],
+              ),
+            ),
+          for (final d in _carry.dropped)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 7, 20, 7),
+              child: Text(
+                '${d.label} — ${d.reason}',
+                style: const TextStyle(fontSize: Gp.t12, color: Gp.faint),
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    key: const ValueKey('carry-clear-all'),
+                    onPressed: _clear,
+                    child: Text(tr('지우기')),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton(onPressed: () => Navigator.pop(context), child: Text(tr('닫기'))),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 /// 이 목록 안에서 찾기(카메라 없는 검색창) + 필터 + [tools] — 글자칸을 스스로 가진다

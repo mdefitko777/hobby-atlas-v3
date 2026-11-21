@@ -12,6 +12,7 @@ import '../clock.dart';
 import '../format.dart';
 import '../l10n/l10n.dart';
 import '../logic/data_labels.dart';
+import '../logic/filter_carryover.dart';
 import '../logic/kit_filter.dart';
 import '../logic/kit_rules.dart';
 import '../marks.dart';
@@ -20,6 +21,7 @@ import '../theme.dart';
 import 'icons.dart';
 import 'sheets.dart';
 
+export '../logic/filter_carryover.dart';
 export '../logic/kit_filter.dart';
 
 /// 필터 시트 열기 — 고르면 새 조건, 닫으면 null
@@ -36,10 +38,35 @@ Future<KitFilter?> pickKitFilter(BuildContext context, {required List<Kit> pool,
   return showFilterSheet(context, kits: pool, initial: current);
 }
 
+/// 필터 시트를 열고, 작품이 바뀌었으면 남은 조건을 이어 쓴다 (닫으면 null).
+/// 돌려준 [FilterCarry] 를 화면이 들고 있다가 탭 줄 「이어 씀 n」([CarryNote])으로 보인다
+Future<FilterCarry?> pickKitFilterCarry(
+  BuildContext context, {
+  required List<Kit> pool,
+  required KitFilter current,
+}) async {
+  final before = current.copy();
+  final picked = await pickKitFilter(context, pool: pool, current: current);
+  if (picked == null) return null;
+  return carryFilter(pool, before, picked);
+}
+
 /// 목록 안 상품 필터 한 벌 (컬렉션 · 캘린더). 값만 들고, 다시 그리기는 화면의 setState.
 /// 찾기 글자는 없다 — 탭 안 찾기 칸을 빼고 위 줄 🔍 검색 덮개 하나로 (2026-11-21)
 class KitFind {
-  KitFilter filter = KitFilter();
+  KitFilter _filter = KitFilter();
+
+  KitFilter get filter => _filter;
+
+  /// 조건을 밖에서 갈아 끼우면(「필터 초기화」) 이어 쓴 알림도 같이 사라진다 —
+  /// 남겨 두면 그 × 가 방금 지운 조건을 되살린다 ([apply] 는 알림과 짝이라 그대로 둔다)
+  set filter(KitFilter f) {
+    _filter = f;
+    carry = null;
+  }
+
+  /// 작품을 바꿀 때 이어 쓴 조건 (탭 줄 「이어 씀 n」 — 아직 바꾼 적이 없으면 null)
+  FilterCarry? carry;
 
   /// 필터가 걸려 있다
   bool get active => filter.count > 0;
@@ -52,10 +79,16 @@ class KitFind {
 
   /// [kits] 로 필터 시트를 연다. 골랐으면 true (화면이 setState)
   Future<bool> openFilter(BuildContext context, Iterable<Kit> kits) async {
-    final f = await pickKitFilter(context, pool: kits.toList(), current: filter);
-    if (f == null) return false;
-    filter = f;
+    final c = await pickKitFilterCarry(context, pool: kits.toList(), current: filter);
+    if (c == null) return false;
+    apply(c);
     return true;
+  }
+
+  /// 이어 쓴 결과로 갈아 끼우기 (필터 시트 · 「이어 씀」 줄에서 지울 때)
+  void apply(FilterCarry c) {
+    _filter = c.filter;
+    carry = c;
   }
 }
 

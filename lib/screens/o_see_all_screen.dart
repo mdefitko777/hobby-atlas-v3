@@ -5,11 +5,11 @@
 //
 // ┌──────── 디자인 가이드 대응표: O 전체 목록 ─────────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
-// │ O-1  │ ‹ + 제목 · 필터 · 보기 전환          │ 어느 목록인지 · 돌아가기 · 격자/목록     │ P03 · P07     │
+// │ O-1  │ ‹ + 제목 · CarryNote · 필터 · 보기 전환 │ 어느 목록인지 · 돌아가기 · 작품을 바꾸면 필터 아이콘 왼쪽 「이어 씀 n ×」 · 격자/목록 │ P03 · P07 │
 // │ O-2  │ 아래 시트(60%) · 네모 세그먼트 · 체크 2열(이름 = 고르기 · × = 제외) · 펼치는 줄 │ 필터: 내 상태 · 발매 · 판매 · 종류 · 작품 · 라인 · 기간 · 가격 (lib/widgets/kit_filter_sheet.dart) │ P06 · P08 · P01 · P05 │
 // │ O-3  │ 고른 필터 한 줄 + showPickSheet      │ 지금 거르는 조건 · 정렬 4가지 (아래 시트)  │ P01 · P07     │
 // │ O-4  │ 격자 ProductTile(+ ♡) / ThumbRow     │ 상품 (정가 ₩ · ¥ · 발매일 보임) → D 상세  │ P08 · P07     │
-// │ O-5  │ 밑줄 탭 + 16:9 카드 (AnnTag)         │ 예고: 공식 발표 · 상품화 확정 · 예약(열리는 때 · 날) · 비공식(있을 때만) · 라이브(곧 할 것이 맨 앞) │ P02 · P06 │
+// │ O-5  │ 밑줄 없는 탭 + 16:9 카드 (AnnTag)     │ 예고: 공식 발표 · 상품화 확정 · 예약(열리는 때 · 날) · 비공식(있을 때만) · 라이브(곧 할 것이 맨 앞) │ P02 · P06 │
 // │ O-6  │ 기록 지우기 → showDialog → 토스트     │ 최근 본 기록 비우기 (기기 기록 · 되돌리기)  │ P05 · P03     │
 // │ O-7  │ 위 검색창 (이 목록 안에서만 찾기)      │ "최근 추가에서 찾기"                     │ P07 · P04     │
 // │ O-8  │ EmptyView                          │ 거른 결과 · 찾은 결과 없음 · 기록 없음     │ P09           │
@@ -52,8 +52,21 @@ class ListTools extends ChangeNotifier {
   KitFilter filter = KitFilter();
   bool grid = true;
 
+  /// 작품을 바꿀 때 이어 쓴 조건 (아이콘 왼쪽 「이어 씀 n」 — 아직 바꾼 적이 없으면 null)
+  FilterCarry? carry;
+
   void setFilter(KitFilter f) {
     filter = f;
+    // 조건을 갈아 끼우면(「필터 초기화」) 이어 쓴 알림도 같이 사라진다 —
+    // 남겨 두면 그 × 가 방금 지운 조건을 되살린다
+    carry = null;
+    notifyListeners();
+  }
+
+  /// 이어 쓴 결과로 갈아 끼우기 (필터 시트 · 「이어 씀」 줄에서 지울 때)
+  void setCarry(FilterCarry c) {
+    filter = c.filter;
+    carry = c;
     notifyListeners();
   }
 
@@ -64,7 +77,8 @@ class ListTools extends ChangeNotifier {
 }
 
 /// 도구 줄 오른쪽 세 칸: 필터 · 격자 · 목록. [pool] = 필터 시트가 개수를 세는 상품 (null 이면 필터 없음 = 옅게).
-/// 좋아요 · 구매함 · 발매 예정 · 나라 아이콘 줄은 필터 시트 맨 위에 (2026-11-21 검색창 아래 줄을 시트로 되돌림)
+/// 좋아요 · 구매함 · 발매 예정 · 나라 아이콘 줄은 필터 시트 맨 위에 (2026-11-21 검색창 아래 줄을 시트로 되돌림).
+/// 작품을 바꿀 때 이어 쓴 조건이 있으면 아이콘 바로 왼쪽에 「이어 씀 n ×」 (줄은 늘지 않는다)
 class ListToolIcons extends StatelessWidget {
   const ListToolIcons({super.key, required this.tools, required this.pool});
   final ListTools tools;
@@ -76,13 +90,17 @@ class ListToolIcons extends StatelessWidget {
     builder: (context, _) => Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        CarryNote(
+          carry: tools.carry,
+          onChanged: tools.setCarry, // STATE: 이어 쓴 조건 지우기 → 목록
+        ),
         FilterButton(
           count: tools.filter.count,
           onTap: pool == null
               ? null
               : () async {
-                  final picked = await pickKitFilter(context, pool: pool!, current: tools.filter);
-                  if (picked != null) tools.setFilter(picked); // STATE: 필터 → 목록
+                  final picked = await pickKitFilterCarry(context, pool: pool!, current: tools.filter);
+                  if (picked != null) tools.setCarry(picked); // STATE: 필터 → 목록
                 },
         ),
         ViewIconToggle(
@@ -149,12 +167,37 @@ class SectionListView extends StatefulWidget {
 class _SectionListViewState extends State<SectionListView> {
   late KitSort _sort = widget.sort;
   KitFilter _ownFilter = KitFilter();
+  FilterCarry? _ownCarry;
   bool _ownGrid = true;
   List<Kit> _cleared = const []; // 최근 본: 지운 기록
 
   // 위 검색창 줄이 갖고 있으면 그쪽 값 (ListTools)
   KitFilter get _filter => widget.tools?.filter ?? _ownFilter;
-  set _filter(KitFilter f) => widget.tools == null ? _ownFilter = f : widget.tools!.setFilter(f);
+
+  /// 조건을 갈아 끼우면 이어 쓴 알림도 같이 사라진다 (그 × 가 방금 지운 조건을 되살리지 않게)
+  set _filter(KitFilter f) {
+    if (widget.tools case final t?) {
+      t.setFilter(f);
+      return;
+    }
+    _ownFilter = f;
+    _ownCarry = null;
+  }
+
+  /// 작품을 바꿀 때 이어 쓴 조건 (O-1 필터 아이콘 왼쪽 「이어 씀 n」)
+  FilterCarry? get _carry => widget.tools?.carry ?? _ownCarry;
+
+  void _applyCarry(FilterCarry c) {
+    if (widget.tools case final t?) {
+      t.setCarry(c);
+      return;
+    }
+    setState(() {
+      _ownFilter = c.filter; // STATE: 이어 쓴 조건 → 목록
+      _ownCarry = c;
+    });
+  }
+
   bool get _grid => widget.tools?.grid ?? _ownGrid;
   set _grid(bool g) => widget.tools == null ? _ownGrid = g : widget.tools!.setGrid(g);
 
@@ -249,8 +292,8 @@ class _SectionListViewState extends State<SectionListView> {
       for (final k in _kits)
         if (kitMatches(k, widget.query)) k,
     ];
-    final picked = await pickKitFilter(context, pool: pool, current: _filter);
-    if (picked != null) setState(() => _filter = picked); // STATE: 필터 → 목록
+    final picked = await pickKitFilterCarry(context, pool: pool, current: _filter);
+    if (picked != null) _applyCarry(picked); // STATE: 필터 → 목록
   }
 
   @override
@@ -291,6 +334,8 @@ class _SectionListViewState extends State<SectionListView> {
                 if (widget.history && _kits.isNotEmpty)
                   TextButton(onPressed: _clearHistory, child: Text(tr('기록 지우기'))), // O-6
                 if (anns == null && _kits.isNotEmpty && widget.tools == null) ...[
+                  // 작품을 바꿔 이어 쓴 조건이 있으면 필터 아이콘 왼쪽에 글자 + × (줄은 늘지 않는다)
+                  CarryNote(carry: _carry, onChanged: _applyCarry),
                   IconButton(
                     tooltip: tr('필터'),
                     onPressed: _openFilter,
@@ -495,7 +540,8 @@ class _SectionListViewState extends State<SectionListView> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          // O-5 밑줄 탭 (채널 바 · 컬렉션과 같은 부품)
+          // O-5 탭 줄 — 이 목록은 홈의 채널 바 아래에서 바뀌므로 채널 바보다 작은 글씨 · 밑줄 없이:
+          // 고른 것은 굵기 · 색으로 (한 화면에 밑줄은 채널 바 한 군데만 — 2026-11-21 주인)
           padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -506,7 +552,8 @@ class _SectionListViewState extends State<SectionListView> {
                     key: ValueKey('ann-tab-${t.tab}'),
                     label: t.tab.isEmpty ? tr('전체') : tr(t.tab),
                     count: t.count,
-                    fontSize: Gp.t14,
+                    fontSize: 13,
+                    underline: false,
                     selected: _annTab == t.tab,
                     onTap: () => setState(() => _annTab = t.tab), // STATE: 상태 → 목록
                   ),

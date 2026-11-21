@@ -8,7 +8,7 @@
 //   buttons       RaisedCircleButton · TogglePill · GradientButton · ChipButton(상세의 빈 줄 대신 작은 버튼)
 //   rings         AccentRing · RingAvatar
 //   sections      SectionHeader · SectionPanel · UnderlineTab · PageDots · AccentBar · ListSummary(목록 맨 끝 합계)
-//   toolbar       GpSearchBar · ToolRow · ToolIcon · FilterButton · ViewIconToggle · FindBar
+//   toolbar       GpSearchBar · ToolRow · ToolIcon · FilterButton · ViewIconToggle · FindBar · CarryNote(작품을 바꿀 때 이어 쓴 조건 「이어 씀 n ×」)
 //   header_collapse  HeaderCollapse · CollapsingHeader (한참 내려 읽으면 채널 바만 접기, 앱 셸 하나가 정한다)
 //   sheets        showPickSheet · SquareSegments · CheckGrid · ExpandRow
 //   side_directory  SideDirectory · SideGrid · SideDirItem · SideDirHead (왼쪽 묶음 목록 + 오른쪽 칸 격자 — 검색 종류 · 세대 · 도감 한 벌)

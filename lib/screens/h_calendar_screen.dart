@@ -9,7 +9,7 @@
 // │ H-9  │ UnderlineTab 전체 일정 · 내 일정 (H-11 줄) │ 좋아요 · 구매함 상품의 날짜만         │ P06           │
 // │ H-9b │ 내 일정: 예약 도착 · 재판매 · PB 마감 · 구매 │ 예약한 상품 도착 예정 · 좋아요 상품 재판매 (둘째 줄 상태) │ P01 · P06 │
 // │ H-9c │ ListSummary (내 일정 목록 맨 끝)      │ 이번 달 결제 예정: 이 달 도착 예정인 미결제 예약 합 │ P01      │
-// │ H-11 │ ToolRow (CollapsingHeader step 2, 늘 위에) │ 전체 일정 · 내 일정 탭 + 상품 필터 (점 · 목록이 같이 좁혀짐) │ P04 · P07 │
+// │ H-11 │ ToolRow (CollapsingHeader step 2, 늘 위에) │ 전체 일정 · 내 일정 탭 + 「이어 씀 n ×」(CarryNote) + 상품 필터 (점 · 목록이 같이 좁혀짐) │ P04 · P07 │
 // │ H-3b │ 전체 · 발매 · 예고 밑줄 탭            │ 일정 종류 거르기                        │ P06 · P07     │
 // │ H-4  │ 날짜 누르기 (다시 누르면 해제)        │ 한 주: 목록을 그날로 옮기기 · 한 달: 그날만 보기 / 한 달 전체 보기 │ P03 │
 // │ H-5  │ 날짜별 묶음 ThumbRow: 점(titleLead) · 제목 2줄 + "상태 · 출처/라인" + D-n │ 발매 · 예고 단계 (알약 없이 둘째 줄 옅은 글자) │ P01 · P02 │
@@ -572,7 +572,14 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope, Sing
         ],
       ),
     ),
-    tools: [FilterButton(count: _find.filter.count, onTap: () => _openFilter(d))],
+    tools: [
+      // 작품을 바꿔 이어 쓴 조건이 있으면 필터 아이콘 왼쪽에 글자 + × (줄은 늘지 않는다)
+      CarryNote(
+        carry: _find.carry,
+        onChanged: (c) => setState(() => _find.apply(c)), // STATE: 이어 쓴 조건 지우기 → 달력 점 · 목록
+      ),
+      FilterButton(count: _find.filter.count, onTap: () => _openFilter(d)),
+    ],
   );
 
   /// H-9c 이번 달 결제 예정 — 이 달에 도착 예정인 미결제 예약 (내 일정에서만, 날짜를 골라도 한 달 전체). 목록 맨 끝에
@@ -596,6 +603,9 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope, Sing
             selected: _kind == i,
             onTap: () => setState(() => _kind = i), // STATE: 종류 → 목록
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            // 한 화면에 밑줄은 채널 바 한 군데만 — 아래 줄은 굵기 · 색으로만 (2026-11-21 주인)
+            fontSize: 13,
+            underline: false,
           ),
       ],
     ),

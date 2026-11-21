@@ -3,6 +3,10 @@ const Map<String, String> zhWidgets = {
   // 검색창 줄 (toolbar.dart)
   '이름 · 번호 · 생김새로 찾기': '按名字 · 编号 · 外形找',
   '검색 열기': '打开搜索',
+  // 작품을 바꿀 때 이어 쓴 조건 (toolbar.dart CarryNote · logic/filter_carryover.dart)
+  '이어 씀 {n}': '沿用 {n}',
+  '이어 쓴 필터': '沿用的筛选',
+  '{work} 에 없어요': '{work} 里没有',
   // 시트 (sheets.dart)
   '초기화': '重置',
   '{n}개 보기': '查看 {n} 个',

@@ -7,6 +7,8 @@
 // │ K-2  │ ListTile → 고르는 시트              │ 언어: 한국어(기본) · 中文（简体）          │ P04 · P10     │
 // │ K-2b │ SwitchListTile                     │ 채널 맞춰 보기: 홈 · 검색 · 캘린더 · 컬렉션이 같은 채널(기본 켜짐) │ P04 │
 // │ K-4  │ ListTile                           │ 상품 데이터 기준일 · 지금 새로 받기 · 버전 │ P10           │
+// 작은 글씨(subtitle)는 상품 데이터(K-4)와 버전 줄에만 둔다 — 2026-11-22 주인. 다른 줄의 설명은 지웠고,
+// 알려야 할 상태(동기화 오류 · 받아 둔 패치)는 설명 줄이 아니라 그 줄 제목 · 오른쪽 끝으로 옮겼다.
 // │ K-4b │ ListTile → 고르는 시트              │ 미리 받기: 와이파이만 · 모바일 데이터도(기본) — 새 소식 사진 │ P07 · P10 │
 // │ K-7  │ ListTile → HelpScreen(쌓기)          │ 도움말: 도감 칸(늘 컬러 · ♡ · 리본 · 내 사진) · 색 · 데이터 출처 · 알림 · 업데이트 │ P10 │
 // └──────────────────────────────────────────────────────────────────────────────────┘
@@ -165,13 +167,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ListTile(
               leading: const Icon(Icons.cloud_off_outlined),
               title: Text(tr('계정 연결 설정이 없어요')),
-              subtitle: Text(tr('기기에만 저장 중')),
             )
           else if (!a.signedIn)
             ListTile(
               leading: const Icon(Icons.login),
               title: Text(tr('로그인')),
-              subtitle: Text(tr('옛 앱과 같은 이메일로')),
               trailing: const Icon(Icons.chevron_right, color: Gp.faint),
               onTap: () => openSignIn(context),
             )
@@ -183,8 +183,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _ => Icons.cloud_done_outlined,
               }, color: sync.phase == SyncPhase.error ? Gp.danger : null),
               title: Text(a.email.isEmpty ? tr('로그인됨') : a.email),
-              subtitle: Text(syncLine),
-              isThreeLine: syncLine.contains('\n'),
+              // 설명 줄은 뺐다 (2026-11-22 주인: 상품 데이터 · 버전 말고는 작은 글씨 없이).
+              // 동기화가 틀어졌을 때만 남긴다 — 그때는 설명이 아니라 알려야 할 일이라서
+              subtitle: sync.phase == SyncPhase.error ? Text(syncLine) : null,
+              isThreeLine: sync.phase == SyncPhase.error && syncLine.contains('\n'),
               trailing: busy
                   ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                   : TextButton(
@@ -239,7 +241,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     key: const Key('settings-prefetch'),
                     leading: const Icon(Icons.downloading_outlined),
                     title: Text(tr('미리 받기')),
-                    subtitle: Text(tr('새 소식 사진 · 하루 15 MB까지')),
                     trailing: Text(_prefetchLabel(_n.config.prefetchWifiOnly), style: const TextStyle(color: Gp.muted)),
                     onTap: _pickPrefetch,
                   ),
@@ -282,7 +283,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   key: const Key('settings-language'),
                   leading: const Icon(Icons.language),
                   title: Text(tr('언어')),
-                  subtitle: Text(tr('화면 · 상품 이름 · 예고 번역 · 알림')),
                   trailing: Text(L10n.isZh ? '中文（简体）' : '한국어', style: const TextStyle(color: Gp.muted)),
                   onTap: () => _pickLanguage(context),
                 ),
@@ -291,7 +291,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   key: const Key('settings-channel-sync'),
                   secondary: const Icon(Icons.sync_alt),
                   title: Text(tr('채널 맞춰 보기')),
-                  subtitle: Text(tr('홈 · 검색 · 캘린더 · 컬렉션에서 같은 채널')),
                   value: Marks.of(context).store.channelSync,
                   onChanged: Marks.read(context).store.setChannelSync, // STATE: 채널 맞춰 보기 → 앱 셸
                 ),

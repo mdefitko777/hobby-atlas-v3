@@ -97,7 +97,9 @@ void main() {
     await u.check(fetch: (_) async => _json);
     await tester.pump();
     expect(find.byTooltip('업데이트'), findsOneWidget);
-    expect(find.text('Hobby Atlas 개발 버전 · 새 버전 1.1.42'), findsOneWidget);
+    // 작은 글씨는 이름 · 번호만, 새 버전 소식은 줄 오른쪽 끝 (2026-11-22)
+    expect(find.text('Hobby Atlas · 개발 버전'), findsOneWidget);
+    expect(find.text('새 버전 1.1.42 ›'), findsOneWidget);
 
     await tester.tap(find.byTooltip('업데이트'));
     await tester.pumpAndSettle();

@@ -3,7 +3,7 @@
 // ┌──────── 디자인 가이드 대응표: A 홈 ────────────────────────────────────────────────┐
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
 // │ A-1  │ ChannelHeader                      │ 아바타 줄 + 내 채널 바 (C-0 공용)       │ P04 · P06     │
-// │ A-2  │ ToolRow (탭 줄 + 상자 없는 아이콘)   │ 새 소식 · My Page 탭 + 필터 (전체 보기 안: 필터 · 격자 · 목록) — 검색창은 위 줄 🔍 │ P07 · P04 │
+// │ A-2  │ ToolRow (탭 줄 + 상자 없는 아이콘)   │ 새 소식 · My Page 탭 + 필터 (전체 보기 안: 필터 · 격자 · 목록) — 검색창은 위 줄 🔍, 필터 왼쪽은 CarryNote 「이어 씀 n ×」 │ P07 · P04 │
 // │ A-3  │ PageView(화면 끝까지) + 점 표시     │ 예고 배너 (공식 먼저 · 모자라면 비공식, 4초마다 다음 장, 끝없이) │ P08 · P02     │
 // │ A-4  │ 배너 아래 AnnTag · 제목             │ 예고 상태(공식 발표·상품화 확정·예약) · 라이브 · 예약 때 · 비공식 │ P01 │
 // │ A-5  │ SectionHeader (색 막대 + ›)         │ 줄 이름 · 전체 보기 → O 전체 목록(홈 안)  │ P06 · P07     │
@@ -137,16 +137,32 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
     setState(() {
       _mine = v; // STATE: 새 소식 ↔ My Page (거르기는 비운다)
       _mineFilter = KitFilter();
+      _mineCarry = null;
     });
   }
+
+  /// A-2 작품을 바꿀 때 이어 쓴 조건 (탭마다 따로) — 필터 아이콘 바로 왼쪽 「이어 씀 n」
+  FilterCarry? _homeCarry;
+  FilterCarry? _mineCarry;
+
+  /// 필터 시트 · 「이어 씀」 줄이 돌려준 조건으로 갈아 끼우기 (보고 있는 탭 것)
+  void _setCarry(FilterCarry c) => setState(() {
+    if (_mine) {
+      _mineFilter = c.filter; // STATE: 필터 → My Page 목록
+      _mineCarry = c;
+    } else {
+      _homeFilter = c.filter; // STATE: 필터 → 홈 가로 줄
+      _homeCarry = c;
+    }
+  });
 
   Future<void> _openMineFilter() async {
     final cat = Catalog.instance;
     final pool = [
       for (final id in UserStore.instance.idsWith(const {CollectStatus.wanted, CollectStatus.owned})) ?cat.byId[id],
     ];
-    final picked = await pickKitFilter(context, pool: pool, current: _mineFilter);
-    if (picked != null) setState(() => _mineFilter = picked); // STATE: 필터 → My Page 목록
+    final picked = await pickKitFilterCarry(context, pool: pool, current: _mineFilter);
+    if (picked != null) _setCarry(picked);
   }
 
   /// 전체 목록의 필터 · 격자/목록 (위 아이콘 줄이 바꾼다)
@@ -163,8 +179,8 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
   void _closeSection() => setState(() => _section = null); // STATE: ‹ · 뒤로 → 홈
 
   Future<void> _openHomeFilter(List<Kit> pool) async {
-    final picked = await pickKitFilter(context, pool: pool, current: _homeFilter);
-    if (picked != null) setState(() => _homeFilter = picked); // STATE: 필터 → 홈 가로 줄
+    final picked = await pickKitFilterCarry(context, pool: pool, current: _homeFilter);
+    if (picked != null) _setCarry(picked);
   }
 
   @override
@@ -285,10 +301,14 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
       tools: [
         if (_section case final sec?)
           ListToolIcons(tools: _listTools, pool: sec == HomeSection.announcements ? null : lists[sec] ?? const [])
-        else if (_mine)
-          FilterButton(count: _mineFilter.count, onTap: _openMineFilter) // A-25
-        else
-          FilterButton(count: _homeFilter.count, onTap: () => _openHomeFilter(data.kits)), // A-11
+        else ...[
+          // 작품을 바꿔 이어 쓴 조건이 있으면 필터 아이콘 왼쪽에 글자 + × (줄은 늘지 않는다)
+          CarryNote(carry: _mine ? _mineCarry : _homeCarry, onChanged: _setCarry),
+          if (_mine)
+            FilterButton(count: _mineFilter.count, onTap: _openMineFilter) // A-25
+          else
+            FilterButton(count: _homeFilter.count, onTap: () => _openHomeFilter(data.kits)), // A-11
+        ],
       ],
     );
     final ids = scopeIds;

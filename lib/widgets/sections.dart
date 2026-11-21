@@ -90,8 +90,10 @@ class UnderlineTab extends StatelessWidget {
   final double fontSize;
   final EdgeInsets padding;
 
-  /// 밑줄을 그을까 — 채널 바만 true. 탭 줄은 false 라서 한 화면에 밑줄이 한 군데만 남는다
-  /// (둘 다 밑줄이면 "전체" 로 시작하는 두 줄이 똑같아 보였다 — 2026-11-21 주인)
+  /// 밑줄을 그을까 — 한 화면에 밑줄은 맨 윗줄 한 군데만 (2026-11-21 주인: 둘 다 밑줄이면
+  /// "전체" 로 시작하는 두 줄이 똑같아 보였다).
+  /// 셸 탭(홈 · 검색 · 캘린더 · 컬렉션)은 위에 채널 바가 보이므로 그 아래 탭 줄은 false + 작게.
+  /// 쌓아 연 화면(상세 · 알림 · 친구 컬렉션 · 베이 조합 …)은 채널 바가 가려져 제 탭 줄이 맨 윗줄이라 true 그대로.
   final bool underline;
 
   @override
