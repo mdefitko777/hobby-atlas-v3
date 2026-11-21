@@ -70,7 +70,7 @@ void main() {
     expect(asked.last, 'gundam');
   });
 
-  testWidgets('캘린더: 아이콘 줄에 필터 · 전체 일정 · 내 일정 (검색창 없음)', (tester) async {
+  testWidgets('캘린더: 탭 줄에 전체 일정 · 내 일정, 오른쪽에 필터 (검색창 없음)', (tester) async {
     await _pump(
       tester,
       Scaffold(
@@ -82,7 +82,9 @@ void main() {
       ),
     );
     expect(find.byType(FilterButton), findsOneWidget);
-    expect(find.byType(ViewIconToggle), findsOneWidget);
+    // 2026-11-21: 전체 일정 · 내 일정 은 아이콘(ViewIconToggle)이 아니라 탭 줄의 글자가 됐다
+    expect(find.text('전체 일정'), findsOneWidget);
+    expect(find.text('내 일정'), findsOneWidget);
     expect(find.byType(GpSearchBar), findsNothing);
     expect(find.byType(TextField), findsNothing);
     // 한 주 목록은 오늘부터라 앞날 줄은 위로 밀려 있다 (화면 밖이어도 목록에 있으면 된다)
@@ -133,8 +135,9 @@ void main() {
     await measure(
       SearchScreen(myChannels: const ['gundam'], onMyChannelsChanged: (_) {}, onCamera: () {}, loaders: fakeLoaders),
     );
-    // 홈 = 필터 · 캘린더 = 필터 · 전체 일정 · 내 일정 · 컬렉션 = 필터 · 휴지통 · 편집 · 검색 = 필터 · 격자 · 목록
-    expect(counts, [1, 3, 3, 3]);
+    // 홈 = 필터 · 캘린더 = 필터 (전체 일정 · 내 일정 은 탭 줄로 옮겼다, 2026-11-21) ·
+    // 컬렉션 = 필터 · 휴지통 · 편집 · 검색 = 필터 · 격자 · 목록
+    expect(counts, [1, 1, 3, 3]);
     expect(rights, hasLength(1));
   });
 

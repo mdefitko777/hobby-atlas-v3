@@ -185,7 +185,8 @@ void main() {
     expect(delegate.childCount, greaterThan(300)); // 머리 줄 + 묶음 + 300
     // 알림 줄은 열쇠로 자리를 찾는다 — 위에 새 알림이 들어와도 밀던 줄이 제 상태를 지킨다
     // 맨 위 확인 시각 · 「오늘」 머리 뒤 여섯째 알림
-    expect(delegate.findChildIndexCallback!(const ValueKey('feed-2026-10-25-k5')), 7);
+    // 2026-11-21 '마지막 확인 … · 새 알림 0' 줄을 뺐다 — 머리 줄이 하나 줄어 자리도 하나 당겨졌다
+    expect(delegate.findChildIndexCallback!(const ValueKey('feed-2026-10-25-k5')), 6);
     expect(delegate.findChildIndexCallback!(const ValueKey('없는 알림')), isNull);
     expect(find.byType(Dismissible).evaluate().length, lessThan(30));
     expect(find.text('상품 0'), findsOneWidget);

@@ -201,7 +201,7 @@ void main() {
         ),
       ),
     );
-    await tester.tap(find.byTooltip('내 일정'));
+    await tester.tap(find.text('내 일정'));
     await _settle(tester);
     // 예약 도착 · 재판매는 줄 둘째 줄의 상태 글 (알약 없이)
     final restock = find.textContaining(RegExp('^재판매 · '), skipOffstage: false);
