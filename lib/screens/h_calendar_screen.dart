@@ -778,7 +778,7 @@ class _MonthCalendar extends StatelessWidget {
               if (!todayShown)
                 TextButton(
                   onPressed: onToday,
-                  child: Text(tr('오늘'), style: const TextStyle(color: Gp.accent)),
+                  child: Text(tr('오늘'), style: TextStyle(color: Gp.accent)),
                 ), // P07
               Row(
                 children: [
@@ -841,7 +841,7 @@ class _MonthCalendar extends StatelessWidget {
                       const SizedBox(width: 4),
                       Text(
                         tr(monthOpen ? '한 주 보기' : '한 달 보기'),
-                        style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                        style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
                       ),
                     ],
                   ),

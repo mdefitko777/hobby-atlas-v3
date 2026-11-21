@@ -39,8 +39,9 @@ class GpSearchBar extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
 
-  static const _textStyle = TextStyle(fontSize: Gp.t14, color: Gp.ink);
-  static const _hintStyle = TextStyle(fontSize: Gp.t14, color: Gp.faint);
+  // getter — static final 이면 밤 모드를 켠 뒤에도 낮 색으로 얼어붙는다
+  static TextStyle get _textStyle => TextStyle(fontSize: Gp.t14, color: Gp.ink);
+  static TextStyle get _hintStyle => TextStyle(fontSize: Gp.t14, color: Gp.faint);
 
   @override
   Widget build(BuildContext context) {
@@ -79,7 +80,7 @@ class GpSearchBar extends StatelessWidget {
           decoration: Gp.raised(radius: Gp.radius),
           child: Row(
             children: [
-              const Icon(Icons.search, size: Gp.iM, color: Gp.muted),
+              Icon(Icons.search, size: Gp.iM, color: Gp.muted),
               const SizedBox(width: 10),
               Expanded(child: field),
               if (c != null && onTap == null)
@@ -91,7 +92,7 @@ class GpSearchBar extends StatelessWidget {
                           // 40 칸 — 검색 덮개 줄(← · 아이콘 세 칸)과 함께 320dp 폰에 들어가게
                           visualDensity: VisualDensity.compact,
                           tooltip: tr('지우기'), // P03
-                          icon: const Icon(Icons.cancel, size: Gp.iM, color: Gp.faint),
+                          icon: Icon(Icons.cancel, size: Gp.iM, color: Gp.faint),
                           onPressed: () {
                             c.clear();
                             onChanged?.call('');
@@ -102,7 +103,7 @@ class GpSearchBar extends StatelessWidget {
                 IconButton(
                   visualDensity: VisualDensity.compact,
                   tooltip: tr('찍어서 찾기'),
-                  icon: const Icon(Icons.photo_camera_outlined, size: Gp.iM, color: Gp.ink),
+                  icon: Icon(Icons.photo_camera_outlined, size: Gp.iM, color: Gp.ink),
                   onPressed: onCamera,
                 )
               else
@@ -261,7 +262,7 @@ class CarryNote extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
             child: Text(
               trf('이어 씀 {n}', {'n': c.count}),
-              style: const TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w600, color: Gp.accent),
+              style: TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w600, color: Gp.accent),
             ),
           ),
         ),
@@ -275,7 +276,7 @@ class CarryNote extends StatelessWidget {
               key: const ValueKey('carry-clear'),
               onTap: () => onChanged(c.cleared()),
               borderRadius: BorderRadius.circular(Gp.rSmall),
-              child: const Padding(
+              child: Padding(
                 padding: EdgeInsets.fromLTRB(2, 8, 4, 8),
                 child: Icon(Icons.close, size: Gp.iS, color: Gp.accent),
               ),
@@ -341,13 +342,13 @@ class _CarrySheetState extends State<_CarrySheet> {
                   Expanded(
                     child: Text(
                       c.label,
-                      style: const TextStyle(fontSize: Gp.t14, color: Gp.ink),
+                      style: TextStyle(fontSize: Gp.t14, color: Gp.ink),
                     ),
                   ),
                   IconButton(
                     visualDensity: VisualDensity.compact,
                     tooltip: tr('지우기'),
-                    icon: const Icon(Icons.close, size: Gp.iM, color: Gp.muted),
+                    icon: Icon(Icons.close, size: Gp.iM, color: Gp.muted),
                     onPressed: () => _remove(c),
                   ),
                 ],
@@ -358,7 +359,7 @@ class _CarrySheetState extends State<_CarrySheet> {
               padding: const EdgeInsets.fromLTRB(20, 7, 20, 7),
               child: Text(
                 '${d.label} — ${d.reason}',
-                style: const TextStyle(fontSize: Gp.t12, color: Gp.faint),
+                style: TextStyle(fontSize: Gp.t12, color: Gp.faint),
               ),
             ),
           Padding(

@@ -73,7 +73,7 @@ Future<void> showUpdateSheet(BuildContext context, UpdateInfo info, {AppUpdate? 
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.system_update_alt, color: Gp.accent, size: Gp.iL),
+                    Icon(Icons.system_update_alt, color: Gp.accent, size: Gp.iL),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
@@ -91,14 +91,14 @@ Future<void> showUpdateSheet(BuildContext context, UpdateInfo info, {AppUpdate? 
                     dateDot(info.builtAt),
                     info.sizeLabel,
                   ]),
-                  style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                  style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
                 ),
                 ..._changeNotes(info.shownNotes),
                 if (u.error.isNotEmpty) ...[
                   const SizedBox(height: 10),
                   Text(
                     u.error,
-                    style: const TextStyle(fontSize: Gp.t12, color: Gp.danger),
+                    style: TextStyle(fontSize: Gp.t12, color: Gp.danger),
                   ),
                 ],
                 const SizedBox(height: 18),
@@ -111,7 +111,7 @@ Future<void> showUpdateSheet(BuildContext context, UpdateInfo info, {AppUpdate? 
                   const SizedBox(height: 8),
                   Text(
                     trf('받는 중 {p}% · 다 받으면 설치 창이 떠요', {'p': p}),
-                    style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                    style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
                   ),
                 ] else
                   Row(
@@ -140,7 +140,7 @@ Future<void> showUpdateSheet(BuildContext context, UpdateInfo info, {AppUpdate? 
                 const SizedBox(height: 8),
                 Text(
                   tr('처음 한 번은 「출처를 알 수 없는 앱 설치」에서 「이 출처 허용」을 켜야 해요 · 내 기록은 그대로예요'),
-                  style: const TextStyle(fontSize: Gp.t11, color: Gp.faint),
+                  style: TextStyle(fontSize: Gp.t11, color: Gp.faint),
                 ),
               ],
             );
@@ -167,7 +167,7 @@ List<Widget> _changeNotes(List<String> notes) => [
           '· $n',
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: Gp.t12, color: Gp.ink, height: 1.4),
+          style: TextStyle(fontSize: Gp.t12, color: Gp.ink, height: 1.4),
         ),
       ),
   ],
@@ -187,7 +187,7 @@ Future<void> showPatchSheet(BuildContext context, {required String versionLabel,
           children: [
             Row(
               children: [
-                const Icon(Icons.download_done, color: Gp.accent, size: Gp.iL),
+                Icon(Icons.download_done, color: Gp.accent, size: Gp.iL),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -201,7 +201,7 @@ Future<void> showPatchSheet(BuildContext context, {required String versionLabel,
             const SizedBox(height: 4),
             Text(
               tr('앱을 다시 열면 적용돼요'),
-              style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+              style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
             ),
             ..._changeNotes(notes),
             const SizedBox(height: 18),
@@ -276,10 +276,10 @@ class _VersionTileState extends State<VersionTile> {
             ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
             // STATE: 새 APK 있음 → 그 번호 / 패치를 받아 둠 → 다시 열면 적용 / 그 밖엔 확인하기
             : u.available != null
-                ? Text(trf('새 버전 {next} ›', {'next': u.available!.versionLabel}), style: const TextStyle(color: Gp.accent))
+                ? Text(trf('새 버전 {next} ›', {'next': u.available!.versionLabel}), style: TextStyle(color: Gp.accent))
                 : p.waiting
-                    ? Text(tr('다시 열면 적용 ›'), key: const Key('patch-waiting'), style: const TextStyle(color: Gp.accent))
-                    : Text(tr('업데이트 확인 ›'), style: const TextStyle(color: Gp.muted)),
+                    ? Text(tr('다시 열면 적용 ›'), key: const Key('patch-waiting'), style: TextStyle(color: Gp.accent))
+                    : Text(tr('업데이트 확인 ›'), style: TextStyle(color: Gp.muted)),
         onTap: _checking ? null : _check,
       ),
     );

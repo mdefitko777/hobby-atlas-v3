@@ -126,7 +126,7 @@ class _NotifySettingsScreenState extends State<NotifySettingsScreen> {
     leading: CircleThumb(image: ch.image, label: tr(ch.label), size: 32),
     title: Text(tr(ch.label)),
     subtitle: Text(channelNotifySummary(_n.config, ch.id, mine: mine)),
-    trailing: const Icon(Icons.chevron_right, color: Gp.faint),
+    trailing: Icon(Icons.chevron_right, color: Gp.faint),
     onTap: () => showGpSheet<void>(
       context,
       tall: true,
@@ -208,7 +208,7 @@ class _NotifySettingsScreenState extends State<NotifySettingsScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 2),
                   child: Text(
                     tr('더 많은 채널'),
-                    style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                    style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
                   ),
                 ),
                 if (c.onlyMine)
@@ -216,7 +216,7 @@ class _NotifySettingsScreenState extends State<NotifySettingsScreen> {
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
                     child: Text(
                       tr('내 채널 소식만이 켜져 있으면 이 채널들의 새 상품은 내가 만든 조건으로만 알려요'),
-                      style: const TextStyle(fontSize: Gp.t12, color: Gp.faint),
+                      style: TextStyle(fontSize: Gp.t12, color: Gp.faint),
                     ),
                   ),
                 for (final ch in more) _channelRow(ch, mine: false),
@@ -241,7 +241,7 @@ class _NotifySettingsScreenState extends State<NotifySettingsScreen> {
                 ListTile(
                   // 이 앱이 휴대폰 설정 화면을 열 수는 없다 (플러그인 없음) — 가는 길만
                   key: const Key('notify-permission'),
-                  leading: const Icon(Icons.notifications_off_outlined, color: Gp.danger),
+                  leading: Icon(Icons.notifications_off_outlined, color: Gp.danger),
                   title: Text(tr('알림 권한이 꺼져 있어요 · 휴대폰 설정 › 애플리케이션 › Hobby Atlas › 알림에서 켤 수 있어요')),
                 ),
             ],
@@ -298,7 +298,7 @@ class _ChannelSheet extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(16, 10, 16, 2),
                   child: Text(
                     tr('조건 알림 (작품 · 라인)'),
-                    style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                    style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
                   ),
                 ),
                 for (final x in c.conditions)
@@ -309,15 +309,15 @@ class _ChannelSheet extends StatelessWidget {
                       title: Text(conditionLabel(x)),
                       trailing: IconButton(
                         tooltip: tr('지우기'),
-                        icon: const Icon(Icons.close, size: 18, color: Gp.faint),
+                        icon: Icon(Icons.close, size: 18, color: Gp.faint),
                         onPressed: () => store.removeCondition(x.id), // STATE: 조건 지우기 (저장)
                       ),
                     ),
                 ListTile(
                   key: const Key('notify-add-condition'),
                   dense: true,
-                  leading: const Icon(Icons.add, size: Gp.iM, color: Gp.accent),
-                  title: Text(tr('조건 추가'), style: const TextStyle(color: Gp.accent)),
+                  leading: Icon(Icons.add, size: Gp.iM, color: Gp.accent),
+                  title: Text(tr('조건 추가'), style: TextStyle(color: Gp.accent)),
                   onTap: () async {
                     final x = await pickNotifyCondition(context, channel: channel);
                     if (x != null) store.addCondition(x); // STATE: 조건 추가 (저장)

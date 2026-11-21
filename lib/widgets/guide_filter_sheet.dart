@@ -157,7 +157,7 @@ class _GuideFilterSheetState extends State<GuideFilterSheet> {
             final m? => MineStateLabel(m),
             null => Tooltip(
               message: tr('내 사진'),
-              child: const Icon(Icons.workspace_premium, size: Gp.iS, color: Gp.own),
+              child: Icon(Icons.workspace_premium, size: Gp.iS, color: Gp.own),
             ),
           },
           onPick: (v) => setState(() => _draft.tier = v),

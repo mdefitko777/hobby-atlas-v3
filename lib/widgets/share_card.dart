@@ -64,7 +64,7 @@ class ShareCardFrame extends StatelessWidget {
             Text(
               shareWatermark(handle),
               key: const ValueKey('share-watermark'),
-              style: const TextStyle(fontSize: Gp.t11, color: Gp.faint, fontWeight: FontWeight.w700),
+              style: TextStyle(fontSize: Gp.t11, color: Gp.faint, fontWeight: FontWeight.w700),
             ),
           ],
         ),
@@ -140,7 +140,7 @@ class CollectionShareCard extends StatelessWidget {
                     if (handle.isNotEmpty)
                       Text(
                         '@$handle',
-                        style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                        style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
                       ),
                   ],
                 ),
@@ -154,9 +154,9 @@ class CollectionShareCard extends StatelessWidget {
             decoration: BoxDecoration(color: Gp.soft, borderRadius: BorderRadius.circular(Gp.radius)),
             child: Row(
               children: [
-                stat(const LikedIcon(size: Gp.iM), liked, tr('좋아요')),
-                stat(const OwnedIcon(size: Gp.iM), owned, tr('구매함')),
-                stat(const Icon(preorderIcon, size: Gp.iM, color: Gp.reserve), preorders, tr('예약')),
+                stat(LikedIcon(size: Gp.iM), liked, tr('좋아요')),
+                stat(OwnedIcon(size: Gp.iM), owned, tr('구매함')),
+                stat(Icon(preorderIcon, size: Gp.iM, color: Gp.reserve), preorders, tr('예약')),
               ],
             ),
           ),
@@ -240,7 +240,7 @@ class GuideShareCard extends StatelessWidget {
                     Text(
                       '$lit / $total',
                       key: const ValueKey('share-lit'),
-                      style: const TextStyle(fontSize: Gp.t12, color: Gp.own, fontWeight: FontWeight.w600),
+                      style: TextStyle(fontSize: Gp.t12, color: Gp.own, fontWeight: FontWeight.w600),
                     ),
                   ],
                 ),

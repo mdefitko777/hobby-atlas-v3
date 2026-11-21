@@ -289,7 +289,7 @@ class _BarcodeScanScreenState extends State<BarcodeScanScreen> {
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          const MiniSpinner(size: 16, color: Gp.accent),
+                                          MiniSpinner(size: 16, color: Gp.accent),
                                           const SizedBox(width: 8),
                                           Text(
                                             tr('찾는 중…'),
@@ -313,14 +313,14 @@ class _BarcodeScanScreenState extends State<BarcodeScanScreen> {
                               tooltip: tr('닫기'), // P03
                               size: 40,
                               onTap: () => Navigator.of(context).maybePop(),
-                              child: const Icon(Icons.close, size: Gp.iM, color: Gp.ink),
+                              child: Icon(Icons.close, size: Gp.iM, color: Gp.ink),
                             ),
                             const Spacer(),
                             RaisedCircleButton(
                               tooltip: tr('번호 입력'), // E-3
                               size: 40,
                               onTap: _typeCode,
-                              child: const Icon(Icons.keyboard_outlined, size: Gp.iM, color: Gp.ink),
+                              child: Icon(Icons.keyboard_outlined, size: Gp.iM, color: Gp.ink),
                             ),
                           ],
                         ),
@@ -355,7 +355,7 @@ class _BarcodeScanScreenState extends State<BarcodeScanScreen> {
                     IconButton(
                       tooltip: tr('갤러리'), // E-5
                       onPressed: _toAlbum,
-                      icon: const Icon(Icons.photo_library_outlined, color: Gp.ink),
+                      icon: Icon(Icons.photo_library_outlined, color: Gp.ink),
                     ),
                     const Spacer(),
                     UnderlineTab(label: tr('사진'), selected: false, onTap: _toPhoto), // E-2 P07
@@ -436,7 +436,7 @@ class _UnknownBarcode extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   code,
-                  style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                  style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
                 ),
               ],
             ),

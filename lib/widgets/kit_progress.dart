@@ -57,11 +57,11 @@ class PreorderRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            const Icon(preorderIcon, size: Gp.iS, color: Gp.reserve),
+            Icon(preorderIcon, size: Gp.iS, color: Gp.reserve),
             const SizedBox(width: 8),
             Text(
               tr('예약'),
-              style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+              style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -69,7 +69,7 @@ class PreorderRow extends StatelessWidget {
                 preorderSummary(p),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w600, color: Gp.ink),
+                style: TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w600, color: Gp.ink),
               ),
             ),
             if (p.active)
@@ -77,10 +77,10 @@ class PreorderRow extends StatelessWidget {
                 key: const ValueKey('preorder-arrived'),
                 tooltip: tr('도착했어요'),
                 onPressed: () => markPreorderArrived(context, kit),
-                icon: const Icon(arrivedIcon, size: Gp.iM, color: Gp.reserve),
+                icon: Icon(arrivedIcon, size: Gp.iM, color: Gp.reserve),
               )
             else
-              const Padding(
+              Padding(
                 padding: EdgeInsets.all(10),
                 child: Icon(Icons.edit_outlined, size: Gp.iS, color: Gp.accent),
               ),
@@ -194,7 +194,7 @@ class _PreorderSheetState extends State<_PreorderSheet> {
                 : IconButton(
                     tooltip: tr('예약 지우기'),
                     onPressed: _delete,
-                    icon: const Icon(Icons.delete_outline, size: Gp.iM, color: Gp.danger),
+                    icon: Icon(Icons.delete_outline, size: Gp.iM, color: Gp.danger),
                   ),
           ),
           _field('shop', _shop, tr('가게 (예: 프리미엄 반다이)')),
@@ -261,13 +261,13 @@ Future<bool> warnIfCollected(BuildContext context, List<Kit> kits) async {
   final d = scanDuplicate(kits, marks.store, marks.statusOf);
   if (d == null) return true;
   final (Widget icon, String head, String detail) = switch (d.kind) {
-    ScanDupKind.owned => (const OwnedIcon(size: Gp.iL), trf('이미 구매함에 있어요 ×{n}', {'n': d.quantity}), ''),
+    ScanDupKind.owned => (OwnedIcon(size: Gp.iL), trf('이미 구매함에 있어요 ×{n}', {'n': d.quantity}), ''),
     ScanDupKind.preorder => (
-      const Icon(preorderIcon, size: Gp.iL, color: Gp.reserve),
+      Icon(preorderIcon, size: Gp.iL, color: Gp.reserve),
       tr('이미 예약했어요'),
       preorderSummary(d.preorder!),
     ),
-    ScanDupKind.liked => (const LikedIcon(size: Gp.iL), tr('좋아요한 상품이에요'), ''),
+    ScanDupKind.liked => (LikedIcon(size: Gp.iL), tr('좋아요한 상품이에요'), ''),
   };
   final open = await showGpSheet<bool>(
     context,
@@ -302,7 +302,7 @@ Future<bool> warnIfCollected(BuildContext context, List<Kit> kits) async {
               const SizedBox(height: 2),
               Text(
                 detail,
-                style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
               ),
             ],
             const SizedBox(height: 14),

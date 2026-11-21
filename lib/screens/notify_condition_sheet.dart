@@ -116,7 +116,7 @@ class _ConditionSheetState extends State<_ConditionSheet> {
       children: [
         Text(
           title,
-          style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+          style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
         ),
         const SizedBox(height: 6),
         Wrap(spacing: 6, runSpacing: 6, children: chips),

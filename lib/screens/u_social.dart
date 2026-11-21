@@ -178,9 +178,9 @@ class _ProfileCoverState extends State<ProfileCover> {
           image: img,
           fit: BoxFit.cover,
           gaplessPlayback: true,
-          errorBuilder: (_, _, _) => widget.empty ?? const ColoredBox(color: Gp.soft),
+          errorBuilder: (_, _, _) => widget.empty ?? ColoredBox(color: Gp.soft),
         ),
-        _ => widget.empty ?? const ColoredBox(color: Gp.soft),
+        _ => widget.empty ?? ColoredBox(color: Gp.soft),
       },
     ),
   );
@@ -253,7 +253,7 @@ class _PrivacySheet extends StatelessWidget {
                           key: const ValueKey('privacy-warn'),
                           message: tr('서버에 공개 범위가 아직 없어요 (docs/supabase-v3-social.sql)'),
                           triggerMode: TooltipTriggerMode.tap,
-                          child: const Icon(Icons.warning_amber_rounded, size: Gp.iS, color: Gp.star),
+                          child: Icon(Icons.warning_amber_rounded, size: Gp.iS, color: Gp.star),
                         ),
                       ],
                     ],
@@ -270,7 +270,7 @@ class _PrivacySheet extends StatelessWidget {
                     title: Text(f.name),
                     subtitle: Text(
                       '@${f.handle}',
-                      style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                      style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
                     ),
                     value: pub && !hidden.contains(f.handle),
                     activeColor: Gp.accent,
@@ -323,7 +323,7 @@ class SuggestionsPanel extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(16, 2, 16, 2),
                 child: Tooltip(
                   message: tr('알 수도 있는 사람'),
-                  child: const Icon(Icons.person_search_outlined, size: Gp.iM, color: Gp.ink),
+                  child: Icon(Icons.person_search_outlined, size: Gp.iM, color: Gp.ink),
                 ),
               ),
               for (final s in list.take(5))
@@ -333,7 +333,7 @@ class SuggestionsPanel extends StatelessWidget {
                   title: Text(s.profile.name, maxLines: 1, overflow: TextOverflow.ellipsis),
                   subtitle: Text(
                     trf('함께 아는 친구 {n}명', {'n': s.mutual}),
-                    style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                    style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
                   ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -351,13 +351,13 @@ class SuggestionsPanel extends StatelessWidget {
                             if (context.mounted) showToast(context, e.message);
                           }
                         },
-                        icon: const Icon(Icons.person_add_alt_1_outlined, color: Gp.accent),
+                        icon: Icon(Icons.person_add_alt_1_outlined, color: Gp.accent),
                       ),
                       IconButton(
                         key: ValueKey('suggest-dismiss-${s.profile.handle}'),
                         tooltip: tr('닫기'),
                         onPressed: () => account.store.social.dismissSuggestion(s.profile.handle), // 기기에만
-                        icon: const Icon(Icons.close, size: Gp.iM, color: Gp.faint),
+                        icon: Icon(Icons.close, size: Gp.iM, color: Gp.faint),
                       ),
                     ],
                   ),
@@ -378,16 +378,16 @@ class FriendStatusLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const style = TextStyle(fontSize: Gp.t12, color: Gp.muted);
+    final style = TextStyle(fontSize: Gp.t12, color: Gp.muted);
     final e = event;
     if (e == null) return Text(fallback, maxLines: 1, overflow: TextOverflow.ellipsis, style: style);
     final name = Catalog.instance.byId[e.kitId]?.name ?? '';
     return Row(
       children: [
         switch (e.kind) {
-          'owned' => const OwnedIcon(size: Gp.iXS),
-          'wanted' => const LikedIcon(size: Gp.iXS),
-          _ => const Icon(Icons.photo_camera_outlined, size: Gp.iXS, color: Gp.muted),
+          'owned' => OwnedIcon(size: Gp.iXS),
+          'wanted' => LikedIcon(size: Gp.iXS),
+          _ => Icon(Icons.photo_camera_outlined, size: Gp.iXS, color: Gp.muted),
         },
         const SizedBox(width: 4),
         if (name.isNotEmpty)
@@ -396,7 +396,7 @@ class FriendStatusLine extends StatelessWidget {
           ),
         Text(
           '${name.isEmpty ? '' : ' · '}${timeAgo(e.at.toLocal(), now: appNow())}',
-          style: const TextStyle(fontSize: Gp.t11, color: Gp.faint),
+          style: TextStyle(fontSize: Gp.t11, color: Gp.faint),
         ),
       ],
     );

@@ -115,7 +115,7 @@ class _ChannelPicker extends StatelessWidget {
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(SideGrid.pad + 4, 12, SideGrid.pad, 8),
               sliver: SliverToBoxAdapter(
-                child: Text(tr('어느 도감을 볼까요?'), style: const TextStyle(color: Gp.muted)),
+                child: Text(tr('어느 도감을 볼까요?'), style: TextStyle(color: Gp.muted)),
               ),
             ),
             g.sliver(myChannels.length, (context, i) {

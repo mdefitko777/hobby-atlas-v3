@@ -82,7 +82,7 @@ class GuideHits extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(14, 0, 14, 4),
             child: Row(
               children: [
-                const Icon(Icons.auto_awesome_mosaic_outlined, size: Gp.iM, color: Gp.accent),
+                Icon(Icons.auto_awesome_mosaic_outlined, size: Gp.iM, color: Gp.accent),
                 const SizedBox(width: 6),
                 Text(tr('도감'), style: const TextStyle(fontWeight: FontWeight.w700)),
               ],
@@ -207,16 +207,16 @@ class _UnitHead extends StatelessWidget {
                   ]),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                  style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
                 ),
               ],
             ),
           ),
           Text(
             tr('도감'),
-            style: const TextStyle(fontSize: Gp.t12, color: Gp.accent),
+            style: TextStyle(fontSize: Gp.t12, color: Gp.accent),
           ),
-          const Icon(Icons.chevron_right, size: Gp.iM, color: Gp.accent),
+          Icon(Icons.chevron_right, size: Gp.iM, color: Gp.accent),
         ],
       ),
     ),

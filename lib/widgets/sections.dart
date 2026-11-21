@@ -53,14 +53,14 @@ class SectionHeader extends StatelessWidget {
                     padding: const EdgeInsets.only(top: 3),
                     child: Text(
                       subtitle,
-                      style: const TextStyle(fontSize: Gp.t12, color: Gp.accent, fontWeight: FontWeight.w500),
+                      style: TextStyle(fontSize: Gp.t12, color: Gp.accent, fontWeight: FontWeight.w500),
                     ),
                   ),
               ],
             ),
           ),
           ?trailing,
-          if (onMore != null) const Icon(Icons.chevron_right, color: Gp.muted),
+          if (onMore != null) Icon(Icons.chevron_right, color: Gp.muted),
         ],
       ),
     );
@@ -172,7 +172,7 @@ class PageDots extends StatelessWidget {
 
 /// 브랜드 색 진행 막대 (도감 수집 · 일치도)
 class AccentBar extends StatelessWidget {
-  const AccentBar({super.key, required this.value, this.height = 4, this.color = Gp.accent});
+  AccentBar({super.key, required this.value, this.height = 4, Color? color}) : color = color ?? Gp.accent;
   final double value;
   final double height;
 
@@ -206,7 +206,7 @@ class SectionPanel extends StatelessWidget {
       // Material: 안의 ListTile · InkWell 누름 물결이 흰 바탕 위에 보이게
       child: Material(
         color: Gp.panel,
-        shape: const Border(top: Gp.bandLine),
+        shape: Border(top: Gp.bandLine),
         child: SizedBox(
           width: double.infinity,
           child: Padding(padding: padding, child: child),
@@ -233,7 +233,7 @@ class BarTitle extends StatelessWidget {
       if (count.isNotEmpty)
         Text(
           count,
-          style: const TextStyle(fontSize: Gp.t12, color: Gp.own, fontWeight: FontWeight.w500),
+          style: TextStyle(fontSize: Gp.t12, color: Gp.own, fontWeight: FontWeight.w500),
         ),
     ],
   );
@@ -251,7 +251,7 @@ class ListSummary extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     margin: const EdgeInsets.fromLTRB(16, 18, 16, 0),
     padding: const EdgeInsets.only(top: 14),
-    decoration: const BoxDecoration(
+    decoration: BoxDecoration(
       border: Border(top: BorderSide(color: Gp.line)),
     ),
     child: Wrap(
@@ -270,7 +270,7 @@ class ListSummary extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 label,
-                style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
               ),
             ],
           ),

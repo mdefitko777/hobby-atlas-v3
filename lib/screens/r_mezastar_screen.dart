@@ -202,7 +202,7 @@ class _TagFilterSheetState extends State<_TagFilterSheet> {
       padding: const EdgeInsets.fromLTRB(2, 16, 0, 8),
       child: Text(
         s,
-        style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+        style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
       ),
     );
     return GpPickSheet(
@@ -274,7 +274,7 @@ class TypeBadge extends StatelessWidget {
       const SizedBox(width: 4),
       Text(
         tr(typeLabels[type] ?? type),
-        style: const TextStyle(fontSize: Gp.t12, color: Gp.ink),
+        style: TextStyle(fontSize: Gp.t12, color: Gp.ink),
       ),
     ],
   );
@@ -325,7 +325,7 @@ class _SquareChecks extends StatelessWidget {
                         TextSpan(text: label(v)),
                         TextSpan(
                           text: ' ${count(v)}',
-                          style: const TextStyle(fontSize: Gp.t11, color: Gp.faint),
+                          style: TextStyle(fontSize: Gp.t11, color: Gp.faint),
                         ),
                       ],
                     ),
@@ -686,14 +686,14 @@ class TagCell extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: Gp.t11, color: Gp.faint),
+            style: TextStyle(fontSize: Gp.t11, color: Gp.faint),
           ),
           Text(
             card.name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: Gp.t12, color: Gp.ink),
+            style: TextStyle(fontSize: Gp.t12, color: Gp.ink),
           ),
         ],
       ),
@@ -754,7 +754,7 @@ class _TagSheet extends StatelessWidget {
                               const SizedBox(height: 4),
                               Text(
                                 i == 0 ? tr('앞면') : tr('뒷면'),
-                                style: const TextStyle(fontSize: Gp.t11, color: Gp.muted),
+                                style: TextStyle(fontSize: Gp.t11, color: Gp.muted),
                               ),
                             ],
                           ],
@@ -776,7 +776,7 @@ class _TagSheet extends StatelessWidget {
                 ),
                 Text(
                   card.number,
-                  style: const TextStyle(fontSize: Gp.t14, color: Gp.muted, fontWeight: FontWeight.w600),
+                  style: TextStyle(fontSize: Gp.t14, color: Gp.muted, fontWeight: FontWeight.w600),
                 ),
                 if (card.url.isNotEmpty)
                   IconButton(
@@ -787,14 +787,14 @@ class _TagSheet extends StatelessWidget {
                       final ok = await launchUrl(Uri.parse(card.url), mode: LaunchMode.externalApplication);
                       if (!ok && context.mounted) showToast(context, tr('열지 못했어요'));
                     },
-                    icon: const Icon(Icons.open_in_new, size: Gp.iM, color: Gp.muted),
+                    icon: Icon(Icons.open_in_new, size: Gp.iM, color: Gp.muted),
                   ),
               ],
             ),
             if (card.local.isNotEmpty && card.local != card.name && _readable(card.local))
               Text(
                 card.local,
-                style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
               ),
             const SizedBox(height: 8),
             Wrap(
@@ -810,7 +810,7 @@ class _TagSheet extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               joinDot([...sets, ...card.variant.split(' · ').where(_readable)]),
-              style: const TextStyle(fontSize: Gp.t12, color: Gp.faint),
+              style: TextStyle(fontSize: Gp.t12, color: Gp.faint),
             ),
             const SizedBox(height: 14),
             Row(
@@ -963,13 +963,13 @@ class _TagBox extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(14, 0, 14, 4),
           child: Row(
             children: [
-              const Icon(Icons.style_outlined, size: Gp.iM, color: Gp.accent),
+              Icon(Icons.style_outlined, size: Gp.iM, color: Gp.accent),
               const SizedBox(width: 6),
               Text(tr('태그 · 픽'), style: const TextStyle(fontWeight: FontWeight.w700)),
               const Spacer(),
               Text(
                 count,
-                style: const TextStyle(color: Gp.faint, fontSize: Gp.t12),
+                style: TextStyle(color: Gp.faint, fontSize: Gp.t12),
               ),
             ],
           ),

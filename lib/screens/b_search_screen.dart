@@ -301,7 +301,7 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
                 visualDensity: VisualDensity.compact,
                 tooltip: tr('뒤로'),
                 onPressed: () => Navigator.maybePop(context),
-                icon: const Icon(Icons.arrow_back, color: Gp.ink),
+                icon: Icon(Icons.arrow_back, color: Gp.ink),
               ),
               Expanded(
                 child: GpSearchBar(
@@ -382,7 +382,7 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
                       ? tr('Rebrickable의 레고 전부 (굿즈 · 도서 · 옛 세트까지)')
                       : trf('{year}년부터 나온 정식 세트 · 미니피겨', {'year': legoRecentFromYear}),
                 ),
-                trailing: v == me.legoScope ? const Icon(Icons.check, color: Gp.accent) : null,
+                trailing: v == me.legoScope ? Icon(Icons.check, color: Gp.accent) : null,
                 onTap: () => Navigator.pop(sheet, v),
               ),
           ],
@@ -447,7 +447,7 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
     onDeleted: onDeleted,
     deleteIcon: const Icon(Icons.close, size: Gp.iS),
     backgroundColor: Gp.panel,
-    side: const BorderSide(color: Gp.line),
+    side: BorderSide(color: Gp.line),
     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(Gp.rSmall))),
     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     visualDensity: VisualDensity.compact,
@@ -476,7 +476,7 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
                     Expanded(child: Text(e.key, maxLines: 1, overflow: TextOverflow.ellipsis)),
                     Text(
                       '×${e.value}', // 내가 찾은 횟수 (순위 아님)
-                      style: const TextStyle(fontSize: Gp.t12, color: Gp.faint),
+                      style: TextStyle(fontSize: Gp.t12, color: Gp.faint),
                     ),
                   ],
                 ),
@@ -496,7 +496,7 @@ class _SearchScreenState extends State<SearchScreen> with ChannelScope {
               tooltip: tr('모두 지우기'),
               visualDensity: VisualDensity.compact,
               onPressed: () => _clearRecent(me),
-              icon: const Icon(Icons.delete_sweep_outlined, size: Gp.iM, color: Gp.muted),
+              icon: Icon(Icons.delete_sweep_outlined, size: Gp.iM, color: Gp.muted),
             ),
           ),
           wrap([
@@ -695,7 +695,7 @@ class SentenceCandidates extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.manage_search, size: Gp.iM, color: Gp.accent),
+              Icon(Icons.manage_search, size: Gp.iM, color: Gp.accent),
               const SizedBox(width: 6),
               Text(tr('설명에 맞는 상품'), style: const TextStyle(fontWeight: FontWeight.w700)),
             ],

@@ -52,7 +52,8 @@ class DateTag extends StatelessWidget {
 
 /// 연한 색 꼬리표 하나 (네모 · 색 글자 + 같은 색 10% 바탕) — 날짜 · 예고 단계 · 상태 공통
 class SoftTag extends StatelessWidget {
-  const SoftTag(this.text, {super.key, this.color = Gp.accent});
+  // const 를 뗀 까닭: 기본 색이 팔레트에서 오는 값이라 const 식이 될 수 없다 (밤 모드)
+  SoftTag(this.text, {super.key, Color? color}) : color = color ?? Gp.accent;
   final String text;
   final Color color;
 
@@ -90,7 +91,7 @@ Color preorderColor(PreorderStage stage) => switch (stage) {
 };
 
 /// 비공식 소식 꼬리표 색 — ⚠ 아이콘과 같은 호박색 (틀린 것은 아니지만 공식과 다를 수 있다)
-const unofficialColor = Gp.star;
+Color get unofficialColor => Gp.star;
 
 /// 예고 꼬리표 하나 — 라이브면 때(라이브 · 오늘 21:00 · 라이브 중 · 다시보기 · 11.12), 예약 때를 알면
 /// 예약(예약 · 오늘 18:00 · 예약 시작 · ~11.30 23:59 마감 · 예약 마감), 아니면 예고 단계.

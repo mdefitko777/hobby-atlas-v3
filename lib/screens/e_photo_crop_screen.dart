@@ -60,7 +60,7 @@ class _PhotoCropScreenState extends State<PhotoCropScreen> {
             padding: const EdgeInsets.fromLTRB(Gp.gutter, 4, Gp.gutter, 12),
             child: Text(
               tr('물건만 들어가게 모서리를 끌어 주세요'),
-              style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+              style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
             ),
           ),
           Expanded(

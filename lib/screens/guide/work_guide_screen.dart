@@ -494,7 +494,7 @@ class _UnitSheet extends StatelessWidget {
                       if (unit.nameEn.isNotEmpty)
                         Text(
                           unit.nameEn,
-                          style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                          style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
                         ),
                       Text(
                         status,
@@ -548,7 +548,7 @@ class _UnitSheet extends StatelessWidget {
                 Expanded(
                   child: Text(
                     photo == null ? '' : tr('다시 누르면 사진 바꾸기'),
-                    style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                    style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
                   ),
                 ),
                 if (photo != null)
@@ -574,7 +574,7 @@ class _UnitSheet extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 child: Text(
                   tr('대응 상품 아직 없음 · 나오면 홈에 먼저 떠요'), // P09
-                  style: const TextStyle(color: Gp.muted),
+                  style: TextStyle(color: Gp.muted),
                 ),
               ),
             for (final k in lit) kitRow(k),

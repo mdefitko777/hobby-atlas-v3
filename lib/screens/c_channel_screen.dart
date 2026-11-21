@@ -176,7 +176,7 @@ class ChannelBar extends StatelessWidget {
           ),
           IconButton(
             tooltip: tr('채널 관리'),
-            icon: const ChannelGlyph(), // C-2 P07
+            icon: ChannelGlyph(), // C-2 P07
             onPressed: () => Navigator.of(context).push(
               CupertinoPageRoute<void>(
                 // C-3 P03
@@ -237,7 +237,7 @@ class _ChannelManagerScreenState extends State<ChannelManagerScreen> {
                   child: Text(
                     tr('아래에서 + 를 눌러 채널을 추가하세요'),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: Gp.muted),
+                    style: TextStyle(color: Gp.muted),
                   ),
                 )
               else
@@ -289,7 +289,7 @@ class _ChannelManagerScreenState extends State<ChannelManagerScreen> {
               const SizedBox(height: 12),
               Text(
                 tr('회색 = 아직 상품 없음 · 추가해 두면 새 상품이 홈에 먼저 떠요'), // C-6 P10
-                style: const TextStyle(color: Gp.muted, fontSize: Gp.t12),
+                style: TextStyle(color: Gp.muted, fontSize: Gp.t12),
               ),
             ],
           );
@@ -317,7 +317,7 @@ class _GroupTitle extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             hint,
-            style: const TextStyle(fontSize: Gp.t12, color: Gp.faint),
+            style: TextStyle(fontSize: Gp.t12, color: Gp.faint),
           ),
         ],
       ),
@@ -369,7 +369,7 @@ class _ChannelTile extends StatelessWidget {
           child: DecoratedBox(
             decoration: Gp.raised().copyWith(
               border: Border.all(color: highlighted ? Gp.ink : Gp.glass, width: highlighted ? 1.5 : 1),
-              boxShadow: lifted ? const [BoxShadow(color: Gp.shadow, blurRadius: 24, offset: Offset(0, 10))] : null,
+              boxShadow: lifted ? [BoxShadow(color: Gp.shadow, blurRadius: 24, offset: Offset(0, 10))] : null,
             ),
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,

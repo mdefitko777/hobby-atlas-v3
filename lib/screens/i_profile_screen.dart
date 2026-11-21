@@ -321,7 +321,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     // 사진 위에서도 보이게 흰 원
                     tooltip: tr('뒤로'),
                     onTap: () => Navigator.maybePop(context),
-                    child: const Icon(Icons.arrow_back, size: Gp.iM, color: Gp.ink),
+                    child: Icon(Icons.arrow_back, size: Gp.iM, color: Gp.ink),
                   ),
                 )
               : null,
@@ -331,7 +331,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             preferredSize: const Size.fromHeight(Gp.rLarge),
             child: Container(
               height: Gp.rLarge,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: Gp.panel,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(Gp.rLarge)),
               ),
@@ -346,12 +346,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   /// 내 것 · 친구 것 배경 사진 — 없으면 서랍 머리와 같은 옅은 그라데이션
-  static const _softCover = DecoratedBox(
+  // static final 로 두면 밤 모드를 켠 뒤에도 처음 만든 색 그대로 얼어붙는다 → getter
+  static Widget get _softCover => DecoratedBox(
     decoration: BoxDecoration(
       gradient: LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [Color(0xFFE9F3FB), Color(0xFFE8F8F3), Gp.panel],
+        colors: [Gp.p.coverA, Gp.p.coverB, Gp.panel],
       ),
     ),
   );
@@ -413,28 +414,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _Row(
           // I-4 숫자 줄 → 컬렉션 탭 그 목록
           key: const ValueKey('profile-liked'),
-          icon: const LikedIcon(filled: false, size: Gp.iL),
+          icon: LikedIcon(filled: false, size: Gp.iL),
           label: tr('좋아요'),
           value: '$liked',
           onTap: jump == null ? null : () => jump(CollectionJump.liked),
         ),
         _Row(
           key: const ValueKey('profile-owned'),
-          icon: const OwnedIcon(filled: false, size: Gp.iL),
+          icon: OwnedIcon(filled: false, size: Gp.iL),
           label: tr('구매함'),
           value: '$owned',
           onTap: jump == null ? null : () => jump(CollectionJump.owned),
         ),
         _Row(
           key: const ValueKey('profile-preorder'),
-          icon: const Icon(preorderIcon, size: Gp.iL, color: Gp.ink),
+          icon: Icon(preorderIcon, size: Gp.iL, color: Gp.ink),
           label: tr('예약 금액'),
           value: won(due),
           onTap: jump == null ? null : () => jump(CollectionJump.preorder),
         ),
         _Row(
           key: const ValueKey('profile-spend'),
-          icon: const Icon(Icons.account_balance_wallet_outlined, size: Gp.iL, color: Gp.ink),
+          icon: Icon(Icons.account_balance_wallet_outlined, size: Gp.iL, color: Gp.ink),
           label: tr('구매 금액'),
           sub: month > 0 ? trf('이번 달 {money}', {'money': won(month)}) : '',
           value: won(store.spendKrw),
@@ -444,7 +445,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _Row(
           // I-6 · I-7 내 사진 — 미리 보기 2열, › = 사진 벽 전부
           key: const ValueKey('profile-photos'),
-          icon: const Icon(Icons.photo_library_outlined, size: Gp.iL, color: Gp.ink),
+          icon: Icon(Icons.photo_library_outlined, size: Gp.iL, color: Gp.ink),
           label: tr('내 사진'),
           value: '${photos.length}',
           extra: [
@@ -453,14 +454,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 key: const ValueKey('photo-warn'),
                 message: photoWarn(account.photos),
                 triggerMode: TooltipTriggerMode.tap,
-                child: const Icon(Icons.warning_amber_rounded, size: Gp.iS, color: Gp.star),
+                child: Icon(Icons.warning_amber_rounded, size: Gp.iS, color: Gp.star),
               ),
             if (signedIn) _privacyButton(store),
             IconButton(
               tooltip: tr('사진 넣기'),
               visualDensity: VisualDensity.compact,
               onPressed: () => addMyPhoto(context),
-              icon: const Icon(Icons.add_a_photo_outlined, size: Gp.iM, color: Gp.ink),
+              icon: Icon(Icons.add_a_photo_outlined, size: Gp.iM, color: Gp.ink),
             ),
           ],
           onTap: () => _openPhotos(account, store),
@@ -471,7 +472,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _Row(
             // I-5 친구 → 친구 화면 (요청 · 목록) · 아이디로 추가
             key: const ValueKey('profile-friends'),
-            icon: const Icon(Icons.people_outline, size: Gp.iL, color: Gp.ink),
+            icon: Icon(Icons.people_outline, size: Gp.iL, color: Gp.ink),
             label: tr('친구'),
             value: account.friends.unavailable ? '' : '${account.friends.friends.length}',
             badge: account.incomingCount,
@@ -480,7 +481,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 tooltip: tr('아이디로 친구 추가'),
                 visualDensity: VisualDensity.compact,
                 onPressed: () => showAddFriend(context),
-                icon: const Icon(Icons.person_add_alt_1_outlined, size: Gp.iM, color: Gp.ink),
+                icon: Icon(Icons.person_add_alt_1_outlined, size: Gp.iM, color: Gp.ink),
               ),
             ],
             onTap: () => openFriends(context, loaders: widget.loaders),
@@ -570,21 +571,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
         const _Gap(),
         _Row(
           key: const ValueKey('profile-liked'),
-          icon: const LikedIcon(filled: false, size: Gp.iL),
+          icon: LikedIcon(filled: false, size: Gp.iL),
           label: tr('좋아요'),
           value: '${m.liked}',
           onTap: () => open(CollectionJump.liked),
         ),
         _Row(
           key: const ValueKey('profile-owned'),
-          icon: const OwnedIcon(filled: false, size: Gp.iL),
+          icon: OwnedIcon(filled: false, size: Gp.iL),
           label: tr('구매함'),
           value: '${m.owned}',
           onTap: () => open(CollectionJump.owned),
         ),
         _Row(
           key: const ValueKey('profile-guide'),
-          icon: const Icon(Icons.auto_awesome_mosaic_outlined, size: Gp.iL, color: Gp.ink),
+          icon: Icon(Icons.auto_awesome_mosaic_outlined, size: Gp.iL, color: Gp.ink),
           label: tr('도감'),
           value: '${m.lit}',
           onTap: () => open(CollectionJump.guide),
@@ -593,7 +594,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _Row(
           // I-6 친구가 공개한 사진만
           key: const ValueKey('profile-photos'),
-          icon: const Icon(Icons.photo_library_outlined, size: Gp.iL, color: Gp.ink),
+          icon: Icon(Icons.photo_library_outlined, size: Gp.iL, color: Gp.ink),
           label: tr('사진'),
           value: '${photos.length}',
           onTap: photos.isEmpty
@@ -718,7 +719,7 @@ class _Card extends StatelessWidget {
                               handle.isNotEmpty ? '@$handle' : noHandle,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                              style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
                             ),
                           ),
                           if (handle.isNotEmpty)
@@ -729,7 +730,7 @@ class _Card extends StatelessWidget {
                                 Clipboard.setData(ClipboardData(text: '@$handle'));
                                 showToast(context, tr('아이디를 복사했어요'));
                               },
-                              icon: const Icon(Icons.content_copy_rounded, size: Gp.iS, color: Gp.muted),
+                              icon: Icon(Icons.content_copy_rounded, size: Gp.iS, color: Gp.muted),
                             )
                           else
                             const SizedBox(height: 40),
@@ -750,7 +751,7 @@ class _Card extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(2, 8, 4, 8),
                 child: Row(
                   children: [
-                    const Icon(Icons.sell_outlined, size: Gp.iS, color: Gp.muted),
+                    Icon(Icons.sell_outlined, size: Gp.iS, color: Gp.muted),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -760,7 +761,7 @@ class _Card extends StatelessWidget {
                         style: TextStyle(fontSize: Gp.t14, color: tags.isEmpty ? Gp.faint : Gp.ink),
                       ),
                     ),
-                    if (onTags != null) const Icon(Icons.chevron_right, color: Gp.faint),
+                    if (onTags != null) Icon(Icons.chevron_right, color: Gp.faint),
                   ],
                 ),
               ),
@@ -777,7 +778,7 @@ class _Gap extends StatelessWidget {
   const _Gap();
 
   @override
-  Widget build(BuildContext context) => const SizedBox(height: 8, child: ColoredBox(color: Gp.soft));
+  Widget build(BuildContext context) => SizedBox(height: 8, child: ColoredBox(color: Gp.soft));
 }
 
 /// 목록 한 줄 — 아이콘 · 이름(· 작은 둘째 줄) · 값 · [extra] 아이콘 · ›
@@ -828,7 +829,7 @@ class _Row extends StatelessWidget {
                       if (sub.isNotEmpty)
                         Text(
                           sub,
-                          style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                          style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
                         ),
                     ],
                   ),
@@ -836,10 +837,10 @@ class _Row extends StatelessWidget {
                 if (badge > 0) ...[Badge(backgroundColor: Gp.danger, label: Text('$badge')), const SizedBox(width: 8)],
                 Text(
                   value,
-                  style: const TextStyle(fontSize: Gp.t14, color: Gp.muted),
+                  style: TextStyle(fontSize: Gp.t14, color: Gp.muted),
                 ),
                 ...extra,
-                if (onTap != null) const Icon(Icons.chevron_right, color: Gp.faint) else const SizedBox(width: 8),
+                if (onTap != null) Icon(Icons.chevron_right, color: Gp.faint) else const SizedBox(width: 8),
               ],
             ),
           ),
@@ -861,7 +862,7 @@ class _PhotoPreview extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(Gp.gutter, 2, Gp.gutter, 12),
         child: tiles.isEmpty
-            ? const Padding(
+            ? Padding(
                 padding: EdgeInsets.symmetric(vertical: 6),
                 child: Icon(Icons.photo_outlined, size: Gp.iL, color: Gp.line),
               )
@@ -934,7 +935,7 @@ class _TagSheetState extends State<_TagSheet> {
               const SizedBox(width: 6),
               Text(
                 '${_tags.length}/$_maxTags',
-                style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
               ),
               const Spacer(),
               IconButton(
@@ -943,7 +944,7 @@ class _TagSheetState extends State<_TagSheet> {
                   _add(); // 적어 두고 + 를 안 눌렀어도 넣는다
                   Navigator.pop(context, _tags);
                 },
-                icon: const Icon(Icons.check, size: Gp.iL, color: Gp.accent),
+                icon: Icon(Icons.check, size: Gp.iL, color: Gp.accent),
               ),
             ],
           ),
@@ -966,7 +967,7 @@ class _TagSheetState extends State<_TagSheet> {
                       children: [
                         Text(t, style: const TextStyle(fontSize: Gp.t12)),
                         const SizedBox(width: 2),
-                        const Icon(Icons.close, size: Gp.iXS, color: Gp.faint),
+                        Icon(Icons.close, size: Gp.iXS, color: Gp.faint),
                       ],
                     ),
                   ),
@@ -1001,8 +1002,8 @@ List<HelpItem> profileHelp() => [
   HelpItem(Icons.ios_share, tr('공유 카드 (그림으로 공유 · 저장)')),
   HelpItem(Icons.edit_outlined, tr('프로필 편집 (프로필 사진 · 배경 사진 · 이름 · 아이디 · 태그)')),
   HelpItem(Icons.sell_outlined, tr('취향 태그')),
-  HelpItem.widget(const LikedIcon(size: Gp.iL), tr('좋아요 수 → 컬렉션')),
-  HelpItem.widget(const OwnedIcon(size: Gp.iL), tr('구매함 수 → 컬렉션')),
+  HelpItem.widget(LikedIcon(size: Gp.iL), tr('좋아요 수 → 컬렉션')),
+  HelpItem.widget(OwnedIcon(size: Gp.iL), tr('구매함 수 → 컬렉션')),
   HelpItem(preorderIcon, tr('예약 금액 (결제 예정 합)')),
   HelpItem(Icons.account_balance_wallet_outlined, tr('구매 금액 (총 지출 · 이번 달)')),
   HelpItem(Icons.people_outline, tr('친구 (빨간 숫자 = 받은 친구 요청)')),
@@ -1016,8 +1017,8 @@ List<HelpItem> profileHelp() => [
 
 /// I-15 사용법의 "친구 보기" 묶음
 List<HelpItem> friendProfileHelp() => [
-  HelpItem.widget(const LikedIcon(size: Gp.iL), tr('친구의 좋아요')),
-  HelpItem.widget(const OwnedIcon(size: Gp.iL), tr('친구의 구매함')),
+  HelpItem.widget(LikedIcon(size: Gp.iL), tr('친구의 좋아요')),
+  HelpItem.widget(OwnedIcon(size: Gp.iL), tr('친구의 구매함')),
   HelpItem(Icons.auto_awesome_mosaic_outlined, tr('도감 비교')),
   HelpItem(Icons.photo_library_outlined, tr('친구가 공개한 사진')),
   HelpItem(Icons.person_remove_outlined, tr('친구 끊기')),

@@ -126,7 +126,7 @@ class _ReportSheetState extends State<_ReportSheet> {
             tr('제보'),
             subtitle: widget.subject,
             padding: const EdgeInsets.fromLTRB(0, 0, 0, 12),
-            trailing: const Icon(Icons.flag_outlined, size: Gp.iM, color: Gp.muted),
+            trailing: Icon(Icons.flag_outlined, size: Gp.iM, color: Gp.muted),
           ),
           Wrap(
             spacing: 6,

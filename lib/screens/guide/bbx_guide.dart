@@ -194,7 +194,7 @@ class _TopSheet extends StatelessWidget {
             ),
             Text(
               trf('보유 부품 {owned} / {total}', {'owned': top.owned, 'total': top.total}),
-              style: const TextStyle(fontSize: Gp.t12, color: Gp.own, fontWeight: FontWeight.w500),
+              style: TextStyle(fontSize: Gp.t12, color: Gp.own, fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 12),
             for (final p in top.parts)
@@ -213,7 +213,7 @@ class _TopSheet extends StatelessWidget {
                         children: [
                           Text(
                             tr(p.typeLabel),
-                            style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                            style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
                           ),
                           Text(p.name, style: const TextStyle(fontWeight: FontWeight.w500)),
                         ],

@@ -41,12 +41,12 @@ class RingAvatar extends StatelessWidget {
             width: size,
             height: size,
             alignment: Alignment.center,
-            decoration: const BoxDecoration(shape: BoxShape.circle, color: Gp.panel),
+            decoration: BoxDecoration(shape: BoxShape.circle, color: Gp.panel),
             child: label,
           )
         : Container(
             padding: const EdgeInsets.all(2),
-            decoration: const BoxDecoration(shape: BoxShape.circle, color: Gp.bg),
+            decoration: BoxDecoration(shape: BoxShape.circle, color: Gp.bg),
             child: RaisedCircleButton(tooltip: tooltip, size: size, onTap: onTap!, child: label),
           );
     return AccentRing(width: ringWidth, child: face);
@@ -102,7 +102,7 @@ class _AccentRingState extends State<AccentRing> with SingleTickerProviderStateM
           shape: circle ? BoxShape.circle : BoxShape.rectangle,
           borderRadius: circle ? null : BorderRadius.circular(widget.radius!),
           gradient: SweepGradient(
-            colors: const [Gp.accent, Gp.accent2, Gp.accent],
+            colors: [Gp.accent, Gp.accent2, Gp.accent],
             transform: GradientRotation(_turn.value * 6.2832),
           ),
         ),

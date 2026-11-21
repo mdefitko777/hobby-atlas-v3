@@ -150,14 +150,14 @@ class PhotoWall extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.photo_library_outlined, size: Gp.iM, color: Gp.ink),
+              Icon(Icons.photo_library_outlined, size: Gp.iM, color: Gp.ink),
               if (warn.isNotEmpty) ...[
                 const SizedBox(width: 6),
                 Tooltip(
                   key: const ValueKey('photo-warn'),
                   message: warn,
                   triggerMode: TooltipTriggerMode.tap,
-                  child: const Icon(Icons.warning_amber_rounded, size: Gp.iS, color: Gp.star),
+                  child: Icon(Icons.warning_amber_rounded, size: Gp.iS, color: Gp.star),
                 ),
               ],
               const Spacer(),
@@ -167,13 +167,13 @@ class PhotoWall extends StatelessWidget {
                   tooltip: tr('사진 넣기'),
                   visualDensity: VisualDensity.compact,
                   onPressed: onAdd,
-                  icon: const Icon(Icons.add_a_photo_outlined, size: Gp.iM, color: Gp.ink),
+                  icon: Icon(Icons.add_a_photo_outlined, size: Gp.iM, color: Gp.ink),
                 ),
             ],
           ),
           const SizedBox(height: 6),
           if (tiles.isEmpty)
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(vertical: 10),
               child: Icon(Icons.photo_outlined, size: Gp.iL, color: Gp.line),
             )
@@ -219,7 +219,7 @@ class _Tile extends StatelessWidget {
 /// 작은 흰 동그라미 위 아이콘 (사진 위 표시)
 Widget _dot(Widget icon) => Container(
   padding: const EdgeInsets.all(3),
-  decoration: const BoxDecoration(color: Gp.glass, shape: BoxShape.circle),
+  decoration: BoxDecoration(color: Gp.glass, shape: BoxShape.circle),
   child: icon,
 );
 
@@ -232,7 +232,7 @@ class MyPhotoTile extends StatelessWidget {
   Widget build(BuildContext context) => _Tile(
     key: ValueKey('my-photo-${photo.id}'),
     onTap: () => openPage(context, PhotoViewScreen(mine: photo.id)),
-    badge: photo.shared ? null : _dot(const Icon(Icons.visibility_off_outlined, size: Gp.iXS, color: Gp.muted)),
+    badge: photo.shared ? null : _dot(Icon(Icons.visibility_off_outlined, size: Gp.iXS, color: Gp.muted)),
     child: LocalPhotoImage(photo.file),
   );
 }
@@ -267,8 +267,8 @@ class _FriendImage extends StatelessWidget {
     future: bytes,
     builder: (context, snap) => switch (snap) {
       AsyncSnapshot(hasData: true, :final data?) => BytesImage(data, fit: fit),
-      AsyncSnapshot(hasError: true) => const Center(child: Icon(Icons.broken_image_outlined, color: Gp.faint)),
-      _ => const ColoredBox(color: Gp.soft),
+      AsyncSnapshot(hasError: true) => Center(child: Icon(Icons.broken_image_outlined, color: Gp.faint)),
+      _ => ColoredBox(color: Gp.soft),
     },
   );
 }
@@ -364,7 +364,7 @@ class _PhotoViewScreenState extends State<PhotoViewScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Padding(
+              Padding(
                 padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
                 child: Row(
                   children: [
@@ -431,7 +431,7 @@ class _PhotoViewScreenState extends State<PhotoViewScreen> {
           IconButton(
             tooltip: tr('저장'),
             onPressed: _saving ? null : () => _save(mark, watermark),
-            icon: _saving ? const MiniSpinner(size: 18) : const Icon(Icons.download_outlined, size: Gp.iL),
+            icon: _saving ? MiniSpinner(size: 18) : const Icon(Icons.download_outlined, size: Gp.iL),
           ),
           if (p != null)
             IconButton(
@@ -474,7 +474,7 @@ class _PhotoViewScreenState extends State<PhotoViewScreen> {
                     Tooltip(
                       message: _warnText(account.photos),
                       triggerMode: TooltipTriggerMode.tap,
-                      child: const Icon(Icons.warning_amber_rounded, size: Gp.iS, color: Gp.star),
+                      child: Icon(Icons.warning_amber_rounded, size: Gp.iS, color: Gp.star),
                     ),
                   ],
                 ],
@@ -486,7 +486,7 @@ class _PhotoViewScreenState extends State<PhotoViewScreen> {
             SwitchListTile(
               // T-5 P05
               key: const ValueKey('photo-watermark'),
-              secondary: const Icon(Icons.branding_watermark_outlined, size: Gp.iM, color: Gp.muted),
+              secondary: Icon(Icons.branding_watermark_outlined, size: Gp.iM, color: Gp.muted),
               title: Text(mark, style: const TextStyle(fontSize: Gp.t14)),
               value: p.watermark,
               activeThumbColor: Gp.accent,
@@ -499,7 +499,7 @@ class _PhotoViewScreenState extends State<PhotoViewScreen> {
               image: kit.image,
               title: kit.name,
               size: 44,
-              leading: const Padding(
+              leading: Padding(
                 padding: EdgeInsets.only(right: 4),
                 child: OwnedIcon(size: Gp.iS),
               ),
@@ -508,13 +508,13 @@ class _PhotoViewScreenState extends State<PhotoViewScreen> {
                   : IconButton(
                       tooltip: tr('상품 연결 해제'),
                       onPressed: () => _update(p.copyWith(kitId: ''), reupload: p.shared),
-                      icon: const Icon(Icons.link_off, size: Gp.iM, color: Gp.muted),
+                      icon: Icon(Icons.link_off, size: Gp.iM, color: Gp.muted),
                     ),
               onTap: () => openKitDetail(context, kit),
             )
           else if (p != null)
             ListTile(
-              leading: const Icon(Icons.link, size: Gp.iM, color: Gp.muted),
+              leading: Icon(Icons.link, size: Gp.iM, color: Gp.muted),
               title: Text(tr('상품 연결'), style: const TextStyle(fontSize: Gp.t14)),
               onTap: () => _link(p),
             ),
@@ -606,7 +606,7 @@ class KitPhotoStrip extends StatelessWidget {
                   borderRadius: BorderRadius.circular(Gp.rSmall),
                   border: Border.all(color: Gp.line),
                 ),
-                child: const Icon(Icons.add_a_photo_outlined, size: Gp.iM, color: Gp.muted),
+                child: Icon(Icons.add_a_photo_outlined, size: Gp.iM, color: Gp.muted),
               ),
             ),
           ),

@@ -1,6 +1,6 @@
 // 화면 M: 서랍 — 왼쪽 위 아바타를 누르거나, 홈에서 왼쪽 가장자리를 밀면 나온다 (QQ 옆 서랍처럼)
 // 세 띠 (2026-11-22 주인 시안): 위 고정 = 내 프로필 요약(배경 사진 위 아바타 · 이름 · Lv, 누르면 I 내 정보),
-//     가운데 = 줄 목록만 혼자 움직인다(좋아요 · 구매함 · 예약 / 친구 · 공유 카드, 스크롤바 없음), 아래 고정 = 아이콘 줄(사용법 · 설정).
+//     가운데 = 줄 목록만 혼자 움직인다(좋아요 · 구매함 · 예약 / 친구 · 공유 카드, 스크롤바 없음), 아래 고정 = 아이콘 줄(밤 모드 · 사용법 · 설정).
 // 친구(검색 · 친구 요청 · 목록 · ★ 특별 관심 소식)는 "친구" 줄이 여는 쌓기 화면 [FriendsPage].
 // v3: 친구 · 요청은 Gunpula 계정(v3 get_me), 친구 숫자는 get_friend_collection, 친구 사진 · 아바타는 get_friend_wall,
 //     알 수도 있는 친구는 gunpula_v3_suggest_friends(docs/supabase-v3-social.sql — 없으면 칸 숨김),
@@ -23,7 +23,7 @@
 // │ M-8  │ 안내 + 로그인 버튼                   │ 로그인 전                              │ P09           │
 // │ M-9  │ ★ 묶음 (SpecialFeed)                │ 특별 관심 친구가 최근 담은 것 (옛 My Page ★) │ P01         │
 // │ M-10 │ 머리 오른쪽 + · ✕                   │ 아이디로 친구 추가 · 닫기                 │ P07 · P03     │
-// │ M-11 │ 아래 고정 띠: 아이콘 줄               │ 사용법 · 설정 (밤 모드는 어두운 테마가 들어오면 맨 앞 자리) │ P07 · P08 │
+// │ M-11 │ 아래 고정 띠: 아이콘 줄               │ 밤 모드 · 사용법 · 설정                     │ P07 · P08 │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 서랍 → 내 정보 · 친구 화면 · 공유 카드 · 사용법 · 설정(쌓기, 서랍은 닫힘) · 좋아요 · 구매함 · 예약(컬렉션 탭, 옆으로).
 //       요청 · 추가 → 덮기(바텀 시트).
@@ -149,12 +149,12 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
   Widget _header((Profile, int)? data, Account account) {
     final p = data?.$1;
     final name = account.signedIn ? account.displayName : p?.name ?? '';
-    const soft = DecoratedBox(
+    final soft = DecoratedBox(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFE9F3FB), Color(0xFFE8F8F3), Gp.panel],
+          colors: [Gp.p.coverA, Gp.p.coverB, Gp.panel],
         ),
       ),
     );
@@ -195,12 +195,12 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
                   IconButton(
                     tooltip: tr('아이디로 친구 추가'),
                     onPressed: () => showAddFriend(context),
-                    icon: const Icon(Icons.person_add_alt_1_outlined, color: Gp.ink),
+                    icon: Icon(Icons.person_add_alt_1_outlined, color: Gp.ink),
                   ),
                   IconButton(
                     tooltip: tr('닫기'),
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close, color: Gp.ink),
+                    icon: Icon(Icons.close, color: Gp.ink),
                   ),
                 ],
               ),
@@ -240,7 +240,7 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
                           ],
                         ),
                       ),
-                      const Icon(Icons.chevron_right, color: Gp.muted),
+                      Icon(Icons.chevron_right, color: Gp.muted),
                     ],
                   ),
                 ),
@@ -275,14 +275,14 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
             children: [
               _row(
                 'liked',
-                const LikedIcon(filled: false, size: Gp.iL),
+                LikedIcon(filled: false, size: Gp.iL),
                 tr('좋아요'),
                 () => jump(CollectionJump.liked),
                 count: counts?.liked,
               ),
               _row(
                 'owned',
-                const OwnedIcon(filled: false, size: Gp.iL),
+                OwnedIcon(filled: false, size: Gp.iL),
                 tr('구매함'),
                 () => jump(CollectionJump.owned),
                 count: counts?.owned,
@@ -294,7 +294,7 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
                 () => jump(CollectionJump.preorder),
                 count: counts?.preorder,
               ),
-              const Divider(height: 11, thickness: 0.5, color: Gp.line),
+              Divider(height: 11, thickness: 0.5, color: Gp.line),
               _row(
                 'friends',
                 plain(Icons.people_outline),
@@ -304,7 +304,7 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
                     ? Badge(backgroundColor: Gp.danger, label: Text('$incoming')) // 받은 요청 = 빨간 숫자
                     : freshPhotos
                     // 새 사진 = 파란 점 (친구 줄과 같은 점) — 옛 서랍 머리 「새 사진 n」 대신
-                    ? const Badge(key: ValueKey('drawer-friends-new'), backgroundColor: Gp.accent, smallSize: 9)
+                    ? Badge(key: ValueKey('drawer-friends-new'), backgroundColor: Gp.accent, smallSize: 9)
                     : null,
               ),
               _row(
@@ -359,7 +359,7 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
             if (count != null)
               Text(
                 '$count',
-                style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
               ),
             ?trailing,
           ],
@@ -368,16 +368,28 @@ class _FriendsDrawerState extends State<FriendsDrawer> {
     ),
   );
 
-  /// M-11 아래 고정 띠 — 아이콘만 (이름은 툴팁).
-  /// 밤 모드가 이 줄 맨 앞 자리: 어두운 테마가 아직 없어 지금은 그리지 않는다 (죽은 단추를 두지 않는다)
+  /// M-11 아래 고정 띠 — 아이콘만 (이름은 툴팁). 맨 앞은 밤 모드 (2026-11-22 부터 진짜로 켜진다).
+  /// 손으로만 켜고 끈다 — 기기 설정을 따라가지 않는다 (주인이 그렇게 골랐다).
   Widget _bottomBar() {
     final host = Scaffold.maybeOf(context)?.context ?? context;
     return DecoratedBox(
-      decoration: const BoxDecoration(border: Border(top: Gp.bandLine)),
+      decoration: BoxDecoration(border: Border(top: Gp.bandLine)),
       child: Padding(
         padding: EdgeInsets.fromLTRB(8, 0, 8, MediaQuery.paddingOf(context).bottom),
         child: Row(
           children: [
+            // 앱 뿌리도 GpMode 를 듣고 앱 전체를 다시 만들지만, 이 단추는 자기 혼자서도 바뀐다
+            // — 뿌리가 다시 만들어 주기를 기다리면 서랍을 띄워 놓은 채로는 아이콘이 늦게 따라온다
+            ValueListenableBuilder<bool>(
+              valueListenable: GpMode.notifier,
+              builder: (context, dark, _) => ToolIcon(
+                key: const ValueKey('drawer-night'),
+                icon: dark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                tip: dark ? tr('밝은 화면으로') : tr('밤 모드'),
+                // 서랍은 닫지 않는다 — 켜 보고 바로 되돌릴 수 있게
+                onTap: () => GpMode.set(!dark),
+              ),
+            ),
             ToolIcon(
               key: const ValueKey('drawer-help'),
               icon: Icons.help_outline,
@@ -451,7 +463,7 @@ class _FriendsPageState extends State<FriendsPage> {
           IconButton(
             tooltip: tr('아이디로 친구 추가'),
             onPressed: () => showAddFriend(context),
-            icon: const Icon(Icons.person_add_alt_1_outlined, color: Gp.ink),
+            icon: Icon(Icons.person_add_alt_1_outlined, color: Gp.ink),
           ),
           const SizedBox(width: 6),
         ],
@@ -477,7 +489,7 @@ class _FriendsPageState extends State<FriendsPage> {
               ],
               _lists(friends, signedIn, account),
               if (signedIn && UserStore.instance.specialFriends.isNotEmpty)
-                const SectionPanel(
+                SectionPanel(
                   // M-9
                   padding: EdgeInsets.fromLTRB(16, 10, 16, 12),
                   child: Column(
@@ -533,7 +545,7 @@ class _FriendsPageState extends State<FriendsPage> {
         children: [
           ListTile(
             key: const ValueKey('friend-requests'),
-            leading: const Icon(Icons.person_add_alt_outlined, color: Gp.ink),
+            leading: Icon(Icons.person_add_alt_outlined, color: Gp.ink),
             title: Text(
               waiting == 0
                   ? tr('친구 요청')
@@ -546,7 +558,7 @@ class _FriendsPageState extends State<FriendsPage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (f.incoming.isNotEmpty) Badge(backgroundColor: Gp.danger, label: Text('${f.incoming.length}')),
-                const Icon(Icons.chevron_right, color: Gp.faint),
+                Icon(Icons.chevron_right, color: Gp.faint),
               ],
             ),
             onTap: () => showFriendRequests(context),
@@ -588,7 +600,7 @@ class _FriendsPageState extends State<FriendsPage> {
               m.status,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+              style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
             )
           : FriendStatusLine(
               // 최근 담은 것 · 올린 사진 (★ 소식과 같은 셈)
@@ -615,8 +627,8 @@ class _FriendsPageState extends State<FriendsPage> {
                 ),
               ),
               icon: UserStore.instance.specialFriends.contains(m.handle)
-                  ? const Icon(Icons.star_rounded, color: Gp.star)
-                  : const Icon(Icons.star_border_rounded, color: Gp.faint),
+                  ? Icon(Icons.star_rounded, color: Gp.star)
+                  : Icon(Icons.star_border_rounded, color: Gp.faint),
             ),
       onTap: () => openFriend(context, m, loaders: widget.loaders),
     );
@@ -640,13 +652,13 @@ class _FriendsPageState extends State<FriendsPage> {
                   AnimatedRotation(
                     turns: open ? 0.25 : 0,
                     duration: const Duration(milliseconds: 150),
-                    child: const Icon(Icons.arrow_right, color: Gp.muted),
+                    child: Icon(Icons.arrow_right, color: Gp.muted),
                   ),
                   Text(tr('친구'), style: const TextStyle(fontWeight: FontWeight.w600)),
                   const Spacer(),
                   Text(
                     '${shown.length}/${all.length}',
-                    style: const TextStyle(fontSize: Gp.t12, color: Gp.faint),
+                    style: TextStyle(fontSize: Gp.t12, color: Gp.faint),
                   ),
                 ],
               ),
@@ -657,7 +669,7 @@ class _FriendsPageState extends State<FriendsPage> {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
               child: Text(
                 tr('아직 친구가 없어요'),
-                style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
               ),
             ),
           if (open)
@@ -683,8 +695,8 @@ class _SpecialFeedState extends State<SpecialFeed> {
   Widget build(BuildContext context) {
     final account = AccountScope.of(context);
     final special = UserStore.instance.specialFriends;
-    const empty = Padding(
-      padding: EdgeInsets.symmetric(vertical: 10),
+    final empty = Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
       child: Icon(Icons.star_border_rounded, size: Gp.iL, color: Gp.line),
     );
     if (!account.signedIn || special.isEmpty) return empty;
@@ -724,7 +736,7 @@ class _SpecialFeedState extends State<SpecialFeed> {
                     backgroundColor: Gp.soft,
                     child: Text(
                       name.isEmpty ? '?' : name.substring(0, 1),
-                      style: const TextStyle(fontSize: Gp.t12, color: Gp.ink),
+                      style: TextStyle(fontSize: Gp.t12, color: Gp.ink),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -733,7 +745,7 @@ class _SpecialFeedState extends State<SpecialFeed> {
                     style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(width: 6),
-                  st == 'owned' ? const OwnedIcon(size: Gp.iS) : const LikedIcon(),
+                  st == 'owned' ? OwnedIcon(size: Gp.iS) : LikedIcon(),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
@@ -745,7 +757,7 @@ class _SpecialFeedState extends State<SpecialFeed> {
                   ),
                   Text(
                     timeAgo(at, now: appNow()),
-                    style: const TextStyle(fontSize: Gp.t11, color: Gp.faint),
+                    style: TextStyle(fontSize: Gp.t11, color: Gp.faint),
                   ),
                 ],
               ),

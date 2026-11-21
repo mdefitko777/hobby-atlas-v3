@@ -273,7 +273,7 @@ class _PhotoFindScreenState extends State<PhotoFindScreen> {
     extra: !_canAttach || !Marks.of(context).owned(k)
         ? null
         : _attached.contains(k.id)
-        ? const Padding(
+        ? Padding(
             padding: EdgeInsets.symmetric(horizontal: 8),
             child: Icon(Icons.check_circle, size: Gp.iM, color: Gp.accent),
           )
@@ -281,7 +281,7 @@ class _PhotoFindScreenState extends State<PhotoFindScreen> {
             tooltip: tr('내 사진 넣기'),
             visualDensity: VisualDensity.compact,
             onPressed: () => _attach(k),
-            icon: const Icon(Icons.add_photo_alternate_outlined, size: Gp.iM, color: Gp.ink),
+            icon: Icon(Icons.add_photo_alternate_outlined, size: Gp.iM, color: Gp.ink),
           ),
   );
 
@@ -309,14 +309,14 @@ class _PhotoFindScreenState extends State<PhotoFindScreen> {
       child: Row(
         children: [
           if (icon == null)
-            const MiniSpinner(size: Gp.iS, color: Gp.accent)
+            MiniSpinner(size: Gp.iS, color: Gp.accent)
           else
             Icon(icon, size: Gp.iS, color: Gp.faint),
           const SizedBox(width: 6),
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+              style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
             ),
           ),
         ],
@@ -402,7 +402,7 @@ class _PhotoFindScreenState extends State<PhotoFindScreen> {
                                           key: const ValueKey('visual-crop'),
                                           tooltip: tr('찾을 부분 고르기'),
                                           onTap: () => _pickCrop(photo),
-                                          child: const Icon(Icons.crop, size: Gp.iM, color: Gp.ink),
+                                          child: Icon(Icons.crop, size: Gp.iM, color: Gp.ink),
                                         ),
                                       ),
                                     ],
@@ -462,11 +462,11 @@ class _PhotoFindScreenState extends State<PhotoFindScreen> {
                     padding: const EdgeInsets.fromLTRB(Gp.gutter, 8, Gp.gutter, 0),
                     child: Row(
                       children: [
-                        const Icon(Icons.search_off, size: Gp.iS, color: Gp.faint),
+                        Icon(Icons.search_off, size: Gp.iS, color: Gp.faint),
                         const SizedBox(width: 6),
                         Text(
                           tr('맞는 상품을 못 찾았어요 · 이름으로 찾기'),
-                          style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                          style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
                         ),
                       ],
                     ),
@@ -528,8 +528,8 @@ List<HelpItem> photoFindHelp() => [
   for (final k in OcrKind.values)
     if (_TokenChip._icon(k) case final icon?) HelpItem(icon, _TokenChip._label(k), color: Gp.accent),
   HelpItem(Icons.link, tr('공유로 받은 주소 (100%)')),
-  HelpItem.widget(const LikedIcon(size: Gp.iL, filled: false, color: Gp.muted), tr('좋아요')),
-  HelpItem.widget(const OwnedIcon(size: Gp.iL, filled: false, color: Gp.muted), tr('구매함')),
+  HelpItem.widget(LikedIcon(size: Gp.iL, filled: false, color: Gp.muted), tr('좋아요')),
+  HelpItem.widget(OwnedIcon(size: Gp.iL, filled: false, color: Gp.muted), tr('구매함')),
   HelpItem(Icons.add_photo_alternate_outlined, tr('이 사진을 구매함 상품에 넣기')),
   HelpItem(Icons.image_search, tr('생김새가 비슷한 상품 (기기 안 모델 · 처음 한 번 받기 · 사진은 밖으로 안 나감)')),
   HelpItem(Icons.crop, tr('찾을 부분 고르기 (물건만 틀에 넣으면 생김새를 더 잘 찾아요)')),
@@ -556,7 +556,7 @@ class _SharedTextBox extends StatelessWidget {
             text,
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+            style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
           ),
         ),
       ],

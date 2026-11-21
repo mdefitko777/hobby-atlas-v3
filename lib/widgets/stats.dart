@@ -38,7 +38,7 @@ class StatGroups extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(
                   c.value,
-                  style: const TextStyle(fontSize: Gp.t14, color: Gp.muted),
+                  style: TextStyle(fontSize: Gp.t14, color: Gp.muted),
                 ),
               ],
             ),
@@ -89,17 +89,17 @@ class CollectionStats extends StatelessWidget {
   Widget build(BuildContext context) => StatGroups(
     groups: [
       [
-        StatCell(const LikedIcon(), '$liked', tr('좋아요'), onTap: onLiked),
-        StatCell(const OwnedIcon(), '$owned', tr('구매함'), onTap: onOwned),
+        StatCell(LikedIcon(), '$liked', tr('좋아요'), onTap: onLiked),
+        StatCell(OwnedIcon(), '$owned', tr('구매함'), onTap: onOwned),
       ],
       [
         StatCell(
-          const Icon(Icons.calendar_month_outlined, size: Gp.iS, color: Gp.muted),
+          Icon(Icons.calendar_month_outlined, size: Gp.iS, color: Gp.muted),
           wonShort(month),
           tr('이번 달 지출'),
         ),
         StatCell(
-          const Icon(Icons.account_balance_wallet_outlined, size: Gp.iS, color: Gp.muted),
+          Icon(Icons.account_balance_wallet_outlined, size: Gp.iS, color: Gp.muted),
           wonShort(total),
           tr('총 지출'),
         ),
@@ -112,7 +112,7 @@ class CollectionStats extends StatelessWidget {
             tooltip: tr('공유 카드'),
             visualDensity: VisualDensity.compact,
             onPressed: onShare,
-            icon: const Icon(Icons.ios_share, size: Gp.iM, color: Gp.muted),
+            icon: Icon(Icons.ios_share, size: Gp.iM, color: Gp.muted),
           ),
   );
 }

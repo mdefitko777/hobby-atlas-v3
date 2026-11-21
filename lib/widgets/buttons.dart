@@ -42,7 +42,8 @@ class RaisedCircleButton extends StatelessWidget {
 
 /// 켜고 끄는 버튼 (좋아요 · 구매함) — 켜지면 옅은 하늘색 바탕 + 브랜드 색 테두리·아이콘
 class TogglePill extends StatelessWidget {
-  const TogglePill({
+  // const 를 뗀 까닭: 기본 색이 팔레트에서 오는 값이라 const 식이 될 수 없다 (밤 모드)
+  TogglePill({
     super.key,
     required this.label,
     required this.icon,
@@ -50,8 +51,8 @@ class TogglePill extends StatelessWidget {
     required this.active,
     required this.onTap,
     this.height = 44,
-    this.color = Gp.accent,
-  });
+    Color? color,
+  }) : color = color ?? Gp.accent;
 
   final String label;
   final IconData icon;
@@ -142,7 +143,8 @@ class GradientButton extends StatelessWidget {
 /// 작은 칩 버튼 (아이콘 + 짧은 말) — 상세에서 아직 적은 것이 없는 줄 대신 한 줄에 나란히 (시세 찾아보기 · 예약 적기 · 구매가 적기).
 /// 빈 줄을 전체 폭으로 깔면 정가 아래가 회색 칸으로 길어져 상품보다 칸이 먼저 보였다 (2026-11-14)
 class ChipButton extends StatelessWidget {
-  const ChipButton({super.key, required this.icon, required this.label, required this.onTap, this.color = Gp.accent});
+  ChipButton({super.key, required this.icon, required this.label, required this.onTap, Color? color})
+    : color = color ?? Gp.accent;
   final IconData icon;
   final String label;
   final VoidCallback onTap;
@@ -175,7 +177,7 @@ class ChipButton extends StatelessWidget {
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w600, color: Gp.ink),
+                  style: TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w600, color: Gp.ink),
                 ),
               ),
             ],

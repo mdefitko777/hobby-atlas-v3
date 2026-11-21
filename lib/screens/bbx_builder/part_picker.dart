@@ -47,7 +47,7 @@ class _SlotRow extends StatelessWidget {
               decoration: BoxDecoration(color: Gp.soft, borderRadius: BorderRadius.circular(Gp.rSmall)),
               clipBehavior: Clip.antiAlias,
               child: v == null
-                  ? const Icon(Icons.add, color: Gp.faint, size: Gp.iM)
+                  ? Icon(Icons.add, color: Gp.faint, size: Gp.iM)
                   : AppImage(v.image, fit: BoxFit.contain, placeholder: m?.name(bbxNameLang) ?? ''),
             ),
             const SizedBox(width: 12),
@@ -57,7 +57,7 @@ class _SlotRow extends StatelessWidget {
                 children: [
                   Text(
                     bbxSlotLabel(slot),
-                    style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                    style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
                   ),
                   Text(
                     m?.name(bbxNameLang) ?? tr('고르기'),
@@ -68,7 +68,7 @@ class _SlotRow extends StatelessWidget {
                       _moldInfo(m, v),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: Gp.t11, color: Gp.faint),
+                      style: TextStyle(fontSize: Gp.t11, color: Gp.faint),
                     ),
                 ],
               ),
@@ -76,16 +76,16 @@ class _SlotRow extends StatelessWidget {
             if (owned)
               Tooltip(
                 message: tr('보유'),
-                child: const OwnedIcon(size: Gp.iM),
+                child: OwnedIcon(size: Gp.iM),
               ),
             if (m != null)
               IconButton(
                 tooltip: tr('비우기'),
                 onPressed: onClear,
-                icon: const Icon(Icons.close, size: Gp.iM, color: Gp.faint),
+                icon: Icon(Icons.close, size: Gp.iM, color: Gp.faint),
               )
             else
-              const Padding(
+              Padding(
                 padding: EdgeInsets.all(12),
                 child: Icon(Icons.chevron_right, color: Gp.faint),
               ),
@@ -107,7 +107,7 @@ class _FixedRow extends StatelessWidget {
     padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
     child: Row(
       children: [
-        const SizedBox(
+        SizedBox(
           width: 52,
           child: Icon(Icons.link, color: Gp.faint, size: Gp.iM),
         ),
@@ -118,9 +118,9 @@ class _FixedRow extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
               ),
-              Text(text, style: const TextStyle(color: Gp.faint)),
+              Text(text, style: TextStyle(color: Gp.faint)),
             ],
           ),
         ),
@@ -273,7 +273,7 @@ class _PickRow extends StatelessWidget {
                     _moldInfo(mold, v),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                    style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
                   ),
                 ],
               ),
@@ -282,7 +282,7 @@ class _PickRow extends StatelessWidget {
               Tooltip(
                 // T-5b P05
                 message: tr('지금 조합과 안 맞아요'),
-                child: const Padding(
+                child: Padding(
                   padding: EdgeInsets.only(left: 6),
                   child: Icon(Icons.block, size: Gp.iS, color: Gp.danger),
                 ),
@@ -292,11 +292,11 @@ class _PickRow extends StatelessWidget {
                 padding: const EdgeInsets.only(left: 6),
                 child: Tooltip(
                   message: tr('보유'),
-                  child: const OwnedIcon(size: Gp.iM),
+                  child: OwnedIcon(size: Gp.iM),
                 ),
               ),
             if (selected)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(left: 6),
                 child: Icon(Icons.check, size: Gp.iM, color: Gp.accent),
               ),

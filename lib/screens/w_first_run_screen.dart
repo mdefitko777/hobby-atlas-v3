@@ -71,14 +71,14 @@ class FirstRunScreen extends StatelessWidget {
                   const SizedBox(height: 10),
                   Text(
                     '${c.filesDone} / ${c.filesTotal} · $mb MB',
-                    style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                    style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
                   ),
                   if (c.progress.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text(
                       c.progress,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: Gp.t12, color: Gp.faint),
+                      style: TextStyle(fontSize: Gp.t12, color: Gp.faint),
                     ),
                   ],
                 ],

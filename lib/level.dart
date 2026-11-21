@@ -115,7 +115,7 @@ class LevelBar extends StatelessWidget {
           const SizedBox(width: 10),
           Text(
             '${lv.into} / ${lv.need}',
-            style: const TextStyle(fontSize: Gp.t11, color: Gp.muted),
+            style: TextStyle(fontSize: Gp.t11, color: Gp.muted),
           ),
           const LevelHelpButton(),
         ],
@@ -178,7 +178,7 @@ class _LevelHelp extends StatelessWidget {
           ),
           Text(
             xp,
-            style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w700, color: Gp.accent),
+            style: TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w700, color: Gp.accent),
           ),
         ],
       ),
@@ -192,7 +192,7 @@ class _LevelHelp extends StatelessWidget {
           children: [
             row(tier(CellTier.liked), tr('♡ 좋아요'), '0'),
             row(tier(CellTier.owned), tr('구매함'), '+10'),
-            row(const Icon(Icons.grid_view_rounded, color: Gp.own, size: Gp.iL), tr('도감 새 칸'), '+5'),
+            row(Icon(Icons.grid_view_rounded, color: Gp.own, size: Gp.iL), tr('도감 새 칸'), '+5'),
             row(tier(CellTier.photo), tr('사진 인증'), '+3'),
             const SizedBox(height: 10),
             Row(
@@ -265,7 +265,7 @@ Future<void> showLevelSheet(BuildContext context, Loaders loaders) => showGpShee
           const Divider(height: 1),
           Expanded(
             child: d.series.isEmpty
-                ? const Center(
+                ? Center(
                     child: Icon(Icons.grid_view_rounded, size: Gp.iXL, color: Gp.line),
                   )
                 : GridView.builder(
@@ -301,7 +301,7 @@ Future<void> showLevelSheet(BuildContext context, Loaders loaders) => showGpShee
                           ),
                           Text(
                             '${s.owned} / ${s.total}',
-                            style: const TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w700, color: Gp.own),
+                            style: TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w700, color: Gp.own),
                           ),
                         ],
                       );

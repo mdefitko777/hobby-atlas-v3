@@ -50,7 +50,7 @@ class _SavedRow extends StatelessWidget {
                       box,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                      style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
                     ),
                 ],
               ),
@@ -62,17 +62,17 @@ class _SavedRow extends StatelessWidget {
             if (buildable)
               Padding(
                 padding: const EdgeInsets.only(left: 4),
-                child: Tooltip(message: tr('내 부품으로 만들 수 있음'), child: const OwnedIcon()),
+                child: Tooltip(message: tr('내 부품으로 만들 수 있음'), child: OwnedIcon()),
               ),
             IconButton(
               tooltip: tr('이름 바꾸기'),
               onPressed: onRename,
-              icon: const Icon(Icons.edit_outlined, size: Gp.iM, color: Gp.muted),
+              icon: Icon(Icons.edit_outlined, size: Gp.iM, color: Gp.muted),
             ),
             IconButton(
               tooltip: tr('지우기'),
               onPressed: onDelete,
-              icon: const Icon(Icons.delete_outline, size: Gp.iM, color: Gp.muted),
+              icon: Icon(Icons.delete_outline, size: Gp.iM, color: Gp.muted),
             ),
           ],
         ),
@@ -164,7 +164,7 @@ class _DeckCard extends StatelessWidget {
                     Deck(id: deck.id, name: name, rulesProfile: deck.rulesProfile, comboIds: deck.comboIds),
                   );
                 },
-                icon: const Icon(Icons.edit_outlined, size: Gp.iM, color: Gp.muted),
+                icon: Icon(Icons.edit_outlined, size: Gp.iM, color: Gp.muted),
               ),
               IconButton(
                 tooltip: tr('덱 지우기'),
@@ -173,7 +173,7 @@ class _DeckCard extends StatelessWidget {
                   store.deleteBbxDeck(deck.id);
                   showToast(context, tr('덱을 지웠어요'), onUndo: () => store.restoreBbx(combos, decks));
                 },
-                icon: const Icon(Icons.delete_outline, size: Gp.iM, color: Gp.muted),
+                icon: Icon(Icons.delete_outline, size: Gp.iM, color: Gp.muted),
               ),
             ],
           ),
@@ -189,7 +189,7 @@ class _DeckCard extends StatelessWidget {
             padding: const EdgeInsets.only(top: 4, bottom: 6),
             child: Text(
               bbxProfileHint(RulesProfile.byId(deck.rulesProfile).id),
-              style: const TextStyle(fontSize: Gp.t11, color: Gp.faint),
+              style: TextStyle(fontSize: Gp.t11, color: Gp.faint),
             ),
           ),
           for (var i = 0; i < 3; i++) _deckSlot(context, i, cat, check.conflictSlots.contains(i)),
@@ -272,7 +272,7 @@ class _DeckCard extends StatelessWidget {
                     style: TextStyle(fontWeight: FontWeight.w600, color: c == null ? Gp.faint : Gp.ink),
                   ),
                 ),
-                const Icon(Icons.chevron_right, color: Gp.faint),
+                Icon(Icons.chevron_right, color: Gp.faint),
               ],
             ),
           ),

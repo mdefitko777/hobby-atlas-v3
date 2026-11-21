@@ -167,7 +167,7 @@ class _SideDirectoryState extends State<SideDirectory> with SingleTickerProvider
                     maxWidth: sideDirWidth,
                     child: DecoratedBox(
                       key: widget.directoryKey,
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         border: Border(right: BorderSide(color: Gp.line)),
                       ),
                       // 한 번에 다 만든다 (작품 60개 안팎) — 고른 줄이 아래에 있어도 처음에 보이게 [SideDirItem]
@@ -266,7 +266,7 @@ class SideDirHead extends StatelessWidget {
         ),
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
-        style: const TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w800, color: Gp.muted),
+        style: TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w800, color: Gp.muted),
       ),
     ),
   );

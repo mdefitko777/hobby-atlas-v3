@@ -123,7 +123,7 @@ class GuideCell extends StatelessWidget {
         maxLines: 2,
         textAlign: TextAlign.center,
         overflow: TextOverflow.ellipsis,
-        style: const TextStyle(fontSize: Gp.t12, color: Gp.ink),
+        style: TextStyle(fontSize: Gp.t12, color: Gp.ink),
       ),
     ),
   );

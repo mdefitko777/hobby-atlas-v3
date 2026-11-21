@@ -28,6 +28,7 @@ import 'theme.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await L10n.load(); // 화면 언어 (기기 파일 하나 — 첫 화면부터 그 언어로)
+  await GpMode.load(); // 밤 모드 (기기 파일 하나 — 첫 화면부터 그 색으로, 흰 번쩍임 없이)
   final meLoaded = UserStore.instance.load(); // 내 기록 (기기)
   Catalog.instance.ensureLoaded().ignore(); // 캐시 → 뒤에서 새 데이터 확인
   // 계정: Gunpula Supabase (config/supabase.json). 저장된 세션이 있으면 바로 받아 온다.
@@ -49,7 +50,14 @@ class HobbyAtlasApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // 언어를 바꾸면 앱 전체를 그 언어로 다시 만든다 (설정 → 언어). 보던 탭은 처음으로 — 언어를 바꿀 때만이라 괜찮다
-    return ValueListenableBuilder<AppLang>(valueListenable: L10n.notifier, builder: (context, lang, _) => _app(lang));
+    return ValueListenableBuilder<AppLang>(
+      valueListenable: L10n.notifier,
+      // 밤 모드는 색만 바뀌므로 key 를 주지 않는다 — 보던 탭 · 검색어 · 연 시트가 그대로 남는다
+      builder: (context, lang, _) => ValueListenableBuilder<bool>(
+        valueListenable: GpMode.notifier,
+        builder: (context, _, _) => _app(lang),
+      ),
+    );
   }
 
   Widget _app(AppLang lang) {

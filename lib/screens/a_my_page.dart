@@ -80,17 +80,17 @@ class _MyPageViewState extends State<MyPageView> {
           ),
         ),
         _Section(
-          icon: const LikedIcon(size: Gp.iM),
+          icon: LikedIcon(size: Gp.iM),
           onMore: () => widget.onJump?.call(CollectionJump.liked),
           child: _LikedSoon(kits: liked, loaders: widget.loaders),
         ),
         _Section(
-          icon: const OwnedIcon(size: Gp.iS),
+          icon: OwnedIcon(size: Gp.iS),
           onMore: () => widget.onJump?.call(CollectionJump.owned),
           child: _OwnedRow(kits: owned.take(12).toList(), loaders: widget.loaders),
         ),
         _Section(
-          icon: const Icon(Icons.star_rounded, size: Gp.iM, color: Gp.star),
+          icon: Icon(Icons.star_rounded, size: Gp.iM, color: Gp.star),
           child: const _SpecialFeed(),
         ),
       ],
@@ -120,7 +120,7 @@ class _Section extends StatelessWidget {
                 InkWell(
                   onTap: onMore,
                   borderRadius: BorderRadius.circular(Gp.radius),
-                  child: const Padding(
+                  child: Padding(
                     padding: EdgeInsets.all(2),
                     child: Icon(Icons.chevron_right, color: Gp.faint),
                   ),
@@ -268,7 +268,7 @@ class _SpecialFeedState extends State<_SpecialFeed> {
                     backgroundColor: Gp.soft,
                     child: Text(
                       name.isEmpty ? '?' : name.substring(0, 1),
-                      style: const TextStyle(fontSize: Gp.t12, color: Gp.ink),
+                      style: TextStyle(fontSize: Gp.t12, color: Gp.ink),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -277,7 +277,7 @@ class _SpecialFeedState extends State<_SpecialFeed> {
                     style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(width: 6),
-                  st == 'owned' ? const OwnedIcon(size: Gp.iS) : const LikedIcon(),
+                  st == 'owned' ? OwnedIcon(size: Gp.iS) : LikedIcon(),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
@@ -289,7 +289,7 @@ class _SpecialFeedState extends State<_SpecialFeed> {
                   ),
                   Text(
                     _ago(at),
-                    style: const TextStyle(fontSize: Gp.t11, color: Gp.faint),
+                    style: TextStyle(fontSize: Gp.t11, color: Gp.faint),
                   ),
                 ],
               ),

@@ -384,7 +384,7 @@ class _AppShellState extends State<AppShell> {
       key: const ValueKey('top-search'),
       tooltip: tr('검색'),
       onPressed: _goSearch,
-      icon: const Icon(Icons.search, color: Gp.ink),
+      icon: Icon(Icons.search, color: Gp.ink),
     );
     final bell = IconButton(
       // S-9 알림 (N)
@@ -401,7 +401,7 @@ class _AppShellState extends State<AppShell> {
             isLabelVisible: unread > 0,
             backgroundColor: Gp.accent, // 안 읽은 알림 수 = 브랜드 색
             label: Text(unread > 99 ? '99+' : '$unread'),
-            child: const Icon(Icons.notifications_none, color: Gp.ink),
+            child: Icon(Icons.notifications_none, color: Gp.ink),
           );
         },
       ),
@@ -627,7 +627,7 @@ class _CameraButton extends StatelessWidget {
       tooltip: tr('찍어서 찾기'),
       size: _cameraSize,
       onTap: onTap,
-      child: const Icon(Icons.photo_camera_outlined, color: Gp.ink, size: Gp.iL),
+      child: Icon(Icons.photo_camera_outlined, color: Gp.ink, size: Gp.iL),
     );
   }
 }
@@ -753,7 +753,7 @@ class _BottomBar extends StatelessWidget {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
         child: DecoratedBox(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: Gp.glass,
             border: Border(top: BorderSide(color: Gp.line)),
           ),

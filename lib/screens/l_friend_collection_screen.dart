@@ -214,7 +214,7 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
           width: 34,
           child: Text(
             who,
-            style: const TextStyle(fontSize: Gp.t11, color: Gp.muted),
+            style: TextStyle(fontSize: Gp.t11, color: Gp.muted),
           ),
         ),
         Expanded(
@@ -225,7 +225,7 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
           child: Text(
             '$n/$total',
             textAlign: TextAlign.right,
-            style: const TextStyle(fontSize: Gp.t11, color: Gp.muted),
+            style: TextStyle(fontSize: Gp.t11, color: Gp.muted),
           ),
         ),
       ],
@@ -242,7 +242,7 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
                   if (f.verified > 0) trf('사진 {n}장', {'n': f.verified}),
                   trf('켜진 칸 {n}개 (구매함 기준)', {'n': f.lit}),
                 ])}',
-                style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
               ),
             ),
             if (widget.photoKitIds.isNotEmpty)
@@ -252,7 +252,7 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
                 message: tr('사진'),
                 child: Row(
                   children: [
-                    const Icon(Icons.photo_library_outlined, size: Gp.iS, color: Gp.muted),
+                    Icon(Icons.photo_library_outlined, size: Gp.iS, color: Gp.muted),
                     Text(
                       ' ${widget.photoKitIds.length}',
                       style: const TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w700),
@@ -290,11 +290,11 @@ class _FriendCollectionScreenState extends State<FriendCollectionScreen> {
                             child: Text(shortWorkName(w.name), style: const TextStyle(fontWeight: FontWeight.w600)),
                           ),
                           if ((photos[w.id] ?? 0) > 0) ...[
-                            const Icon(Icons.photo_camera_outlined, size: Gp.iXS, color: Gp.muted),
+                            Icon(Icons.photo_camera_outlined, size: Gp.iXS, color: Gp.muted),
                             Text(
                               ' ${photos[w.id]}',
                               key: ValueKey('work-photos-${w.id}'),
-                              style: const TextStyle(fontSize: Gp.t11, color: Gp.muted),
+                              style: TextStyle(fontSize: Gp.t11, color: Gp.muted),
                             ),
                           ],
                         ],

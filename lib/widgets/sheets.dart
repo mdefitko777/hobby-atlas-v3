@@ -69,7 +69,7 @@ class GpPickSheet extends StatelessWidget {
           trailing: TextButton(
             onPressed: onReset,
             style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
-            child: Text(tr('초기화'), style: const TextStyle(color: Gp.muted)),
+            child: Text(tr('초기화'), style: TextStyle(color: Gp.muted)),
           ),
         ),
         Expanded(
@@ -126,7 +126,7 @@ Future<T?> showPickSheet<T>(
                         ),
                       ),
                     ),
-                    if (v == current) const Icon(Icons.check, size: Gp.iM, color: Gp.accent),
+                    if (v == current) Icon(Icons.check, size: Gp.iM, color: Gp.accent),
                   ],
                 ),
               ),
@@ -168,7 +168,7 @@ class SquareSegments<T> extends StatelessWidget {
       child: Row(
         children: [
           for (final (i, v) in values.indexed) ...[
-            if (i > 0) const VerticalDivider(width: 1, color: Gp.line),
+            if (i > 0) VerticalDivider(width: 1, color: Gp.line),
             Expanded(
               child: Material(
                 color: v == current ? Gp.accent.withValues(alpha: 0.12) : Gp.panel,
@@ -261,7 +261,7 @@ class CheckGrid extends StatelessWidget {
                 borderRadius: BorderRadius.circular(Gp.rSmall),
                 border: Border.all(color: on ? Gp.accent : (off ? Gp.ghost : Gp.line)),
               ),
-              child: on ? const Icon(Icons.check, size: Gp.iS, color: Gp.bg) : null,
+              child: on ? Icon(Icons.check, size: Gp.iS, color: Gp.bg) : null,
             ),
             const SizedBox(width: 8),
             Expanded(
@@ -338,7 +338,7 @@ class ExpandRow extends StatelessWidget {
             AnimatedRotation(
               turns: open ? 0.5 : 0,
               duration: const Duration(milliseconds: 150),
-              child: const Icon(Icons.expand_more, size: Gp.iM, color: Gp.muted),
+              child: Icon(Icons.expand_more, size: Gp.iM, color: Gp.muted),
             ),
           ],
         ),

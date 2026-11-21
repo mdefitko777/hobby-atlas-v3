@@ -100,7 +100,7 @@ class ProductTile extends StatelessWidget {
               subtitle,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+              style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
             ),
           ],
           if (note.isNotEmpty)
@@ -108,7 +108,7 @@ class ProductTile extends StatelessWidget {
               note,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: Gp.t11, color: Gp.faint),
+              style: TextStyle(fontSize: Gp.t11, color: Gp.faint),
             ),
         ],
       );
@@ -187,7 +187,7 @@ class KitPriceLines extends StatelessWidget {
         for (final p in parts.skip(1))
           Text(
             p,
-            style: const TextStyle(fontSize: Gp.t11, color: Gp.faint),
+            style: TextStyle(fontSize: Gp.t11, color: Gp.faint),
           ),
       ],
     );
@@ -293,7 +293,7 @@ class ThumbRow extends StatelessWidget {
                       subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                      style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
                     ),
                   ],
                 ],

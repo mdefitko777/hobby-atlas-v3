@@ -210,7 +210,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
             const SizedBox(height: 6),
             Text(
               trf('정가 {price} · 컬렉션 지출 합계에 들어가요', {'price': kitPrice(k)}),
-              style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+              style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
             ),
             const SizedBox(height: 14),
             FilledButton(
@@ -386,7 +386,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
                     tooltip: tr('뒤로'),
                     size: 40,
                     onTap: () => Navigator.of(context).maybePop(),
-                    child: const Icon(Icons.arrow_back_ios_new, size: Gp.iM, color: Gp.ink),
+                    child: Icon(Icons.arrow_back_ios_new, size: Gp.iM, color: Gp.ink),
                   ),
                 ),
               ),
@@ -404,7 +404,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
                           tooltip: tr('공유'),
                           size: 40,
                           onTap: _share,
-                          child: const Icon(Icons.share_outlined, size: Gp.iM, color: Gp.ink),
+                          child: Icon(Icons.share_outlined, size: Gp.iM, color: Gp.ink),
                         ),
                         const SizedBox(width: 8),
                         HelpButton(title: tr('상품 상세'), items: detailHelp, raised: true), // D-15
@@ -465,7 +465,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
             // 정가 = ₩ · ¥ 기호, 내 구매가 · 시세 = "…원" (섞여 보여도 무엇인지 알게)
             Text(
               tr(prices.first.label),
-              style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+              style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
             ),
             const SizedBox(height: 2),
             // 좁은 화면에서는 다음 줄로 넘어가게 (Wrap)
@@ -488,7 +488,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
                   padding: const EdgeInsets.only(bottom: 3),
                   child: Text(
                     trf('발매 {date}', {'date': dateDot(k.date)}),
-                    style: const TextStyle(color: Gp.muted, fontSize: Gp.t12),
+                    style: TextStyle(color: Gp.muted, fontSize: Gp.t12),
                   ),
                 ),
                 if (k.limited) TagPill(tr('한정'), strong: true),
@@ -502,7 +502,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
                 children: [
                   Text(
                     '${tr(p.short)} ${p.price}',
-                    style: const TextStyle(fontSize: Gp.t14, color: Gp.muted),
+                    style: TextStyle(fontSize: Gp.t14, color: Gp.muted),
                   ),
                   _shopLink(p),
                 ],
@@ -566,22 +566,22 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(paidIcon, size: Gp.iS, color: Gp.own),
+                        Icon(paidIcon, size: Gp.iS, color: Gp.own),
                         const SizedBox(width: 8),
                         Text(
                           tr('내 구매가'),
-                          style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                          style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             won(paid),
-                            style: const TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w600, color: Gp.ink),
+                            style: TextStyle(fontSize: Gp.t14, fontWeight: FontWeight.w600, color: Gp.ink),
                           ),
                         ),
                         Text(
                           tr('수정'),
-                          style: const TextStyle(fontSize: Gp.t12, color: Gp.accent, fontWeight: FontWeight.w600),
+                          style: TextStyle(fontSize: Gp.t12, color: Gp.accent, fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),
@@ -616,7 +616,7 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
             if (snap.hasError) {
               return Padding(
                 padding: const EdgeInsets.all(16),
-                child: Text(tr('관련 상품을 불러오지 못했어요'), style: const TextStyle(color: Gp.muted)),
+                child: Text(tr('관련 상품을 불러오지 못했어요'), style: TextStyle(color: Gp.muted)),
               );
             }
             // 이 상품 · 그 짝(같은 상품의 다른 나라 쪽)은 빼고
@@ -672,8 +672,8 @@ class _KitDetailScreenState extends State<KitDetailScreen> {
         child: Center(
           child: TextButton.icon(
             onPressed: _report, // D-12 P09
-            icon: const Icon(Icons.flag_outlined, size: Gp.iM, color: Gp.muted),
-            label: Text(tr('정보가 틀렸나요? 제보하기'), style: const TextStyle(color: Gp.muted)),
+            icon: Icon(Icons.flag_outlined, size: Gp.iM, color: Gp.muted),
+            label: Text(tr('정보가 틀렸나요? 제보하기'), style: TextStyle(color: Gp.muted)),
           ),
         ),
       ),
@@ -695,7 +695,7 @@ class _SpecStrip extends StatelessWidget {
         height: 72,
         child: Row(
           children: [
-            const Padding(
+            Padding(
               padding: EdgeInsets.only(left: 16, right: 6),
               child: Icon(Icons.assignment_outlined, size: Gp.iM, color: Gp.ink),
             ),
@@ -715,14 +715,14 @@ class _SpecStrip extends StatelessWidget {
                       const SizedBox(height: 3),
                       Text(
                         specs[i].$1,
-                        style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                        style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
                       ),
                     ],
                   ),
                 ),
               ),
             ),
-            const Padding(
+            Padding(
               padding: EdgeInsets.only(right: 10),
               child: Icon(Icons.chevron_right, color: Gp.muted),
             ),
@@ -749,7 +749,7 @@ class _SpecSheet extends StatelessWidget {
         children: [
           Text(
             e.$1,
-            style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+            style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
           ),
           const SizedBox(height: 6),
           Text(e.$2, style: const TextStyle(fontSize: Gp.t14)),
@@ -796,7 +796,7 @@ class _SpecSheet extends StatelessWidget {
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text(e.$1, style: const TextStyle(color: Gp.muted)),
+                      child: Text(e.$1, style: TextStyle(color: Gp.muted)),
                     ),
                     Expanded(
                       child: Text(e.$2, style: const TextStyle(fontSize: Gp.t14)),
@@ -824,12 +824,12 @@ class _MarketCard extends StatelessWidget {
       children: [
         Row(
           children: [
-            const Icon(Icons.info_outline, size: Gp.iS, color: Gp.faint),
+            Icon(Icons.info_outline, size: Gp.iS, color: Gp.faint),
             const SizedBox(width: 6),
             Expanded(
               child: Text(
                 tr('모은 시세가 없어요 · 상품명으로 찾아보기'), // P09
-                style: const TextStyle(color: Gp.muted),
+                style: TextStyle(color: Gp.muted),
               ),
             ),
           ],
@@ -854,7 +854,7 @@ class _MarketCard extends StatelessWidget {
                             style: const TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w500),
                           ),
                           const SizedBox(width: 2),
-                          const Icon(Icons.north_east, size: Gp.iXS, color: Gp.muted),
+                          Icon(Icons.north_east, size: Gp.iXS, color: Gp.muted),
                         ],
                       ),
                     ),
@@ -922,7 +922,7 @@ class _QtyRow extends StatelessWidget {
         children: [
           Text(
             owned ? tr('보유 수') : tr('갖고 싶은 수'),
-            style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+            style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
           ),
           const Spacer(),
           _QtyStepper(qty: qty, onChanged: onChanged),
@@ -991,14 +991,14 @@ class _BottomActions extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               label,
-              style: const TextStyle(fontSize: Gp.t11, color: Gp.muted),
+              style: TextStyle(fontSize: Gp.t11, color: Gp.muted),
             ),
           ],
         ),
       ),
     );
     return DecoratedBox(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Gp.panel,
         border: Border(top: BorderSide(color: Gp.line)),
       ),
@@ -1086,10 +1086,10 @@ class _RestockList extends StatelessWidget {
                   Expanded(
                     child: Text(
                       tr(e.label),
-                      style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                      style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
                     ),
                   ),
-                  if (e.sourceUrl.isNotEmpty) const Icon(Icons.north_east, size: Gp.iXS, color: Gp.muted),
+                  if (e.sourceUrl.isNotEmpty) Icon(Icons.north_east, size: Gp.iXS, color: Gp.muted),
                 ],
               ),
             ),
@@ -1121,7 +1121,7 @@ class _FriendsWithKit extends StatelessWidget {
               who.map((h) => '@$h').join(' · '),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+              style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
             ),
           ),
         ],
@@ -1135,12 +1135,12 @@ class _FriendsWithKit extends StatelessWidget {
           if (f.owned.isNotEmpty)
             Tooltip(
               message: tr('구매함에 있는 친구'),
-              child: line(const OwnedIcon(size: Gp.iS, filled: true), f.owned),
+              child: line(OwnedIcon(size: Gp.iS, filled: true), f.owned),
             ),
           if (f.liked.isNotEmpty)
             Tooltip(
               message: tr('좋아요한 친구'),
-              child: line(const LikedIcon(size: Gp.iS, filled: true), f.liked),
+              child: line(LikedIcon(size: Gp.iS, filled: true), f.liked),
             ),
         ],
       ),
@@ -1176,7 +1176,7 @@ class _GuideLinkState extends State<_GuideLink> {
           title: tr('도감에서 보기'),
           subtitle: joinDot([u.name, index.work(u.workId)!.name]),
           size: 44,
-          trailing: const Icon(Icons.chevron_right, size: Gp.iM, color: Gp.muted),
+          trailing: Icon(Icons.chevron_right, size: Gp.iM, color: Gp.muted),
           onTap: () => openUnitInGuide(context, index, u.id, loaders: widget.loaders),
         ),
       );
@@ -1199,7 +1199,7 @@ class _ManualLink extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
-            const Icon(Icons.menu_book_outlined, size: Gp.iM, color: Gp.ink),
+            Icon(Icons.menu_book_outlined, size: Gp.iM, color: Gp.ink),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -1211,12 +1211,12 @@ class _ManualLink extends StatelessWidget {
                   ),
                   Text(
                     tr('BANDAI HOBBY 공식'),
-                    style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                    style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, size: Gp.iM, color: Gp.muted),
+            Icon(Icons.chevron_right, size: Gp.iM, color: Gp.muted),
           ],
         ),
       ),

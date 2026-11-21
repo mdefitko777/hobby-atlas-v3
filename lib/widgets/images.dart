@@ -177,7 +177,7 @@ class AppImage extends StatelessWidget {
       frameBuilder: (_, child, frame, sync) => sync
           ? child
           : frame == null
-          ? (fallback == null ? const ColoredBox(color: Gp.soft) : const SizedBox.expand())
+          ? (fallback == null ? ColoredBox(color: Gp.soft) : const SizedBox.expand())
           : _FadeIn(child: child),
       errorBuilder: (_, error, _) {
         // 잠깐의 실패(시간 초과 · 멈춘 서버)는 기억하지 않는다 — 다음에 다시 그리면 다시 받는다
@@ -401,7 +401,7 @@ class _LocalPhotoImageState extends State<LocalPhotoImage> {
         errorBuilder: (_, _, _) => widget.fallback ?? const _Placeholder(''),
       ),
       _ when widget.fallback != null && snap.connectionState == ConnectionState.done => widget.fallback!,
-      _ => const ColoredBox(color: Gp.soft),
+      _ => ColoredBox(color: Gp.soft),
     },
   );
 }
@@ -420,7 +420,7 @@ class _Placeholder extends StatelessWidget {
           textAlign: TextAlign.center,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(color: Gp.faint, fontWeight: FontWeight.w700),
+          style: TextStyle(color: Gp.faint, fontWeight: FontWeight.w700),
         ),
       ),
     );
@@ -438,7 +438,7 @@ class BytesImage extends StatelessWidget {
     bytes,
     fit: fit,
     gaplessPlayback: true,
-    errorBuilder: (_, _, _) => const ColoredBox(color: Gp.soft),
+    errorBuilder: (_, _, _) => ColoredBox(color: Gp.soft),
   );
 }
 

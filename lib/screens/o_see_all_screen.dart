@@ -328,7 +328,7 @@ class _SectionListViewState extends State<SectionListView> {
                   child: Text(
                     widget.subtitle,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: Gp.t12, color: Gp.accent, fontWeight: FontWeight.w500),
+                    style: TextStyle(fontSize: Gp.t12, color: Gp.accent, fontWeight: FontWeight.w500),
                   ),
                 ),
                 if (widget.history && _kits.isNotEmpty)
@@ -343,7 +343,7 @@ class _SectionListViewState extends State<SectionListView> {
                       isLabelVisible: _filter.count > 0,
                       backgroundColor: Gp.accent,
                       label: Text('${_filter.count}'),
-                      child: const Icon(Icons.tune, color: Gp.ink),
+                      child: Icon(Icons.tune, color: Gp.ink),
                     ),
                   ),
                   IconButton(
@@ -388,12 +388,12 @@ class _SectionListViewState extends State<SectionListView> {
                           joinDot(labels), // KitFilter.labels 는 이미 보이는 이름 (다시 tr 하지 않는다)
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: Gp.t12, color: Gp.accent),
+                          style: TextStyle(fontSize: Gp.t12, color: Gp.accent),
                         ),
                       ),
                       InkWell(
                         onTap: () => setState(() => _filter = KitFilter()), // STATE: 필터 초기화
-                        child: const SizedBox.square(
+                        child: SizedBox.square(
                           // 누르는 자리 40
                           dimension: 40,
                           child: Icon(Icons.close, size: Gp.iS, color: Gp.muted),
@@ -419,11 +419,11 @@ class _SectionListViewState extends State<SectionListView> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.swap_vert, size: Gp.iM, color: Gp.muted),
+                  Icon(Icons.swap_vert, size: Gp.iM, color: Gp.muted),
                   const SizedBox(width: 2),
                   Text(
                     _sort.label,
-                    style: const TextStyle(fontSize: Gp.t12, color: Gp.ink),
+                    style: TextStyle(fontSize: Gp.t12, color: Gp.ink),
                   ),
                 ],
               ),
@@ -517,7 +517,7 @@ class _SectionListViewState extends State<SectionListView> {
         KitPriceLines(k),
         Text(
           dateDot(k.date),
-          style: const TextStyle(fontSize: Gp.t11, color: Gp.faint),
+          style: TextStyle(fontSize: Gp.t11, color: Gp.faint),
         ),
       ],
     ),
@@ -599,7 +599,7 @@ class _SectionListViewState extends State<SectionListView> {
                                       ]),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                                      style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
                                     ),
                                   ),
                                 ],

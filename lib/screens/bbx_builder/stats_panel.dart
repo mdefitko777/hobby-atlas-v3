@@ -25,7 +25,7 @@ class _StatsPanel extends StatelessWidget {
           Text(
             joinDot([weight, bbxSpinLabel(stats.spin)]),
             key: const Key('bbx-weight'),
-            style: const TextStyle(fontSize: Gp.t12, color: Gp.muted, fontWeight: FontWeight.w500),
+            style: TextStyle(fontSize: Gp.t12, color: Gp.muted, fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 8),
           for (final k in BbxStats.keys)
@@ -37,7 +37,7 @@ class _StatsPanel extends StatelessWidget {
                     width: 72,
                     child: Text(
                       tr(bbxStatLabels[k]!),
-                      style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                      style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
                     ),
                   ),
                   Expanded(child: AccentBar(value: max[k] == 0 ? 0 : stats.stats[k] / max[k], height: 6)),

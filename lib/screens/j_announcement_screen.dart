@@ -424,7 +424,7 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
                 const SizedBox(height: 6),
                 Text(
                   joinDot([tr(channelOf(a.franchiseId).label), dateDot(annShownDay(a)), sourceLabel(a.source)]),
-                  style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                  style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
                 ),
                 _PreorderLine(item: a),
                 if (a.unofficial) const _UnofficialNote(),
@@ -447,7 +447,7 @@ class _AnnouncementScreenState extends State<AnnouncementScreen> {
                   padding: const EdgeInsets.all(16),
                   child: Text(
                     tr('이어진 상품 아직 없음 · 상품화되면 여기에'), // P09
-                    style: const TextStyle(color: Gp.muted, fontSize: Gp.t12),
+                    style: TextStyle(color: Gp.muted, fontSize: Gp.t12),
                   ),
                 );
               }
@@ -517,7 +517,7 @@ class _TopBar extends StatelessWidget {
           IconButton(
             tooltip: tr('뒤로'),
             onPressed: onBack,
-            icon: const Icon(Icons.arrow_back_ios_new, size: Gp.iM, color: Gp.ink),
+            icon: Icon(Icons.arrow_back_ios_new, size: Gp.iM, color: Gp.ink),
           ),
           Expanded(
             child: Column(
@@ -540,7 +540,7 @@ class _TopBar extends StatelessWidget {
                         joinDot([dateDot(annShownDay(item)), sourceLabel(item.source)]),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: Gp.t11, color: Gp.muted),
+                        style: TextStyle(fontSize: Gp.t11, color: Gp.muted),
                       ),
                     ),
                   ],
@@ -581,7 +581,7 @@ class _BottomBar extends StatelessWidget {
     final store = NotifyScope.of(context);
     final on = store.isFollowing(item.id);
     return DecoratedBox(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Gp.panel,
         border: Border(top: BorderSide(color: Gp.line)),
       ),
@@ -640,7 +640,7 @@ class _BottomBar extends StatelessWidget {
               IconButton(
                 tooltip: tr('브라우저로 열기'),
                 onPressed: onOutside,
-                icon: const Icon(Icons.open_in_new, size: Gp.iM, color: Gp.muted),
+                icon: Icon(Icons.open_in_new, size: Gp.iM, color: Gp.muted),
               ),
             ],
           ),
@@ -672,7 +672,7 @@ class _Summary extends StatelessWidget {
               if (failed) ...[
                 Text(
                   tr('앱 안에서 열 수 없는 페이지 · 아래 ↗ 로 브라우저에서'),
-                  style: const TextStyle(fontSize: Gp.t12, color: Gp.danger),
+                  style: TextStyle(fontSize: Gp.t12, color: Gp.danger),
                 ),
                 const SizedBox(height: 12),
               ],
@@ -683,7 +683,7 @@ class _Summary extends StatelessWidget {
               const SizedBox(height: 6),
               Text(
                 joinDot([tr(channelOf(item.franchiseId).label), dateDot(annShownDay(item)), sourceLabel(item.source)]),
-                style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
               ),
               _PreorderLine(item: item),
               if (item.unofficial) const _UnofficialNote(),
@@ -709,7 +709,7 @@ class _UnofficialNote extends StatelessWidget {
     padding: const EdgeInsets.only(top: 8),
     child: Text(
       tr('비공식 소식 · 공식 발표와 다를 수 있어요'),
-      style: const TextStyle(fontSize: Gp.t12, color: unofficialColor),
+      style: TextStyle(fontSize: Gp.t12, color: unofficialColor),
     ),
   );
 }
@@ -1036,7 +1036,7 @@ class _InfoRow extends StatelessWidget {
           flex: 2,
           child: Text(
             label,
-            style: const TextStyle(fontSize: Gp.t12, color: Gp.muted, height: 1.7),
+            style: TextStyle(fontSize: Gp.t12, color: Gp.muted, height: 1.7),
           ),
         ),
         Expanded(

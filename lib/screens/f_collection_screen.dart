@@ -205,7 +205,7 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                   if (gone.isEmpty)
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
-                      child: Text(tr('지운 상품이 없어요'), style: const TextStyle(color: Gp.muted)),
+                      child: Text(tr('지운 상품이 없어요'), style: TextStyle(color: Gp.muted)),
                     )
                   else
                     Flexible(
@@ -222,7 +222,7 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                               onTap: () => restore([k.id], trf('「{name}」 복원했어요', {'name': k.name})),
                               trailing: Text(
                                 tr('복원'),
-                                style: const TextStyle(color: Gp.accent, fontWeight: FontWeight.w600),
+                                style: TextStyle(color: Gp.accent, fontWeight: FontWeight.w600),
                               ),
                             ),
                         ],
@@ -525,11 +525,11 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                               switch (_paid(k)) {
                                 (krw: null, estimate: _) => Text(
                                   tr('구매가 미입력'),
-                                  style: const TextStyle(fontSize: Gp.t14, color: Gp.faint),
+                                  style: TextStyle(fontSize: Gp.t14, color: Gp.faint),
                                 ),
                                 (krw: _, estimate: true) => KitPriceLines(
                                   k,
-                                  style: const TextStyle(fontSize: Gp.t14, color: Gp.faint),
+                                  style: TextStyle(fontSize: Gp.t14, color: Gp.faint),
                                 ),
                                 (krw: final int w, estimate: false) => Text(
                                   won(w),
@@ -539,7 +539,7 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
                               if (!_paid(k).estimate)
                                 Text(
                                   trf('정가 {money}', {'money': kitPrice(k)}),
-                                  style: const TextStyle(fontSize: Gp.t11, color: Gp.faint),
+                                  style: TextStyle(fontSize: Gp.t11, color: Gp.faint),
                                 ),
                             ] else
                               KitPriceLines(k),
@@ -623,7 +623,7 @@ class _CollectionScreenState extends State<CollectionScreen> with ChannelScope {
         IconButton(
           tooltip: tr('도착했어요'),
           onPressed: () => markPreorderArrived(context, k),
-          icon: const Icon(arrivedIcon, size: Gp.iM, color: Gp.reserve),
+          icon: Icon(arrivedIcon, size: Gp.iM, color: Gp.reserve),
         ),
     ],
   );

@@ -139,7 +139,7 @@ class _EmptyPane extends StatelessWidget {
     return ColoredBox(
       color: Gp.bg,
       child: Center(
-        child: const Column(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.view_in_ar_outlined, size: 72, color: Gp.ghost),

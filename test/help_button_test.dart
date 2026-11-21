@@ -47,7 +47,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: buildGpTheme(),
-        home: const Scaffold(
+        home: Scaffold(
           body: Center(
             child: HelpButton(
               title: '시험',

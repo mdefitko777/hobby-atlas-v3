@@ -96,7 +96,7 @@ class _TextAskDialogState extends State<_TextAskDialog> {
         children: [
           Text(
             tr(h ? '친구가 이 아이디로 나를 찾아요. 영문 소문자 · 숫자 · _ 3–20자.' : '친구 목록에 보이는 이름이에요'),
-            style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+            style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
           ),
           const SizedBox(height: 10),
           TextField(
@@ -203,7 +203,7 @@ class _AddFriendSheetState extends State<_AddFriendSheet> {
                 children: [
                   Text(
                     tr('내 아이디'),
-                    style: const TextStyle(color: Gp.muted, fontSize: Gp.t12),
+                    style: TextStyle(color: Gp.muted, fontSize: Gp.t12),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -221,7 +221,7 @@ class _AddFriendSheetState extends State<_AddFriendSheet> {
                         Clipboard.setData(ClipboardData(text: '@$mine'));
                         showToast(context, tr('아이디를 복사했어요 · 친구에게 보내 주세요'));
                       },
-                      icon: const Icon(Icons.content_copy_rounded, size: Gp.iM, color: Gp.muted),
+                      icon: Icon(Icons.content_copy_rounded, size: Gp.iM, color: Gp.muted),
                     ),
                 ],
               ),
@@ -252,12 +252,12 @@ class _AddFriendSheetState extends State<_AddFriendSheet> {
             if (_error.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 10),
-                child: Text(_error, style: const TextStyle(color: Gp.danger)),
+                child: Text(_error, style: TextStyle(color: Gp.danger)),
               ),
             if (_searched && _found == null && _error.isEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 12),
-                child: Text(tr('그 아이디를 가진 사람이 없어요'), style: const TextStyle(color: Gp.muted)),
+                child: Text(tr('그 아이디를 가진 사람이 없어요'), style: TextStyle(color: Gp.muted)),
               ),
             if (_found case final f?) _result(f),
           ],
@@ -296,7 +296,7 @@ class _AddFriendSheetState extends State<_AddFriendSheet> {
         title: Text(p.name),
         subtitle: Text(
           '@${p.handle}',
-          style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+          style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
         ),
         trailing: action,
       ),
@@ -344,7 +344,7 @@ class _RequestsSheetState extends State<_RequestsSheet> {
       title: Text(p.name),
       subtitle: Text(
         '@${p.handle}',
-        style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+        style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
       ),
       trailing: Row(mainAxisSize: MainAxisSize.min, children: actions),
     );
@@ -361,7 +361,7 @@ class _RequestsSheetState extends State<_RequestsSheet> {
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
                 child: Text(
                   tr('받은 요청이 없어요'),
-                  style: const TextStyle(color: Gp.muted, fontSize: Gp.t12),
+                  style: TextStyle(color: Gp.muted, fontSize: Gp.t12),
                 ),
               ),
             for (final p in incoming)
@@ -389,7 +389,7 @@ class _RequestsSheetState extends State<_RequestsSheet> {
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
                 child: Text(
                   tr('기다리는 요청이 없어요'),
-                  style: const TextStyle(color: Gp.muted, fontSize: Gp.t12),
+                  style: TextStyle(color: Gp.muted, fontSize: Gp.t12),
                 ),
               ),
             for (final p in outgoing)

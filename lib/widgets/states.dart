@@ -31,13 +31,13 @@ class LoadingView extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const MiniSpinner(),
+          MiniSpinner(),
           const SizedBox(height: 12),
           Text(
             text,
             maxLines: oneLine ? 1 : null,
             overflow: oneLine ? TextOverflow.ellipsis : null,
-            style: const TextStyle(color: Gp.muted),
+            style: TextStyle(color: Gp.muted),
           ),
         ],
       ),
@@ -62,7 +62,7 @@ class ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.cloud_off_outlined, size: Gp.iXL, color: Gp.ink),
+            Icon(Icons.cloud_off_outlined, size: Gp.iXL, color: Gp.ink),
             const SizedBox(height: 12),
             Text(
               title ?? tr('정보를 불러오지 못했어요'),
@@ -73,7 +73,7 @@ class ErrorView extends StatelessWidget {
               Text(
                 message,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Gp.muted),
+                style: TextStyle(color: Gp.muted),
               ),
             ],
             const SizedBox(height: 16),
@@ -121,7 +121,7 @@ class EmptyView extends StatelessWidget {
               Text(
                 detail,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Gp.muted),
+                style: TextStyle(color: Gp.muted),
               ),
             ],
             if (action != null) ...[const SizedBox(height: 14), action!],
@@ -134,7 +134,7 @@ class EmptyView extends StatelessWidget {
 
 /// 작은 돌아가는 원 — 불러오기 · 확인 중 (LoadingView · 시트 · 대화 상자 공통)
 class MiniSpinner extends StatelessWidget {
-  const MiniSpinner({super.key, this.size = 22, this.color = Gp.ink});
+  MiniSpinner({super.key, this.size = 22, Color? color}) : color = color ?? Gp.ink;
   final double size;
   final Color color;
 

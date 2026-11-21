@@ -119,7 +119,7 @@ class _ManualScreenState extends State<ManualScreen> {
                           widget.kitName,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                          style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
                         ),
                       ],
                     ),
@@ -149,7 +149,7 @@ class _ManualScreenState extends State<ManualScreen> {
           ),
           // X-4
           DecoratedBox(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: Gp.panel,
               border: Border(top: BorderSide(color: Gp.line)),
             ),
@@ -163,7 +163,7 @@ class _ManualScreenState extends State<ManualScreen> {
                     Expanded(
                       child: Text(
                         tr('BANDAI HOBBY 공식 설명서'),
-                        style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                        style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
                       ),
                     ),
                     TextButton.icon(

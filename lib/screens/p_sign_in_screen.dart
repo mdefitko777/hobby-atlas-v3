@@ -93,11 +93,11 @@ class _SignInScreenState extends State<SignInScreen> {
         children: [
           Text(
             tr('옛 Gunpula 앱과 같은 이메일이면 구매함 · 좋아요가 그대로 와요 · 두 앱이 15초쯤 안에 맞춰져요'),
-            style: const TextStyle(color: Gp.muted, height: 1.45),
+            style: TextStyle(color: Gp.muted, height: 1.45),
           ),
           const SizedBox(height: 18),
           if (!account.available && account.ready)
-            Text(tr('계정 연결 설정이 없어요 (config/supabase.json)'), style: const TextStyle(color: Gp.danger)),
+            Text(tr('계정 연결 설정이 없어요 (config/supabase.json)'), style: TextStyle(color: Gp.danger)),
           TextField(
             // P-1
             controller: _email,
@@ -153,12 +153,12 @@ class _SignInScreenState extends State<SignInScreen> {
             Padding(
               // P-3 P09
               padding: const EdgeInsets.only(top: 12),
-              child: Text(_error, style: const TextStyle(color: Gp.danger, height: 1.4)),
+              child: Text(_error, style: TextStyle(color: Gp.danger, height: 1.4)),
             ),
           const SizedBox(height: 24),
           Text(
             tr('이메일이 안 오면 스팸함 · 1분 뒤 다시 · 처음 쓰는 이메일은 새 계정 (같이 쓰는 사람 · 친구는 각자 이메일)'),
-            style: const TextStyle(fontSize: Gp.t12, color: Gp.faint, height: 1.45),
+            style: TextStyle(fontSize: Gp.t12, color: Gp.faint, height: 1.45),
           ),
         ],
       ),

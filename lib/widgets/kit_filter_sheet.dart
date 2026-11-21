@@ -100,8 +100,8 @@ class MineStateLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => switch (state) {
     MineState.any => Text(tr('전체')),
-    MineState.liked => Tooltip(message: tr('좋아요'), child: const LikedIcon()),
-    MineState.owned => Tooltip(message: tr('구매함'), child: const OwnedIcon()),
+    MineState.liked => Tooltip(message: tr('좋아요'), child: LikedIcon()),
+    MineState.owned => Tooltip(message: tr('구매함'), child: OwnedIcon()),
     MineState.none => Text(tr('아직 없음')),
   };
 }
@@ -172,7 +172,7 @@ class KitFilterToggles extends StatelessWidget {
                   const SizedBox(width: 3),
                   Text(
                     region.label,
-                    style: const TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w700, color: Gp.accent),
+                    style: TextStyle(fontSize: Gp.t12, fontWeight: FontWeight.w700, color: Gp.accent),
                   ),
                 ],
               ],
@@ -340,7 +340,7 @@ class _FilterSheetState extends State<FilterSheet> {
             padding: const EdgeInsets.fromLTRB(2, 10, 0, 2),
             child: Text(
               tr('굿즈 종류'),
-              style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+              style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
             ),
           ),
           CheckGrid(
@@ -510,7 +510,7 @@ class _PeriodPicker extends StatelessWidget {
                   onTap: () => pick(start: true),
                 ),
               ),
-              const Padding(
+              Padding(
                 padding: EdgeInsets.symmetric(horizontal: 8),
                 child: Text('–', style: TextStyle(color: Gp.muted)),
               ),

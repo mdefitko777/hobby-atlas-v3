@@ -14,7 +14,7 @@ const paidIcon = Icons.account_balance_wallet_outlined;
 
 /// 채널 관리 아이콘: 짧은 선(왼쪽 위) · 긴 선(가운데) · 짧은 선(오른쪽 아래)
 class ChannelGlyph extends StatelessWidget {
-  const ChannelGlyph({super.key, this.size = 22, this.color = Gp.ink});
+  ChannelGlyph({super.key, this.size = 22, Color? color}) : color = color ?? Gp.ink;
 
   final double size;
   final Color color;
@@ -45,7 +45,7 @@ class _ChannelGlyphPainter extends CustomPainter {
 
 /// 좋아요 표시 (♡, 파랑) — 글자 대신. 상세 · 필터 · 서랍 · 내 정보 · 친구 소식 공통
 class LikedIcon extends StatelessWidget {
-  const LikedIcon({super.key, this.filled = true, this.size = Gp.iS, this.color = Gp.accent});
+  LikedIcon({super.key, this.filled = true, this.size = Gp.iS, Color? color}) : color = color ?? Gp.accent;
   final bool filled;
   final double size;
   final Color color;
@@ -56,7 +56,7 @@ class LikedIcon extends StatelessWidget {
 
 /// 구매함 표시 (책갈피, 민트) — 상품 카드의 리본과 같은 뜻
 class OwnedIcon extends StatelessWidget {
-  const OwnedIcon({super.key, this.filled = true, this.size = Gp.iS, this.color = Gp.own});
+  OwnedIcon({super.key, this.filled = true, this.size = Gp.iS, Color? color}) : color = color ?? Gp.own;
   final bool filled;
   final double size;
   final Color color;

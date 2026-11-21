@@ -152,7 +152,7 @@ class _VisualMatchesState extends State<VisualMatches> {
               tooltip: tr('생김새 모델 지우기'),
               visualDensity: VisualDensity.compact,
               onPressed: _remove,
-              icon: const Icon(Icons.delete_outline, size: Gp.iM, color: Gp.faint),
+              icon: Icon(Icons.delete_outline, size: Gp.iM, color: Gp.faint),
             )
           : null,
     );
@@ -289,12 +289,12 @@ class _Offer extends StatelessWidget {
     decoration: BoxDecoration(color: Gp.soft, borderRadius: BorderRadius.circular(Gp.radius)),
     child: Row(
       children: [
-        const Icon(Icons.image_search, size: Gp.iM, color: Gp.accent),
+        Icon(Icons.image_search, size: Gp.iM, color: Gp.accent),
         const SizedBox(width: 10),
         Expanded(
           child: Text(
             text,
-            style: const TextStyle(fontSize: Gp.t12, color: Gp.muted, height: 1.4),
+            style: TextStyle(fontSize: Gp.t12, color: Gp.muted, height: 1.4),
           ),
         ),
         const SizedBox(width: 6),
@@ -321,7 +321,7 @@ class _Progress extends StatelessWidget {
         const SizedBox(height: 6),
         Text(
           trf('모델 받는 중… {p}%', {'p': (value * 100).round()}),
-          style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+          style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
         ),
       ],
     ),
@@ -341,7 +341,7 @@ class _Note extends StatelessWidget {
     child: Row(
       children: [
         if (icon == null)
-          const MiniSpinner(size: Gp.iS, color: Gp.accent)
+          MiniSpinner(size: Gp.iS, color: Gp.accent)
         else
           Icon(icon, size: Gp.iS, color: Gp.faint),
         const SizedBox(width: 6),
@@ -350,7 +350,7 @@ class _Note extends StatelessWidget {
             text,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+            style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
           ),
         ),
         ?action,

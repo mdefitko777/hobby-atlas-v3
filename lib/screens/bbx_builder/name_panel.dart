@@ -93,7 +93,7 @@ class _NamePanel extends StatelessWidget {
           if (editingName != null && editingName!.isNotEmpty)
             Text(
               editingName!,
-              style: const TextStyle(fontSize: Gp.t12, color: Gp.accent, fontWeight: FontWeight.w600),
+              style: TextStyle(fontSize: Gp.t12, color: Gp.accent, fontWeight: FontWeight.w600),
             ),
           Text(
             shown.isEmpty ? tr('부품을 골라 주세요') : shown,
@@ -105,7 +105,7 @@ class _NamePanel extends StatelessWidget {
               padding: const EdgeInsets.only(top: 2),
               child: Text(
                 others,
-                style: const TextStyle(fontSize: Gp.t12, color: Gp.muted),
+                style: TextStyle(fontSize: Gp.t12, color: Gp.muted),
               ),
             ),
           if (combo.parts.isNotEmpty) ...[

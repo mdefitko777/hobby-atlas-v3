@@ -119,7 +119,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ListTile(
                 key: Key('language-${lang.name}'),
                 title: Text(label),
-                trailing: L10n.current == lang ? const Icon(Icons.check, color: Gp.accent) : null,
+                trailing: L10n.current == lang ? Icon(Icons.check, color: Gp.accent) : null,
                 onTap: () => Navigator.pop(sheet, lang),
               ),
           ],
@@ -172,7 +172,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ListTile(
               leading: const Icon(Icons.login),
               title: Text(tr('로그인')),
-              trailing: const Icon(Icons.chevron_right, color: Gp.faint),
+              trailing: Icon(Icons.chevron_right, color: Gp.faint),
               onTap: () => openSignIn(context),
             )
           else ...[
@@ -241,7 +241,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     key: const Key('settings-prefetch'),
                     leading: const Icon(Icons.downloading_outlined),
                     title: Text(tr('미리 받기')),
-                    trailing: Text(_prefetchLabel(_n.config.prefetchWifiOnly), style: const TextStyle(color: Gp.muted)),
+                    trailing: Text(_prefetchLabel(_n.config.prefetchWifiOnly), style: TextStyle(color: Gp.muted)),
                     onTap: _pickPrefetch,
                   ),
                 ),
@@ -263,9 +263,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   children: [
                     Text(
                       notifySummary(_n.config, permitted: _permitted),
-                      style: const TextStyle(color: Gp.muted),
+                      style: TextStyle(color: Gp.muted),
                     ),
-                    const Icon(Icons.chevron_right, color: Gp.faint),
+                    Icon(Icons.chevron_right, color: Gp.faint),
                   ],
                 ),
                 onTap: () => openNotifySettings(context, notify: _n),
@@ -283,7 +283,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   key: const Key('settings-language'),
                   leading: const Icon(Icons.language),
                   title: Text(tr('언어')),
-                  trailing: Text(L10n.isZh ? '中文（简体）' : '한국어', style: const TextStyle(color: Gp.muted)),
+                  trailing: Text(L10n.isZh ? '中文（简体）' : '한국어', style: TextStyle(color: Gp.muted)),
                   onTap: () => _pickLanguage(context),
                 ),
                 SwitchListTile(
@@ -298,7 +298,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   // K-7
                   leading: const Icon(Icons.help_outline),
                   title: Text(tr('도움말')),
-                  trailing: const Icon(Icons.chevron_right, color: Gp.faint),
+                  trailing: Icon(Icons.chevron_right, color: Gp.faint),
                   onTap: () => openPage(context, const HelpScreen()),
                 ),
                 const VersionTile(), // 지금 빌드 · 업데이트 확인

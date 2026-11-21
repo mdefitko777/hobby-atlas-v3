@@ -59,7 +59,7 @@ class HelpButton extends StatelessWidget {
       return RaisedCircleButton(
         tooltip: tip,
         onTap: () => _open(context),
-        child: const Icon(Icons.help_outline, size: Gp.iM, color: Gp.ink),
+        child: Icon(Icons.help_outline, size: Gp.iM, color: Gp.ink),
       );
     }
     return SizedBox(
@@ -69,7 +69,7 @@ class HelpButton extends StatelessWidget {
         tooltip: tip,
         padding: EdgeInsets.zero,
         onPressed: () => _open(context),
-        icon: const Icon(Icons.help_outline, size: Gp.iM, color: Gp.muted),
+        icon: Icon(Icons.help_outline, size: Gp.iM, color: Gp.muted),
       ),
     );
   }
@@ -82,7 +82,7 @@ Widget _helpRow(HelpItem i) {
       padding: const EdgeInsets.only(top: 12, bottom: 2),
       child: Text(
         i.text,
-        style: const TextStyle(fontSize: Gp.t12, color: Gp.muted, fontWeight: FontWeight.w600),
+        style: TextStyle(fontSize: Gp.t12, color: Gp.muted, fontWeight: FontWeight.w600),
       ),
     );
   }
