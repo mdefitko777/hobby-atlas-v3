@@ -1,4 +1,5 @@
-// 채널 바 접기 — 내용을 한참(400 쯤, 한 번 세게 밀어 한 화면쯤) 내려 읽어야 채널 바만 위로 접히고, 조금이라도 올리면 다시 나온다.
+// 채널 바 접기 — 살짝(120 쯤, 한 번 가볍게 밀기) 내려 읽으면 채널 바가 접히고, 거기서 또 살짝 밀면 탭 줄까지
+// 두 겹이 차례로 접힌다. 조금이라도 올리면 두 겹 다 다시 나온다 (2026-11-22 주인: 한 겹에 400 · 두 겹에 1100 넘게는 너무 많이 밀어야 했다).
 // 아바타 줄은 늘 그대로. 손가락을 따라 조금씩 움직이면 어지럽다고 해서(2026-11-21 주인) 200ms 에 한 번에 접고 편다.
 // 앱 셸 하나([HeaderCollapse])가 네 탭에서 올라오는 ScrollNotification 을 보고 정하고, 탭 머리([CollapsingHeader])는
 // 그 값만 따른다 — 탭 화면이 스크롤을 따로 알리지 않아도 목록 · 당겨서 새로 고침 · 안쪽 탭 화면이 모두 같게 움직인다.
@@ -24,11 +25,15 @@ class HeaderCollapseController extends ValueNotifier<bool> {
 /// 접고 펴는 시간 (2026-11-20 주인 시안: 200ms 쯤 한 번에)
 const headerSnapDuration = Duration(milliseconds: 200);
 
-/// 위로 올리지 않고 이만큼 내려 읽어야 접는다 — 천천히 읽는 동안은 그대로 (2026-11-21 주인: 12 는 너무 빨랐다)
-const headerHideAfter = 400.0;
+/// 위로 올리지 않고 이만큼 내려 읽어야 첫 겹(채널 바)을 접는다 — 살짝 한 번 민 거리.
+/// 2026-11-21 에 12 는 너무 빨랐고(손만 대도 접힘) 400 은 한 화면을 꽉 밀어야 했다 → 그 중간,
+/// 폰 한 화면(812)의 1/7 쯤으로 (2026-11-22 주인: 살짝 한 번 밀면 한 겹). 천천히 한두 줄 읽는 동안은 아직 그대로다.
+const headerHideAfter = 120.0;
 
-/// 채널 바를 접은 뒤 이만큼 더 내려 읽어야 탭 줄까지 접는다 (2026-11-21 주인: 한 겹씩 접히고 맨 윗줄만 남게)
-const headerHideAfter2 = 320.0;
+/// 첫 겹이 접힌 뒤 이만큼 **더** 내려 읽어야 둘째 겹(탭 줄)까지 접는다 — 또 살짝 한 번 (2026-11-22 주인).
+/// 첫 겹을 접는 순간 controller 알림이 [_HeaderCollapseState._follow] 를 불러 _down 이 0 으로 돌아가므로,
+/// 이 값은 "접은 그 자리에서부터" 센 거리다 (두 겹 합쳐도 240 — 한 화면의 1/3 아래).
+const headerHideAfter2 = 120.0;
 
 /// 이만큼 올리면 편다 (조금만 올려도)
 const _showAfter = 6.0;
@@ -172,8 +177,9 @@ class _HeaderCollapseState extends State<HeaderCollapse> with TickerProviderStat
     _down += d;
     // 채널 바를 접어 목록이 길어져도 아직 스크롤이 남을 때만 접는다 — 짧은 목록에서 접혔다 펴졌다 흔들리지 않게
     if (_down > headerHideAfter && m.maxScrollExtent > _extent) _set(true);
-    // 채널 바가 접힌 뒤에도 더 내려 읽으면 탭 줄까지 — 맨 윗줄(프로필 · Lv · 검색 · 알림)만 남는다
-    if (_down > headerHideAfter + headerHideAfter2 && widget.controller.hidden) _set2(true);
+    // 채널 바가 접힌 뒤 또 살짝 내려 읽으면 탭 줄까지 — 맨 윗줄(프로필 · Lv · 검색 · 알림)만 남는다.
+    // 첫 겹을 접을 때 _down 이 0 으로 돌아갔으므로 여기서 더하지 않는다 (전에는 합쳐 더해 둘째 겹까지 1100 넘게 밀어야 했다)
+    if (_down > headerHideAfter2 && widget.controller.hidden) _set2(true);
     return false;
   }
 

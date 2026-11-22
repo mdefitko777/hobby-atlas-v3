@@ -431,7 +431,7 @@ class _HomeScreenState extends State<HomeScreen> with ChannelScope {
     );
   }
 
-  /// A-2 줄은 목록 밖 위에 — 한참 내려 읽으면 채널 바가 먼저 접히고(S-13 첫 겹) 더 읽으면 이 줄도 접힌다 (둘째 겹, 네 탭 같게)
+  /// A-2 줄은 목록 밖 위에 — 살짝 내려 읽으면 채널 바가 먼저 접히고(S-13 첫 겹) 또 살짝 밀면 이 줄도 접힌다 (둘째 겹, 네 탭 같게)
   Widget _pinned(Widget tools, Widget list) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [

@@ -10,6 +10,7 @@ import 'package:hobby_atlas/screens/d_kit_detail_screen.dart';
 import 'package:hobby_atlas/screens/b_search_screen.dart' show searchHelp;
 import 'package:hobby_atlas/screens/f_collection_screen.dart';
 import 'package:hobby_atlas/screens/g_guide_view.dart' show guideHelpSections;
+import 'package:hobby_atlas/screens/h_calendar_screen.dart' show calendarHelp;
 import 'package:hobby_atlas/screens/s_app_shell.dart';
 import 'package:hobby_atlas/screens/u_social.dart' show MyAvatar;
 import 'package:hobby_atlas/theme.dart';
@@ -105,7 +106,17 @@ void main() {
     expect(find.text('격자 · 목록 (전체 보기 안)'), findsOneWidget); // 홈 묶음
     final list = find.descendant(of: find.byType(HelpPage), matching: find.byType(Scrollable)).first;
     await tester.scrollUntilVisible(find.text('그 밖의 일정'), 300, scrollable: list);
-    expect(find.text('좋아요 · 예약한 상품'), findsOneWidget); // 점 색은 둘뿐 (파랑 · 회색)
+    // 점 색은 뜻마다 다르다 (2026-11-22 주인) — 발매 · PB 마감 · 예약 도착 · 재판매 · 구매한 날 · 그 밖
+    expect([
+      for (final h in calendarHelp) h.text,
+    ], containsAll(['좋아요 · 예약한 상품의 발매', 'PB 예약 마감 (내 일정)', '예약 도착 (내 일정)', '재판매 (내 일정)', '구매한 날 (내 일정)', '그 밖의 일정']));
+    expect(
+      {
+        for (final h in calendarHelp)
+          if (h.dot) h.color,
+      }.length,
+      6,
+    ); // 여섯 색이 서로 다르다
     await tester.scrollUntilVisible(find.text('아이디로 친구 추가'), 300, scrollable: list);
     expect(tester.takeException(), isNull);
   });

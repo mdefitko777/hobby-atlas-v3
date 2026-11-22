@@ -2,6 +2,7 @@
 //   · 내 빌드보다 새것이면 위 줄에 ⬇ 아이콘 (빨간 점)
 //   · 큰 업데이트(major)면 앱을 열 때 한 번만 묻는다 (같은 빌드는 다시 묻지 않음)
 //   · 업데이트 → 앱 안에서 받기(진행률) → 안드로이드 설치 창 (ota_update). 처음 한 번 「출처를 알 수 없는 앱 설치」 허용
+//   · 「이 버전 건너뛰기」 를 누른 빌드는 ⬇ · 열 때 묻기에서 뺀다 (설정 › 앱 › 버전에서 손으로 확인하면 그래도 나온다)
 // 내 빌드 번호는 APK 를 만들 때 --dart-define=APP_BUILD 로 넣는다. 0 = 손으로 만든 개발 빌드 → 확인하지 않는다.
 // 다트 코드만 바뀐 업데이트는 새 APK 가 아니라 패치로 온다 (app_patch.dart) — version.json 의 build 는 그대로라
 // 이 파일의 ⬇ · 묻기는 뜨지 않고, patch 칸(번호 · 바뀐 점)만 달라진다.
@@ -145,6 +146,8 @@ class AppUpdate extends ChangeNotifier {
 
   /// version.json 확인. [force] 가 아니면 한 시간에 한 번 (받은 때만 센다 — 못 받았으면 다음에 바로 다시).
   /// 새 빌드면 [available] 을 채우고 돌려준다. 못 받으면 [checkFailed] = true, 지난 결과를 그대로 돌려준다.
+  /// 건너뛴 빌드는 [available] 에 넣지 않는다 (⬇ · 열 때 묻기를 쉬게) — [force] 로 손수 확인하면 다시 채운다.
+  /// 건너뛰기는 "조르지 마라" 이지 "못 받게 하라" 가 아니다 (2026-11-22 주인).
   Future<UpdateInfo?> check({bool force = false, Future<String?> Function(Uri)? fetch}) async {
     if (!supported && fetch == null) return null;
     final now = DateTime.now();
@@ -162,7 +165,10 @@ class AppUpdate extends ChangeNotifier {
     checkFailed = false;
     final json = _decode(text);
     final info = UpdateInfo.fromJson(json);
-    available = info != null && info.build > appBuild ? info : null;
+    final next = info != null && info.build > appBuild ? info : null;
+    // 손으로 확인한(force) 건너뛴 빌드도 [available] 에 넣는다 — 안 넣으면 그 자리에서 「업데이트」를 눌러 받는 동안
+    // 위 줄 ⬇(진행률)과 설정 줄의 「새 버전」이 없어 받는 중인 것을 따라갈 길이 사라진다
+    available = next != null && !force && next.build <= await _skippedBuild() ? null : next;
     patch = PatchInfo.fromJson(jMap(json)['patch']);
     notifyListeners();
     return available;
@@ -179,12 +185,29 @@ class AppUpdate extends ChangeNotifier {
   }
 
   static const _askedKey = 'update_asked';
+  static const _skippedKey = 'update_skipped';
 
-  /// 이 빌드를 앱을 열 때 물어볼까 (큰 업데이트 · 아직 안 물어본 빌드)
+  int? _skipped;
+
+  /// 건너뛴 빌드 번호 (없으면 0) — 확인할 때마다 파일을 읽지 않게 한 번만 읽어 둔다
+  Future<int> _skippedBuild() async => _skipped ??= int.tryParse(await BlobStore.read(_skippedKey) ?? '') ?? 0;
+
+  /// 이 빌드를 앱을 열 때 물어볼까 (큰 업데이트 · 건너뛰지 않은 · 아직 안 물어본 빌드)
   Future<bool> shouldAsk(UpdateInfo info) async =>
-      info.major && (int.tryParse(await BlobStore.read(_askedKey) ?? '') ?? 0) < info.build;
+      info.major &&
+      info.build > await _skippedBuild() &&
+      (int.tryParse(await BlobStore.read(_askedKey) ?? '') ?? 0) < info.build;
 
   Future<void> markAsked(UpdateInfo info) => BlobStore.write(_askedKey, '${info.build}');
+
+  /// 「이 버전 건너뛰기」 — 이 빌드까지는 ⬇ 도 열 때 묻기도 하지 않는다 (더 새 빌드가 나오면 다시 뜬다).
+  /// [available] 은 기기에 적기 전에 바로 비운다 — 시트를 닫는 순간 ⬇ 가 사라지게 (2026-11-22 주인)
+  Future<void> skip(UpdateInfo info) async {
+    _skipped = info.build;
+    available = null;
+    notifyListeners();
+    await BlobStore.write(_skippedKey, '${info.build}');
+  }
 
   /// 받기 → 설치 창. 진행률은 [progress], 끝나면(설치 창이 뜨면) null.
   void start(UpdateInfo info) {
@@ -237,6 +260,7 @@ class AppUpdate extends ChangeNotifier {
     error = '';
     checkFailed = false;
     _lastCheck = null;
+    _skipped = null;
   }
 }
 

@@ -1,10 +1,14 @@
-// 채널 바 접기 (lib/widgets/header_collapse.dart) — 천천히 조금 읽는 동안은 그대로, 한참(400 넘게 · 한 번 세게 밀기) 내려야 접고,
-// 조금이라도 올리면 편다. 짧은 목록 · 가로 줄 · 화면이 스스로 옮긴 스크롤 · 맨 위 당기기. 글자 없이 Key · 타입 · 높이로 본다
+// 채널 바 접기 (lib/widgets/header_collapse.dart) — 한두 줄 읽는 동안은 그대로, 살짝 한 번(120 넘게) 밀면 채널 바가,
+// 거기서 또 살짝 밀면 탭 줄까지 한 겹씩 접히고, 조금이라도 올리면 두 겹 다 펴진다 (2026-11-22 주인).
+// 짧은 목록 · 가로 줄 · 화면이 스스로 옮긴 스크롤 · 맨 위 당기기 · 캘린더 한 주 보기처럼 안쪽에 따로 밀리는 목록.
+// 글자 없이 Key · 타입 · 높이로 본다
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hobby_atlas/widgets.dart';
 
 const _headerKey = ValueKey('header');
+const _barKey = ValueKey('bar'); // 첫 겹 — 채널 바
+const _tabsKey = ValueKey('tabs'); // 둘째 겹 — 탭 줄
 const _listKey = ValueKey('list');
 const _rowKey = ValueKey('row');
 
@@ -12,6 +16,7 @@ Future<(HeaderCollapseController, ScrollController)> _show(
   WidgetTester tester, {
   int items = 60,
   bool refresh = false,
+  bool twoSteps = false,
 }) async {
   final controller = HeaderCollapseController();
   final scroll = ScrollController();
@@ -41,7 +46,11 @@ Future<(HeaderCollapseController, ScrollController)> _show(
           child: Column(
             children: [
               const SizedBox(height: 56), // 아바타 줄 — 머리 밖이라 늘 그대로
-              const CollapsingHeader(child: SizedBox(key: _headerKey, height: 60)), // 채널 바
+              const CollapsingHeader(
+                key: _barKey,
+                child: SizedBox(key: _headerKey, height: 60),
+              ), // 채널 바
+              if (twoSteps) const CollapsingHeader(key: _tabsKey, step: 2, child: SizedBox(height: 40)), // 탭 줄
               Expanded(child: list),
             ],
           ),
@@ -52,7 +61,9 @@ Future<(HeaderCollapseController, ScrollController)> _show(
   return (controller, scroll);
 }
 
-double _barHeight(WidgetTester tester) => tester.getSize(find.byType(CollapsingHeader)).height;
+double _barHeight(WidgetTester tester) => tester.getSize(find.byKey(_barKey)).height;
+
+double _tabsHeight(WidgetTester tester) => tester.getSize(find.byKey(_tabsKey)).height;
 
 Future<void> _snap(WidgetTester tester) async {
   await tester.pump(); // 애니메이션은 다음 프레임부터
@@ -60,19 +71,19 @@ Future<void> _snap(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('천천히 조금씩(합쳐 400 아래) 내려 읽는 동안은 그대로', (tester) async {
+  testWidgets('한두 줄씩(합쳐 120 아래) 천천히 내려 읽는 동안은 그대로', (tester) async {
     final (c, _) = await _show(tester);
     for (var i = 0; i < 3; i++) {
-      await tester.drag(find.byKey(_listKey), const Offset(0, -100));
+      await tester.drag(find.byKey(_listKey), const Offset(0, -35));
       await _snap(tester);
     }
     expect(c.hidden, isFalse);
     expect(_barHeight(tester), 60);
   });
 
-  testWidgets('한 번에 400 넘게 내리면 200ms 에 한 번에 접히고, 조금 올리면 다시 펴진다', (tester) async {
+  testWidgets('살짝 한 번(120 넘게) 밀면 200ms 에 한 번에 접히고, 조금 올리면 다시 펴진다', (tester) async {
     final (c, _) = await _show(tester);
-    await tester.drag(find.byKey(_listKey), const Offset(0, -500));
+    await tester.drag(find.byKey(_listKey), const Offset(0, -160));
     await tester.pump();
     expect(c.hidden, isTrue);
     await tester.pump(headerSnapDuration ~/ 2);
@@ -87,7 +98,32 @@ void main() {
     expect(_barHeight(tester), 60);
   });
 
-  testWidgets('세게 한 번 밀기(손을 뗀 뒤 미끄러진 거리까지) = 한참 내려 읽기', (tester) async {
+  testWidgets('살짝 한 번 밀면 한 겹, 또 살짝 밀면 또 한 겹 (2026-11-22 주인)', (tester) async {
+    await _show(tester, twoSteps: true);
+    await tester.drag(find.byKey(_listKey), const Offset(0, -160));
+    await _snap(tester);
+    expect(_barHeight(tester), 0);
+    expect(_tabsHeight(tester), 40); // 아직 탭 줄은 남는다
+
+    await tester.drag(find.byKey(_listKey), const Offset(0, -160));
+    await _snap(tester);
+    expect(_tabsHeight(tester), 0);
+  });
+
+  testWidgets('두 겹이 다 접혀도 조금 올리면 한 번에 둘 다 펴진다', (tester) async {
+    await _show(tester, twoSteps: true);
+    for (var i = 0; i < 2; i++) {
+      await tester.drag(find.byKey(_listKey), const Offset(0, -160));
+      await _snap(tester);
+    }
+    expect((_barHeight(tester), _tabsHeight(tester)), (0.0, 0.0));
+
+    await tester.drag(find.byKey(_listKey), const Offset(0, 30));
+    await _snap(tester);
+    expect((_barHeight(tester), _tabsHeight(tester)), (60.0, 40.0));
+  });
+
+  testWidgets('세게 한 번 밀기(손을 뗀 뒤 미끄러진 거리까지)도 접는다', (tester) async {
     final (c, _) = await _show(tester);
     await tester.fling(find.byKey(_listKey), const Offset(0, -200), 2500);
     await tester.pumpAndSettle();
@@ -96,12 +132,12 @@ void main() {
 
   testWidgets('올리지 않고 이어서 내린 거리는 합친다 · 중간에 올리면 처음부터', (tester) async {
     final (c, _) = await _show(tester);
-    await tester.drag(find.byKey(_listKey), const Offset(0, -250));
+    await tester.drag(find.byKey(_listKey), const Offset(0, -90));
     await tester.drag(find.byKey(_listKey), const Offset(0, 40)); // 올림 → 처음부터
-    await tester.drag(find.byKey(_listKey), const Offset(0, -250));
+    await tester.drag(find.byKey(_listKey), const Offset(0, -90));
     await _snap(tester);
     expect(c.hidden, isFalse);
-    await tester.drag(find.byKey(_listKey), const Offset(0, -250)); // 이어서 250 + 250
+    await tester.drag(find.byKey(_listKey), const Offset(0, -90)); // 이어서 90 + 90 (손가락 미끌림 18 을 뺀 72 + 72)
     await _snap(tester);
     expect(c.hidden, isTrue);
   });
@@ -150,11 +186,11 @@ void main() {
 
   testWidgets('펴져 있을 때 show() 해도 앞에서 내려 읽은 거리는 버린다 (탭 바꾸기)', (tester) async {
     final (c, _) = await _show(tester);
-    await tester.drag(find.byKey(_listKey), const Offset(0, -300));
+    await tester.drag(find.byKey(_listKey), const Offset(0, -80));
     await _snap(tester);
     expect(c.hidden, isFalse);
-    c.show(); // 다른 탭으로 — 300 은 이어지지 않는다
-    await tester.drag(find.byKey(_listKey), const Offset(0, -150));
+    c.show(); // 다른 탭으로 — 80 은 이어지지 않는다
+    await tester.drag(find.byKey(_listKey), const Offset(0, -80));
     await _snap(tester);
     expect(c.hidden, isFalse);
   });
@@ -179,6 +215,61 @@ void main() {
       }
     });
   }
+
+  // H-4 캘린더 한 주 보기: 달력은 위에 남고 목록만 안쪽에서 제 ScrollController 로 따로 밀린다.
+  // 그 목록을 밀어도 알림이 HeaderCollapse 까지 올라와 두 겹이 접히는지 — 옆에 있는 달력 쪽 SingleChildScrollView 의
+  // 알림이 끼어들어 도로 펴 버리지 않는지 함께 본다 (lib/screens/h_calendar_screen.dart 는 읽기만 했다)
+  testWidgets('캘린더 한 주 보기처럼 안쪽 목록이 따로 밀려도 두 겹이 접힌다 (H-4)', (tester) async {
+    final controller = HeaderCollapseController();
+    final listCtrl = ScrollController();
+    addTearDown(controller.dispose);
+    addTearDown(listCtrl.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: HeaderCollapse(
+            controller: controller,
+            child: Column(
+              children: [
+                const SizedBox(height: 56),
+                const CollapsingHeader(key: _barKey, child: SizedBox(height: 60)),
+                const CollapsingHeader(key: _tabsKey, step: 2, child: SizedBox(height: 40)),
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, box) => Column(
+                      children: [
+                        ConstrainedBox(
+                          // 달력 + 종류 탭 — 남은 높이의 3/4 까지
+                          constraints: BoxConstraints(maxHeight: box.maxHeight * 0.75),
+                          child: const SingleChildScrollView(child: SizedBox(height: 400)),
+                        ),
+                        Expanded(
+                          child: ListView(
+                            key: _listKey,
+                            controller: listCtrl,
+                            children: [for (var i = 0; i < 60; i++) const SizedBox(height: 48)],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.drag(find.byKey(_listKey), const Offset(0, -160));
+    await _snap(tester);
+    expect(_barHeight(tester), 0);
+    expect(_tabsHeight(tester), 40);
+
+    await tester.drag(find.byKey(_listKey), const Offset(0, -160));
+    await _snap(tester);
+    expect(_tabsHeight(tester), 0);
+  });
 
   testWidgets('HeaderCollapse 밖이면 늘 펼침 (검색 덮개 · 셸 없이 띄운 화면)', (tester) async {
     await tester.pumpWidget(

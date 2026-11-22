@@ -1,5 +1,5 @@
 // 컬렉션 줄 부제(같은 말 한 번 · 건담은 도감 공식 작품 이름) · 목록 맨 끝 합계(₩ · ¥ 따로) ·
-// 캘린더 한 주 ↔ 한 달 손잡이 · 점 두 가지 뜻 (2026-11-20 화면 정리)
+// 캘린더 한 주 ↔ 한 달 손잡이 · 한 주 줄은 늘 위에 · 뜻마다 다른 점 색 (2026-11-22 주인)
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hobby_atlas/api.dart';
@@ -7,6 +7,8 @@ import 'package:hobby_atlas/clock.dart';
 import 'package:hobby_atlas/data/user_store.dart';
 import 'package:hobby_atlas/detail_pane.dart';
 import 'package:hobby_atlas/logic/kit_meta.dart';
+import 'package:hobby_atlas/logic/preorder.dart';
+import 'package:hobby_atlas/logic/restock.dart';
 import 'package:hobby_atlas/marks.dart';
 import 'package:hobby_atlas/models.dart';
 import 'package:hobby_atlas/screens/f_collection_screen.dart';
@@ -21,6 +23,7 @@ Kit _kit(
   int? krw,
   int? jpy,
   String date = '',
+  String pbCloses = '',
 }) => Kit.fromSlim(
   {
     'id': id,
@@ -29,6 +32,7 @@ Kit _kit(
     'line': line,
     'series': series,
     'date': date,
+    'pbCloses': pbCloses,
     'priceKrw': ?krw,
     'priceJpy': ?jpy,
   },
@@ -115,15 +119,62 @@ void main() {
   });
 
   group('캘린더', () {
-    Future<void> pumpCalendar(WidgetTester tester, UserStore store, List<Kit> kits, List<Announcement> anns) => _pump(
+    Future<void> pumpCalendar(
+      WidgetTester tester,
+      UserStore store,
+      List<Kit> kits,
+      List<Announcement> anns, {
+      RestockIndex restocks = RestockIndex.empty,
+    }) => _pump(
       tester,
       store,
       CalendarScreen(
         myChannels: const ['gundam'],
         onMyChannelsChanged: (_) {},
-        loaders: Loaders(kits: (_) async => kits, announcements: (_) async => anns),
+        loaders: Loaders(kits: (_) async => kits, announcements: (_) async => anns, restocks: () async => restocks),
       ),
     );
+
+    /// 뜻마다 다른 점 색 (lib/screens/h_calendar_screen.dart `_Mark`) — 밤 모드 때문에 getter 라 const 가 아니다
+    Set<Color> markColors() => {Gp.accent, Gp.danger, Gp.reserve, Gp.resale, Gp.own, Gp.muted};
+
+    /// 달력 격자 [day] 칸 아래 점 색들 (고른 날 동그라미 · 오늘 테두리는 걸러진다)
+    Iterable<Color> dotsOn(WidgetTester tester, String day) => tester
+        .widgetList<Container>(
+          find.descendant(
+            of: find.ancestor(of: find.text(day), matching: find.byType(GestureDetector)).first,
+            matching: find.byType(Container),
+          ),
+        )
+        .map((c) => (c.decoration as BoxDecoration?)?.color)
+        .whereType<Color>()
+        .where(markColors().contains);
+
+    // 점 색이 낮 값으로 얼어붙으면(`static final` 함정) 밤에 안 보인다 — 두 벌을 각각 읽어 견준다
+    test('점 색 여섯은 낮 · 밤 두 벌에서 서로 다르고, 밤 바탕에서 보인다 (얼어붙음 없음)', () {
+      addTearDown(() => GpMode.debugSet(false));
+      List<Color> dotColors() => [
+        for (final h in calendarHelp)
+          if (h.dot) h.color!,
+      ];
+      double ratio(Color a, Color b) {
+        final (x, y) = (a.computeLuminance(), b.computeLuminance());
+        return ((x > y ? x : y) + 0.05) / ((x < y ? x : y) + 0.05);
+      }
+
+      GpMode.debugSet(false);
+      final day = dotColors();
+      GpMode.debugSet(true);
+      final night = dotColors();
+      expect(day, hasLength(6));
+      expect(day.toSet(), hasLength(6), reason: '낮에 두 뜻이 같은 색이면 구분이 없어진다');
+      expect(night.toSet(), hasLength(6), reason: '밤에 두 뜻이 같은 색이면 구분이 없어진다');
+      for (final (i, c) in night.indexed) {
+        expect(c, isNot(day[i]), reason: '$i 번째 점이 낮 색으로 얼어붙었다');
+        // 글자가 아닌 그림 요소 기준 3:1 (WCAG AA)
+        expect(ratio(c, Gp.bg), greaterThanOrEqualTo(3.0), reason: '$i 번째 점이 밤 바탕에서 안 보인다');
+      }
+    });
 
     testWidgets('처음은 오늘이 든 한 주 · ‹ › 는 주 · 손잡이를 밀어 내리면 한 달, 올리면 다시 한 주', (tester) async {
       final store = UserStore.memory();
@@ -157,7 +208,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('점 뜻은 둘: 내 좋아요 상품 = 파랑, 그 밖(다른 발매 · 예고) = 회색 · 상태는 알약 없이 둘째 줄', (tester) async {
+    testWidgets('점 색: 내 좋아요 상품 = 파랑, 그 밖(다른 발매 · 예고) = 회색 · 상태는 알약 없이 둘째 줄', (tester) async {
       final liked = _kit('liked', date: '2026-10-27');
       final other = _kit('other', date: '2026-10-28');
       final store = UserStore.memory()..setStatus(liked.id, CollectStatus.wanted);
@@ -177,18 +228,104 @@ void main() {
       final annRow = find.byKey(const ValueKey('event-ann'), skipOffstage: false);
       expect(find.descendant(of: annRow, matching: find.byKey(const ValueKey('event-dot-other'))), findsOneWidget);
       // 달력 칸 점: 27일 파랑, 28 · 29일 회색
-      Iterable<Color> dotsOn(String day) => tester
-          .widgetList<Container>(
-            find.descendant(
-              of: find.ancestor(of: find.text(day), matching: find.byType(GestureDetector)).first,
-              matching: find.byType(Container),
-            ),
-          )
-          .map((c) => (c.decoration as BoxDecoration?)?.color)
-          .whereType<Color>()
-          .where((c) => c == Gp.accent || c == Gp.muted);
-      expect(dotsOn('27'), [Gp.accent]);
-      expect(dotsOn('28'), [Gp.muted]);
+      expect(dotsOn(tester, '27'), [Gp.accent]);
+      expect(dotsOn(tester, '28'), [Gp.muted]);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('내 일정 점 색은 뜻마다 다르다: 예약 도착 · 재판매 · 구매한 날 · PB 마감 (2026-11-22 주인)', (tester) async {
+      final pre = _kit('pre');
+      final res = _kit('res');
+      final pb = _kit('pb', pbCloses: '2026-10-30');
+      final own = _kit('own');
+      // 구매한 날 = 기록을 적은 때라 UserStore 의 지금 시각이 아니라 저장 파일로 심는다 (10월 안이어야 보인다)
+      final store = UserStore.memory()
+        ..debugLoadJson({
+          'collection': {
+            'items': {
+              for (final id in ['pre', 'res', 'pb'])
+                id: {'status': 'wanted', 'updated_at': '2026-10-20T00:00:00Z', 'quantity': 1},
+              'own': {'status': 'owned', 'updated_at': '2026-10-26T12:00:00Z', 'quantity': 1},
+            },
+          },
+        })
+        ..putPreorder(pre.id, const Preorder(shop: '샵', arrival: '2026-10-28', price: 50000));
+      await pumpCalendar(
+        tester,
+        store,
+        [pre, res, pb, own],
+        const [],
+        restocks: RestockIndex({
+          'res': [RestockEvent(kitId: 'res', date: '2026-10-29')],
+        }),
+      );
+      await tester.tap(find.byKey(const ValueKey('calendar-scope-1'))); // 내 일정
+      await tester.pumpAndSettle();
+      // 목록 줄 앞 점 (한 주 목록은 아래로 길어 skipOffstage: false)
+      for (final key in ['event-dot-preorder', 'event-dot-resale', 'event-dot-bought', 'event-dot-pb']) {
+        expect(find.byKey(ValueKey(key), skipOffstage: false), findsOneWidget, reason: key);
+      }
+      // 달력 격자에도 네 뜻이 다 있다 (구매한 날은 적은 시각이 기기 시간대에 따라 26 · 27 로 갈려 날을 못 박지 않는다)
+      final card = find.byKey(const ValueKey('calendar-card'));
+      for (final key in ['day-dot-preorder', 'day-dot-resale', 'day-dot-bought', 'day-dot-pb']) {
+        expect(
+          find.descendant(of: card, matching: find.byKey(ValueKey(key))),
+          findsOneWidget,
+          reason: key,
+        );
+      }
+      // 격자 점 색도 목록과 같다 — 28 예약(보라) · 29 재판매(주황) · 30 PB 마감(빨강)
+      expect(dotsOn(tester, '28'), [Gp.reserve]);
+      expect(dotsOn(tester, '29'), [Gp.resale]);
+      expect(dotsOn(tester, '30'), [Gp.danger]);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('한 주 줄은 늘 위에: 목록을 밀어도 달력이 남는다 (전체 일정 · 내 일정 · 다시 접은 뒤 · 넓은 화면)', (tester) async {
+      final kits = [
+        for (var d = 1; d <= 31; d++)
+          _kit('d${d.toString().padLeft(2, '0')}', date: '2026-10-${d.toString().padLeft(2, '0')}'),
+      ];
+      final store = UserStore.memory();
+      for (final k in kits) {
+        store.setStatus(k.id, CollectStatus.wanted); // 내 일정에도 줄이 있게
+      }
+      await pumpCalendar(tester, store, kits, const []);
+      final card = find.byKey(const ValueKey('calendar-card'));
+      final list = find.byKey(const ValueKey('calendar-week-list'));
+      // 달력이 목록 밖(고정)에 있다 = 목록을 밀어도 화면 안에 그대로
+      Future<void> expectPinned(String path) async {
+        await tester.drag(list, const Offset(0, -1500));
+        await tester.pumpAndSettle();
+        expect(card, findsOneWidget, reason: path);
+        expect(tester.getRect(card).top, greaterThanOrEqualTo(0.0), reason: path);
+        expect(tester.getRect(card).bottom, lessThanOrEqualTo(844.0), reason: path);
+        expect(
+          find.descendant(of: card, matching: find.text('25')),
+          findsOneWidget,
+          reason: path,
+        );
+      }
+
+      await expectPinned('전체 일정');
+      await tester.tap(find.byKey(const ValueKey('calendar-scope-1')));
+      await tester.pumpAndSettle();
+      await expectPinned('내 일정');
+      // 한 달로 펴고 다시 한 주로 접은 뒤에도
+      await tester.tap(find.byKey(const ValueKey('month-handle')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('month-handle')));
+      await tester.pumpAndSettle();
+      await expectPinned('다시 접은 뒤');
+      // 넓은 화면(≥720dp): 달력은 왼쪽 칸에 고정, 오른쪽 목록만 밀린다
+      tester.view.physicalSize = const Size(900, 844);
+      await tester.pumpAndSettle();
+      expect(list, findsNothing, reason: '넓은 화면 갈래로 안 갔다 — 아래 밀기가 좁은 화면을 또 보고 있다');
+      await tester.dragFrom(const Offset(700, 600), const Offset(0, -1500));
+      await tester.pumpAndSettle();
+      expect(card, findsOneWidget);
+      expect(tester.getRect(card).top, greaterThanOrEqualTo(0.0));
+      expect(find.descendant(of: card, matching: find.text('25')), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 

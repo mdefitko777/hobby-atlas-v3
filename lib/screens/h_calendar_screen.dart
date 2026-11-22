@@ -4,7 +4,7 @@
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
 // │ H-1  │ ChannelHeader                      │ 아바타 줄 + 내 채널 바 (C-0 공용)       │ P04 · P06     │
 // │ H-2  │ ‹ 2026년 10월 › + 오늘              │ 한 주 · 한 달 넘기기 · 오늘              │ P03 · P07     │
-// │ H-3  │ 7열 달력 한 주 줄 + 날짜 아래 점 (뜻은 H-12) │ 파랑 = 내 좋아요 · 예약 상품 · 회색 = 그 밖의 일정 │ P01 · P06 │
+// │ H-3  │ 7열 달력 한 주 줄 (늘 고정) + 날짜 아래 점 (뜻은 H-12) │ 뜻마다 다른 색: 발매 · PB 마감 · 예약 도착 · 재판매 · 구매한 날 · 그 밖(회색) │ P01 · P06 │
 // │ H-3c │ "한 달 보기" 손잡이 (누르기 · 밀기)    │ 한 주 ↔ 한 달 격자 펴고 접기 (애니메이션, 기억) │ P03 · P07 │
 // │ H-9  │ UnderlineTab 전체 일정 · 내 일정 (H-11 줄) │ 좋아요 · 구매함 상품의 날짜만         │ P06           │
 // │ H-9b │ 내 일정: 예약 도착 · 재판매 · PB 마감 · 구매 │ 예약한 상품 도착 예정 · 좋아요 상품 재판매 (둘째 줄 상태) │ P01 · P06 │
@@ -18,13 +18,16 @@
 // │ H-6  │ "날짜 미정 · n월 중" 묶음            │ 날짜가 정해지지 않은 발매               │ P01 · P10     │
 // │ H-7  │ LayoutBuilder ≥720dp                │ 넓은 화면: 달력 왼쪽 · 목록 오른쪽       │ 적응형        │
 // │ H-8  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 이 달 일정 없음     │ P01 · P09     │
-// │ H-12 │ 서랍 › 사용법 (S-19, calendarHelp)   │ 아이콘 뜻 + 점 색                        │ P10 · P01     │
+// │ H-12 │ 서랍 › 사용법 (S-19, calendarHelp)   │ 아이콘 뜻 + 점 색 여섯                   │ P10 · P01     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 발매 줄 → D 상품 상세(쌓기). 예고 · 라이브 줄 → J 공식 예고 상세(쌓기).
 // 왜 이렇게: 발매 정보를 목록 한구석이 아니라 날짜로 보게. 처음엔 한 주만 (목록이 위로 — 2026-11-20 주인), 달 격자는 손잡이로.
-// 한 주일 때는 달력 · 종류 탭이 위에 남고 목록은 고른 날 · 오늘(이 주) · 그 주 첫날부터 (2026-11-20 주인: 한 주로 접었는데
-//   목록이 1일부터라 이번 주를 찾아 내려야 했다). 그 주의 날을 누르면 목록이 그날로 간다 — 지난 날은 위로 밀면 보인다.
-// 점 색은 둘뿐: 내 좋아요 · 예약 상품 = 파랑, 그 밖 = 회색 (예고 · 발매 · 재판매 … 색을 따로 외우지 않게, 종류는 줄 둘째 줄 글자로).
+// 한 주일 때는 달력 · 종류 탭이 위에 남고(목록만 밀린다 — 좁은 화면 · 넓은 화면 · 내 일정 모두) 목록은 고른 날 ·
+//   오늘(이 주) · 그 주 첫날부터 (2026-11-20 주인: 한 주로 접었는데 목록이 1일부터라 이번 주를 찾아 내려야 했다).
+//   그 주의 날을 누르면 목록이 그날로 간다 — 지난 날은 위로 밀면 보인다.
+// 점 색은 뜻마다 다르다 (2026-11-22 주인: 파랑 · 회색 둘로 줄였더니 구분이 없어졌다) — 발매(파랑) · PB 예약 마감(빨강) ·
+//   예약 도착(보라) · 재판매(주황) · 구매한 날(민트) · 그 밖(회색: 예고 · 라이브 · 내 것이 아닌 발매 · 구매함 상품의 발매). 달력 격자와 목록 줄 앞
+//   점이 같은 색이고, 한 날에 여러 뜻이면 셋까지 — 뜻 · 색은 [_Mark] 한 곳에서 (밤 팔레트에도 여섯 색이 다 있다).
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -57,6 +60,45 @@ DateTime get calendarToday {
 List<String> get _weekdays =>
     byLang(ko: const ['일', '월', '화', '수', '목', '금', '토'], zh: const ['日', '一', '二', '三', '四', '五', '六']);
 
+/// 일정 점의 뜻 — 색과 점 위젯 키가 여기서만 나온다 (달력 격자 · 목록 줄이 같은 색).
+/// 2026-11-22 주인: 파랑 · 회색 둘로 줄였더니 "색 구분이 다 없어졌다" 고 해서 뜻마다 다른 색으로 되돌렸다.
+/// 내 것이 아닌 보통 일정(발매 · 예고 · 라이브)은 [other] 회색 하나 — "내 것" 이 눈에 띄는 성질은 그대로 둔다.
+/// 한 날에 여러 뜻이 겹치면 이 적어 둔 순서로 셋까지 — 내 발매 · 급한 PB 마감이 앞, 회색이 맨 뒤.
+enum _Mark {
+  /// 좋아요 · 예약한 상품의 발매일
+  mine('mine'),
+
+  /// PB 예약 마감 — 지나면 못 산다. 같은 줄 D-n 꼬리표(urgent)와 같은 빨강
+  pbClose('pb'),
+
+  /// 예약한 상품 도착 예정
+  preorder('preorder'),
+
+  /// 좋아요한 상품의 재판매
+  resale('resale'),
+
+  /// 구매한 날
+  bought('bought'),
+
+  /// 그 밖 — 예고 · 라이브 · 비공식 소식 · 내 것이 아닌 발매 · 구매함 상품의 발매(이미 지난 일)
+  other('other');
+
+  const _Mark(this.key);
+
+  /// 점 위젯 키 꼬리 (테스트가 글자 대신 이것으로 찾는다)
+  final String key;
+
+  /// 밤 모드 때문에 `Gp` 색은 getter 다 — const 식에 넣지 않는다
+  Color get color => switch (this) {
+    _Mark.mine => Gp.accent,
+    _Mark.pbClose => Gp.danger,
+    _Mark.preorder => Gp.reserve,
+    _Mark.resale => Gp.resale,
+    _Mark.bought => Gp.own,
+    _Mark.other => Gp.muted,
+  };
+}
+
 /// 달력 한 줄의 일정 (발매 상품 또는 예고)
 class _Event {
   const _Event({
@@ -66,7 +108,7 @@ class _Event {
     this.kit,
     this.ann,
     this.day,
-    this.mine = false,
+    this.mark = _Mark.other,
     this.tag = '',
     this.due = 0,
     this.time = '',
@@ -78,8 +120,8 @@ class _Event {
   /// 예약 도착 줄: 결제 예정 (원)
   final int due;
 
-  /// 내 좋아요 · 예약 상품 → 파랑 점, 그 밖 → 회색 점 (달력 · 줄 같은 뜻)
-  final bool mine;
+  /// 점 색의 뜻 (달력 격자 · 목록 줄이 같다)
+  final _Mark mark;
 
   /// 상태 글 (비면 발매 / 예고 단계) — 한국어 그대로 비교에 쓰고, 보일 때 tr
   final String tag;
@@ -308,7 +350,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope, Sing
               sub: dataLabel(k.line),
               kit: k,
               day: dayOf(k.pbCloses),
-              mine: true,
+              mark: _Mark.pbClose,
               tag: 'PB 예약 마감',
             ),
           );
@@ -321,7 +363,8 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope, Sing
               sub: joinDot([dataLabel(k.line), kitPrice(k)]),
               kit: k,
               day: dayOf(k.date),
-              mine: st == CollectStatus.wanted,
+              // 구매함 상품의 발매일은 지난 일이라 그 밖(회색) — 좋아요 · 예약한 것만 파랑
+              mark: st == CollectStatus.wanted ? _Mark.mine : _Mark.other,
             ),
           );
         }
@@ -338,7 +381,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope, Sing
               ]),
               kit: k,
               day: dayOf(pre.arrival),
-              mine: true,
+              mark: _Mark.preorder,
               tag: '예약',
               due: pre.due,
             ),
@@ -354,7 +397,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope, Sing
                 sub: joinDot([tr(e.label), if (e.dateEstimated) tr('추정 날짜')]),
                 kit: k,
                 day: e.day,
-                mine: true,
+                mark: _Mark.resale,
                 tag: '재판매',
               ),
             );
@@ -369,6 +412,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope, Sing
               sub: kitMetaLine(k, channel: false), // 라인 · 작품 (같은 말 한 번 — 컬렉션 줄과 같게)
               kit: k,
               day: at.day,
+              mark: _Mark.bought,
               tag: '구매',
             ),
           );
@@ -389,7 +433,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope, Sing
             ]),
             kit: k,
             day: dayOf(k.date),
-            mine: marks.liked(k),
+            mark: marks.liked(k) ? _Mark.mine : _Mark.other,
           ),
       for (final a in d.announcements)
         // H-5b 라이브는 방송하는 날에 (시간 미정이면 announcementDay 가 비어 캘린더에 없다), 예약은 열리는 날에
@@ -441,10 +485,10 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope, Sing
                 return ErrorView(message: '${snap.error}', onRetry: () => setState(reloadScope));
               }
               final events = _events(snap.data!, Marks.of(context));
-              // H-3 날짜 점: 내 좋아요 · 예약 상품이 있으면 파랑, 다른 일정이 있으면 회색 (둘 다면 둘)
-              final dots = <int, Set<Color>>{};
+              // H-3 날짜 점: 그날에 있는 일정의 뜻마다 한 점 (뜻 · 색은 _Mark)
+              final dots = <int, Set<_Mark>>{};
               for (final e in events) {
-                if (e.day case final d?) (dots[d] ??= {}).add(e.mine ? Gp.accent : Gp.muted);
+                if (e.day case final d?) (dots[d] ??= {}).add(e.mark);
               }
               final calendar = GestureDetector(
                 // H-10 달력 위에서 좌우로 밀면 넘기기 (접혀 있으면 한 주, 펴져 있으면 한 달)
@@ -501,7 +545,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope, Sing
                           );
                         }
                         if (wide) {
-                          // H-7 넓은 화면
+                          // H-7 넓은 화면 — 달력은 왼쪽 칸에 고정, 오른쪽 목록만 밀린다 (2026-11-22 주인: 한 주 줄은 늘 위에)
                           return Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -517,7 +561,8 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope, Sing
                           );
                         }
                         if (!_monthOpen) {
-                          // H-4 한 주: 달력 · 종류 탭은 위에 남고 목록만 밀린다 (작은 화면에서 펴는 중이면 위쪽도 밀린다)
+                          // H-4 한 주: 달력 · 종류 탭은 위에 남고 목록만 밀린다 — 내 일정에서도 같다 (2026-11-22 주인).
+                          // 위쪽이 스크롤 통인 까닭은 손잡이로 펴는 중(아직 한 주 자리)에 달 격자가 커져도 넘치지 않게
                           return Column(
                             children: [
                               ConstrainedBox(
@@ -562,6 +607,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope, Sing
         children: [
           for (final (i, label) in const ['전체 일정', '내 일정'].indexed)
             UnderlineTab(
+              key: ValueKey('calendar-scope-$i'), // 테스트가 글자 대신 이것으로 (중국어 화면에서도)
               label: tr(label),
               selected: _mine == (i == 1),
               onTap: () => setState(() => _mine = i == 1), // STATE: 전체 일정 ↔ 내 일정
@@ -702,8 +748,8 @@ class _MonthCalendar extends StatelessWidget {
   final bool monthOpen;
   final int? selected;
 
-  /// 날짜 → 그날 점 색들 (글자 범례 없이 색으로, 뜻은 위 줄 ? 에 — calendarHelp)
-  final Map<int, Set<Color>> dots;
+  /// 날짜 → 그날 일정의 뜻들 (글자 범례 없이 색으로, 뜻은 서랍 › 사용법에 — calendarHelp)
+  final Map<int, Set<_Mark>> dots;
   final VoidCallback onPrev;
   final VoidCallback onNext;
   final VoidCallback onToday;
@@ -739,6 +785,8 @@ class _MonthCalendar extends StatelessWidget {
       ],
     );
     return Container(
+      // 테스트가 "목록을 밀어도 달력(한 주 줄)이 화면에 남는다" 를 이 키로 본다
+      key: const ValueKey('calendar-card'),
       margin: const EdgeInsets.fromLTRB(16, 4, 16, 6),
       padding: const EdgeInsets.fromLTRB(8, 6, 8, 0),
       decoration: BoxDecoration(
@@ -880,7 +928,7 @@ class _DayCell extends StatelessWidget {
   final int day;
   final bool today;
   final bool selected;
-  final Set<Color> dots;
+  final Set<_Mark> dots;
   final bool sunday;
   final VoidCallback onTap;
 
@@ -915,15 +963,15 @@ class _DayCell extends StatelessWidget {
             ),
             const SizedBox(height: 2),
             SizedBox(
-              // H-3 ● 내 좋아요 · 예약 (파랑) · ● 그 밖 (회색) — 파랑이 앞
+              // H-3 그날 일정의 뜻마다 한 점 — 32 폭에 들어가게 셋까지, _Mark 적어 둔 순서(내 것 · 급한 것이 앞 · 회색이 맨 뒤)
               height: 6,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  for (final (i, c) in [
-                    if (dots.contains(Gp.accent)) Gp.accent,
-                    if (dots.contains(Gp.muted)) Gp.muted,
-                  ].indexed) ...[if (i > 0) const SizedBox(width: 3), _Dot(color: c)],
+                  for (final (i, m) in _Mark.values.where(dots.contains).take(3).indexed) ...[
+                    if (i > 0) const SizedBox(width: 3),
+                    _Dot(key: ValueKey('day-dot-${m.key}'), color: m.color),
+                  ],
                 ],
               ),
             ),
@@ -979,10 +1027,7 @@ class _EventRow extends StatelessWidget {
       image: event.image,
       title: event.title,
       titleLines: 2,
-      titleLead: _Dot(
-        key: ValueKey(event.mine ? 'event-dot-mine' : 'event-dot-other'),
-        color: event.mine ? Gp.accent : Gp.muted,
-      ),
+      titleLead: _Dot(key: ValueKey('event-dot-${event.mark.key}'), color: event.mark.color),
       subtitle: joinDot([_status, event.sub]),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       onTap: () {
@@ -997,9 +1042,14 @@ class _EventRow extends StatelessWidget {
   }
 }
 
+/// H-12 점 색 뜻 (서랍 › 사용법의 "캘린더" 묶음 — s_app_shell.dart). 순서는 [_Mark] 와 같게
 List<HelpItem> get calendarHelp => [
   HelpItem(Icons.tune, tr('필터')),
   HelpItem(Icons.keyboard_arrow_down, tr('한 달 보기 (누르거나 아래로 밀기)')),
-  HelpItem.dot(Gp.accent, tr('좋아요 · 예약한 상품')),
-  HelpItem.dot(Gp.muted, tr('그 밖의 일정')), // 발매 · 예고 · 라이브 · 비공식 소식 · 구매한 날
+  HelpItem.dot(_Mark.mine.color, tr('좋아요 · 예약한 상품의 발매')),
+  HelpItem.dot(_Mark.pbClose.color, tr('PB 예약 마감 (내 일정)')),
+  HelpItem.dot(_Mark.preorder.color, tr('예약 도착 (내 일정)')),
+  HelpItem.dot(_Mark.resale.color, tr('재판매 (내 일정)')),
+  HelpItem.dot(_Mark.bought.color, tr('구매한 날 (내 일정)')),
+  HelpItem.dot(_Mark.other.color, tr('그 밖의 일정')), // 예고 · 라이브 · 비공식 소식 · 내 것이 아닌 발매 · 구매함 상품의 발매
 ];

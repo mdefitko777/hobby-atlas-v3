@@ -209,11 +209,11 @@ void main() {
     final open = tester.getSize(bar).height;
     expect(open, greaterThan(40));
     final avatarTop = tester.getTopLeft(find.byType(MyAvatar).first).dy;
-    await tester.drag(find.byType(RefreshIndicator).first, const Offset(0, -200));
+    await tester.drag(find.byType(RefreshIndicator).first, const Offset(0, -60));
     for (var i = 0; i < 4; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
-    expect(tester.getSize(bar).height, open); // 400 쯤 내려 읽어야 접는다 (test/header_collapse_test.dart)
+    expect(tester.getSize(bar).height, open); // 120 쯤 내려 읽어야 접는다 (test/header_collapse_test.dart)
     expect(tester.getTopLeft(find.byType(MyAvatar).first).dy, avatarTop);
     expect(find.byType(FilterButton).hitTestable(), findsWidgets); // 아이콘 줄은 목록 밖이라 그대로
     expect(find.byType(GpSearchBar), findsNothing); // 찾기는 위 줄 🔍
