@@ -10,7 +10,7 @@
 // │ H-9b │ 내 일정: 예약 도착 · 재판매 · PB 마감 · 구매 │ 예약한 상품 도착 예정 · 좋아요 상품 재판매 (둘째 줄 상태) │ P01 · P06 │
 // │ H-9c │ ListSummary (내 일정 목록 맨 끝)      │ 이번 달 결제 예정: 이 달 도착 예정인 미결제 예약 합 │ P01      │
 // │ H-11 │ ToolRow (CollapsingHeader step 2, 늘 위에) │ 전체 일정 · 내 일정 탭 + 「이어 씀 n ×」(CarryNote) + 상품 필터 (점 · 목록이 같이 좁혀짐) │ P04 · P07 │
-// │ H-3b │ 전체 · 발매 · 예고 밑줄 탭            │ 일정 종류 거르기                        │ P06 · P07     │
+// │ H-3b │ 전체 · 발매 · 예고 밑줄 탭            │ 일정 종류 거르기 (점 · 목록이 같이 좁혀진다) │ P06 · P07     │
 // │ H-4  │ 날짜 누르기 (다시 누르면 해제)        │ 한 주: 목록을 그날로 옮기기 · 한 달: 그날만 보기 / 한 달 전체 보기 │ P03 │
 // │ H-5  │ 날짜별 묶음 ThumbRow: 점(titleLead) · 제목 2줄 + "상태 · 출처/라인" + D-n │ 발매 · 예고 단계 (알약 없이 둘째 줄 옅은 글자) │ P01 · P02 │
 // │ H-5b │ 예고 줄 둘째 줄 "21:00 라이브 · 출처"  │ 공식 라이브 — 발표일이 아니라 방송하는 날에 (시간 미정은 없음) │ P01 │
@@ -250,6 +250,12 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope, Sing
 
   /// 예고는 필터 값(종류 · 가격 …)이 없다 — 필터를 고르면 상품 일정만
   bool get _showAnns => _find.filter.count == 0;
+
+  /// H-3b 종류 탭(전체 · 발매 · 예고)으로 거르기 — 달력 격자 점과 아래 목록이 이 한 규칙을 같이 쓴다
+  /// (2026-11-22 주인: 「예고」를 열어도 격자에 발매 점이 그대로 남아 있었다 — 거르기가 목록에만 걸려 있었다).
+  /// 내 일정에는 종류 탭이 없으므로([_kinds] 는 !_mine 일 때만) 거르지 않는다.
+  /// 날짜 거르기([_filterDay])는 여기 넣지 않는다 — 그날만 보는 것은 목록이고, 점은 그 달 전체를 보여 줘야 한다.
+  bool _inKind(_Event e) => _mine || _kind == 0 || (_kind == 1) == e.isRelease;
 
   Future<void> _openFilter(_CalData d) async {
     if (await _find.openFilter(context, d.kits)) setState(() {}); // STATE: 필터 → 달력 점 · 목록
@@ -512,8 +518,10 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope, Sing
               }
               final events = _events(snap.data!, Marks.of(context));
               // H-3 날짜 점: 그날에 있는 일정의 뜻 · 모양마다 한 점 (색은 _Mark, 속 빔은 _Event.hollow)
+              // 종류 탭을 따라간다 ([_inKind]) — 「예고」를 열면 격자에도 속 빈 동그라미만 남는다
               final dots = <int, Set<_DotSpec>>{};
               for (final e in events) {
+                if (!_inKind(e)) continue;
                 if (e.day case final d?) (dots[d] ??= {}).add(e.dot);
               }
               final calendar = GestureDetector(
@@ -664,16 +672,18 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope, Sing
     ]);
   }
 
-  /// H-3b 종류 거르기 (내 일정에서는 없음)
+  /// H-3b 종류 거르기 (내 일정에서는 없음). 점 · 목록을 같이 좁힌다 ([_inKind])
   Widget _kinds() => Padding(
     padding: const EdgeInsets.fromLTRB(8, 10, 8, 0),
     child: Row(
       children: [
         for (final (i, label) in ['전체', '발매', '예고'].indexed)
           UnderlineTab(
+            // 글자로 찾으면 줄의 "발매" · "예고" 상태 글자와 겹친다 — 테스트가 이 탭만 집게
+            key: ValueKey('kind-$i'),
             label: tr(label),
             selected: _kind == i,
-            onTap: () => setState(() => _kind = i), // STATE: 종류 → 목록
+            onTap: () => setState(() => _kind = i), // STATE: 종류 → 점 · 목록
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             // 한 화면에 밑줄은 채널 바 한 군데만 — 아래 줄은 굵기 · 색으로만 (2026-11-21 주인)
             fontSize: 13,
@@ -688,7 +698,7 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope, Sing
     final due = _dueSummary(all);
     final day = _filterDay;
     final inDay = day == null ? all : all.where((e) => e.day == day).toList();
-    final shown = _mine ? inDay : inDay.where((e) => _kind == 0 || (_kind == 1) == e.isRelease).toList();
+    final shown = inDay.where(_inKind).toList();
     _anchorPlaced = false;
     if (shown.isEmpty) {
       return [

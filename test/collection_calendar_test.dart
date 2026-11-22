@@ -256,6 +256,48 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    // 2026-11-22 주인: 격자 점도 종류 탭을 따라간다. 그때까지 거르기는 아래 목록에만 걸려 있어서,
+    // 「예고」를 열면 목록은 예고뿐인데 격자에는 발매 점이 그대로 남아 있었다 (H-3b `_inKind`).
+    testWidgets('격자 점이 전체 · 발매 · 예고 탭을 따라간다', (tester) async {
+      final liked = _kit('liked', date: '2026-10-27');
+      final store = UserStore.memory()..setStatus(liked.id, CollectStatus.wanted);
+      const ann = Announcement(
+        id: 'ann',
+        franchiseId: 'gundam',
+        title: 'ann',
+        status: '공식 발표',
+        date: '2026-10-29',
+        source: '',
+        image: '',
+        hero: false,
+      );
+      await pumpCalendar(tester, store, [liked], [ann]);
+
+      Future<void> openKind(int i) async {
+        // 종류 탭만 집는다 — 줄의 "발매" · "예고" 상태 글자와 겹치지 않게
+        final tab = find.byKey(ValueKey('kind-$i'));
+        expect(tab, findsOneWidget, reason: '종류 탭 $i 이 한 벌만 있어야 한다 (두 겹으로 그려지면 둘)');
+        await tester.tap(tab);
+        await tester.pump(const Duration(milliseconds: 400));
+      }
+
+      expect(dotsOn(tester, '27'), [(Gp.accent, false)]);
+      expect(dotsOn(tester, '29'), [(Gp.muted, true)]);
+
+      await openKind(2);
+      expect(dotsOn(tester, '27'), isEmpty, reason: '「예고」를 열었는데 격자에 발매 점이 남았다');
+      expect(dotsOn(tester, '29'), [(Gp.muted, true)]);
+
+      await openKind(1);
+      expect(dotsOn(tester, '27'), [(Gp.accent, false)]);
+      expect(dotsOn(tester, '29'), isEmpty, reason: '「발매」를 열었는데 격자에 예고 점이 남았다');
+
+      await openKind(0);
+      expect(dotsOn(tester, '27'), [(Gp.accent, false)]);
+      expect(dotsOn(tester, '29'), [(Gp.muted, true)]);
+      expect(tester.takeException(), isNull);
+    });
+
     // 모양 축이 생겨 같은 회색이 꽉 참 · 속 빔으로 갈린다 — 셋까지인 자리를 같은 색 둘로 낭비하지 않는다
     testWidgets('한 날에 겹치면 뜻마다 한 점씩 먼저 (내 발매 · 그 밖의 발매 · 예고 = 세 점)', (tester) async {
       final liked = _kit('liked', date: '2026-10-26');
