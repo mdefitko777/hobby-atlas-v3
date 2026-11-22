@@ -94,7 +94,7 @@ void main() {
     expect(find.text('줄 0'), findsOneWidget);
   });
 
-  testWidgets('위 줄 ? 는 없고 서랍 › 사용법 한 쪽에 위 줄 · 네 탭 · 도감 · 친구 · 내 정보 (캘린더 = 점 색까지)', (tester) async {
+  testWidgets('위 줄 ? 는 없고 서랍 › 사용법 한 쪽에 위 줄 · 네 탭 · 도감 · 친구 · 내 정보 (캘린더 = 점 색 · 모양까지)', (tester) async {
     await _show(tester, AppShell(loaders: fakeLoaders));
     expect(find.byTooltip('도움말'), findsNothing); // 2026-11-21 주인: 위 줄 · 탭 안의 ? 를 서랍으로
     await tester.tap(find.byType(MyAvatar).first);
@@ -105,18 +105,35 @@ void main() {
     expect(find.text('수집 레벨'), findsOneWidget); // 위 줄
     expect(find.text('격자 · 목록 (전체 보기 안)'), findsOneWidget); // 홈 묶음
     final list = find.descendant(of: find.byType(HelpPage), matching: find.byType(Scrollable)).first;
-    await tester.scrollUntilVisible(find.text('그 밖의 일정'), 300, scrollable: list);
-    // 점 색은 뜻마다 다르다 (2026-11-22 주인) — 발매 · PB 마감 · 예약 도착 · 재판매 · 구매한 날 · 그 밖
-    expect([
-      for (final h in calendarHelp) h.text,
-    ], containsAll(['좋아요 · 예약한 상품의 발매', 'PB 예약 마감 (내 일정)', '예약 도착 (내 일정)', '재판매 (내 일정)', '구매한 날 (내 일정)', '그 밖의 일정']));
+    await tester.scrollUntilVisible(find.text('그 밖의 발매'), 300, scrollable: list);
+    // 점 색은 뜻마다 다르다 (2026-11-22 주인) — 발매 · PB 마감 · 예약 도착 · 재판매 · 구매한 날 · 그 밖 + 모양 줄(예고)
+    expect(
+      [for (final h in calendarHelp) h.text],
+      containsAll([
+        '좋아요 · 예약한 상품의 발매',
+        'PB 예약 마감 (내 일정)',
+        '예약 도착 (내 일정)',
+        '재판매 (내 일정)',
+        '구매한 날 (내 일정)',
+        '그 밖의 발매',
+        '예고 · 라이브',
+      ]),
+    );
     expect(
       {
         for (final h in calendarHelp)
-          if (h.dot) h.color,
+          if (h.dot && !h.hollow) h.color,
       }.length,
       6,
     ); // 여섯 색이 서로 다르다
+    // 속 빈 동그라미 줄은 새 색 없이 모양만 다르다 (색은 그대로 — 2026-11-22 주인)
+    expect(
+      [
+        for (final h in calendarHelp)
+          if (h.dot && h.hollow) h.text,
+      ],
+      ['예고 · 라이브'],
+    );
     await tester.scrollUntilVisible(find.text('아이디로 친구 추가'), 300, scrollable: list);
     expect(tester.takeException(), isNull);
   });

@@ -1,5 +1,5 @@
 // 컬렉션 줄 부제(같은 말 한 번 · 건담은 도감 공식 작품 이름) · 목록 맨 끝 합계(₩ · ¥ 따로) ·
-// 캘린더 한 주 ↔ 한 달 손잡이 · 한 주 줄은 늘 위에 · 뜻마다 다른 점 색 (2026-11-22 주인)
+// 캘린더 한 주 ↔ 한 달 손잡이 · 한 주 줄은 늘 위에 · 뜻마다 다른 점 색 + 발매(꽉 참) · 예고(속 빔) 모양 (2026-11-22 주인)
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hobby_atlas/api.dart';
@@ -138,24 +138,27 @@ void main() {
     /// 뜻마다 다른 점 색 (lib/screens/h_calendar_screen.dart `_Mark`) — 밤 모드 때문에 getter 라 const 가 아니다
     Set<Color> markColors() => {Gp.accent, Gp.danger, Gp.reserve, Gp.resale, Gp.own, Gp.muted};
 
-    /// 달력 격자 [day] 칸 아래 점 색들 (고른 날 동그라미 · 오늘 테두리는 걸러진다)
-    Iterable<Color> dotsOn(WidgetTester tester, String day) => tester
+    /// 달력 격자 [day] 칸 아래 점들 — (색, 속 빔). 꽉 찬 점은 칠한 색, 속 빈 동그라미는 테두리 색으로 읽는다
+    /// (고른 날 옅은 동그라미 · 오늘 테두리는 `_Mark` 색이 아니라 걸러진다)
+    Iterable<(Color, bool)> dotsOn(WidgetTester tester, String day) => tester
         .widgetList<Container>(
           find.descendant(
             of: find.ancestor(of: find.text(day), matching: find.byType(GestureDetector)).first,
             matching: find.byType(Container),
           ),
         )
-        .map((c) => (c.decoration as BoxDecoration?)?.color)
-        .whereType<Color>()
-        .where(markColors().contains);
+        .map((c) => c.decoration as BoxDecoration?)
+        .map((d) => (d?.color ?? (d?.border as Border?)?.top.color, d?.color == null))
+        .where((e) => markColors().contains(e.$1))
+        .map((e) => (e.$1!, e.$2));
 
     // 점 색이 낮 값으로 얼어붙으면(`static final` 함정) 밤에 안 보인다 — 두 벌을 각각 읽어 견준다
     test('점 색 여섯은 낮 · 밤 두 벌에서 서로 다르고, 밤 바탕에서 보인다 (얼어붙음 없음)', () {
       addTearDown(() => GpMode.debugSet(false));
+      // 모양 줄(속 빈 동그라미 = 예고)은 색이 회색과 같은 한 벌이라 색 세는 데서 뺀다
       List<Color> dotColors() => [
         for (final h in calendarHelp)
-          if (h.dot) h.color!,
+          if (h.dot && !h.hollow) h.color!,
       ];
       double ratio(Color a, Color b) {
         final (x, y) = (a.computeLuminance(), b.computeLuminance());
@@ -174,6 +177,14 @@ void main() {
         // 글자가 아닌 그림 요소 기준 3:1 (WCAG AA)
         expect(ratio(c, Gp.bg), greaterThanOrEqualTo(3.0), reason: '$i 번째 점이 밤 바탕에서 안 보인다');
       }
+      // 모양 줄은 새 색을 들이지 않는다 — 속 빈 동그라미도 그 밖(회색) 한 벌 (2026-11-22 주인: 색은 그대로)
+      expect(
+        [
+          for (final h in calendarHelp)
+            if (h.dot && h.hollow) h.color,
+        ],
+        [Gp.muted],
+      );
     });
 
     testWidgets('처음은 오늘이 든 한 주 · ‹ › 는 주 · 손잡이를 밀어 내리면 한 달, 올리면 다시 한 주', (tester) async {
@@ -208,7 +219,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('점 색: 내 좋아요 상품 = 파랑, 그 밖(다른 발매 · 예고) = 회색 · 상태는 알약 없이 둘째 줄', (tester) async {
+    testWidgets('점: 내 좋아요 = 파랑 · 그 밖 = 회색, 예고는 같은 회색 속 빈 동그라미 · 상태는 알약 없이 둘째 줄', (tester) async {
       final liked = _kit('liked', date: '2026-10-27');
       final other = _kit('other', date: '2026-10-28');
       final store = UserStore.memory()..setStatus(liked.id, CollectStatus.wanted);
@@ -224,12 +235,65 @@ void main() {
       );
       await pumpCalendar(tester, store, [liked, other], [ann]);
       expect(find.byKey(const ValueKey('event-dot-mine'), skipOffstage: false), findsOneWidget);
-      expect(find.byKey(const ValueKey('event-dot-other'), skipOffstage: false), findsNWidgets(2));
+      // 발매 줄은 꽉 찬 점, 예고 줄은 같은 회색 속 빈 동그라미 (2026-11-22 주인: 색이 아니라 모양으로)
+      expect(find.byKey(const ValueKey('event-dot-other'), skipOffstage: false), findsOneWidget);
       final annRow = find.byKey(const ValueKey('event-ann'), skipOffstage: false);
-      expect(find.descendant(of: annRow, matching: find.byKey(const ValueKey('event-dot-other'))), findsOneWidget);
-      // 달력 칸 점: 27일 파랑, 28 · 29일 회색
-      expect(dotsOn(tester, '27'), [Gp.accent]);
-      expect(dotsOn(tester, '28'), [Gp.muted]);
+      expect(
+        find.descendant(of: annRow, matching: find.byKey(const ValueKey('event-dot-other-hollow'))),
+        findsOneWidget,
+      );
+      // 달력 칸 점: 27일 파랑(꽉 참), 28일 회색(꽉 참 — 내 것 아닌 발매), 29일 회색 속 빔(예고)
+      expect(dotsOn(tester, '27'), [(Gp.accent, false)]);
+      expect(dotsOn(tester, '28'), [(Gp.muted, false)]);
+      expect(dotsOn(tester, '29'), [(Gp.muted, true)]);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('calendar-card')),
+          matching: find.byKey(const ValueKey('day-dot-other-hollow')),
+        ),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    // 모양 축이 생겨 같은 회색이 꽉 참 · 속 빔으로 갈린다 — 셋까지인 자리를 같은 색 둘로 낭비하지 않는다
+    testWidgets('한 날에 겹치면 뜻마다 한 점씩 먼저 (내 발매 · 그 밖의 발매 · 예고 = 세 점)', (tester) async {
+      final liked = _kit('liked', date: '2026-10-26');
+      final other = _kit('other', date: '2026-10-26');
+      final store = UserStore.memory()..setStatus(liked.id, CollectStatus.wanted);
+      const ann = Announcement(
+        id: 'ann',
+        franchiseId: 'gundam',
+        title: 'ann',
+        status: '공식 발표',
+        date: '2026-10-26',
+        source: '',
+        image: '',
+        hero: false,
+      );
+      await pumpCalendar(tester, store, [liked, other], [ann]);
+      expect(dotsOn(tester, '26'), [(Gp.accent, false), (Gp.muted, false), (Gp.muted, true)]);
+      expect(tester.takeException(), isNull);
+    });
+
+    // 셋까지 자르는 자리를 같은 색이 두 번 쓰지 않는다 — 네 뜻이 한 날에 겹치면 앞의 세 뜻(_Mark 순서)만
+    testWidgets('한 날에 네 뜻이 겹치면 앞의 세 뜻만 (내 발매 · PB 마감 · 예약 도착, 재판매는 밀린다)', (tester) async {
+      final k = _kit('all', date: '2026-10-28', pbCloses: '2026-10-28');
+      final store = UserStore.memory()
+        ..setStatus(k.id, CollectStatus.wanted)
+        ..putPreorder(k.id, const Preorder(shop: '샵', arrival: '2026-10-28'));
+      await pumpCalendar(
+        tester,
+        store,
+        [k],
+        const [],
+        restocks: RestockIndex({
+          'all': [RestockEvent(kitId: 'all', date: '2026-10-28')],
+        }),
+      );
+      await tester.tap(find.byKey(const ValueKey('calendar-scope-1'))); // 내 일정
+      await tester.pumpAndSettle();
+      expect(dotsOn(tester, '28'), [(Gp.accent, false), (Gp.danger, false), (Gp.reserve, false)]);
       expect(tester.takeException(), isNull);
     });
 
@@ -274,10 +338,10 @@ void main() {
           reason: key,
         );
       }
-      // 격자 점 색도 목록과 같다 — 28 예약(보라) · 29 재판매(주황) · 30 PB 마감(빨강)
-      expect(dotsOn(tester, '28'), [Gp.reserve]);
-      expect(dotsOn(tester, '29'), [Gp.resale]);
-      expect(dotsOn(tester, '30'), [Gp.danger]);
+      // 격자 점 색도 목록과 같다 — 28 예약(보라) · 29 재판매(주황) · 30 PB 마감(빨강), 내 일정은 다 꽉 찬 점
+      expect(dotsOn(tester, '28'), [(Gp.reserve, false)]);
+      expect(dotsOn(tester, '29'), [(Gp.resale, false)]);
+      expect(dotsOn(tester, '30'), [(Gp.danger, false)]);
       expect(tester.takeException(), isNull);
     });
 

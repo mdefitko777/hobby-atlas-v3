@@ -13,21 +13,43 @@ import 'toolbar.dart';
 /// 도움말 시트 한 줄 — 아이콘(또는 색 점 · 작은 그림) + 짧은 글 한 줄. [HelpItem.group] 은 작은 회색 묶음 이름
 @immutable
 class HelpItem {
-  const HelpItem(IconData this.icon, this.text, {this.color}) : leading = null, dot = false, group = false;
+  const HelpItem(IconData this.icon, this.text, {this.color})
+    : leading = null,
+      dot = false,
+      hollow = false,
+      group = false;
 
-  /// 달력 점처럼 색 하나
-  const HelpItem.dot(Color this.color, this.text) : icon = null, leading = null, dot = true, group = false;
+  /// 달력 점처럼 색 하나. [hollow] = 속 빈 동그라미 (캘린더에서 예고 — 2026-11-22 주인)
+  const HelpItem.dot(Color this.color, this.text, {this.hollow = false})
+    : icon = null,
+      leading = null,
+      dot = true,
+      group = false;
 
   /// 아이콘이 아닌 것 (Lv 칩 · 도감 칸 · 글자 버튼)
-  const HelpItem.widget(Widget this.leading, this.text) : icon = null, color = null, dot = false, group = false;
+  const HelpItem.widget(Widget this.leading, this.text)
+    : icon = null,
+      color = null,
+      dot = false,
+      hollow = false,
+      group = false;
 
   /// 묶음 이름 (위 줄 · 이 탭 …)
-  const HelpItem.group(this.text) : icon = null, color = null, leading = null, dot = false, group = true;
+  const HelpItem.group(this.text)
+    : icon = null,
+      color = null,
+      leading = null,
+      dot = false,
+      hollow = false,
+      group = true;
 
   final IconData? icon;
   final Color? color;
   final Widget? leading;
   final bool dot;
+
+  /// 점 줄의 모양 — 속이 빈 동그라미
+  final bool hollow;
   final bool group;
   final String text;
 }
@@ -87,10 +109,15 @@ Widget _helpRow(HelpItem i) {
     );
   }
   final lead = switch (i) {
+    // 속 빈 동그라미는 테두리만 — 8 에 1.4 면 구멍이 보인다 (캘린더 점과 같은 규칙)
     HelpItem(dot: true) => Container(
       width: 8,
       height: 8,
-      decoration: BoxDecoration(shape: BoxShape.circle, color: i.color),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: i.hollow ? null : i.color,
+        border: i.hollow ? Border.all(color: i.color!, width: 1.4) : null,
+      ),
     ),
     HelpItem(:final IconData icon) => Icon(icon, size: Gp.iL, color: i.color ?? Gp.ink),
     _ => i.leading ?? const SizedBox.shrink(),

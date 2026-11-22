@@ -4,7 +4,7 @@
 // │ 번호 │ Flutter 위젯명                     │ 비즈니스 명칭(한글)                    │ 원칙(P번호)   │
 // │ H-1  │ ChannelHeader                      │ 아바타 줄 + 내 채널 바 (C-0 공용)       │ P04 · P06     │
 // │ H-2  │ ‹ 2026년 10월 › + 오늘              │ 한 주 · 한 달 넘기기 · 오늘              │ P03 · P07     │
-// │ H-3  │ 7열 달력 한 주 줄 (늘 고정) + 날짜 아래 점 (뜻은 H-12) │ 뜻마다 다른 색: 발매 · PB 마감 · 예약 도착 · 재판매 · 구매한 날 · 그 밖(회색) │ P01 · P06 │
+// │ H-3  │ 7열 달력 한 주 줄 (늘 고정) + 날짜 아래 점 (뜻은 H-12) │ 색 = 뜻(발매 · PB 마감 · 예약 도착 · 재판매 · 구매한 날 · 그 밖) · 모양 = 발매(꽉 찬 점) · 예고(속 빈 동그라미) │ P01 · P06 │
 // │ H-3c │ "한 달 보기" 손잡이 (누르기 · 밀기)    │ 한 주 ↔ 한 달 격자 펴고 접기 (애니메이션, 기억) │ P03 · P07 │
 // │ H-9  │ UnderlineTab 전체 일정 · 내 일정 (H-11 줄) │ 좋아요 · 구매함 상품의 날짜만         │ P06           │
 // │ H-9b │ 내 일정: 예약 도착 · 재판매 · PB 마감 · 구매 │ 예약한 상품 도착 예정 · 좋아요 상품 재판매 (둘째 줄 상태) │ P01 · P06 │
@@ -18,7 +18,7 @@
 // │ H-6  │ "날짜 미정 · n월 중" 묶음            │ 날짜가 정해지지 않은 발매               │ P01 · P10     │
 // │ H-7  │ LayoutBuilder ≥720dp                │ 넓은 화면: 달력 왼쪽 · 목록 오른쪽       │ 적응형        │
 // │ H-8  │ LoadingView / ErrorView / EmptyView │ 불러오는 중 · 오류 · 이 달 일정 없음     │ P01 · P09     │
-// │ H-12 │ 서랍 › 사용법 (S-19, calendarHelp)   │ 아이콘 뜻 + 점 색 여섯                   │ P10 · P01     │
+// │ H-12 │ 서랍 › 사용법 (S-19, calendarHelp)   │ 아이콘 뜻 + 점 색 여섯 + 속 빈 동그라미 = 예고 │ P10 · P01  │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 발매 줄 → D 상품 상세(쌓기). 예고 · 라이브 줄 → J 공식 예고 상세(쌓기).
 // 왜 이렇게: 발매 정보를 목록 한구석이 아니라 날짜로 보게. 처음엔 한 주만 (목록이 위로 — 2026-11-20 주인), 달 격자는 손잡이로.
@@ -28,6 +28,9 @@
 // 점 색은 뜻마다 다르다 (2026-11-22 주인: 파랑 · 회색 둘로 줄였더니 구분이 없어졌다) — 발매(파랑) · PB 예약 마감(빨강) ·
 //   예약 도착(보라) · 재판매(주황) · 구매한 날(민트) · 그 밖(회색: 예고 · 라이브 · 내 것이 아닌 발매 · 구매함 상품의 발매). 달력 격자와 목록 줄 앞
 //   점이 같은 색이고, 한 날에 여러 뜻이면 셋까지 — 뜻 · 색은 [_Mark] 한 곳에서 (밤 팔레트에도 여섯 색이 다 있다).
+// 발매와 예고는 색이 아니라 모양으로 가른다 (2026-11-22 주인: 기본 칸은 파랑 · 회색뿐이라 열면 회색만 보였다 —
+//   새 색을 들이지 않고 모양 하나를 더하는 쪽을 골랐다): 실제로 일어나는 일 = 꽉 찬 점, 아직 소식뿐인 것(예고 ·
+//   라이브 · 비공식) = 같은 색 속 빈 동그라미 ([_Event.hollow] · [_Dot]).
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -64,6 +67,7 @@ List<String> get _weekdays =>
 /// 2026-11-22 주인: 파랑 · 회색 둘로 줄였더니 "색 구분이 다 없어졌다" 고 해서 뜻마다 다른 색으로 되돌렸다.
 /// 내 것이 아닌 보통 일정(발매 · 예고 · 라이브)은 [other] 회색 하나 — "내 것" 이 눈에 띄는 성질은 그대로 둔다.
 /// 한 날에 여러 뜻이 겹치면 이 적어 둔 순서로 셋까지 — 내 발매 · 급한 PB 마감이 앞, 회색이 맨 뒤.
+/// 색은 오직 이 뜻만 (같은 뜻 = 같은 색) — 발매와 예고는 색이 아니라 모양으로 가른다 ([_Dot] · [_Event.hollow]).
 enum _Mark {
   /// 좋아요 · 예약한 상품의 발매일
   mine('mine'),
@@ -98,6 +102,22 @@ enum _Mark {
     _Mark.other => Gp.muted,
   };
 }
+
+/// 점 하나 = 뜻(색) + 모양(속이 비었나). 격자 한 칸은 이 짝을 모아 둔다
+typedef _DotSpec = (_Mark mark, bool hollow);
+
+/// 점 위젯 키 — 테스트가 글자 대신 뜻 · 모양으로 찾는다 (`day-dot-other-hollow` · `event-dot-mine`)
+ValueKey<String> _dotKey(String where, _DotSpec d) => ValueKey('$where-dot-${d.$1.key}${d.$2 ? '-hollow' : ''}');
+
+/// H-3 한 칸에 그릴 점 — [_Mark] 적어 둔 순서(내 발매 · 급한 것이 앞, 회색이 맨 뒤)로 셋까지,
+/// 한 뜻에 두 모양이 다 있으면 꽉 찬 쪽 먼저 (실제로 일어나는 일).
+/// 속이 빈 것은 예고뿐이고 예고는 늘 [_Mark.other](맨 뒤)라, 이 순서면 같은 회색 둘이 다른 뜻의 자리를
+/// 밀어내지 않는다 — 예고에도 색을 주게 되면 이 규칙을 다시 본다 (2026-11-22 주인: 색은 그대로, 모양으로 가르기).
+List<_DotSpec> _dayDots(Set<_DotSpec> dots) => [
+  for (final m in _Mark.values)
+    for (final hollow in const [false, true])
+      if (dots.contains((m, hollow))) (m, hollow),
+].take(3).toList();
 
 /// 달력 한 줄의 일정 (발매 상품 또는 예고)
 class _Event {
@@ -136,6 +156,12 @@ class _Event {
   final Announcement? ann;
 
   bool get isRelease => kit != null;
+
+  /// 점 모양 — 속 빈 동그라미 = 아직 소식뿐인 것(예고 · 라이브 · 비공식), 꽉 찬 점 = 실제로 일어나는 일
+  bool get hollow => ann != null;
+
+  /// 격자 점 하나로 줄인 값 (뜻 + 모양)
+  _DotSpec get dot => (mark, hollow);
 
   /// null = 날짜 미정(그 달 중)
   final int? day;
@@ -485,10 +511,10 @@ class _CalendarScreenState extends State<CalendarScreen> with ChannelScope, Sing
                 return ErrorView(message: '${snap.error}', onRetry: () => setState(reloadScope));
               }
               final events = _events(snap.data!, Marks.of(context));
-              // H-3 날짜 점: 그날에 있는 일정의 뜻마다 한 점 (뜻 · 색은 _Mark)
-              final dots = <int, Set<_Mark>>{};
+              // H-3 날짜 점: 그날에 있는 일정의 뜻 · 모양마다 한 점 (색은 _Mark, 속 빔은 _Event.hollow)
+              final dots = <int, Set<_DotSpec>>{};
               for (final e in events) {
-                if (e.day case final d?) (dots[d] ??= {}).add(e.mark);
+                if (e.day case final d?) (dots[d] ??= {}).add(e.dot);
               }
               final calendar = GestureDetector(
                 // H-10 달력 위에서 좌우로 밀면 넘기기 (접혀 있으면 한 주, 펴져 있으면 한 달)
@@ -748,8 +774,8 @@ class _MonthCalendar extends StatelessWidget {
   final bool monthOpen;
   final int? selected;
 
-  /// 날짜 → 그날 일정의 뜻들 (글자 범례 없이 색으로, 뜻은 서랍 › 사용법에 — calendarHelp)
-  final Map<int, Set<_Mark>> dots;
+  /// 날짜 → 그날 일정의 뜻 · 모양들 (글자 범례 없이, 뜻은 서랍 › 사용법에 — calendarHelp)
+  final Map<int, Set<_DotSpec>> dots;
   final VoidCallback onPrev;
   final VoidCallback onNext;
   final VoidCallback onToday;
@@ -903,15 +929,35 @@ class _MonthCalendar extends StatelessWidget {
   }
 }
 
+/// 일정 점 — 꽉 찬 점 = 실제로 일어나는 일(발매 · 예약 도착 · 재판매 · 구매 · PB 마감),
+/// 속 빈 동그라미 = 아직 소식뿐인 것(예고 · 라이브 · 비공식). 색은 [_Mark] 그대로다
+/// (2026-11-22 주인: 새 색을 들이지 않고 모양으로 발매 · 예고를 가른다).
 class _Dot extends StatelessWidget {
-  const _Dot({super.key, required this.color});
+  const _Dot({super.key, required this.color, this.hollow = false});
+
+  /// 두 모양이 같은 자리를 쓴다 — 목록 줄 · 격자 점 줄이 모양에 따라 흔들리지 않게
+  static const double box = 7;
+
   final Color color;
+  final bool hollow;
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: 6,
-    height: 6,
-    decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+  Widget build(BuildContext context) => SizedBox(
+    width: box,
+    height: box,
+    child: Center(
+      // 6 에 테두리 1.4 면 구멍이 3.2 밖에 안 남아 속이 빈 줄 모른다 → 속 빈 쪽만 7 (구멍 4.2),
+      // 꽉 찬 점은 전과 같은 6 (칠한 넓이가 24 : 28 로 비슷해 한 줄에 섞여도 무게가 고르다)
+      child: Container(
+        width: hollow ? box : 6,
+        height: hollow ? box : 6,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: hollow ? null : color,
+          border: hollow ? Border.all(color: color, width: 1.4) : null,
+        ),
+      ),
+    ),
   );
 }
 
@@ -928,7 +974,7 @@ class _DayCell extends StatelessWidget {
   final int day;
   final bool today;
   final bool selected;
-  final Set<_Mark> dots;
+  final Set<_DotSpec> dots;
   final bool sunday;
   final VoidCallback onTap;
 
@@ -963,14 +1009,14 @@ class _DayCell extends StatelessWidget {
             ),
             const SizedBox(height: 2),
             SizedBox(
-              // H-3 그날 일정의 뜻마다 한 점 — 32 폭에 들어가게 셋까지, _Mark 적어 둔 순서(내 것 · 급한 것이 앞 · 회색이 맨 뒤)
-              height: 6,
+              // H-3 그날 일정마다 한 점 — 32 폭에 들어가게 셋까지 (고르는 규칙은 _dayDots)
+              height: _Dot.box,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  for (final (i, m) in _Mark.values.where(dots.contains).take(3).indexed) ...[
+                  for (final (i, d) in _dayDots(dots).indexed) ...[
                     if (i > 0) const SizedBox(width: 3),
-                    _Dot(key: ValueKey('day-dot-${m.key}'), color: m.color),
+                    _Dot(key: _dotKey('day', d), color: d.$1.color, hollow: d.$2),
                   ],
                 ],
               ),
@@ -1027,7 +1073,7 @@ class _EventRow extends StatelessWidget {
       image: event.image,
       title: event.title,
       titleLines: 2,
-      titleLead: _Dot(key: ValueKey('event-dot-${event.mark.key}'), color: event.mark.color),
+      titleLead: _Dot(key: _dotKey('event', event.dot), color: event.mark.color, hollow: event.hollow),
       subtitle: joinDot([_status, event.sub]),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       onTap: () {
@@ -1042,7 +1088,8 @@ class _EventRow extends StatelessWidget {
   }
 }
 
-/// H-12 점 색 뜻 (서랍 › 사용법의 "캘린더" 묶음 — s_app_shell.dart). 순서는 [_Mark] 와 같게
+/// H-12 점 뜻 (서랍 › 사용법의 "캘린더" 묶음 — s_app_shell.dart). 순서는 [_Mark] 와 같게.
+/// 마지막 두 줄이 모양 뜻도 보여 준다 — 같은 회색인데 꽉 찬 점 = 발매, 속 빈 동그라미 = 예고 (2026-11-22 주인)
 List<HelpItem> get calendarHelp => [
   HelpItem(Icons.tune, tr('필터')),
   HelpItem(Icons.keyboard_arrow_down, tr('한 달 보기 (누르거나 아래로 밀기)')),
@@ -1051,5 +1098,6 @@ List<HelpItem> get calendarHelp => [
   HelpItem.dot(_Mark.preorder.color, tr('예약 도착 (내 일정)')),
   HelpItem.dot(_Mark.resale.color, tr('재판매 (내 일정)')),
   HelpItem.dot(_Mark.bought.color, tr('구매한 날 (내 일정)')),
-  HelpItem.dot(_Mark.other.color, tr('그 밖의 일정')), // 예고 · 라이브 · 비공식 소식 · 내 것이 아닌 발매 · 구매함 상품의 발매
+  HelpItem.dot(_Mark.other.color, tr('그 밖의 발매')), // 내 것이 아닌 발매 · 구매함 상품의 발매(이미 지난 일)
+  HelpItem.dot(_Mark.other.color, tr('예고 · 라이브'), hollow: true), // 비공식 소식도 이 모양
 ];
