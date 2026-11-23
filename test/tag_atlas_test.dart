@@ -1,6 +1,8 @@
 // 메자스타 · 프렌다 태그 도감 — 데이터 매핑(작은 fixtures) · 검색 · 좋아요 · 구매함 저장 · 화면 · 컬렉션
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -31,13 +33,21 @@ final _files = {
 
 TagRegion _region(String id) => mezastarRegions.firstWhere((r) => r.id == id);
 
-/// 화면 테스트용: 인터넷 그림 주소를 지운다 (테스트에서 네트워크 그림을 받지 않게)
-Object? _noImages(Object? v) => switch (v) {
+/// 화면 테스트용: 인터넷 그림 주소를 지운다 (테스트에서 네트워크 그림을 받지 않게). 태그 리스트(checklist)도 —
+/// [lists] 면 지우지 않고 없는 앱 그림 경로로 바꾼다 (자리표시로 그려진다)
+Object? _noImages(Object? v, {bool lists = false}) => switch (v) {
   final Map<String, Object?> m => {
     for (final e in m.entries)
-      if (!e.key.startsWith('img') && e.key != 'dex') e.key: _noImages(e.value),
+      if (e.key.startsWith('checklist') ? lists : !e.key.startsWith('img') && e.key != 'dex')
+        e.key: e.key.startsWith('checklist') ? _localList(e.value) : _noImages(e.value, lists: lists),
   },
-  final List<Object?> l => [for (final x in l) _noImages(x)],
+  final List<Object?> l => [for (final x in l) _noImages(x, lists: lists)],
+  _ => v,
+};
+
+Object? _localList(Object? v) => switch (v) {
+  final String s => 'assets/test/${s.split('/').last}',
+  final List<Object?> l => [for (final x in l) _localList(x)],
   _ => v,
 };
 
@@ -47,8 +57,8 @@ String _friendaHtml(String section, List<(String no, String file)> items) =>
     '${items.map((i) => '<li class="grid__item is-vertical"><a href="#" data-img="img/${i.$2}.webp"><img src="img/${i.$2}_thumb.webp" alt=""></a><p>${i.$1}</p><p>이름</p></li>').join()}'
     '</ul></section></body></html>';
 
-Future<void> _pump(WidgetTester tester, Widget home, UserStore store) async {
-  tester.view.physicalSize = const Size(390, 844);
+Future<void> _pump(WidgetTester tester, Widget home, UserStore store, {Size size = const Size(390, 844)}) async {
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
@@ -159,6 +169,35 @@ void main() {
       expect(c.image, contains('official-artwork/1007.png'));
       expect(f.cards.last.number, 'P-130');
     });
+  });
+
+  test('태그 리스트: 그 지역 release 것만 · 한국 한 장 · 홍콩 앞 · 뒤 · 대만 PDF · 저장 파일 이름', () {
+    TagSet set(String region, String id) => parseMezastar(_files[_region(region).file], _region(region)).set(id)!;
+    final kr = set('KR', 'mz-intl:stardust-1');
+    expect(kr.listImages, ['https://pokemontagstar.co.kr/data/bbsData/17760382731.jpg']);
+    expect(kr.listPdf, '');
+    final hk = set('HK', 'mz-intl:stardust-3');
+    expect(hk.listImages, hasLength(2)); // checklist_imgs 앞 · 뒤 (checklist 는 그 첫 장이라 겹치지 않는다)
+    expect(hk.listImages.last, endsWith('sd3_checklist_back.jpg'));
+    // 홍콩 1탄은 리스트가 없다 — 한국 · 대만 것을 빌려 오지 않는다 (번호 · 태그가 다름)
+    expect(set('HK', 'mz-intl:stardust-1').hasList, isFalse);
+    final tw = set('TW', 'mz-intl:stardust-1');
+    expect(tw.listImages, isEmpty);
+    expect(tw.listPdf, endsWith('.pdf'));
+    expect(parseMezastar(_files[mezastarJpFile], _region('JP')).sets.where((s) => s.hasList), isEmpty);
+    expect(parseFrienda(_files[friendaFile]).sets.where((s) => s.hasList), isEmpty);
+
+    expect(tagListFiles(kr, '스타더스트 1탄 태그리스트'), [
+      (
+        url: 'https://pokemontagstar.co.kr/data/bbsData/17760382731.jpg',
+        name: '스타더스트 1탄 태그리스트.jpg',
+        mime: 'image/jpeg',
+      ),
+    ]);
+    expect(tagListFiles(hk, 'A/B: "3"? 태그리스트').map((f) => f.name), ['A B 3 태그리스트 1.jpg', 'A B 3 태그리스트 2.jpg']);
+    final pdf = tagListFiles(tw, '1탄 태그리스트').single;
+    expect((pdf.name, pdf.mime), ('1탄 태그리스트.pdf', 'application/pdf'));
+    expect(tagListFiles(const TagSet(id: 'x', name: 'x'), 'x'), isEmpty);
   });
 
   test('서포트 포켓몬 티켓 — 지금 · 이전 묶음, 한국판에만', () {
@@ -411,6 +450,115 @@ void main() {
       expect(find.text('2 / 2'), findsOneWidget);
       expect([store.tagOwned, store.tagLiked], [isEmpty, isEmpty]); // 보기만, 좋아요 · 구매함은 그대로
       expect(tester.takeException(), isNull);
+    });
+
+    group('태그 리스트', () {
+      final download = TagAtlas.download;
+      setUp(() => TagAtlas.source = (file) async => _noImages(_files[file], lists: true));
+      tearDown(() => TagAtlas.download = download);
+      final preview = find.byKey(const ValueKey('tag-list-preview'));
+      final save = find.byKey(const ValueKey('tag-list-save'));
+      final pdf = find.byKey(const ValueKey('tag-list-pdf'));
+      Finder previewImages() => find.descendant(of: preview, matching: find.byType(AppImage));
+
+      testWidgets('탄 하나를 고르면 머리 아래 미리보기 · 오른쪽 ⬇ — 전체 · 일본판엔 없고 · 대만은 PDF 줄', (tester) async {
+        await _pump(tester, const TagAtlasScreen(game: TagGame.mezastar, region: 'KR'), UserStore.memory());
+        expect(previewImages(), findsOneWidget); // 한국 = 세로로 긴 한 장
+        expect(save, findsOneWidget);
+        expect(pdf, findsNothing);
+
+        await tester.tap(find.text('전체'));
+        await _settle(tester);
+        expect(preview, findsNothing);
+        expect(save, findsNothing);
+
+        await tester.tap(find.text('HK'));
+        await _settle(tester);
+        expect(previewImages(), findsNWidgets(2)); // 앞 · 뒤 나란히
+        expect(save, findsOneWidget);
+
+        await tester.tap(find.text('TW'));
+        await _settle(tester);
+        expect(preview, findsNothing);
+        expect(pdf, findsOneWidget);
+        expect(save, findsOneWidget);
+
+        await tester.tap(find.text('JP'));
+        await _settle(tester);
+        expect(preview, findsNothing);
+        expect(pdf, findsNothing);
+        expect(save, findsNothing);
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('미리보기 누르기 = 크게 보기 (앞 · 뒤 이어서 · ⬇) · 받는 동안 잠금 · 못 받으면 토스트', (tester) async {
+        final asked = <String>[];
+        final gate = Completer<Uint8List>();
+        TagAtlas.download = (url) {
+          asked.add(url);
+          return gate.future;
+        };
+        await _pump(tester, const TagAtlasScreen(game: TagGame.mezastar, region: 'HK'), UserStore.memory());
+        await tester.tap(previewImages().first);
+        await _settle(tester);
+        final viewer = find.byKey(const ValueKey('tag-list-viewer'));
+        expect(viewer, findsOneWidget);
+        expect(find.descendant(of: viewer, matching: find.byType(AppImage)), findsNWidgets(2));
+        expect(save, findsOneWidget); // 크게 보기 위 줄에도 ⬇ (뒤 화면 것은 가려져 있다)
+
+        await tester.tap(save);
+        await tester.pump();
+        expect(asked, [endsWith('sd3_checklist_front.jpg')]);
+        expect(tester.widget<IconButton>(save).onPressed, isNull); // 받는 동안 잠금
+        expect(find.descendant(of: save, matching: find.byType(CircularProgressIndicator)), findsOneWidget);
+        await tester.tap(save, warnIfMissed: false);
+        await tester.pump();
+        expect(asked, hasLength(1));
+
+        gate.completeError(StateError('offline'));
+        await _settle(tester);
+        expect(find.byType(SnackBar), findsOneWidget);
+        expect(tester.widget<IconButton>(save).onPressed, isNotNull);
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('받는 중에 다른 탄으로 옮기면 그 탄 ⬇ 는 잠기지 않고 앞 탄 토스트도 안 뜬다', (tester) async {
+        final gate = Completer<Uint8List>();
+        TagAtlas.download = (_) => gate.future;
+        await _pump(tester, const TagAtlasScreen(game: TagGame.mezastar, region: 'TW'), UserStore.memory());
+        await tester.tap(save);
+        await tester.pump();
+        expect(tester.widget<IconButton>(save).onPressed, isNull);
+
+        final other = parseMezastar(_files[_region('TW').file], _region('TW')).set('mz-intl:stardust-1')!.name;
+        await tester.tap(find.text(other).first);
+        await _settle(tester);
+        expect(tester.widget<IconButton>(save).onPressed, isNotNull); // 탄마다 따로
+        expect(find.descendant(of: save, matching: find.byType(CircularProgressIndicator)), findsNothing);
+
+        gate.completeError(StateError('offline'));
+        await _settle(tester);
+        expect(find.byType(SnackBar), findsNothing);
+        expect(tester.takeException(), isNull);
+      });
+
+      for (final region in ['KR', 'HK', 'TW']) {
+        testWidgets('폭 320: $region 태그 리스트가 넘치지 않는다', (tester) async {
+          await _pump(
+            tester,
+            TagAtlasScreen(game: TagGame.mezastar, region: region),
+            UserStore.memory(),
+            size: const Size(320, 568),
+          );
+          expect(save, findsOneWidget);
+          if (region != 'TW') {
+            await tester.tap(previewImages().first);
+            await _settle(tester);
+            expect(find.byKey(const ValueKey('tag-list-viewer')), findsOneWidget);
+          }
+          expect(tester.takeException(), isNull);
+        });
+      }
     });
 
     testWidgets('프렌다: 탄을 열면 그 탄의 공식 페이지 한 장만 읽어 칸 · 크게 보기에 그림', (tester) async {

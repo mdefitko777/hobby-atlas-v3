@@ -94,7 +94,12 @@
      "url": "https://world.pokemonmezastar.com/hk/tag/33114/",
      "news": "https://world.pokemonmezastar.com/hk/news/article/33268/",
      "legacy_date": "2025-11-13",
-     "legacy_news": "https://world.pokemonmezastar.com/hk/news/article/33911/"
+     "legacy_news": "https://world.pokemonmezastar.com/hk/news/article/33911/",
+     "checklist": "https://world.pokemonmezastar.com/hk/files/sd3_checklist_front.jpg",
+     "checklist_imgs": [
+      "https://world.pokemonmezastar.com/hk/files/sd3_checklist_front.jpg",
+      "https://world.pokemonmezastar.com/hk/files/sd3_checklist_back.jpg"
+     ]
     }
    ],
    "counts": {

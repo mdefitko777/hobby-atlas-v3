@@ -6,6 +6,10 @@
 // │ R-2  │ SquareSegments (KR · JP · HK · TW)  │ 메자스타 지역 고르기                     │ P04           │
 // │ R-3  │ ToolRow [검색창][필터][격자 · 목록]   │ 이 도감에서 찾기 (다른 탭과 같은 줄)      │ P04 · P07     │
 // │ R-4  │ 가로 탄 칸 (이름만)                  │ 탄 · 시리즈 고르기 (수 · 진행 막대 없이 — 진행은 칸 표시로) │ P06 │
+// │ R-4a │ 탄 머리 오른쪽 ⬇ (_TagListSaveButton) │ 태그 리스트 저장 (공식 그림 · PDF 를 받아 기기에) │ P07 · P09 │
+// │ R-4b │ _TagListPreview (그림 맨 위만)       │ 고른 탄의 태그 리스트 미리보기 (아래로 흐려짐) │ P02 · P06 │
+// │ R-4c │ _TagListViewer (검은 바탕)           │ 태그 리스트 크게 보기: 세로로 내려 읽기 · 두 손가락 확대 · ⬇ │ P02 · P08 │
+// │ R-4d │ 대만 PDF 줄 (문서 아이콘 · ›)         │ 태그 리스트 PDF 를 앱 밖에서 열기        │ P09           │
 // │ R-5  │ TagCell 격자 (TierCell, 늘 컬러)     │ 아직 = 그림 그대로 · ♡ = 좋아요 · 리본 + 옅은 민트 테두리 = 구매함 │ P01 · P04 │
 // │ R-5b │ 칸 누르기 → 태그 상세 (R-6)           │ 상품 칸과 같음: 누르면 상세              │ P07 · P08     │
 // │ R-5c │ FriendaImages (기기에서 공식 페이지)  │ 프렌다 픽 그림: 탄을 열면 받아 7일 보관     │ P02 · P01     │
@@ -22,8 +26,11 @@
 // │ R-11 │ TagCollectionSection (F 컬렉션 안)  │ 좋아요 · 구매함 탭 끝의 "태그 · 픽" 줄    │ P06 · P01     │
 // └──────────────────────────────────────────────────────────────────────────────────┘
 // 전환: 도감 카드 → R(쌓기) → 태그 시트(덮기). 검색 결과 · 컬렉션 줄 → 태그 시트(덮기) → R(쌓기).
+// 태그 리스트 미리보기 → 크게 보기(전체 화면 덮기).
 // 구매함 = UserStore.tagOwned · 좋아요 = tagLiked (기기 · 계정 기기 기록, payload 밖). 키 = Gunpula atlas 의 인쇄 id · 픽 id.
 // 한 태그에 상태 하나 (상품과 같음): 구매함을 켜면 좋아요에서 빠지고, 좋아요를 켜면 구매함에서 빠진다.
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -510,8 +517,26 @@ class _TagAtlasScreenState extends State<TagAtlasScreen> {
               if (s != null && s.local != s.name && _readable(s.local)) s.local,
             ]),
             padding: const EdgeInsets.fromLTRB(16, 14, 4, 8),
+            // 탄마다 따로 — 다른 탄으로 옮겨도 앞 탄을 받는 중인 잠금 · 토스트가 따라오지 않게
+            trailing: s != null && s.hasList
+                ? _TagListSaveButton(key: ValueKey('tag-list-save-${s.id}'), set: s)
+                : null, // R-4a
           ),
         ),
+        if (s != null && s.listImages.isNotEmpty)
+          SliverToBoxAdapter(child: _TagListPreview(set: s)) // R-4b
+        else if (s != null && s.listPdf.isNotEmpty)
+          SliverToBoxAdapter(
+            child: ListTile(
+              // R-4d 대만은 PDF 만 내서 그림 대신 줄 하나 (앱 밖 PDF 보기로)
+              key: const ValueKey('tag-list-pdf'),
+              dense: true,
+              leading: Icon(Icons.description_outlined, size: Gp.iM, color: Gp.muted),
+              title: Text(tr('태그 리스트'), style: const TextStyle(fontSize: Gp.t14)),
+              trailing: Icon(Icons.chevron_right, color: Gp.muted),
+              onTap: () => _openOutside(context, s.listPdf),
+            ),
+          ),
         if (cards.isEmpty)
           SliverToBoxAdapter(
             child: EmptyView(
@@ -783,10 +808,7 @@ class _TagSheet extends StatelessWidget {
                     // R-6c
                     tooltip: tr('공식 페이지'),
                     visualDensity: VisualDensity.compact,
-                    onPressed: () async {
-                      final ok = await launchUrl(Uri.parse(card.url), mode: LaunchMode.externalApplication);
-                      if (!ok && context.mounted) showToast(context, tr('열지 못했어요'));
-                    },
+                    onPressed: () => _openOutside(context, card.url),
                     icon: Icon(Icons.open_in_new, size: Gp.iM, color: Gp.muted),
                   ),
               ],
@@ -856,6 +878,195 @@ class _TagSheet extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// 앱 밖(브라우저 · PDF 보기)으로 열기
+Future<void> _openOutside(BuildContext context, String url) async {
+  final ok = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+  if (!ok && context.mounted) showToast(context, tr('열지 못했어요'));
+}
+
+// ── R-4a~d 태그 리스트 ───────────────────────────────────────────────────────────────
+// 메모리: 한국 리스트는 4584×15563 px 한 장이라 원본으로 풀면 약 285 MB(RGBA)다. 그래서 늘 줄여서 푼다 —
+// 미리보기는 폭 1024 px · 크게 보기는 폭 1408 px 까지 (AppImage 가 64 px 단위로 올려 풀어도 1080 · 1440 을 넘지 않게).
+// 원본은 저장할 때 바이트로만 받고 풀지 않는다.
+
+/// [child] 의 AppImage 가 폭 [maxPx](물리 px)보다 크게 풀지 않게 — AppImage 는 칸 폭 × 화면 배율로 풀어서, 배율을 낮춰 준다
+Widget _decodeCap(double maxPx, Widget child) => LayoutBuilder(
+  builder: (context, box) {
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    if (!box.maxWidth.isFinite || box.maxWidth * dpr <= maxPx) return child;
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(devicePixelRatio: maxPx / box.maxWidth),
+      child: child,
+    );
+  },
+);
+
+/// R-4b 고른 탄의 태그 리스트 — 그림 맨 위만 보이고 아래로 흐려져 더 있다는 것을 보인다. 홍콩은 앞 · 뒤 나란히. 누르면 R-4c
+class _TagListPreview extends StatelessWidget {
+  const _TagListPreview({required this.set});
+  final TagSet set;
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(Gp.radius);
+    Widget tile(String src) => GestureDetector(
+      onTap: () => openTagList(context, set),
+      child: Container(
+        height: 200,
+        foregroundDecoration: BoxDecoration(
+          borderRadius: radius,
+          border: Border.all(color: Gp.line, width: 0.5),
+        ),
+        child: ClipRRect(
+          borderRadius: radius,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              ColoredBox(color: Gp.soft),
+              // 세로로 긴 그림이라 폭에 맞춰 그리고 맨 위만 남긴다 (아래는 잘림)
+              OverflowBox(
+                alignment: Alignment.topCenter,
+                minHeight: 0,
+                maxHeight: double.infinity,
+                child: _decodeCap(1024, AppImage(src, fit: BoxFit.fitWidth)),
+              ),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: 56,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Gp.bg.withValues(alpha: 0), Gp.bg],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    return Padding(
+      key: const ValueKey('tag-list-preview'),
+      padding: const EdgeInsets.fromLTRB(Gp.gutter, 0, Gp.gutter, 12),
+      child: Row(
+        children: [
+          for (final (i, src) in set.listImages.indexed) ...[
+            if (i > 0) const SizedBox(width: 8),
+            Expanded(child: tile(src)),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// R-4c 태그 리스트 크게 보기 (상품 · 태그 그림 크게 보기와 같은 검은 바탕)
+Future<void> openTagList(BuildContext context, TagSet set) => Navigator.of(
+  context,
+).push(MaterialPageRoute<void>(fullscreenDialog: true, builder: (_) => _TagListViewer(set: set)));
+
+/// 세로로 긴 그림을 폭에 맞춰 위에서부터 — 손가락으로 내려 읽고 두 손가락으로 5배까지. 홍콩은 앞 · 뒤를 이어서.
+/// 옆으로 넘기는 openImageViewer 는 원본 크기로 풀어서(fullSize) 이 그림에는 쓰지 않는다
+class _TagListViewer extends StatelessWidget {
+  const _TagListViewer({required this.set});
+  final TagSet set;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: Colors.black,
+    appBar: AppBar(
+      backgroundColor: Colors.black,
+      foregroundColor: Colors.white,
+      title: Text(set.name, style: const TextStyle(fontSize: Gp.t14)),
+      actions: [
+        _TagListSaveButton(set: set, color: Colors.white),
+        const SizedBox(width: 6),
+      ],
+    ),
+    body: LayoutBuilder(
+      builder: (context, box) => InteractiveViewer(
+        key: const ValueKey('tag-list-viewer'),
+        constrained: false, // 화면 높이에 가두지 않고 그림 높이만큼 내려 읽게
+        maxScale: 5,
+        child: SizedBox(
+          width: box.maxWidth,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final (i, src) in set.listImages.indexed) ...[
+                if (i > 0) const SizedBox(height: 12),
+                _decodeCap(1408, AppImage(src, fit: BoxFit.fitWidth, placeholder: set.name)),
+              ],
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+/// R-4a 태그 리스트 저장 — 공식 파일을 받아 저장 창으로 (공유 카드 저장과 같은 길). 홍콩은 두 장을 차례로.
+/// 받는 동안은 도는 표시 · 다시 눌러도 무시
+class _TagListSaveButton extends StatefulWidget {
+  const _TagListSaveButton({super.key, required this.set, this.color});
+  final TagSet set;
+  final Color? color;
+
+  @override
+  State<_TagListSaveButton> createState() => _TagListSaveButtonState();
+}
+
+class _TagListSaveButtonState extends State<_TagListSaveButton> {
+  bool _busy = false;
+
+  Future<void> _save() async {
+    if (_busy) return;
+    final files = tagListFiles(widget.set, '${widget.set.name} 태그리스트');
+    if (kIsWeb) {
+      // 웹: 공식 사이트가 CORS 를 열지 않아 바이트로 못 받고, saveFile 도 늘 null 을 돌려준다 — 새 탭으로 열어 브라우저에서 저장
+      await Future.wait([for (final f in files) launchUrl(Uri.parse(f.url), webOnlyWindowName: '_blank')]);
+      return;
+    }
+    setState(() => _busy = true); // STATE: 받는 중 → 버튼 잠금
+    try {
+      var saved = false;
+      for (final f in files) {
+        final bytes = await TagAtlas.download(f.url);
+        final uri = await FilePicker.saveFile(fileName: f.name, bytes: bytes, mimeType: f.mime);
+        if (uri == null) break; // 저장 창을 닫았다 — 남은 장도 그만
+        saved = true;
+      }
+      if (mounted && saved) showToast(context, tr('저장했어요'));
+    } on Object {
+      if (mounted) showToast(context, tr('저장하지 못했어요'));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = widget.color ?? Gp.muted;
+    return IconButton(
+      key: const ValueKey('tag-list-save'),
+      tooltip: tr('태그 리스트 저장'),
+      visualDensity: VisualDensity.compact,
+      onPressed: _busy ? null : _save,
+      icon: _busy
+          ? SizedBox.square(
+              dimension: Gp.iM,
+              child: CircularProgressIndicator(strokeWidth: 2, color: color),
+            )
+          : Icon(Icons.download_outlined, size: Gp.iM, color: color),
     );
   }
 }
@@ -1136,6 +1347,7 @@ List<HelpItem> tagHelp() => [
   HelpItem(Icons.touch_app_outlined, tr('칸 누르기 = 태그 상세 (좋아요 · 구매함 버튼)')),
   HelpItem(Icons.zoom_out_map, tr('상세의 그림 누르기 = 크게 보기 (앞 · 뒤)')),
   HelpItem(Icons.open_in_new, tr('공식 페이지 (브라우저)')),
+  HelpItem(Icons.download_outlined, tr('탄 이름 옆 ⬇ = 태그 리스트 저장 · 리스트 그림 누르기 = 크게 보기')),
   HelpItem(Icons.tune, tr('필터 (상품 필터와 같은 상태 줄 · 등급 · 타입)')),
   HelpItem(Icons.grid_view_outlined, tr('격자로 보기')),
   HelpItem(Icons.view_list_outlined, tr('목록으로 보기 (줄 오른쪽 ♡ · 리본)')),

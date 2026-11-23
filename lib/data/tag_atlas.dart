@@ -3,7 +3,13 @@
 //   · mezastar-jp.json    : 일본판(JA, 2020–2024 끝남)
 //   · pokemon-frienda.json: 일본 프렌다 픽 (공식 사이트가 이미지 직접 링크를 막아 그림이 없다 → 도감 번호 그림)
 // 칸 하나 = 그 지역에서 나온 인쇄 하나. 좋아요 · 구매함 표시는 인쇄 id(메자스타 `…@KR`) · 픽 id(프렌다) 그대로 쓴다.
+import 'dart:typed_data';
+
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:http/http.dart' as http;
+
 import 'catalog.dart';
+import 'gunpula.dart' show gunpulaUserAgent;
 import '../json_util.dart';
 import '../l10n/l10n.dart';
 
@@ -62,6 +68,8 @@ class TagSet {
     this.date = '',
     this.ordinal = 0,
     this.extra = false,
+    this.listImages = const [],
+    this.listPdf = '',
   }) : nameKo = name;
   final String id;
 
@@ -81,6 +89,14 @@ class TagSet {
 
   /// 프로모 · 원더 · 레거시처럼 번호 탄이 아닌 묶음
   final bool extra;
+
+  /// 이 지역 공식 사이트의 태그 리스트 그림 — 한국 = 탄 전부가 든 세로로 긴 한 장, 홍콩 = 앞 · 뒤 두 장
+  final List<String> listImages;
+
+  /// 태그 리스트 PDF (대만). 그림이 있는 지역은 ''
+  final String listPdf;
+
+  bool get hasList => listImages.isNotEmpty || listPdf.isNotEmpty;
 }
 
 /// 도감 칸 하나 (지역 인쇄 · 픽 하나)
@@ -321,6 +337,47 @@ String _koName(Map<String, Object?> names) {
 
 int? _grade(Object? v) => v is num ? v.toInt() : null;
 
+/// 주소의 확장자 (소문자, ?… 뺌)
+String _ext(String url) {
+  final path = (Uri.tryParse(url)?.path ?? url).toLowerCase();
+  final dot = path.lastIndexOf('.');
+  return dot < 0 ? '' : path.substring(dot + 1);
+}
+
+/// 태그 리스트 (그림 · PDF) — 그 지역 release 의 checklist_imgs, 없으면 checklist (끝이 그림 · PDF 인 것만)
+({List<String> images, String pdf}) _tagList(Map<String, Object?> release) {
+  final one = jStr(release['checklist']);
+  final imgs = [
+    for (final u in jList(release['checklist_imgs']).map(jStr))
+      if (u.isNotEmpty) u,
+  ];
+  return (
+    images: imgs.isNotEmpty || !const {'jpg', 'jpeg', 'png'}.contains(_ext(one)) ? imgs : [one],
+    pdf: _ext(one) == 'pdf' ? one : '',
+  );
+}
+
+/// 태그 리스트 저장 파일 — 받을 주소 · 파일 이름 · 종류. [title] = 「스타더스트 1탄 태그리스트」 같은 이름 (파일 이름이라 번역하지 않는다).
+/// 홍콩은 앞 · 뒤 두 장이라 이름 끝에 1 · 2. 파일 이름에 못 쓰는 글자(/ \ : * ? " < > |)는 띄어쓰기로
+List<({String url, String name, String mime})> tagListFiles(TagSet s, String title) {
+  final urls = s.listImages.isNotEmpty ? s.listImages : [if (s.listPdf.isNotEmpty) s.listPdf];
+  final base = title.replaceAll(RegExp(r'[/\\:*?"<>|]'), ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
+  ({String url, String name, String mime}) file(int i, String url) {
+    final ext = switch (_ext(url)) {
+      'pdf' => 'pdf',
+      'png' => 'png',
+      _ => 'jpg',
+    };
+    return (
+      url: url,
+      name: '$base${urls.length > 1 ? ' ${i + 1}' : ''}.$ext',
+      mime: ext == 'pdf' ? 'application/pdf' : (ext == 'png' ? 'image/png' : 'image/jpeg'),
+    );
+  }
+
+  return [for (final (i, url) in urls.indexed) file(i, url)];
+}
+
 String _setNo(String id) => RegExp(r'(\d+)$').firstMatch(id)?.group(1) ?? '';
 
 String _search(Iterable<Object?> parts) => normalizeQuery(parts.whereType<String>().join(' '));
@@ -385,8 +442,10 @@ TagBook parseMezastar(Object? json, TagRegion region) {
     if (!cards.any((c) => c.setIds.contains(id))) continue; // 이 지역에 안 나온 탄
     final names = jMap(s['names']);
     final releases = [for (final r in jList(s['releases'])) jMap(r)];
-    final mine =
-        releases.where((r) => jStr(r['region']) == region.code).firstOrNull ?? releases.firstOrNull ?? const {};
+    final exact = releases.where((r) => jStr(r['region']) == region.code).firstOrNull;
+    final mine = exact ?? releases.firstOrNull ?? const {};
+    // 태그 리스트는 이 지역 것만 — 다른 지역 리스트는 번호 · 태그가 달라 빌려 오지 않는다
+    final list = _tagList(exact ?? const {});
     final series = jStr(s['series']);
     final promo = series == 'promo';
     final ko = jStr(names['ko']).replaceFirst('스타태그 ', '');
@@ -404,6 +463,8 @@ TagBook parseMezastar(Object? json, TagRegion region) {
         date: jStr(mine['date']),
         ordinal: jInt(s['ordinal']),
         extra: promo,
+        listImages: list.images,
+        listPdf: list.pdf,
       ),
     );
   }
@@ -559,6 +620,18 @@ class TagAtlas {
     final b = game == TagGame.frienda ? parseFrienda(raw) : parseMezastar(raw, region);
     _cache[key] = (raw, b);
     return b;
+  }
+
+  /// 태그 리스트 파일 받기 (저장 버튼) — 테스트에서 바꿔 끼운다
+  static Future<Uint8List> Function(String url) download = _download;
+
+  static Future<Uint8List> _download(String url) async {
+    // 한국 리스트는 3 MB 쯤이라 넉넉히
+    final r = await http
+        .get(Uri.parse(url), headers: kIsWeb ? null : const {'User-Agent': gunpulaUserAgent})
+        .timeout(const Duration(seconds: 60));
+    if (r.statusCode != 200) throw StateError('HTTP ${r.statusCode}');
+    return r.bodyBytes;
   }
 
   /// 메자스타 4지역 + 프렌다 (검색 탭). 못 읽은 것은 건너뛴다
