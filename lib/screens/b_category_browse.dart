@@ -7,7 +7,7 @@
 // │ B-20a │ 묶음 목록 안 채널 머리(›)                │ '전체' 채널: 내 채널마다 그 아래 묶음 · 머리 누르면 그 채널 │ P06 · P07 │
 // │ B-20b │ 검색 탭 필터(KitFilter) → 칸 거르기       │ 필터를 고르면 맞는 상품이 있는 칸만 · 연 상품 화면도 그 필터로 │ P07 · P01 │
 // │ B-20c │ SideDirectory 펴기 · 접기 (밀기 + 손잡이) │ 펴면 한 줄 3칸, 접으면 화면 가득 4칸 · 펴 둔 상태는 기기에 기억 (도감과 같은 틀) │ P06 · P03 │
-// │ B-21  │ 왼쪽 묶음 목록 + CategoryTile 격자       │ 세대: 건담 = 시대별 작품(공식 작품 로고) · 포켓몬 세대 · Fate 작품 · AC 작품 · 베이 라인 · 레고 테마 │ P06 · P04 │
+// │ B-21  │ 왼쪽 묶음 목록 + CategoryTile 격자       │ 세대: 건담 = 시대별 작품(공식 작품 로고) · 포켓몬 세대 · Fate 작품 · AC 작품 · 베이 라인 · 마도카 작품 · 캐릭터 · 레고 테마 │ P06 · P04 │
 // │ B-22  │ 서랍 › 사용법 (categoryBrowseHelp)       │ 종류 · 세대 보기 읽는 법 (칸 머리 ? 는 서랍으로 옮김) │ P10    │
 // │ B-24  │ LoadingView / ErrorView / EmptyView     │ 불러오는 중 · 오류 · 내 채널 없음 · 조건에 맞는 상품 없음 │ P01 · P09 │
 // └──────────────────────────────────────────────────────────────────────────────────┘
@@ -17,7 +17,8 @@
 //   "사진 대신 아이콘" 결정은 주인이 2026-11-20 되돌렸다 (칸이 꽉 차 로고 · 사진이 섞여도 모양이 같다). 회색 칸 · 숫자 · 진행 없음.
 // 틀: 왼쪽 목록 · 펴기 · 접기 · 칸 크기 = lib/widgets/side_directory.dart (도감 G 와 한 벌).
 // 데이터: 종류 = Loaders.kits → lib/logic/category_browse.dart typeSections (묶음 · 칸 순서 · 빈 칸 숨김),
-//   세대 = 건담 Loaders.guideWorks + guideUnits(작품 기체의 상품) · 그 밖 Loaders.worlds(World.kitIds, 베이는 라인).
+//   세대 = 건담 Loaders.guideWorks + guideUnits(작품 기체의 상품) · 그 밖 Loaders.worlds(World.kitIds, 베이는 라인),
+//   마도카는 그 위에 상품의 작품(series key) 묶음 (seriesWorks).
 import 'package:flutter/material.dart';
 
 import '../l10n/l10n.dart';
@@ -281,7 +282,16 @@ class _CategoryBrowseState extends State<_CategoryBrowse> {
         ),
       );
     }
-    return worldSections(channel, cats, (c) => c.key);
+    // 마도카: atlas 묶음(캐릭터) 위에 작품 묶음 — 작품 로고가 없어 칸은 가장 새 상품 사진
+    final works = seriesWorks(channel, kits);
+    return [
+      if (works.isNotEmpty)
+        (
+          seriesWorkSection,
+          [for (final e in works) _Cat(e.key, e.label, '', cellKind('', e.kits), e.kits, photo: e.cover)],
+        ),
+      ...worldSections(channel, cats, (c) => c.key),
+    ];
   }
 
   void _open(String channel, _Cat c, KitFilter? f) => openCategoryProducts(

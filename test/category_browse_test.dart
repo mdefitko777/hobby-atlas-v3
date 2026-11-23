@@ -2,6 +2,7 @@
 // 세부 시리즈 · 세대 묶음 + 매핑의 세부 시리즈 (lib/data/gunpula.dart cleanSubline)
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hobby_atlas/data/gunpula.dart' show cleanSubline;
+import 'package:hobby_atlas/l10n/l10n.dart';
 import 'package:hobby_atlas/logic/category_browse.dart';
 import 'package:hobby_atlas/logic/data_labels.dart';
 import 'package:hobby_atlas/models.dart';
@@ -314,6 +315,57 @@ void main() {
       expect(isAtlasCover('https://x.github.io/gunpula/app/assets/bbx/cx17-cb63e16152.jpg'), isFalse);
       expect(isAtlasCover('https://cdn.rebrickable.com/media/sets/75192-1.jpg'), isFalse);
       expect(isAtlasCover(''), isFalse);
+    });
+
+    test('마도카 작품 칸: 상품의 작품 키로 묶고 나온 순서 (TV → 반역 → 회천 → 마기아 레코드 → 그 밖은 첫 발매일)', () {
+      Kit md(
+        String id,
+        String key,
+        String ko,
+        String date, {
+        String zh = '',
+        String image = 'assets/gp/kits/gu01.jpg',
+      }) => lineKit(
+        id,
+        channel: 'madoka',
+        line: '스케일',
+        type: '피규어',
+        seriesKey: key,
+        series: ko,
+        seriesZh: zh,
+        date: date,
+        image: image,
+      );
+      final kits = [
+        md('exe', 'madoka_exedra', '마기아 엑세드라', '2025-03-01'),
+        md('mr', 'madoka_magireco', '마기아 레코드', '2020-01-01', zh: '魔法纪录'),
+        md('w0', 'madoka_walpurgis', '발푸르기스의 회천', '2026-02-01'),
+        md('w1', 'madoka_walpurgis', '발푸르기스의 회천', '2026-10-01', image: ''),
+        md('ori', 'madoka_oriko', '오리코 마기카', '2014-06-01'),
+        md('rb', 'madoka_rebellion', '반역의 이야기', '2013-10-01'),
+        md('tv0', 'madoka_tv', '마도카 마기카', '2012-01-01', zh: '魔法少女小圆'),
+        md('tv1', 'madoka_tv', '마도카 마기카', '2024-01-01', zh: '魔法少女小圆'),
+        md('none', '', '', '2026-01-01'),
+      ];
+      final works = seriesWorks('madoka', kits);
+      expect(works.map((e) => e.key), [
+        'madoka_tv',
+        'madoka_rebellion',
+        'madoka_walpurgis',
+        'madoka_magireco',
+        'madoka_oriko',
+        'madoka_exedra',
+      ]);
+      expect(works.first.label, '마도카 마기카');
+      expect(works.first.kits.map((k) => k.id), ['tv1', 'tv0'], reason: '칸 안은 새것부터');
+      expect(works[2].cover, 'assets/gp/kits/gu01.jpg', reason: '사진이 있는 가장 새 상품');
+      expect(works.expand((e) => e.kits).map((k) => k.id), isNot(contains('none')), reason: '작품 키 없는 상품은 칸 없음');
+      expect(seriesWorks('fate', kits), isEmpty, reason: '다른 채널은 그대로');
+
+      L10n.debugSet(AppLang.zh);
+      addTearDown(() => L10n.debugSet(AppLang.ko));
+      expect(seriesWorks('madoka', kits).first.label, '魔法少女小圆');
+      expect(tr(seriesWorkSection), '作品');
     });
 
     test('베이 라인 묶음 = 라인이 같은 상품', () {

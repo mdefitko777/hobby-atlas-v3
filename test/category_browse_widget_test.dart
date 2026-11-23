@@ -8,6 +8,7 @@ import 'package:hobby_atlas/channels.dart';
 import 'package:hobby_atlas/clock.dart';
 import 'package:hobby_atlas/data/user_store.dart';
 import 'package:hobby_atlas/detail_pane.dart';
+import 'package:hobby_atlas/logic/category_browse.dart' show seriesWorkSection;
 import 'package:hobby_atlas/marks.dart';
 import 'package:hobby_atlas/models.dart';
 import 'package:hobby_atlas/screens/b_category_browse.dart';
@@ -521,6 +522,63 @@ void main() {
       await _frames(t, 2);
     }
     expect(t.takeException(), isNull);
+  });
+
+  testWidgets('세대 · 마도카: 캐릭터 위에 작품 묶음 (나온 순서 · 가장 새 상품 사진) · 작품 칸 → 그 작품 상품 전부 · 320dp', (t) async {
+    Kit md(String id, String key, String line, String type, String date) => lineKit(
+      id,
+      channel: 'madoka',
+      line: line,
+      type: type,
+      seriesKey: key,
+      series: key,
+      date: date,
+      image: 'assets/test/$id.jpg',
+    );
+    final kits = [
+      md('md0', 'madoka_rebellion', '스케일', '피규어', '2014-01-01'),
+      md('md1', 'madoka_tv', '굿즈', '굿즈', '2025-01-01'),
+      md('md2', 'madoka_tv', '넨도로이드', '피규어', '2012-01-01'),
+      md('md3', 'madoka_walpurgis', '가샤폰', '가샤폰', '2026-01-01'),
+    ];
+    for (final size in const [Size(390, 844), Size(320, 568)]) {
+      final at = '${size.width}';
+      await _show(
+        t,
+        EraBrowse(channel: 'madoka', loaders: _loaders(kits)),
+        size: size,
+      );
+      expect(t.takeException(), isNull, reason: at);
+      expect(_dir('madoka', seriesWorkSection), findsOneWidget, reason: at);
+      expect(
+        t.getTopLeft(_dir('madoka', seriesWorkSection)).dy,
+        lessThan(t.getTopLeft(_dir('madoka', '캐릭터')).dy),
+        reason: '$at 작품이 캐릭터 위',
+      );
+      // 처음 열면 작품 묶음 — 칸은 나온 순서 (TV → 반역 → 회천), 로고가 없어 가장 새 상품 사진
+      expect(
+        [for (final c in t.widgetList<CategoryTile>(find.byType(CategoryTile))) (c.key! as ValueKey<String>).value],
+        ['cat-madoka-madoka_tv', 'cat-madoka-madoka_rebellion', 'cat-madoka-madoka_walpurgis'],
+        reason: at,
+      );
+      final tv = t.widget<CategoryTile>(_cat('madoka', 'madoka_tv'));
+      expect((tv.image, tv.photo), ('', 'assets/test/md1.jpg'), reason: at);
+      // 접어도 넘치지 않는다
+      await t.tap(_handle);
+      await t.pumpAndSettle();
+      expect(t.takeException(), isNull, reason: '$at 접음');
+    }
+    await t.tap(_cat('madoka', 'madoka_tv'));
+    await _frames(t);
+    expect(t.takeException(), isNull);
+    expect(t.widgetList<ProductTile>(find.byType(ProductTile)).map((p) => p.id).toSet(), {'md1', 'md2'});
+
+    // 캐릭터 묶음은 그대로
+    await _show(t, EraBrowse(channel: 'madoka', loaders: _loaders(kits)));
+    await t.tap(_dir('madoka', '캐릭터'));
+    await _frames(t, 2);
+    expect(_cat('madoka', 'madoka-madoka'), findsOneWidget);
+    expect(_cat('madoka', 'madoka_tv'), findsNothing);
   });
 
   testWidgets('세대 칸: atlas 공식 표지는 그림 자리, 묶음 그림이 상품 사진이면 그 묶음의 가장 새 상품 사진', (t) async {

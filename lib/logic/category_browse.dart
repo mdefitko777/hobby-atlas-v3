@@ -1,7 +1,8 @@
 // 검색 탭 종류 · 세대 둘러보기 규칙 (순수 Dart) — 상품 카탈로그처럼 "분류 칸 = 공식 로고(없으면 가장 새 상품 사진) + 이름"
 //   종류: 채널 상품 → 칸 키(라인 · 굿즈 세부 종류 · 베이 상품 형태) → 채널마다 정한 묶음(프라모델 · SD건담 · 완성품 …)
 //   칸 이름: 키는 데이터 값 그대로, 보이는 이름만 dataLabel (lib/logic/data_labels.dart)
-//   세대: 건담 = 작품을 시대 묶음으로, 그 밖 = atlas 묶음(세대 · 작품)을 채널마다 정한 묶음으로
+//   세대: 건담 = 작품을 시대 묶음으로, 그 밖 = atlas 묶음(세대 · 작품)을 채널마다 정한 묶음으로.
+//   마도카는 그 위에 상품의 작품(series key)으로 묶은 작품 묶음 하나 더 (seriesWorks)
 //   칸 그림: 로고가 없는 칸은 가장 새 상품 사진 (TypeEntry.cover · newestCover — 2026-11-19 "사진 대신 아이콘" 결정을
 //   주인이 2026-11-20 되돌렸다), 사진도 없으면 종류 아이콘 (cellKind). 회색 칸 없이
 //   세부 시리즈: 상품 화면 위 줄 (HGUC · HGCE … · PB 한정)
@@ -420,6 +421,52 @@ List<(String, List<T>)> worldSections<T>(String channel, Iterable<T> items, Stri
   }
   if (channel == 'fate') out.sort((a, b) => _fateSections.indexOf(a.$1).compareTo(_fateSections.indexOf(b.$1)));
   return out;
+}
+
+/// 세대 작품 묶음 이름 (아머드 코어 세대 묶음과 같은 말)
+const seriesWorkSection = '작품';
+
+/// 세대에서 atlas 묶음 위에 상품의 작품(series key) 칸을 더 두는 채널 → 작품 순서 (나온 순서).
+/// 마도카 atlas 묶음은 캐릭터뿐이라 작품(반역 · 회천 · 마기아 레코드)으로 볼 길이 없었다 (2026-11-23 주인 요청).
+/// 표에 없는 작품(엑세드라 · 오리코 …)은 뒤에, 가장 먼저 나온 상품의 발매일 순서로
+const _seriesWorkOrder = {
+  'madoka': ['madoka_tv', 'madoka_rebellion', 'madoka_walpurgis', 'madoka_magireco'],
+};
+
+/// 채널 상품 → 작품 칸 (나온 순서). 정한 채널이 아니면 빈 목록. 작품 키가 없는 상품은 칸에 넣지 않는다 (종류에는 그대로 있다)
+List<TypeEntry> seriesWorks(String channel, Iterable<Kit> kits) {
+  final order = _seriesWorkOrder[channel];
+  if (order == null) return const [];
+  final byKey = <String, List<Kit>>{};
+  for (final k in kits) {
+    if (k.seriesKey.isNotEmpty) (byKey[k.seriesKey] ??= []).add(k);
+  }
+  int rank(String key) {
+    final r = order.indexOf(key);
+    return r >= 0 ? r : order.length;
+  }
+
+  // 표에 없는 작품끼리: 첫 상품 발매일 (날짜 없는 작품은 끝)
+  String first(String key) => byKey[key]!
+      .map((k) => k.date)
+      .where((d) => d.isNotEmpty)
+      .fold('', (a, d) => a.isEmpty || d.compareTo(a) < 0 ? d : a);
+  final keys = byKey.keys.toList()
+    ..sort((a, b) {
+      final r = rank(a).compareTo(rank(b));
+      if (r != 0) return r;
+      final (fa, fb) = (first(a), first(b));
+      if (fa.isEmpty != fb.isEmpty) return fa.isEmpty ? 1 : -1;
+      final d = fa.compareTo(fb);
+      return d != 0 ? d : a.compareTo(b);
+    });
+  TypeEntry entry(String key) {
+    final sorted = [...byKey[key]!]..sort(newestFirst);
+    // 이름 = 데이터의 작품 이름 (상세 화면 작품 줄과 같은 seriesLabel — 고른 언어)
+    return TypeEntry(key: key, label: sorted.first.seriesLabel, kits: sorted, cover: newestCover(sorted));
+  }
+
+  return [for (final key in keys) entry(key)];
 }
 
 /// 세대 칸의 공식 그림 자리에 쓸 묶음 그림(World.image)인가 — atlas 공식 표지(`assets/atlas/covers/` = 작품 로고 · 키 비주얼)만.
